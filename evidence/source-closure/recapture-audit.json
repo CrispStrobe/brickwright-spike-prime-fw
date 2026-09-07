@@ -1,0 +1,21 @@
+{
+  "consumed_path_count": 6121,
+  "depfile_count": 23,
+  "errors": [
+    "trace includes generated, removed, or non-file paths that need classification: missing=348, non_file=7"
+  ],
+  "external_existing_path_count": 790,
+  "map_files": [
+    "nuttx/System.map",
+    "nuttx/User.map",
+    "nuttx/nuttx.map"
+  ],
+  "missing_path_count": 348,
+  "non_file_path_count": 7,
+  "schema": 1,
+  "status": "incomplete",
+  "trace": {
+    "lines": 4060664,
+    "sha256": "90f204fcc5789b5fb02e51082dab597fbf603a0946625aa51dab5491bab8aae3"
+  }
+}

@@ -133,6 +133,41 @@ class ClosureTest(unittest.TestCase):
         files = json.loads(self.manifest.read_text())["files"]
         self.assertEqual(["main.c"], [item["path"] for item in files])
 
+    def test_fcntl_directory_descriptor_duplication(self):
+        self.trace.write_text(
+            f'3947728 openat(AT_FDCWD, "{self.root}", O_RDONLY|O_DIRECTORY) = 3\n'
+            '3947728 fcntl(3, F_DUPFD_CLOEXEC, 10) = 10\n'
+            '3947728 openat(10, "main.c", O_RDONLY) = 4\n'
+        )
+        self.dep.write_text(f'x: {self.root}/main.c\n')
+        self.generate()
+
+    def test_unfinished_dot_directory_open_supports_fchdir(self):
+        self.trace.write_text(
+            f'3947728 chdir("{self.root}") = 0\n'
+            '3947728 openat(AT_FDCWD, ".", O_RDONLY|O_CLOEXEC <unfinished ...>\n'
+            '3947728 <... openat resumed>) = 3\n'
+            '3947728 chdir("removed") = 0\n'
+            '3947728 fchdir(3) = 0\n'
+            '3947728 openat(AT_FDCWD, "main.c", O_RDONLY) = 4\n'
+        )
+        self.dep.write_text(f'x: {self.root}/main.c\n')
+        self.generate()
+
+    def test_generated_and_directory_paths_are_not_source(self):
+        output = self.root / "generated.o"
+        output.write_bytes(b"generated")
+        self.trace.write_text(
+            f'3947728 openat(AT_FDCWD, "{self.root}", O_RDONLY|O_DIRECTORY) = 3\n'
+            f'3947728 openat(AT_FDCWD, "{output}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4\n'
+            f'3947728 openat(AT_FDCWD, "{output}", O_RDONLY) = 4\n'
+            f'3947728 openat(AT_FDCWD, "{self.root}/main.c", O_RDONLY) = 4\n'
+        )
+        self.dep.write_text(f'x: {self.root}/main.c\n')
+        self.generate()
+        files = json.loads(self.manifest.read_text())["files"]
+        self.assertEqual(["main.c"], [item["path"] for item in files])
+
     def test_nested_license_boundary_requires_override(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("different terms\n")

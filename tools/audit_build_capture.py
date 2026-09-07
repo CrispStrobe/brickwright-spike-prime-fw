@@ -42,8 +42,22 @@ def main() -> None:
     closure = load_closure_tool()
     errors: list[str] = []
     consumed_count = 0
+    missing_count = 0
+    non_file_count = 0
+    external_count = 0
     try:
-        consumed_count = len(closure.trace_paths(trace, cwd))
+        consumed = closure.trace_paths(trace, cwd)
+        consumed_count = len(consumed)
+        missing_count = sum(not path.exists() for path in consumed)
+        non_file_count = sum(path.exists() and not path.is_file() for path in consumed)
+        external_count = sum(
+            not path.is_relative_to(tree) for path in consumed if path.exists()
+        )
+        if missing_count or non_file_count:
+            errors.append(
+                "trace includes generated, removed, or non-file paths that need "
+                f"classification: missing={missing_count}, non_file={non_file_count}"
+            )
     except SystemExit as exception:
         errors.append(str(exception).removeprefix("source-closure: ERROR: "))
     depfiles = sorted(tree.rglob("*.d"))
@@ -60,6 +74,9 @@ def main() -> None:
         "status": "ready" if not errors else "incomplete",
         "trace": {"sha256": digest(trace), "lines": sum(1 for _ in trace.open("rb"))},
         "consumed_path_count": consumed_count,
+        "missing_path_count": missing_count,
+        "non_file_path_count": non_file_count,
+        "external_existing_path_count": external_count,
         "depfile_count": len(depfiles),
         "map_files": [path.relative_to(tree).as_posix() for path in maps],
         "errors": errors,
