@@ -1,0 +1,174 @@
+config APP_BTSENSOR
+	tristate "SPIKE telemetry over Bluetooth Classic and LE"
+	default n
+	---help---
+		Transport-neutral SPIKE Prime telemetry daemon.  It uses the
+		vendored Apache-2.0 Zephyr Bluetooth host through the Brickwright
+		hub transport and supports Classic SPP and the FD02 LE service.
+		No BTstack source or TI service-pack bytes are embedded.
+
+if APP_BTSENSOR
+
+config APP_BTSENSOR_PROGNAME
+	string "Program name"
+	default "btsensor"
+	depends on BUILD_KERNEL
+	---help---
+		NSH command name.
+
+config APP_BTSENSOR_PRIORITY
+	int "Task priority"
+	default 100
+
+config APP_BTSENSOR_STACKSIZE
+	int "Task stack size"
+	default 4096
+
+config APP_BTSENSOR_STOP_TIMEOUT_MS
+	int "Daemon stop timeout (ms)"
+	default 3000
+	range 100 30000
+	---help---
+		Maximum time the command waits for services and the Zephyr host
+		to stop.  The lifecycle remains marked running after a timeout.
+
+config APP_BTSENSOR_BUNDLE_TICK_MS
+	int "BUNDLE frame emission period (ms)"
+	default 10
+	range 5 100
+	---help---
+		Period of the BUNDLE wire frame emitter.  Default 10 ms
+		gives the 100 Hz cadence the host viewer expects.  Lower
+		values increase BT bandwidth pressure; higher values
+		reduce bandwidth but decimate IMU samples (max 8 per
+		BUNDLE).  Issue #88.
+
+config APP_BTSENSOR_NUTTX_PERIPHERALS
+	bool "NuttX IMU and Powered Up peripheral backend"
+	default n
+	---help---
+		Wire the transport-neutral legacy command adapter to the NuttX
+		IMU sampler, LEGO sensor sampler, and BUNDLE emitter.  This is
+		disabled in the size-constrained protected baseline until its
+		flash/RAM budget has been measured.  IMU capture remains
+		unsupported until it is migrated to the neutral scheduler.
+
+config APP_BTSENSOR_RING_DEPTH
+	int "Frame ring buffer depth"
+	default 32
+	range 4 128
+	---help---
+		Number of frames kept between the BUNDLE emitter and
+		the RFCOMM send worker.  Default 32 covers ~320 ms of
+		100 Hz emission; deeper rings tolerate longer RF stalls
+		at the cost of RAM.  Each slot is BTSENSOR_TX_FRAME_MAX_SIZE
+		bytes (1408 in Issue #88).  The 32-frame default matches
+		main's pre-#88 layout to avoid an intermittent boot
+		failure observed when shrinking the user-space BSS by
+		~33 KB; the cause is not yet root-caused but is likely a
+		RAM-layout interaction during user-space init.
+
+config APP_BTSENSOR_BTN_LONG_PRESS_MS
+	int "BT button long-press threshold (ms)"
+	default 1500
+	range 200 5000
+	---help---
+		Hold the BT button down at least this long for a
+		long-press event; shorter presses register as short.
+		Long press toggles BT off when paired or advertising;
+		short press starts advertising from BT off.
+
+config APP_BTSENSOR_LED_BLINK_PERIOD_MS
+	int "BT LED slow-blink period (ms)"
+	default 1000
+	range 100 3000
+	---help---
+		Period of the BT LED blink while advertising
+		(half on / half off).
+
+config APP_BTSENSOR_LED_FAIL_BLINKS
+	int "BT LED fail-blink pulse count"
+	default 3
+	range 1 10
+	---help---
+		Number of short blue blinks emitted when SSP pairing
+		fails before the LED returns to off.
+
+config APP_BTSENSOR_SHELL_MODE
+	bool "BT-side NSH shell over SPP (Issue #108)"
+	default n
+	select PIPES
+	---help---
+		Mutually exclusive `MODE SHELL` / `MODE TELEMETRY` switch
+		on the existing SPP/RFCOMM channel.  When the peer sends
+		`MODE SHELL\n` the daemon stops the IMU/SENSOR pumps and
+		bridges the byte stream to a freshly-spawned NSH child via
+		FIFOs (/dev/btnsh_in, /dev/btnsh_out).  Returns to
+		telemetry mode on `exit` from the shell or RFCOMM peer
+		drop.  USB-side NSH (/dev/console) is unaffected.
+
+if APP_BTSENSOR_SHELL_MODE
+
+config APP_BTSENSOR_SHELL_TX_BUF
+	int "Shell TX coalescing buffer (bytes)"
+	default 4096
+	range 256 32768
+	---help---
+		Size of the coalescing buffer that holds NSH stdout bytes
+		between the reader pthread and the BTstack thread that
+		drives rfcomm_send().  4096 covers everyday short-output
+		commands.  Larger snapshots (a full RAMLOG `dmesg`) over-run
+		this buffer and the reader drops the tail, but the shell
+		session itself stays usable — bump only if you need to
+		capture every byte of a large dump.  TX throttle and the
+		frame-size cap below pace the actual radio output to avoid
+		the CC2564C ACL TX queue stall (Issue #54 / #109).
+
+config APP_BTSENSOR_SHELL_TX_FRAME_BYTES
+	int "Shell rfcomm_send frame size cap (bytes)"
+	default 256
+	range 64 1016
+	---help---
+		Per-call upper bound on the byte count handed to
+		rfcomm_send() from the shell pump.  RFCOMM negotiates
+		up to 1016 B per frame, but the CC2564C controller has
+		only HC_Total_Num_ACL_Data_Packets=4 ACL TX slots and a
+		burst of MTU-sized frames stalls the controller until
+		link supervision timeout (Issue #54 / #109 root cause).
+		Smaller frames trade per-byte overhead for shorter slot
+		occupancy and better resilience against the stall.  256 B
+		gives ~4 frames per slot turnover for `dmesg`-class
+		output without hitting the stall trigger.
+
+config APP_BTSENSOR_SHELL_THROTTLE_MS
+	int "Shell pump timer interval (ms)"
+	default 5
+	range 1 500
+	---help---
+		Inter-send delay between successive RFCOMM_REQUEST_CAN_SEND_NOW
+		fires from the shell TX pump.  Throttling gives the
+		controller a window to drain the previous ACL packet before
+		the next one is offered, avoiding the CC2564C ACL TX queue
+		stall (Issue #54).  Combined with the 256 B frame cap, 5 ms
+		is enough headroom on a 4-slot controller queue.
+
+config APP_BTSENSOR_SHELL_NSH_STACK
+	int "NSH child task stack (bytes)"
+	default 6144
+	range 4096 16384
+	---help---
+		Stack size for the spawned NSH child task that runs the
+		BT-side shell.  Tune with `nsh> ps` Stack used after
+		exercising commands like `dmesg` or builtin apps.
+
+config APP_BTSENSOR_SHELL_READER_STACK
+	int "Shell reader pthread stack (bytes)"
+	default 2048
+	range 1024 8192
+	---help---
+		Stack size for the reader pthread that drains NSH
+		stdout into the shell TX buffer.
+
+endif # APP_BTSENSOR_SHELL_MODE
+
+endif

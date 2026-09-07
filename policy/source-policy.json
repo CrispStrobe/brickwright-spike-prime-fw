@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "allowed_project_licenses": [
+    "Apache-2.0",
+    "MIT"
+  ],
+  "pinned_submodules": {
+    "nuttx": "a67efb31cf4f236e456882589b91862f04594528",
+    "nuttx-apps": "55f0bc216565ccab8dee600a88f4485c7693bf8b"
+  },
+  "private_baseline_quarantine": {
+    "third_party/ti-cc2564c/TIInit_6.12.26.bts": {
+      "sha256": "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e"
+    },
+    "third_party/ti-cc2564c/LICENSE.ti": {
+      "sha256": "21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37"
+    }
+  },
+  "forbidden_tracked_paths": [
+    "apps/btsensor/chipset/cc256x_init_script.c",
+    "boards/spike-prime-hub/LICENSES/ti-bt-service-pack-license.txt"
+  ],
+  "forbidden_sha256": {
+    "20c06ff3e9c07116eb62ba6ddc630d7f4055150693ea9838dbbbba948f513479": "TI CC2564C generated service-pack array"
+  },
+  "forbidden_tracked_suffixes": [
+    ".bin",
+    ".elf",
+    ".hex",
+    ".map",
+    ".o",
+    ".a",
+    ".gz",
+    ".zip",
+    ".7z",
+    ".rar",
+    ".tar",
+    ".tgz",
+    ".bz2",
+    ".xz"
+  ],
+  "allowed_restricted_paths": [
+    "third_party/ti-cc2564c/TIInit_6.12.26.bts",
+    "third_party/ti-cc2564c/LICENSE.ti"
+  ],
+  "forbidden_public_references": [
+    "spike-firmware-backups",
+    "CrispStrobe/brickwright-spike-firmware.git",
+    "fetch_private_firmware.py"
+  ]
+}

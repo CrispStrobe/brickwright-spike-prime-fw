@@ -1,0 +1,27 @@
+{
+  "actions": 162,
+  "licence": {
+    "name": "LICENSE",
+    "scope": "TI-licensed firmware; not MIT/Apache-2.0",
+    "sha256": "21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37"
+  },
+  "metadata": {
+    "device": "CC2564C",
+    "filename": "TIInit_6.12.26.bts",
+    "kind": "combined-main-and-ble",
+    "rom": "6.12.26",
+    "service_pack": "1.5",
+    "size": 10211
+  },
+  "schema": 1,
+  "sha256": "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e",
+  "size": 10211,
+  "source": {
+    "bts_path": "initscripts/TIInit_6.12.26.bts",
+    "commit": "3aa1d75f3c2ae77f6e4d36194e3d281b899ab149",
+    "license_path": "LICENSE",
+    "license_sha256": "21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37",
+    "repository": "https://git.ti.com/git/ti-bt/service-packs.git"
+  },
+  "source_name": "TIInit_6.12.26.bts"
+}

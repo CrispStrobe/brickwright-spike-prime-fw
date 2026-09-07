@@ -1,0 +1,32 @@
+{
+  "license": "Apache-2.0",
+  "format": "spike-cobs-xor-v1",
+  "vectors": [
+    {"name": "empty", "payload_hex": "", "frame_hex": "0002"},
+    {"name": "delimiter-zero", "payload_hex": "00", "frame_hex": "000002"},
+    {"name": "delimiter-one", "payload_hex": "01", "frame_hex": "540002"},
+    {"name": "delimiter-two", "payload_hex": "02", "frame_hex": "a80002"},
+    {"name": "xor-byte", "payload_hex": "03", "frame_hex": "070002"},
+    {"name": "all-delimiters", "payload_hex": "00010203", "frame_hex": "0054a8070002"},
+    {"name": "info-request", "payload_hex": "00", "frame_hex": "000002"},
+    {"name": "notification-request-100ms", "payload_hex": "286400", "frame_hex": "062b670002"}
+  ],
+  "stream_cases": [
+    {
+      "name": "fragmented",
+      "chunks_hex": ["062b", "6700", "02"],
+      "payloads_hex": ["286400"]
+    },
+    {
+      "name": "coalesced",
+      "chunks_hex": ["000002070002"],
+      "payloads_hex": ["00", "03"]
+    },
+    {
+      "name": "priority-interrupt",
+      "chunks_hex": ["0700", "01070002", "02"],
+      "payloads_hex": ["03", "03"]
+    }
+  ],
+  "invalid_frames_hex": ["", "02", "0000", "0302", "0102", "0402"]
+}

@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ImuViewer.App.ViewModels"
+             xmlns:ctrl="using:ImuViewer.App.Controls"
+             x:Class="ImuViewer.App.Views.SensorPanelView"
+             x:DataType="vm:SensorPanelViewModel"
+             Padding="6"
+             Background="#1F1F22">
+  <DockPanel LastChildFill="True">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Text="{Binding Title}"
+                 FontWeight="SemiBold"
+                 FontSize="13"
+                 Foreground="{Binding StatusForeground}" />
+      <TextBlock Text="{Binding ConnectionStatus}"
+                 FontSize="10"
+                 Foreground="#A0A0A0"
+                 TextTrimming="CharacterEllipsis" />
+    </StackPanel>
+
+    <TextBlock DockPanel.Dock="Bottom"
+               FontSize="11"
+               FontFamily="Inter, monospace"
+               Foreground="#E0E0E0"
+               Margin="0,2,0,0"
+               Text="{Binding LatestValuesText}"
+               TextTrimming="CharacterEllipsis" />
+
+    <Border MinHeight="80"
+            Background="#18181C"
+            Margin="0,4,0,2">
+      <ctrl:SensorPlotControl Points="{Binding RecentPoints}" />
+    </Border>
+  </DockPanel>
+</UserControl>

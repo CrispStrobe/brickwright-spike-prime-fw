@@ -1,0 +1,10 @@
+include $(APPDIR)/Make.defs
+
+PROGNAME = led
+PRIORITY = SCHED_PRIORITY_DEFAULT
+STACKSIZE = $(CONFIG_DEFAULT_TASK_STACKSIZE)
+MODULE = $(CONFIG_APP_LED)
+
+MAINSRC = led_main.c
+
+include $(APPDIR)/Application.mk

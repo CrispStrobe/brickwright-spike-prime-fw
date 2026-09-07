@@ -1,0 +1,72 @@
+FROM ubuntu:24.04 AS nuttx-tools
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    bison \
+    flex \
+    g++ \
+    gperf \
+    libncurses5-dev \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG NUTTX_TOOLS_COMMIT=9ad3e1ee75c7d39bfee8019ce44f4fd035d89584
+ARG NUTTX_TOOLS_SHA256=7e0d477edf35b540c874e9312d0c3843440ee2d608bedeeaeda8ccdebf023d91
+
+RUN mkdir -p /tools/nuttx-tools \
+    && curl -fL --retry 3 \
+       "https://github.com/patacongo/tools/archive/${NUTTX_TOOLS_COMMIT}.tar.gz" \
+       -o /tmp/nuttx-tools.tar.gz \
+    && echo "${NUTTX_TOOLS_SHA256}  /tmp/nuttx-tools.tar.gz" | sha256sum -c - \
+    && tar -C /tools/nuttx-tools --strip-components=1 -xzf /tmp/nuttx-tools.tar.gz \
+    && rm /tmp/nuttx-tools.tar.gz
+
+RUN cd /tools/nuttx-tools/kconfig-frontends \
+    && ./configure --enable-mconf --disable-gconf --disable-qconf \
+       --enable-static --prefix=/tools/kconfig-frontends \
+    && make install \
+    && rm -rf /tools/nuttx-tools
+
+###############################################################################
+# Final image
+###############################################################################
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    gcc-arm-none-eabi \
+    libnewlib-arm-none-eabi \
+    git \
+    wget \
+    bison \
+    flex \
+    gettext \
+    texinfo \
+    gperf \
+    xxd \
+    genromfs \
+    libncurses5-dev \
+    libncursesw5-dev \
+    python3 \
+    python3-pip \
+    u-boot-tools \
+    util-linux \
+    dfu-util \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --break-system-packages kconfiglib
+
+COPY --from=nuttx-tools /tools/kconfig-frontends/ /tools/kconfig-frontends/
+ENV PATH="/tools/kconfig-frontends/bin:$PATH"
+
+CMD [ "/bin/bash" ]

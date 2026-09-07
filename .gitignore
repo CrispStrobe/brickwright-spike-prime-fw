@@ -1,0 +1,50 @@
+.DS_Store
+.venv/
+site/
+
+# User-supplied restricted controller firmware and generated local manifests.
+# Nothing below this directory may be committed or uploaded by CI.
+.local/
+third_party/ti-cc2564c/ti_bts_local_payload.h
+
+# NuttX build artifacts
+nuttx/.config
+nuttx/.config.old
+nuttx/nuttx
+nuttx/nuttx.bin
+nuttx/nuttx.hex
+nuttx/nuttx.map
+nuttx/System.map
+nuttx/.version
+
+# Board build artifacts
+boards/*/src/*.o
+boards/*/src/*.a
+boards/*/src/.depend
+boards/*/src/Make.dep
+boards/*/src/etctmp.c
+boards/*/src/etctmp/
+boards/*/kernel/*.o
+boards/*/kernel/*.elf
+boards/*/kernel/.depend
+boards/*/kernel/Make.dep
+
+# Apps build artifacts
+apps/Kconfig
+apps/.kconfig
+apps/**/*.o
+apps/**/.built
+apps/**/.depend
+apps/**/Make.dep
+
+# Test artifacts
+tests/logs/
+tests/__pycache__/
+tools/__pycache__/
+.pytest_cache/
+
+# ELF build artifacts
+.elf-build/
+build/
+nuttx/nuttx-export
+nuttx/nuttx-export-*.tar.gz

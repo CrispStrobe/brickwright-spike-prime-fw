@@ -1,0 +1,116 @@
+site_name: SPIKE Prime Hub NuttX Guide
+site_url: ''
+site_description: SPIKE Prime Hub 上で NuttX RTOS を動作させるためのガイド
+repo_url: https://github.com/CrispStrobe/brickwright-spike-prime-fw
+repo_name: CrispStrobe/brickwright-spike-prime-fw
+
+theme:
+  name: material
+  language: ja
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: ダークモードに切り替え
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: ライトモードに切り替え
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: ja
+          name: 日本語
+          default: true
+          build: true
+        - locale: en
+          name: English
+          build: true
+          nav_translations:
+            ハードウェア: Hardware
+            ドライバ: Drivers
+            開発ガイド: Development
+            NuttX: NuttX
+            テスト: Testing
+            利用ガイド: Usage
+
+nav:
+  - Home: index.md
+  - Project:
+      - project/provenance.md
+      - project/ti-service-pack.md
+      - project/classic-protocol.md
+      - project/ble-protocol.md
+      - project/hub-contract.md
+  - ハードウェア:
+      - hardware/hub-overview.md
+      - hardware/pin-mapping.md
+      - hardware/peripherals.md
+      - hardware/dma-irq.md
+  - ドライバ:
+      - drivers/architecture.md
+      - drivers/implementation-plan.md
+      - drivers/port-detection.md
+      - drivers/lump-protocol.md
+      - drivers/sensor.md
+      - drivers/motor-control.md
+      - drivers/drivebase.md
+      - drivers/linetrace.md
+      - drivers/imu.md
+      - drivers/led.md
+      - drivers/battery.md
+      - drivers/power.md
+      - drivers/sound.md
+      - drivers/w25q256.md
+      - drivers/bluetooth.md
+  - 利用ガイド:
+      - usage/01-flash-storage.md
+  - 開発ガイド:
+      - development/getting-started.md
+      - development/debugging.md
+      - development/file-transfer.md
+      - development/apps.md
+      - development/build-protected.md
+      - development/nsh-boot-script.md
+      - development/pc-receive-spp.md
+      - development/bt-nsh-shell.md
+      - development/capture.md
+      - development/capture-schemas.md
+  - NuttX:
+      - nuttx/f413-support.md
+      - nuttx/tickless-timer.md
+      - nuttx/watchdog.md
+      - nuttx/upstream-issues.md
+  - テスト:
+      - testing/test-spec.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - def_list
+  - attr_list
+  - md_in_html

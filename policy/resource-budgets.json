@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "protected_userspace": {
+    "flash_bytes_max": 523264,
+    "static_ram_bytes_max": 98304,
+    "ti_payload_symbol": "brickwright_local_ti_bts_image",
+    "ti_payload_bytes_exact": 10211
+  },
+  "configuration": {
+    "nuttx/.config": {
+      "CONFIG_APP_BTSENSOR_STACKSIZE": {"min": 4096, "max": 8192},
+      "CONFIG_APP_BTSENSOR_RING_DEPTH": {"min": 4, "max": 32}
+    },
+    "bluetooth/zephyr_compat/include/zephyr/autoconf.h": {
+      "CONFIG_BT_LONG_WQ_STACK_SIZE": {"min": 1536, "max": 3072},
+      "CONFIG_BRICKWRIGHT_DELAYED_WORK_SLOTS": {"min": 1, "max": 8},
+      "CONFIG_BT_BUF_ACL_RX_COUNT": {"min": 2, "max": 6},
+      "CONFIG_BT_BUF_ACL_RX_COUNT_EXTRA": {"min": 0, "max": 2},
+      "CONFIG_BT_BUF_ACL_TX_COUNT": {"min": 2, "max": 6},
+      "CONFIG_BT_BUF_CMD_TX_COUNT": {"min": 1, "max": 2},
+      "CONFIG_BT_BUF_EVT_RX_COUNT": {"min": 2, "max": 8},
+      "CONFIG_BT_BUF_EVT_DISCARDABLE_COUNT": {"min": 1, "max": 3},
+      "CONFIG_BT_BUF_SYNC_EVT_POOL_COUNT": {"min": 1, "max": 1}
+    }
+  }
+}

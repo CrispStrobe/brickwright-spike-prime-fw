@@ -1,0 +1,100 @@
+name: Firmware build and simulation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firmware:
+    name: Build without publishing artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Initialize baseline build dependencies
+        run: git submodule update --init --depth 1 nuttx nuttx-apps
+
+      - name: Verify the vendored TI service pack and licence
+        run: |
+          python3 tools/import_ti_service_pack.py \
+            third_party/ti-cc2564c/TIInit_6.12.26.bts \
+            --license third_party/ti-cc2564c/LICENSE.ti
+
+      - name: Build the pinned tool container
+        run: docker build --pull -t nuttx-builder -f docker/Dockerfile.nuttx docker
+
+      - name: Record container and tool versions
+        run: |
+          docker image inspect nuttx-builder --format 'container={{.Id}}'
+          docker run --rm nuttx-builder arm-none-eabi-gcc --version | head -n 2
+          docker run --rm nuttx-builder python3 --version
+          docker run --rm nuttx-builder make --version | head -n 1
+
+      - name: Build protected NuttX firmware
+        run: make nuttx
+
+      - name: Enforce protected resource budgets
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" \
+            -w "$PWD" \
+            nuttx-builder \
+            python3 tools/check_resource_budgets.py
+
+      - name: Cross-compile Zephyr buffer boundary against pinned NuttX
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" \
+            -w "$PWD" \
+            nuttx-builder \
+            tools/check_zephyr_nuttx_compile.sh
+
+      - name: Cross-compile pinned PSA Bluetooth units
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" \
+            -w "$PWD" \
+            nuttx-builder \
+            tools/check_zephyr_psa_compile.sh
+
+      - name: Link complete host-side Bluetooth harness
+        run: tools/check_zephyr_host_link.sh
+
+      - name: Record local-only outputs
+        run: |
+          test -s nuttx/nuttx.bin
+          test -s nuttx/nuttx_user.bin
+          wc -c nuttx/nuttx.bin nuttx/nuttx_user.bin
+          sha256sum nuttx/nuttx.bin nuttx/nuttx_user.bin
+
+      - name: Install pinned Renode
+        run: tools/install_renode.sh
+
+      - name: Stage the redistributable protected pair
+        run: python3 tools/stage_nuttx_image.py brickwright nuttx
+
+      - name: Execute protected firmware in Renode
+        run: |
+          tools/test_renode_protected_images.sh \
+            --include brickwright \
+            --include brickwright-userspace \
+            --include brickwright-board-models \
+            --include brickwright-board-stubs
+
+      - name: Test the transport-neutral virtual HCI bridge
+        run: tools/test_renode_virtual_hci_bridge.sh
+
+      # Deliberately no artifact upload. The firmware is simulation-only until
+      # its real-hardware safety gate is complete. Renode results also remain
+      # inside the ephemeral runner.

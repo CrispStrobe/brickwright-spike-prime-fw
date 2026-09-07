@@ -1,0 +1,22 @@
+Brickwright SPIKE Prime firmware
+Copyright 2026 the Brickwright contributors
+
+This distribution incorporates work from spike-nx, copyright KatsumiOuwa,
+under the MIT License.
+
+Portions are derived from Pybricks, copyright the Pybricks Authors, under the
+MIT License. Individual source files retain provenance comments where used.
+
+The selected Bluetooth host source under third_party/zephyr-host/upstream is
+derived from Zephyr Project sources under Apache License 2.0. The local source
+selection and modification are recorded by its manifest and patch directory.
+
+The CC2564C service-pack binary under third_party/ti-cc2564c is not covered by
+the project MIT or Apache licences. It is an unmodified Texas Instruments
+binary distributed under the adjacent LICENSE.ti, including its TI-device-only
+use and no-reverse-engineering conditions.
+
+The NuttX and NuttX Apps gitlinks are external build dependencies. Their own
+licence and NOTICE files govern them. The configured firmware disables optional
+BSD components; the complete upstream repositories include other optional
+licences and are not relicensed by this project.

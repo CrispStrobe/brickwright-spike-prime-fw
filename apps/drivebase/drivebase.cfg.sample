@@ -1,0 +1,303 @@
+# /mnt/flash/drivebase.cfg — drivebase runtime tuning (Issue #143)
+#
+# Loaded by `drivebase start` from /mnt/flash/drivebase.cfg.  Keys that
+# are absent revert to compiled defaults.  Unknown keys, parse errors,
+# and out-of-range values are logged via syslog and skipped per-line
+# (the rest of the file still applies).
+#
+# Precedence: CLI args to `drivebase start` > this file > compiled.
+# `vi /mnt/flash/drivebase.cfg` to edit, then `drivebase stop; drivebase start`.
+#
+# This template lists every supported key at the Phase 6 production-
+# tuned default; loading it as-is is equivalent to using the compiled
+# binary's built-in defaults (`dmesg` reports `loaded 41 config key(s)
+# ... (0 rejected)`).  Copy this file to /mnt/flash/drivebase.cfg on
+# the hub and edit the values you want to override; comment out (or
+# delete) everything else.
+#
+# Phase 6.6 flipped the `use_gyro_plus1` default to gyro-locked heading
+# at boot; Issue #157 removed the old `1d` mode and made `3d` the sole
+# gyro mode, so the compiled default is now 3 (3D).  The typical SPIKE
+# drivebase use case wants the IMU active from boot; if your build
+# intentionally disables the gyro, set the line near the bottom to 1
+# (= NONE explicit).  A legacy value of 2 (old 1D) is auto-aliased to 3.
+#
+# Phase 6 (#152) shipped a coordinated FF + PID retune.  The compiled
+# defaults reflect the Phase 6.6 bench result:
+#   pid_dist_ki_pos = 5  (was 15 pre-Phase-6; ki is no longer load-
+#                         bearing for breakaway now that FF supplies
+#                         the duty floor — see drivebase_settings.c
+#                         for the per-scenario bench numbers)
+#   ff_dist_kV      = 9  (back-EMF cancel for distance axis)
+#   ff_dist_kA      = 0  (kA over-decelerates symmetrically — Step 6.5)
+#   ff_head_kV      = 6  (Issue #158 Phase 7 — fixes turn 180, #156)
+#   ff_head_kA      = 0  (kA over-decelerates symmetrically — Step 6.5)
+#   ff_motor_kS     = 700 (3.5%/side breakaway assist)
+#   ff_terminal_breakaway = 2600 (Issue #158 Phase 7 — short-move
+#                         static-friction floor; clears straight 50,
+#                         #155, and the turn-90 trap kV=6 would cause)
+#   battery_*       = 7200/6000 (Phase 6.3 sag correction)
+# With this set, straight 50 / turn 90 / turn 180 (brake) all complete
+# within tolerance: straight 50 -> 49-51 mm, turn 90 -> ~89.5 deg, turn
+# 180 -> ~181 deg, none hang.  See drivebase.md §8.5 for the Phase 7
+# breakaway design and the bench sweep that picked 2600.
+
+# ----------------------------------------------------------------------
+# PID gains — distance axis (state_distance = (sL + sR) / 2 motor mdeg)
+# ----------------------------------------------------------------------
+# kp_pos        : (0, 10000]   .01%-duty per mdeg of position error
+# ki_pos        : [0, 10000]   .01%-duty per (mdeg * s); Phase 6.6 ki
+#                              sweep landed on 5 — FF (kV=9 + kS=700)
+#                              now supplies the breakaway floor, so ki
+#                              is no longer load-bearing for static
+#                              friction and lower values give cleaner
+#                              long-motion settling.  Pre-Phase-6 the
+#                              compiled default was 15 (the integrator
+#                              dragged the motor past breakaway on its
+#                              own).
+# kd_pos        : [0, 10000]   .01%-duty per (mdeg/s); 0 by default
+# kp_speed      : [0, 10000]   .01%-duty per (mdeg/s of velocity error)
+# ki_speed      : [0, 10000]   .01%-duty per (mdeg/s * s)
+# deadband_mdeg : [0, 100000]  I-term freeze window around zero error
+# out_max       : (0, 10000]   duty rail (.01%); out_min mirrors
+
+pid_dist_kp_pos        = 50
+pid_dist_ki_pos        = 5
+pid_dist_kd_pos        = 0
+pid_dist_kp_speed      = 5
+pid_dist_ki_speed      = 0
+pid_dist_deadband_mdeg = 3000
+pid_dist_out_max       = 10000
+
+# ----------------------------------------------------------------------
+# PID gains — heading axis (state_heading = (sR - sL) / 2 motor mdeg)
+# heading out_max is 0.8x distance so L/R compose (L=D-H, R=D+H) leaves
+# combined headroom to avoid saturating both motors at once.
+# ----------------------------------------------------------------------
+
+pid_head_kp_pos        = 50
+pid_head_ki_pos        = 15
+pid_head_kd_pos        = 0
+pid_head_kp_speed      = 5
+pid_head_ki_speed      = 0
+pid_head_deadband_mdeg = 3000
+pid_head_out_max       = 8000
+
+# ----------------------------------------------------------------------
+# Completion gate — distance axis
+# pos_tol_mdeg = -1 keeps the kp_pos-derived tolerance (Issue #140):
+#     pos_tolerance_mdeg = max(1000, 400 * 1000 / kp_pos) = 8000 @ kp=50
+# An explicit positive value (in [1000, 60000]) bypasses derivation.
+# smart_continue_mdeg = -1 uses the built-in 6000 mdeg window.
+# ----------------------------------------------------------------------
+
+comp_dist_pos_tol_mdeg          = -1
+comp_dist_speed_tol_mdegps      = 30000
+comp_dist_smart_continue_mdeg   = -1
+comp_dist_done_window_ms        = 50
+comp_dist_smart_passive_hold_ms = 100
+
+# ----------------------------------------------------------------------
+# Completion gate — heading axis (mirrors distance)
+# ----------------------------------------------------------------------
+
+comp_head_pos_tol_mdeg          = -1
+comp_head_speed_tol_mdegps      = 30000
+comp_head_smart_continue_mdeg   = -1
+comp_head_done_window_ms        = 50
+comp_head_smart_passive_hold_ms = 100
+
+# ----------------------------------------------------------------------
+# Stall detection (global; speed-and-duty co-condition over a window)
+# stall_speed_mdegps : speed below which we may stall (30 deg/s)
+# stall_duty_min     : |duty| above which we may stall (60% = 6000)
+# stall_window_ms    : both true continuously for this long
+# ----------------------------------------------------------------------
+
+stall_speed_mdegps = 30000
+stall_duty_min     = 6000
+stall_window_ms    = 200
+
+# ----------------------------------------------------------------------
+# Feed-forward gains — distance + heading (Issue #127 Phase 6 Step 6.1)
+#
+#   duty_ff = kV * (v_ref_mdegps / 1000)
+#           + kA * (a_ref_mdegps2 / 1000)
+#
+# Units: kV in .01% duty per (deg/s); kA in .01% duty per (deg/s^2).
+# duty_ff is summed inside db_pid_update BEFORE saturation so the anti-
+# windup gate reacts to the full output (PID + FF), not just the PID
+# part.  Range for each: [-1000, +1000] (validated by setter to keep
+# the RT-path math in int32).  Per-motor kS friction lives in its own
+# section below.
+#
+# Distance-axis kV is the Phase 6 production default (`ff_dist_kV=9`).
+# That setting is bench-confirmed through Step 6.5 + Step 6.6: it cuts
+# `straight 300 brake` settling from 4.6 s to 1.8 s and works
+# cleanly with `pid_dist_ki_pos=5` (the new post-Phase-6 ki).  The
+# SysId measurement was kV ≈ 6 (real motor's back-EMF); 6 and 9
+# both work in practice and 9 is the bench-validated value.
+#
+# Heading-axis kV is 6 (Issue #158 Phase 7).  Step 6.5 had shelved
+# `ff_head_kV=6` as unfit, but #158 showed that was a move-length
+# confound (drivebase.md §8.5.7): kV=6 fixes the turn 180 overshoot
+# (#156) and only regressed turn 90 because the short move hit the same
+# static-friction trap as straight 50 (#155).  That trap is handled by
+# the terminal breakaway floor below, so kV=6 is now production.  kA
+# stays 0 on both axes (symmetric `kA * a_ref` over-decelerates — Step
+# 6.5).
+# ----------------------------------------------------------------------
+
+ff_dist_kV = 9
+ff_dist_kA = 0
+ff_head_kV = 6
+ff_head_kA = 0
+# Distance-axis kV=9 cuts `straight 300 brake` settling from 4.6 s to
+# 1.8 s (Phase 6.1).  SysId measured kV ≈ 6 on both axes (the plant is
+# axis-independent, #158); distance uses 9 (bench-validated through
+# Phase 6.5), heading uses the measured 6.
+#
+# Heading-axis kV=6 is paired with ff_terminal_breakaway (below).  On
+# its own, kV=6 fixes turn 180 (brake) — Phase 6.2 baseline overshot
+# +7-8° and never reached done; with kV=6 it lands ~+1° in ~2.0 s — but
+# regresses turn 90, which ends short and traps on static friction just
+# like straight 50.  The terminal breakaway clears that trap, so the two
+# are adopted together.  See drivebase.md §8.5.8 for the bench data.
+#
+# kA = 0 is the production recommendation (Step 6.5 bench finding).
+# The SysId measurement gives kA ≈ 1 (.01% per deg/s²), and the
+# contribution at peak accel (= 18% on distance / 9% on heading) is
+# above the 2% threshold from plan OQ1.  But Step 6.5 bench showed
+# that the symmetric kA term over-decelerates during the trajectory's
+# decel phase, leaving the motor stopped short of target with
+# `done=0` for the rest of the 3 s observation:
+#   straight 300 brake @ kA=1: dist=289-295 mm (target 300), done never
+#   turn  90  brake @ kA=1: angle 84-87° (target 90°), done late/never
+# Once the motor stops short, static friction (≈25%) traps it; PID +
+# ki ramps slowly and may never reach target.  Phase 6.2 baseline
+# (kA=0) reaches target cleanly in 1.5-1.8 s.  Step 6.6 will revisit
+# kA together with ki / kS sweep so the decel/PID balance can be
+# tuned as one set rather than gain-by-gain.
+# ff_dist_kA = 1   # DO NOT enable until Step 6.6 retune
+# ff_head_kA = 1   # DO NOT enable until Step 6.6 retune
+
+# ----------------------------------------------------------------------
+# Per-motor friction FF (Issue #152 Phase 6 Step 6.2)
+#
+# kS is non-linear in the L/R compose (sign(D)±sign(H) differs from
+# sign(D±H)), so it applies per-motor AFTER the compose, not per-axis
+# like kV/kA.  Gain is common across left and right (same SPIKE Medium
+# Motor on both sides).  Applied as `sign(vL_or_R_ref) * kS / 2`
+# (pybricks-style /2 attenuation, see observer.c:250) so a seed of
+# kS=700 yields ~3.5% rail-step per side at breakaway.
+#
+# A sign hysteresis state machine suppresses chatter when v_ref
+# oscillates near 0:
+#   |v_ref| >= enter             -> commit sign (overrides held)
+#   |v_ref| <  exit              -> kS off (held sign cleared to 0)
+#   exit <= |v_ref| < enter      -> hold previous sign
+#
+# Conventionally enter > exit so the hysteresis zone is non-empty; the
+# setter accepts any ordering and the hysteresis function tolerates
+# degenerate orderings deterministically.  Bounds: kS in [0, 1000];
+# enter/exit in [0, 100000] mdeg/s.
+#
+# Sizing kS: this is the per-side rail-step (after /2 attenuation) that
+# helps the motor break static friction; it is NOT the full measured
+# breakaway from `_sysid ramp-ks`.  SysId measures the absolute static-
+# friction duty (~3000 .01% = 30% on the reference drivebase); putting
+# that value here would bias every cruise tick by 15% and cause PID
+# overshoot.  The right size is a small assist that lets PID + kV + ki
+# tip past breakaway without disturbing steady-state operation:
+#
+#   kS=700   (plan seed, Phase 6.2 bench): 3.5% per-side assist.
+#            straight 50 brake hits target exactly with ki=10 + kV=9.
+#            Validated as the production value through Phase 6.5.
+#   kS=2952  (SysId measurement):           DO NOT USE as cfg.  This
+#            is the absolute static-friction breakaway, useful as
+#            calibration reference only.  As a kS, it over-drives
+#            the motor in cruise by 15% per side.
+#
+# Step 6.6 will sweep ki together with kS to fine-tune the trade-off
+# between breakaway help and cruise stability.
+# ----------------------------------------------------------------------
+
+ff_motor_kS              = 700
+ff_v_hyst_enter_mdegps   = 5000
+ff_v_hyst_exit_mdegps    = 1000
+
+# ----------------------------------------------------------------------
+# Terminal static-friction breakaway floor (Issue #158 Phase 7)
+#
+# kS above is the small in-motion Coulomb assist; it is capped at 10%
+# (and /2 attenuated) so it cannot break a dead-stopped wheel free.
+# When a finite move's trajectory has ended but a wheel is trapped a few
+# mm / degrees short of (or past) target, this raises that wheel's duty
+# to at least `ff_terminal_breakaway` (.01% units) toward target —
+# saturating (a floor, not additive), once per move per wheel, and only
+# while the PID is not already commanding more or braking the other way.
+# It fixes `straight 50 brake` stopping short (#155) and lets the heading
+# axis run `ff_head_kV=6` (which fixes `turn 180 brake`, #156) without
+# regressing `turn 90 brake`.
+#
+# Direction comes from the wheel's position error, so the floor is
+# correct on straight / pivot / curve (per-motor, like kS).  Bounds:
+# [0, 3000] = 0..30% duty — the cap exceeds the FF gain limit (10%) on
+# purpose, since the SPIKE Medium Motor's static friction is ~25%.
+#
+# Production default is 2600 (Issue #158 Phase 7 bench sweep, paired
+# with ff_head_kV=6 above).  The sweep ran {0,2000,2400,2600} x straight
+# 50 / turn 90 / turn 180 (brake): 0 left straight 50 trapped (43-45 mm,
+# never done) and turn 90 short/slow; 2000 fixed straight 50 but turn 90
+# was inconsistent (86-89.5°, the floor sat below the breakaway
+# threshold); 2400 and 2600 both reached turn 90 ~89.5° consistently
+# with straight 50 at 49-51 mm and no buzz.  2600 is chosen for margin
+# over motor-friction / battery drift.  Set 0 to disable the mechanism.
+# ----------------------------------------------------------------------
+
+ff_terminal_breakaway    = 2600
+
+# ----------------------------------------------------------------------
+# Battery sag correction (Issue #152 Phase 6 Step 6.3)
+#
+# Compensates for the 8.3V (full) → 6.0V (empty) Li-Ion pack voltage
+# spread by scaling each motor's applied duty:
+#   duty_corrected = duty * battery_nominal_mv / max(vbat, battery_min_mv)
+#
+# At nominal vbat the factor is 1.0 (no-op).  At low vbat the factor
+# grows up to nominal / min, capped by the min_mv floor — default
+# 7200 / 6000 = 1.2× max boost.  vbat is updated by the daemon idle
+# thread every 200 ms (BATIOC_VOLTAGE on /dev/bat0), smoothed by an
+# EMA with τ ≈ 1.6 s; the RT thread reads a single _Atomic int32
+# snapshot with no locks.
+#
+# Bounds: both in [1, 12000] mV.  Convention min_mv < nominal_mv (the
+# setter does not cross-validate, same rationale as the FF hysteresis
+# thresholds — cfg load order would otherwise become load-bearing).
+# ----------------------------------------------------------------------
+
+battery_nominal_mv = 7200
+battery_min_mv     = 6000
+
+# ----------------------------------------------------------------------
+# Phase 3b (#148) boot-time gyro mode (Issue #157: default is 3 = 3D)
+#   0 = key absent  — daemon picks DRIVEBASE_USE_GYRO_NONE (legacy)
+#   1 = NONE        — explicit encoder-only at boot
+#   3 = 3D          — gyro-locked heading at boot (default)
+# A legacy value of 2 (old 1D) is auto-aliased to 3 with a warning.
+# The mode is only `latched` once the first command starts AND Madgwick
+# has converged (calibrated); `drivebase status` reports the live state.
+# Set to 1 if you intentionally want to disable the gyro at boot.
+# ----------------------------------------------------------------------
+
+use_gyro_plus1 = 3
+
+# ----------------------------------------------------------------------
+# `drivebase start` defaults
+# Used ONLY when the matching CLI positional arg is omitted; explicit
+# CLI args (`drivebase start <wheel_mm> <axle_mm> <tick_ms>`) win.
+# ----------------------------------------------------------------------
+
+wheel_d_um = 56000    # SPIKE Medium Motor wheel = 56 mm
+axle_t_um  = 112000   # SPIKE drivebase axle    = 112 mm
+tick_us    = 2000     # RT tick = 2 ms (range 1000..20000)

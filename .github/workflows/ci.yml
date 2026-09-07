@@ -1,0 +1,238 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-policy:
+    name: Source policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out tracked files only
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # Two commits are required so `git show --check` does not treat HEAD
+          # as a synthetic root commit and inspect every inherited baseline file.
+          fetch-depth: 2
+          submodules: false
+          persist-credentials: false
+
+      - name: Validate dependencies and restricted-file policy
+        run: python3 tools/check_source_policy.py
+
+      - name: Prove forbidden paths fail closed
+        run: |
+          python3 tools/test_source_policy.py
+          python3 tests/test_resource_budgets.py -v
+
+      - name: Enforce workflow security policy
+        run: |
+          python3 tools/check_workflow_security.py
+          python3 tools/check_safety_policy.py
+
+      - name: Test local-only TI importer with synthetic data
+        run: |
+          python3 tests/test_import_ti_service_pack.py -v
+          tools/check_ti_bts_loader.sh
+          tools/check_controller_lifecycle.sh
+          tools/check_btsensor_nuttx_snapshot.sh
+
+      - name: Validate pinned Zephyr host source selection
+        run: |
+          python3 tools/check_zephyr_host_manifest.py
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/uuid.c \
+            bluetooth/zephyr_compat/src/hex.c \
+            bluetooth/zephyr_compat/test/test_core.c \
+            -o /tmp/test-zephyr-compat-core
+          /tmp/test-zephyr-compat-core
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            bluetooth/zephyr_compat/src/uuid.c \
+            third_party/zephyr-host/upstream/subsys/bluetooth/host/uuid.c \
+            bluetooth/zephyr_compat/test/test_upstream_uuid.c \
+            -o /tmp/test-zephyr-upstream-uuid
+          /tmp/test-zephyr-upstream-uuid
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            bluetooth/zephyr_compat/src/hex.c \
+            third_party/zephyr-host/upstream/subsys/bluetooth/host/addr.c \
+            bluetooth/zephyr_compat/test/test_upstream_addr.c \
+            -o /tmp/test-zephyr-upstream-addr
+          /tmp/test-zephyr-upstream-addr
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            bluetooth/zephyr_compat/src/entropy.c \
+            bluetooth/zephyr_compat/test/test_entropy.c \
+            -o /tmp/test-zephyr-compat-entropy
+          /tmp/test-zephyr-compat-entropy
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/log.c \
+            bluetooth/zephyr_compat/test/test_log.c \
+            -o /tmp/test-zephyr-compat-log
+          /tmp/test-zephyr-compat-log
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/settings.c \
+            bluetooth/zephyr_compat/test/test_settings.c \
+            -o /tmp/test-zephyr-compat-settings
+          /tmp/test-zephyr-compat-settings
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/h4.c \
+            bluetooth/zephyr_compat/test/test_h4.c \
+            -o /tmp/test-brickwright-h4
+          /tmp/test-brickwright-h4
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/h4.c \
+            bluetooth/zephyr_compat/src/ehcill.c \
+            bluetooth/zephyr_compat/test/test_ehcill.c \
+            -o /tmp/test-brickwright-ehcill
+          /tmp/test-brickwright-ehcill
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -pthread \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/h4.c \
+            bluetooth/zephyr_compat/src/ehcill.c \
+            bluetooth/zephyr_compat/src/h4_transport.c \
+            bluetooth/zephyr_compat/test/test_h4_transport.c \
+            -o /tmp/test-brickwright-h4-transport
+          /tmp/test-brickwright-h4-transport
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -pthread \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/h4.c \
+            bluetooth/zephyr_compat/src/ehcill.c \
+            bluetooth/zephyr_compat/src/h4_transport.c \
+            bluetooth/zephyr_compat/test/test_h4_transport_fault.c \
+            -o /tmp/test-brickwright-h4-transport-fault
+          /tmp/test-brickwright-h4-transport-fault
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/src/h4.c \
+            bluetooth/zephyr_compat/src/virtual_hci.c \
+            bluetooth/zephyr_compat/test/test_virtual_hci.c \
+            -o /tmp/test-brickwright-virtual-hci
+          /tmp/test-brickwright-virtual-hci
+          cc -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter \
+            -include zephyr/autoconf.h -pthread \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            -Ithird_party/zephyr-host/upstream/subsys/bluetooth \
+            third_party/zephyr-host/upstream/lib/net_buf/buf.c \
+            third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
+            third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c \
+            bluetooth/zephyr_compat/src/log.c \
+            bluetooth/zephyr_compat/src/h4.c \
+            bluetooth/zephyr_compat/src/h4_netbuf.c \
+            bluetooth/zephyr_compat/test/test_h4_netbuf.c \
+            -o /tmp/test-brickwright-h4-netbuf
+          /tmp/test-brickwright-h4-netbuf
+          cc -std=gnu11 -Wall -Wextra -Werror \
+            -include zephyr/autoconf.h \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
+            bluetooth/zephyr_compat/test/test_upstream_buf_simple.c \
+            -o /tmp/test-zephyr-upstream-buf-simple
+          /tmp/test-zephyr-upstream-buf-simple
+          cc -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter \
+            -include zephyr/autoconf.h -pthread \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            third_party/zephyr-host/upstream/lib/net_buf/buf.c \
+            third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
+            bluetooth/zephyr_compat/src/log.c \
+            bluetooth/zephyr_compat/test/test_upstream_buf_pool.c \
+            -o /tmp/test-zephyr-upstream-buf-pool
+          /tmp/test-zephyr-upstream-buf-pool
+          cc -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter \
+            -include zephyr/autoconf.h -pthread \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/include \
+            -Ithird_party/zephyr-host/upstream/subsys/bluetooth \
+            third_party/zephyr-host/upstream/lib/net_buf/buf.c \
+            third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
+            third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c \
+            bluetooth/zephyr_compat/src/log.c \
+            bluetooth/zephyr_compat/test/test_upstream_bt_buf.c \
+            -o /tmp/test-zephyr-upstream-bt-buf
+          /tmp/test-zephyr-upstream-bt-buf
+          cc -std=gnu11 -Wall -Wextra -Werror -pthread \
+            -include zephyr/autoconf.h \
+            -Ibluetooth/zephyr_compat/include \
+            bluetooth/zephyr_compat/test/test_sync.c \
+            -o /tmp/test-zephyr-compat-sync
+          /tmp/test-zephyr-compat-sync
+          cc -std=gnu11 -Wall -Wextra -Werror -pthread \
+            -include zephyr/autoconf.h \
+            -Ibluetooth/zephyr_compat/include \
+            -Ithird_party/zephyr-host/upstream/subsys/bluetooth/host \
+            bluetooth/zephyr_compat/src/work.c \
+            third_party/zephyr-host/upstream/subsys/bluetooth/host/long_wq.c \
+            bluetooth/zephyr_compat/test/test_work.c \
+            -o /tmp/test-zephyr-compat-work
+          /tmp/test-zephyr-compat-work
+
+      - name: Validate protocol contract JSON
+        run: |
+          python3 -m json.tool protocol/hub-contract.schema.json >/dev/null
+          python3 -m json.tool protocol/fixtures/spike-cobs-v1.json >/dev/null
+
+      - name: Test protocol codecs
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            protocol/c/spike_codec.c protocol/c/test_spike_codec.c \
+            -Iprotocol/c -o /tmp/test-spike-codec
+          /tmp/test-spike-codec
+          node protocol/js/test-spike-codec.js
+          tools/check_hub_daemon.sh
+          tools/check_btsensor_modern.sh
+          tools/check_btsensor_modern_backend.sh
+          tools/check_btsensor_sound.sh
+          tools/check_btsensor_tx.sh
+          tools/check_btsensor_scheduler.sh
+          tools/check_btsensor_neutral_compile.sh
+          tools/check_btsensor_commands.sh
+          tools/check_btsensor_classic.sh
+          tools/check_btsensor_nuttx_peripheral.sh
+
+      - name: Check patches for whitespace errors
+        run: git show --check --format='' HEAD --
+
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install documentation dependencies
+        run: pip install 'mkdocs>=1.6,<2' 'mkdocs-material>=9.5,<10' 'mkdocs-static-i18n>=1.2,<2'
+
+      - name: Build documentation without publishing it
+        run: mkdocs build --strict

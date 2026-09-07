@@ -1,0 +1,14 @@
+SPDX-License-Identifier: Apache-2.0
+
+Size the BR/EDR signaling pool user data using the same configured closure
+size already used by the other connection transmit pools. This preserves the
+upstream eight-byte allocation on the 32-bit target and provides sixteen bytes
+for the two pointers on the 64-bit Brickwright simulator.
+
+--- a/subsys/bluetooth/host/classic/l2cap_br.c
++++ b/subsys/bluetooth/host/classic/l2cap_br.c
+@@ -190,2 +190,3 @@ static sys_slist_t br_servers;
+ NET_BUF_POOL_FIXED_DEFINE(br_sig_pool, CONFIG_BT_MAX_CONN,
+-			  BT_L2CAP_BUF_SIZE(L2CAP_BR_MIN_MTU), 8, NULL);
++			  BT_L2CAP_BUF_SIZE(L2CAP_BR_MIN_MTU),
++			  CONFIG_BT_CONN_TX_USER_DATA_SIZE, NULL);

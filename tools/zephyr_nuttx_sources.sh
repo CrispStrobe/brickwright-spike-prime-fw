@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+
+# This file is sourced by the archive builder and its compile-only gate.
+# Keep this as the single manifest for the NuttX Zephyr-host boundary.
+zephyr_nuttx_sources=(
+  third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c
+  third_party/zephyr-host/upstream/lib/net_buf/buf.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/common/addr.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/common/bt_str.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/common/rpa.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/addr.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/adv.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/att.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/conn.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/data.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/gatt.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/hci_common.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/id.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/keys.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/l2cap.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/scan.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/smp.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/uuid.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/br.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/conn_br.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/keys_br.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/l2cap_br.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/rfcomm.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/sdp.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/sco.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/ssp.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/long_wq.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/settings.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/hci_core.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/crypto_psa.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/host/ecc.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/crypto/bt_crypto.c
+  third_party/zephyr-host/upstream/subsys/bluetooth/crypto/bt_crypto_psa.c
+  bluetooth/zephyr_compat/src/work.c
+  bluetooth/zephyr_compat/src/entropy.c
+  bluetooth/zephyr_compat/src/mbedtls_external_rng.c
+  bluetooth/zephyr_compat/src/hex.c
+  bluetooth/zephyr_compat/src/iterable_sentinels.c
+  bluetooth/zephyr_compat/src/log.c
+  bluetooth/zephyr_compat/src/settings.c
+  bluetooth/zephyr_compat/src/h4.c
+  bluetooth/zephyr_compat/src/controller_lifecycle.c
+  bluetooth/zephyr_compat/src/ehcill.c
+  bluetooth/zephyr_compat/src/h4_transport.c
+  bluetooth/zephyr_compat/src/h4_netbuf.c
+  bluetooth/zephyr_compat/src/virtual_hci.c
+  bluetooth/zephyr_compat/src/hci_driver.c
+  bluetooth/ti_service_pack/ti_bts_loader.c
+  bluetooth/zephyr_compat/src/fd02_service.c
+  bluetooth/zephyr_compat/src/classic_spp.c
+  bluetooth/zephyr_compat/src/hub_transport.c
+)

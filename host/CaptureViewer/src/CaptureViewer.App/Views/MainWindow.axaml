@@ -1,0 +1,330 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CaptureViewer.App.ViewModels"
+        xmlns:vmconv="using:CaptureViewer.App.ViewModels.Converters"
+        xmlns:scp="using:ScottPlot.Avalonia"
+        x:Class="CaptureViewer.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="CaptureViewer"
+        Width="1400" Height="900"
+        Background="#1A1A1A">
+  <Window.Styles>
+    <Style Selector="TextBlock.label">
+      <Setter Property="Foreground" Value="#A0A0A0" />
+      <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style Selector="TextBlock.value">
+      <Setter Property="FontFamily" Value="Inter, monospace" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="#E0E0E0" />
+    </Style>
+    <Style Selector="TextBlock.header">
+      <Setter Property="Foreground" Value="#80B0FF" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,8,0,4" />
+    </Style>
+    <Style Selector="Border.swatch">
+      <Setter Property="Width" Value="10" />
+      <Setter Property="Height" Value="10" />
+      <Setter Property="Margin" Value="0,0,6,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="CornerRadius" Value="2" />
+    </Style>
+    <Style Selector="Border.statusDot">
+      <Setter Property="Width" Value="9" />
+      <Setter Property="Height" Value="9" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="*,Auto">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="320" MinWidth="200" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" MinWidth="300" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Left sidebar — three rows: scrollable controls (*), drag
+         handle (Auto), log pane.  The user can drag the splitter to
+         shrink the log when the loaded-captures list gets long, or
+         grow it when chasing a flurry of receive events. -->
+    <Grid Grid.Column="0" Grid.Row="0" Background="#222222">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" MinHeight="120" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="100" MinHeight="40" />
+      </Grid.RowDefinitions>
+
+      <ScrollViewer Grid.Row="0" Padding="12,12,12,4"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="6">
+
+          <TextBlock Classes="header" Text="Files" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Open .cap..."
+                    Command="{Binding OpenFileCommand}" />
+            <Button Content="Clear all"
+                    Command="{Binding ClearAllCommand}" />
+          </StackPanel>
+          <TextBlock Classes="label"
+                     Text="(or drag &amp; drop .cap files onto the plot area)" />
+
+          <Grid ColumnDefinitions="Auto,*" Margin="0,8,0,4">
+            <Border Grid.Column="0" Classes="statusDot"
+                    Background="{Binding BtIndicatorBrush}" />
+            <TextBlock Grid.Column="1"
+                       Classes="header" Margin="0"
+                       Text="Bluetooth (Linux only)" />
+          </Grid>
+          <StackPanel Spacing="4">
+            <Grid ColumnDefinitions="*,Auto">
+              <ComboBox Grid.Column="0"
+                        ItemsSource="{Binding Ports}"
+                        SelectedItem="{Binding SelectedPort, Mode=TwoWay}"
+                        PlaceholderText="(no paired device)"
+                        HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="value" Text="{Binding Name}" />
+                      <TextBlock Classes="label" Text="{Binding BdAddr}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Grid.Column="1" Content="↻"
+                      Margin="4,0,0,0"
+                      ToolTip.Tip="Re-scan paired BT devices via bluetoothctl"
+                      Command="{Binding RefreshPortsCommand}" />
+            </Grid>
+            <TextBox Watermark="BD addr (XX:XX:XX:XX:XX:XX)"
+                     Text="{Binding BdAddr, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Content="Connect"
+                      Command="{Binding ConnectCommand}" />
+              <Button Content="Disconnect"
+                      Command="{Binding DisconnectCommand}" />
+            </StackPanel>
+            <Button Content="Send `MODE CAPTURE`"
+                    Command="{Binding TriggerCaptureModeCommand}" />
+          </StackPanel>
+
+          <TextBlock Classes="label" Text="Save dir" />
+          <Grid ColumnDefinitions="*,Auto" >
+            <TextBox Grid.Column="0"
+                     Text="{Binding OutputDirectory, Mode=TwoWay}" />
+            <Button Grid.Column="1" Content="..."
+                    Margin="4,0,0,0"
+                    Command="{Binding BrowseSaveDirCommand}" />
+          </Grid>
+
+          <TextBlock Classes="header" Text="Loaded captures" />
+          <ItemsControl ItemsSource="{Binding Loaded}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LoadedCaptureViewModel">
+                <Border Background="#2A2A2A"
+                        Padding="6"
+                        Margin="0,0,4,4"
+                        CornerRadius="3">
+                  <StackPanel Spacing="2">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                      <Button Grid.Column="0"
+                              Padding="2,0"
+                              FontSize="9"
+                              MinWidth="16"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              Command="{Binding ToggleExpandedCommand}"
+                              Content="{Binding IsExpanded, Converter={x:Static vmconv:BoolToTriangle.Instance}}"
+                              ToolTip.Tip="Expand / collapse this row" />
+                      <Border Grid.Column="1" Classes="swatch"
+                              Background="{Binding ColorBrush}" />
+                      <CheckBox Grid.Column="2"
+                                IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3"
+                                 Classes="value"
+                                 Text="{Binding Label}"
+                                 Margin="6,0,0,0"
+                                 VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" />
+                      <Button Grid.Column="4" Content="X"
+                              Padding="6,1"
+                              FontSize="10"
+                              ToolTip.Tip="Remove this capture from the list"
+                              Command="{Binding RemoveCommand}" />
+                    </Grid>
+                    <StackPanel Spacing="2"
+                                IsVisible="{Binding IsExpanded}">
+                      <TextBlock Classes="label"
+                                 Text="{Binding SchemaName, StringFormat='schema: {0}'}" />
+                      <TextBlock Classes="label"
+                                 Text="{Binding RecordCount, StringFormat='records: {0}'}" />
+                      <ItemsControl ItemsSource="{Binding Fields}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:FieldVisibilityViewModel">
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  Margin="0,1,0,1">
+                              <CheckBox Grid.Column="0"
+                                        IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                        VerticalAlignment="Center" />
+                              <TextBlock Grid.Column="1" Classes="value"
+                                         Margin="4,0,4,0"
+                                         VerticalAlignment="Center"
+                                         FontSize="11"
+                                         Text="{Binding Name}" />
+                              <ComboBox Grid.Column="2"
+                                        MinWidth="55"
+                                        FontSize="10"
+                                        ItemsSource="{Binding AxisChoices}"
+                                        SelectedItem="{Binding Axis, Mode=TwoWay}"
+                                        ToolTip.Tip="Pick the Y axis (Y1..Y4) this field plots against">
+                                <ComboBox.ItemTemplate>
+                                  <DataTemplate>
+                                    <TextBlock Text="{Binding StringFormat='Y\{0\}'}" />
+                                  </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                              </ComboBox>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <Button Content="CSV..."
+                              Padding="4,1"
+                              HorizontalAlignment="Left"
+                              Command="{Binding ExportCsvCommand}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- Drag handle between the controls scroller above and the
+           log pane below.  4px tall horizontal grip. -->
+      <GridSplitter Grid.Row="1"
+                    Height="4"
+                    Background="#303030"
+                    ResizeDirection="Rows"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+
+      <!-- Log pane: defaults to 100px, user can drag the splitter
+           above to resize. -->
+      <Border Grid.Row="2" Background="#181818"
+              Padding="8,4" BorderBrush="#303030" BorderThickness="0,1,0,0">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0" Classes="header"
+                     Margin="0,0,0,4" Text="Log" />
+          <ScrollViewer Grid.Row="1"
+                        x:Name="LogScroller"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding LogLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Classes="value"
+                             FontSize="10"
+                             Text="{Binding}"
+                             TextWrapping="Wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Drag handle between sidebar and plot. -->
+    <GridSplitter Grid.Column="1" Grid.Row="0"
+                  Width="4"
+                  Background="#303030"
+                  ResizeDirection="Columns"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch" />
+
+    <!-- Plot area (also accepts .cap drag-and-drop). -->
+    <Grid Grid.Column="2" Grid.Row="0"
+          x:Name="PlotHost"
+          Background="#1A1A1A" Margin="6"
+          RowDefinitions="Auto,*"
+          DragDrop.AllowDrop="True">
+      <Grid Grid.Row="0" Margin="0,0,0,6"
+            ColumnDefinitions="Auto,*,Auto"
+            VerticalAlignment="Center">
+        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                    Spacing="6" VerticalAlignment="Center">
+          <TextBlock Classes="label" Text="Time axis:" VerticalAlignment="Center" />
+          <ComboBox MinWidth="120"
+                    ItemsSource="{Binding TimeAxisModes}"
+                    SelectedItem="{Binding TimeAxis, Mode=TwoWay}" />
+        </StackPanel>
+
+        <WrapPanel Grid.Column="1" Orientation="Horizontal"
+                   Margin="12,0,0,0"
+                   VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="3"
+                      Margin="0,0,12,0" VerticalAlignment="Center"
+                      ToolTip.Tip="Y axis 1 — empty = auto-scale">
+            <TextBlock Classes="label" Text="Y1:" VerticalAlignment="Center" />
+            <TextBox Width="46" Text="{Binding Axis1Min, Mode=TwoWay}"
+                     Watermark="min" />
+            <TextBlock Classes="label" Text=".." VerticalAlignment="Center" />
+            <TextBox Width="56" Text="{Binding Axis1Max, Mode=TwoWay}"
+                     Watermark="max" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="3"
+                      Margin="0,0,12,0" VerticalAlignment="Center"
+                      ToolTip.Tip="Y axis 2 — empty = auto-scale">
+            <TextBlock Classes="label" Text="Y2:" VerticalAlignment="Center" />
+            <TextBox Width="46" Text="{Binding Axis2Min, Mode=TwoWay}"
+                     Watermark="min" />
+            <TextBlock Classes="label" Text=".." VerticalAlignment="Center" />
+            <TextBox Width="56" Text="{Binding Axis2Max, Mode=TwoWay}"
+                     Watermark="max" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="3"
+                      Margin="0,0,12,0" VerticalAlignment="Center"
+                      ToolTip.Tip="Y axis 3 — empty = auto-scale">
+            <TextBlock Classes="label" Text="Y3:" VerticalAlignment="Center" />
+            <TextBox Width="46" Text="{Binding Axis3Min, Mode=TwoWay}"
+                     Watermark="min" />
+            <TextBlock Classes="label" Text=".." VerticalAlignment="Center" />
+            <TextBox Width="56" Text="{Binding Axis3Max, Mode=TwoWay}"
+                     Watermark="max" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="3"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="Y axis 4 — empty = auto-scale">
+            <TextBlock Classes="label" Text="Y4:" VerticalAlignment="Center" />
+            <TextBox Width="46" Text="{Binding Axis4Min, Mode=TwoWay}"
+                     Watermark="min" />
+            <TextBlock Classes="label" Text=".." VerticalAlignment="Center" />
+            <TextBox Width="56" Text="{Binding Axis4Max, Mode=TwoWay}"
+                     Watermark="max" />
+          </StackPanel>
+        </WrapPanel>
+
+        <Button Grid.Column="2"
+                Content="Auto-fit"
+                ToolTip.Tip="Clear all Y-range overrides and rescan visible data"
+                Command="{Binding AutoFitCommand}"
+                VerticalAlignment="Center" />
+      </Grid>
+      <scp:AvaPlot Grid.Row="1" x:Name="AvaPlot1" />
+    </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1"
+            Background="#101010" Padding="8,4">
+      <TextBlock Classes="value"
+                 Text="{Binding StatusText}" />
+    </Border>
+  </Grid>
+</Window>
