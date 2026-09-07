@@ -23,7 +23,7 @@ extern "C"
 /* L/R identifier for the two-motor drivebase.  L is bound to
  * /dev/uorb/sensor_motor_l (odd port = B/D/F), R to sensor_motor_r
  * (even port = A/C/E).  No other configuration is supported in this
- * Issue (see plan §"対応構成").
+ * Issue (see the "supported configuration" section of the plan).
  */
 
 enum db_side_e

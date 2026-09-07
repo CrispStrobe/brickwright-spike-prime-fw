@@ -1,139 +1,43 @@
 ---
 name: codex-review
-description: Codex による設計・実装レビュー。NuttX ドライバ採用、ペリフェラル設計、タイマー/DMA 割当などハードウェア制約を伴う変更に使う。plan モードの計画レビューにも対応。
-argument-hint: <plan | PR number | file path | design description>
+description: Review plans and changes for design quality, STM32F413 feasibility, and shared hardware-resource conflicts.
 ---
 
-# Codex 設計・実装レビュー
+# Codex design and implementation review
 
-## 対象の判定
+## Select the target
 
-`$ARGUMENTS` の内容に応じてレビュー対象を決定する:
+- `plan`: summarize the active plan and extract every peripheral, driver, and
+  shared resource before review.
+- Issue or pull request: collect its description, discussion, and diff.
+- File path: inspect the file and related implementation.
+- Other text: treat it as the proposed design.
 
-- **`plan`**: 現在の会話コンテキストにある plan (実装計画) をレビュー対象とする。plan の内容を要約し、使用予定のペリフェラル・NuttX ドライバ・リソースを抽出してから Codex に送る。**実装着手前のゲートとして機能する。**
-- **PR 番号** (例: `#32`, `32`): `gh pr view` で diff と説明を取得してレビュー対象とする
-- **ファイルパス**: 指定ファイルの内容をレビュー対象とする
-- **その他テキスト**: 設計説明としてそのままレビュー対象とする
+## Required review dimensions
 
-## レビュー実行手順
+Review these dimensions independently; approval requires evidence for all that
+apply:
 
-1. レビュー対象の情報を収集する
-   - `plan` の場合: 会話内の plan から実装方針・使用ペリフェラル・依存する NuttX ドライバを抽出
-   - PR の場合: diff、ソースコード、関連ドキュメント
-   - ファイルの場合: ファイル内容と関連コンテキスト
-2. `docs/{ja,en}/hardware/dma-irq.md` のリソース台帳を読み込む
-3. pybricks に同等機能がある場合、pybricks の実装方式を確認する
-4. 以下の「3面レビュー観点」に基づいてレビュープロンプトを構成する
-5. `mcp__codex__codex` ツールで Codex にレビューを依頼する
-6. Codex の結果を整理してユーザーに報告する
-7. **plan レビューの場合**: 3面すべてで問題なしなら「実装着手 OK」とし、`touch ~/.claude/.plan-codex-reviewed` で marker を更新する。問題ありなら具体的な修正提案を示し、**marker は更新しない**（BLOCKING/CONCERN を解消し再 review して LGTM に至ってから touch する）。
-   - この marker は `ExitPlanMode` の PreToolUse gate（`.claude/settings.json`）が確認する。marker が無い/古い（2h 超）と ExitPlanMode は block され、plan を確定できない。つまり **plan review を通さずに ExitPlanMode することは構造的に防がれる**。
-   - trivial plan で codex-review を skip すると判断した場合も、user 承認を得てから `touch ~/.claude/.plan-codex-reviewed` すれば gate を通過できる（CLAUDE.md「skip すべきと判断する場合もユーザに必ず確認」と整合）。
+1. **Design:** layering, API shape, NuttX conventions, concurrency, error
+   handling, edge cases, and compatibility with intended Pybricks behavior.
+2. **MCU feasibility:** verify the actual STM32F413 peripheral and register
+   features in RM0430. A Kconfig option or successful compilation is not proof
+   that the selected peripheral supports the feature.
+3. **Resource conflicts:** check timers, DMA streams and channels, IRQ
+   priorities, GPIO alternate functions, clocks, and resources reserved for
+   future Pybricks-compatible functionality.
 
-## 3面レビュー観点
+Use `docs/en/hardware/dma-irq.md` and `docs/en/hardware/pin-mapping.md` as the
+resource ledgers. Compare the Pybricks choice for equivalent functionality and
+understand why it was chosen before proposing a different NuttX mechanism.
 
-PR #32 サウンドドライバ事故の教訓から、以下の3面を**それぞれ独立したチェック**として実施する。1つの観点で LGTM でも、他の観点が未確認なら全体 LGTM にしない。
+Require feasibility evidence from a focused simulation or hardware test and
+the reference manual. Respect `SAFETY.md`; this public derivative currently
+permits simulation, not physical-hardware flashing.
 
-### 観点1: 設計レビュー
+## Result
 
-- アーキテクチャの妥当性、レイヤ分離、API 設計
-- NuttX のコーディング規約・ドライバパターンとの整合
-- エラーハンドリング、排他制御、エッジケース
-- pybricks との互換性・将来の移植性
-
-### 観点2: MCU 実機能レビュー (RM0430 照合)
-
-**「NuttX API が存在する」≠「この MCU で動く」**。NuttX の Kconfig はチップファミリ単位の粗い分類で、個別チップの差分を反映していない。
-
-以下を確認する:
-
-- 使用する NuttX ドライバが内部で依存しているレジスタビット・HW 機能は何か
-- その機能は STM32F413 の候補ペリフェラルで本当に実装されているか (RM0430 の節番号まで確認)
-- 候補ペリフェラルは basic/general/advanced timer のどれか、必要な能力 (OPM, TRGO, PWM出力, DMA request, 32-bit counter, capture/compare CH数) が揃っているか
-- コンパイルが通るだけでなく、実行時に期待通り動く根拠があるか
-
-過去の事例:
-- BKPSRAM: F413 は `CONFIG_STM32_BKPSRAM` を有効化できるが実際には BKPSRAM を持たない → HardFault
-- oneshot timer: `stm32_oneshot` は `CR1.OPM` に依存するが F413 の TIM10/11/13/14 は OPM 非対応 → コンパイル通るが発火しない
-
-### 観点3: HW リソース競合レビュー
-
-**「未実装」≠「空き」**。pybricks 全機能移植が前提のため、将来予約されたリソースを転用してはならない。
-
-以下の **全カテゴリ** について、該当するリソースを使う場合は台帳と照合する:
-
-#### タイマー (`docs/{ja,en}/hardware/dma-irq.md` タイマー割当表)
-
-- 使用するタイマーは現在使用中 or pybricks 予約と競合しないか
-- タイマー種別 (basic/general/advanced) と必要な能力が一致するか
-
-#### DMA ストリーム (`docs/{ja,en}/hardware/dma-irq.md` DMA 割当表)
-
-- 使用する DMA controller/stream/channel の組み合わせは RM0430 Table 27/28 に存在するか
-- 同一ストリームを別ペリフェラルが既に使用 or 予約していないか
-- DMA 優先度 (PL フィールド) がボード全体の優先度設計と整合するか
-
-#### IRQ 優先度 (`docs/{ja,en}/hardware/dma-irq.md` NVIC 優先度表)
-
-- NVIC 優先度が NuttX BASEPRI (0x80) 以下に収まっているか (BASEPRI より高い IRQ は NuttX API を安全に呼べない)
-- pybricks の相対優先順序を崩していないか
-
-#### GPIO ピン (`docs/{ja,en}/hardware/pin-mapping.md`)
-
-- 使用するピンが他の機能と競合しないか (同一ピンの AF 多重割当)
-- ピンの AF 番号が RM0430 の alternate function mapping と一致するか
-- pybricks が使用するピンを転用していないか
-
-#### 共通チェック
-
-- defconfig に有効化されているだけでなく、ボード全体の資源計画と矛盾していないか
-- pybricks 互換のために予約済みのリソースを転用していないか
-
-## 追加チェック項目
-
-### pybricks 基準案の確認
-
-pybricks に同等機能がある場合:
-- pybricks はどのペリフェラル・方式を使っているか
-- **なぜ pybricks がその方式を選んだのか**を先に確認する
-- NuttX 標準ドライバ案は「pybricks より明確に有利な理由」がある場合のみ採用する
-
-### 成立性の証拠
-
-HW 依存の設計には、LGTM 前に成立性の証拠を要求する:
-- 最小実機テスト (候補ペリフェラルで実際に動くか)
-- RM のレジスタ記述に基づく根拠
-- 「コンパイルが通った」は証拠にならない
-
-## Codex へのプロンプト構成
-
-Codex に送るプロンプトには以下を含める:
-
-1. レビュー対象のコード/設計の説明
-2. 上記3面レビュー観点のうち該当するものを明示的に指示
-3. プロジェクトのコンテキスト (MCU: STM32F413, RTOS: NuttX 12.13.0, pybricks 全機能移植が前提)
-4. 関連するリソース台帳の現状
-5. 「LGTM を出す場合は3面すべてについて根拠を示すこと」という指示
-
-## `mcp__codex__codex` 呼び出しパラメータ
-
-レビュー目的の Codex 呼び出しは以下を既定にする:
-
-```
-sandbox: "danger-full-access"
-approval-policy: "never"
-cwd: "/home/ouwa/work/spike-nx"   (絶対パス推奨)
-```
-
-### 理由
-
-- **`sandbox: "read-only"` および `"workspace-write"` は bwrap loopback で必ず失敗する**:
-  `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted` で Codex のローカル shell 起動が止まる。結果として Codex がファイルを読めず「推測レビュー」になる (Issue #139 で 5 ラウンド中 4 ラウンドこれで困った)
-- **`danger-full-access` は bwrap を経由しない**ので上記エラーが発生しない。Codex は `Read` / `git diff` / `grep` でローカルファイルを参照できる
-- レビュー目的なら `danger-full-access` でも実害なし — Codex は破壊操作を提案する設計ではない。`approval-policy: never` で即実行モードでもファイル read + grep だけで完結する
-
-### Fallback: inline 渡し
-
-`danger-full-access` を避けたい場合 (例: 機密ファイルが workspace にある等)、plan + diff を **prompt に inline で貼り付ける** ことも可能。spike-nx の Issue #139 規模 (plan 38KB + diff 67KB) で約 105KB の prompt になり Codex の context に収まる。ただし読み取りが間接的になるので精度はやや落ちる。
-
-詳細経緯: [[reference_codex_sandbox]] (memory) を参照。
+List blocking findings, concerns, and evidence. For a plan review, update
+`~/.claude/.plan-codex-reviewed` only after all three dimensions are acceptable.
+Do not update the marker when a blocking item or unresolved feasibility concern
+remains. A trivial-plan skip requires explicit user approval.

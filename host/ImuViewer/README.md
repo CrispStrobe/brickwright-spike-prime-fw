@@ -1,40 +1,40 @@
 # ImuViewer
 
-SPIKE Prime Hub の `btsensor` (Issue #56) が SPP/RFCOMM で配信する LSM6DSL の IMU
-ストリームを PC 側で受信し、Madgwick filter で姿勢推定して 3D で可視化するデスクトップ
-アプリ (Issue #60)。
+ImuViewer is the Issue #60 desktop proof of concept. It receives the LSM6DSL
+IMU stream published by the SPIKE Prime Hub `btsensor` service over
+SPP/RFCOMM, estimates orientation with a Madgwick filter, and renders it in 3D.
 
-- フレームワーク: .NET 10 / Avalonia 11.x / Silk.NET
-- 対象 OS (PoC): Linux (BlueZ, BTPROTO_RFCOMM)
-- macOS / Windows: 別 Issue で後追い (現状は `PlatformNotSupportedException`)
+- Frameworks: .NET 10, Avalonia 11.x, and Silk.NET
+- Supported proof-of-concept host: Linux with BlueZ and `BTPROTO_RFCOMM`
+- macOS and Windows currently throw `PlatformNotSupportedException`
 
-## プロジェクト構成
+## Project structure
 
-| プロジェクト | 役割 |
+| Project | Responsibility |
 | --- | --- |
-| `ImuViewer.Core` | フレームパース、Madgwick、座標変換、Bluetooth トランスポート抽象 |
-| `ImuViewer.Rendering` | Silk.NET OpenGL で Cube + ワールド軸 + グリッドを描画 |
-| `ImuViewer.App` | Avalonia UI (RViz 風レイアウト) |
-| `ImuViewer.Core.Tests` | xUnit ベースの単体テスト |
+| `ImuViewer.Core` | Frame parsing, Madgwick filter, coordinate conversion, and Bluetooth transport abstraction |
+| `ImuViewer.Rendering` | Silk.NET OpenGL cube, world axes, and grid rendering |
+| `ImuViewer.App` | Avalonia UI with an RViz-inspired layout |
+| `ImuViewer.Core.Tests` | xUnit unit tests |
 
-## ビルドと実行 (Linux)
+## Build and run on Linux
 
 ```bash
 cd host/ImuViewer
 dotnet restore ImuViewer.slnx
-dotnet build   ImuViewer.slnx -c Debug
-dotnet test    tests/ImuViewer.Core.Tests/ImuViewer.Core.Tests.csproj
+dotnet build ImuViewer.slnx -c Debug
+dotnet test tests/ImuViewer.Core.Tests/ImuViewer.Core.Tests.csproj
 dotnet run --project src/ImuViewer.App/ImuViewer.App.csproj
 ```
 
-`AF_BLUETOOTH` socket を直接開くため、Linux では実行ファイルに `cap_net_raw` が
-必要 (または `sudo`)。
+Opening an `AF_BLUETOOTH` socket requires `cap_net_raw` on Linux, or the
+application must run with `sudo`:
 
 ```bash
 sudo setcap cap_net_raw,cap_net_admin+ep "$(realpath "$(which dotnet)")"
 ```
 
-## 関連ドキュメント
+## Related documentation
 
-- フレーム/コマンド仕様: `docs/{en,ja}/development/pc-receive-spp.md`
-- Hub 側コマンドハンドラ: `apps/btsensor/btsensor_cmd.c`
+- Frame and command protocol: `docs/en/development/pc-receive-spp.md`
+- Hub command handler: `apps/btsensor/btsensor_cmd.c`

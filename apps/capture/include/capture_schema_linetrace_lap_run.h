@@ -10,7 +10,7 @@
  * fitter.
  *
  * Wire layout: 19 bytes / record (packed; see the table in
- * docs/{ja,en}/development/capture-schemas.md).
+ * docs/en/development/capture-schemas.md).
  *
  * The `edge` byte tags which edge of the line the lap was driven on:
  *   0 = UNKNOWN/UNSET, 1 = LEFT, 2 = RIGHT.  Since Issue #180 the PID

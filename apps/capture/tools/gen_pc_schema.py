@@ -24,7 +24,7 @@ Outputs (CLI flags):
     --out-registry CS  — emit a registry `KnownSchemas.cs` indexing
                           all generated schemas by `Magic`.
     --out-doc PATH     — emit a Markdown table for
-                          docs/{ja,en}/development/capture-schemas.md
+                          docs/en/development/capture-schemas.md
                           (one section per schema).
 
 The deliberate non-goal is full preprocessor fidelity.  v1 ships with

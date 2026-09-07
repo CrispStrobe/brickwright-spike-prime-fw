@@ -28,7 +28,7 @@
  *   collide with the BT traffic.  Users should not open /dev/ttyS2 once
  *   Bluetooth is up.
  *
- * Hardware wiring (see docs/{ja,en}/hardware/pin-mapping.md):
+ * Hardware wiring (see docs/en/hardware/pin-mapping.md):
  *   TX     = PD5 AF7
  *   RX     = PD6 AF7
  *   CTS    = PD3 AF7 (HW flow control required)
@@ -259,7 +259,7 @@ static void btuart_tx_dma_callback(DMA_HANDLE handle, uint8_t status,
 /* Snapshot the RX producer index from the DMA residual counter.  NDTR is
  * the number of *remaining* transfers, so the producer position is
  * (RXRING_SIZE - residual).  Callers must treat this as an upper bound on
- * how much has been received so far — see docs/{ja,en}/drivers/bluetooth.md
+ * how much has been received so far — see docs/en/drivers/bluetooth.md
  * for the single-threaded-consumer rationale.
  */
 

@@ -26,7 +26,7 @@
  * unconditional yields at pybricks lines 199 and 278; they MUST NOT be
  * optimised away or the timing diverges from the reference.
  *
- * See `docs/{ja,en}/drivers/port-detection.md` for the full design.
+ * See `docs/en/drivers/port-detection.md` for the full design.
  ****************************************************************************/
 
 #include <nuttx/config.h>
@@ -232,7 +232,7 @@ static const uint8_t g_type_lookup[3][3] =
 };
 
 /* Per-port pin table — one entry per A..F.  See
- * `docs/ja/hardware/pin-mapping.md` for the canonical mapping.
+ * `docs/en/hardware/pin-mapping.md` for the canonical mapping.
  *
  * Pin caveats encoded here:
  *   - Port D gpio1=PC15, gpio2=PC14: backup-domain I/O, GPIO_SPEED_2MHz only.

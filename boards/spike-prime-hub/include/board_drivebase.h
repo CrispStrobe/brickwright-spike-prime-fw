@@ -100,7 +100,7 @@ extern "C"
  ****************************************************************************/
 
 /* on_completion (pybricks `pbio_control_on_completion_t` parity).  See
- * docs/{ja,en}/drivers/drivebase.md §completion-policies for the SMART
+ * docs/en/drivers/drivebase.md §completion-policies for the SMART
  * variants — they keep torque for `smart_passive_hold_time` after
  * `is_done` and let the next relative command continue from the prior
  * endpoint when the current position is within `position_tolerance × 2`

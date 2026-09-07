@@ -9,7 +9,7 @@
  * UARTs and the LUMP engine has full control over baud changes,
  * RX byte timing, and IRQ priority.
  *
- * See `docs/{ja,en}/drivers/lump-protocol.md` for design.
+ * See `docs/en/drivers/lump-protocol.md` for design.
  ****************************************************************************/
 
 #ifndef __BOARDS_SPIKE_PRIME_HUB_SRC_STM32_LEGOPORT_UART_HW_H

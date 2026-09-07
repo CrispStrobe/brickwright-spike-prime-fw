@@ -39,7 +39,7 @@ Reference implementation: `pybricks/lib/pbio/drv/legodev/legodev_pup_uart.c` (12
 
 ### 2.4 NVIC priority — slot 0x90, six UARTs co-equal
 
-`docs/{ja,en}/hardware/dma-irq.md:151` reserves 0x90 for the LUMP UARTs.  `stm32_bringup.c` sets all six UART IRQs (UART4/5/7/8/9/10) to 0x90 inside the `CONFIG_ARCH_IRQPRIO` block.
+`docs/en/hardware/dma-irq.md:151` reserves 0x90 for the LUMP UARTs.  `stm32_bringup.c` sets all six UART IRQs (UART4/5/7/8/9/10) to 0x90 inside the `CONFIG_ARCH_IRQPRIO` block.
 
 - pybricks puts these IRQs at preempt 0 (highest); NuttX BASEPRI constraints compress that to 0x90, but the relative ordering (LUMP > BT > everything else) is preserved
 - Because all six are co-equal, the ISR is kept short: read SR, drain DR into the per-port ring, clear ORE; no per-byte `nxsem_post` (a `post_pending` flag bounds the wake rate)
@@ -229,5 +229,5 @@ port lump-hw dump             - RCC/USART/NVIC dump (diag build only)
 ## 11. References
 
 - Design overview: [port-detection.md](port-detection.md) §4 (LUMP protocol + DCM handoff)
-- Resource ledger: `docs/{ja,en}/hardware/dma-irq.md`
+- Resource ledger: `docs/en/hardware/dma-irq.md`
 - pybricks origins: `pybricks/lib/pbio/drv/legodev/legodev_pup_uart.c`, `pybricks/lib/lego/lego_uart.h`

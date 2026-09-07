@@ -26,7 +26,7 @@ public sealed partial class SensorPanelViewModel : ObservableObject
     {
         ClassId = classId;
         Title = ScaleTables.ClassName(classId);
-        ConnectionStatus = "未接続";
+        ConnectionStatus = "Disconnected";
     }
 
     [ObservableProperty]
@@ -69,7 +69,7 @@ public sealed partial class SensorPanelViewModel : ObservableObject
             AgeDeci10ms = state.Age10ms;
             ConnectionStatus = state.IsBound
                 ? $"Port {PortLabel} · {ModeLabel} · {state.Age10ms * 10} ms ago"
-                : "未接続";
+                : "Disconnected";
         });
     }
 
