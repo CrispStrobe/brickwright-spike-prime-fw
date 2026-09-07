@@ -168,6 +168,54 @@ class ClosureTest(unittest.TestCase):
         files = json.loads(self.manifest.read_text())["files"]
         self.assertEqual(["main.c"], [item["path"] for item in files])
 
+    def test_rename_destination_inherits_the_source_proof(self):
+        # CMake writes `X.tmpNNNN` with O_CREAT and renames it onto `X`. The
+        # destination is a build product although it was never opened with a
+        # creating flag; the protected build produced 84 such files, and the
+        # audit reported every one as a path needing classification.
+        product = self.root / "generated.cmake"
+        temporary = self.root / "generated.cmake.tmp9f2"
+        self.trace.write_text(
+            f'11 openat(AT_FDCWD, "{temporary}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4\n'
+            f'11 rename("{temporary}", "{product}") = 0\n'
+            f'11 openat(AT_FDCWD, "{product}", O_RDONLY) = 4\n'
+            f'11 openat(AT_FDCWD, "{self.root}/main.c", O_RDONLY) = 4\n'
+        )
+        self.dep.write_text(f"x: {self.root}/main.c\n")
+        self.generate()
+        files = json.loads(self.manifest.read_text())["files"]
+        self.assertEqual(["main.c"], [item["path"] for item in files])
+
+    def test_rename_cannot_launder_an_unproved_source(self):
+        # The destination inherits the SOURCE'S proof and nothing more, so a
+        # rename from a path the trace never proved generated leaves the
+        # destination unproved and the closure still fails closed on it.
+        source = self.root / "unproved.h"
+        source.write_text("int y;\n")
+        destination = self.root / "renamed.h"
+        self.trace.write_text(
+            f'11 rename("{source}", "{destination}") = 0\n'
+            f'11 openat(AT_FDCWD, "{destination}", O_RDONLY) = 4\n'
+            f'11 openat(AT_FDCWD, "{self.root}/main.c", O_RDONLY) = 4\n'
+        )
+        self.dep.write_text(f"x: {self.root}/main.c\n")
+        result = self.generate(ok=False)
+        self.assertIn("renamed.h", result.stderr)
+
+    def test_descriptor_alias_is_not_a_source_file(self):
+        # A shell process substitution hands `/dev/fd/63` to a child, which
+        # opens it to read a pipe. That is consumption of a descriptor, never
+        # of a source file, and it cannot be classified as either a generated
+        # product or a required input.
+        self.trace.write_text(
+            f'11 openat(AT_FDCWD, "/dev/fd/63", O_RDONLY) = 4\n'
+            f'11 openat(AT_FDCWD, "{self.root}/main.c", O_RDONLY) = 4\n'
+        )
+        self.dep.write_text(f"x: {self.root}/main.c\n")
+        self.generate()
+        files = json.loads(self.manifest.read_text())["files"]
+        self.assertEqual(["main.c"], [item["path"] for item in files])
+
     def test_nested_license_boundary_requires_override(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("different terms\n")

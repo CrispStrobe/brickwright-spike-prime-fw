@@ -69,6 +69,15 @@ the link maps, archives, and linked objects until evidence generation finishes.
 Run `tools/audit_build_capture.py` before declaring roots; a nonzero result is
 a machine-readable blocker and must not be bypassed by guessing a dirfd.
 Paths first opened with create, truncate, or exclusive-create flags are proved
-generated and excluded from the source set. Read-only and read/write paths are
+generated and excluded from the source set. A `rename(2)` destination inherits
+the source's proof and nothing more, because build systems write `X.tmpNNNN`
+with a creating flag and rename it onto `X`: the destination is a build product
+that was never opened with a creating flag, and an unproved source still leaves
+the destination unproved, so a rename cannot launder an undeclared input.
+`/dev/fd/N` and `/proc/<pid>/fd/N` are descriptor aliases handed to a child by a
+shell process substitution; they are consumption of a descriptor, not of a file.
+The audit records its own `--cwd` and `--tree` in the report: the same trace
+yields a different external count under a different invocation, so counts
+without the invocation cannot be reproduced. Read-only and read/write paths are
 retained; missing or non-file candidates require classification before closure
 generation.

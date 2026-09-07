@@ -70,7 +70,14 @@ def main() -> None:
     if not maps:
         errors.append("link-map evidence is missing")
     report = {
-        "schema": 1,
+        # Schema 2 records the invocation. Schema 1 recorded counts alone, and
+        # the same trace yields a different external count under a different
+        # --cwd/--tree, so those numbers could not be reproduced or checked.
+        "schema": 2,
+        "capture": {
+            "initial_cwd": cwd.as_posix(),
+            "tree": tree.as_posix(),
+        },
         "status": "ready" if not errors else "incomplete",
         "trace": {"sha256": digest(trace), "lines": sum(1 for _ in trace.open("rb"))},
         "consumed_path_count": consumed_count,

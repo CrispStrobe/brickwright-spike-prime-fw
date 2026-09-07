@@ -1,18 +1,22 @@
 {
-  "consumed_path_count": 6121,
+  "capture": {
+    "initial_cwd": "/mnt/volume1/offload/tmp/brickwright-closure-recapture.bRkGxS/nuttx",
+    "tree": "/mnt/volume1/offload/tmp/brickwright-closure-recapture.bRkGxS"
+  },
+  "consumed_path_count": 6550,
   "depfile_count": 23,
   "errors": [
-    "trace includes generated, removed, or non-file paths that need classification: missing=348, non_file=7"
+    "trace includes generated, removed, or non-file paths that need classification: missing=263, non_file=8"
   ],
-  "external_existing_path_count": 790,
+  "external_existing_path_count": 2757,
   "map_files": [
     "nuttx/System.map",
     "nuttx/User.map",
     "nuttx/nuttx.map"
   ],
-  "missing_path_count": 348,
-  "non_file_path_count": 7,
-  "schema": 1,
+  "missing_path_count": 263,
+  "non_file_path_count": 8,
+  "schema": 2,
   "status": "incomplete",
   "trace": {
     "lines": 4060664,

@@ -25,6 +25,13 @@ SPDX_COMMENT = re.compile(
 )
 MAP_OBJECT = re.compile(r"(?<!\S)([^\s()]+\.a\([^)]+\.o\)|[^\s()]+\.o)(?!\S)")
 LICENSE_BOUNDARY_NAMES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING")
+# rename(2) moves content between names; renameat(2) and renameat2(2) take a
+# directory descriptor before each path. The indexes are (old, new).
+RENAME_PATH_INDEXES = {"rename": (0, 1), "renameat": (1, 3), "renameat2": (1, 3)}
+# `/dev/fd/N` and `/proc/<pid>/fd/N` are descriptor aliases, not files: a shell
+# process substitution passes one to a child, which opens it to read a pipe.
+# They are consumption of a descriptor, never of a source file.
+DESCRIPTOR_ALIAS = re.compile(r"^/(?:dev/fd|proc/(?:self|\d+)/fd)/\d+$")
 
 
 def die(message: str) -> None:
@@ -209,6 +216,12 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
         needs_state = syscall in {
             "clone", "clone3", "fork", "vfork", "chdir", "fchdir",
         }
+        rename_indexes = RENAME_PATH_INDEXES.get(syscall)
+        if rename_indexes is not None:
+            needs_state |= any(
+                not quoted_path(arguments[index], line).is_absolute()
+                for index in rename_indexes
+            )
         if path_index is not None:
             candidate = quoted_path(arguments[path_index], line)
             needs_state |= not candidate.is_absolute() or "O_DIRECTORY" in argument_text
@@ -253,6 +266,31 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
             if pid in state and old_descriptor in state[pid]["fds"]:
                 state[pid]["fds"][result] = state[pid]["fds"][old_descriptor]
             continue
+        if rename_indexes is not None:
+            # A rename moves content that already exists under another name.
+            # Build systems write `X.tmpNNNN` with O_CREAT and rename it onto
+            # `X`, so the destination is a build product although it was never
+            # opened with a creating flag; CMake produces 84 such files in the
+            # protected build. The destination inherits the SOURCE'S PROOF and
+            # nothing more: an unproved source leaves the destination unproved,
+            # so a rename can never launder an undeclared input into a
+            # generated one.
+            old_index, new_index = rename_indexes
+            old_dirfd = arguments[0] if old_index == 1 else None
+            new_dirfd = arguments[2] if new_index == 3 else None
+            old_path = resolve_trace_path(
+                quoted_path(arguments[old_index], line), pid, state, old_dirfd, line
+            )
+            new_path = resolve_trace_path(
+                quoted_path(arguments[new_index], line), pid, state, new_dirfd, line
+            )
+            if old_path in generated:
+                # The proof stays on both names: `generated` records what the
+                # trace proved, not what the filesystem still holds, and the
+                # source name is itself consumed by the stat calls around the
+                # rename.
+                generated.add(new_path)
+            continue
         if path_index is None:
             continue
         dirfd = arguments[0] if path_index == 1 else None
@@ -282,7 +320,8 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
     # Build-created intermediates are linkage evidence, not vendored source.
     # Existing directories are traversal metadata, not source files. Missing
     # paths remain so locate() fails closed unless the trace proved creation.
-    return found - generated - directories
+    aliases = {path for path in found if DESCRIPTOR_ALIAS.match(path.as_posix())}
+    return found - generated - directories - aliases
 
 
 def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
