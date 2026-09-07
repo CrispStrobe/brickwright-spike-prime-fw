@@ -41,6 +41,8 @@ def main() -> None:
     tree = Path(arguments.tree).resolve()
     closure = load_closure_tool()
     errors: list[str] = []
+    non_file_entries: list[dict] = []
+    unclassified_non_file: list[str] = []
     consumed_count = 0
     missing_count = 0
     non_file_count = 0
@@ -49,14 +51,38 @@ def main() -> None:
         consumed = closure.trace_paths(trace, cwd)
         consumed_count = len(consumed)
         missing_count = sum(not path.exists() for path in consumed)
-        non_file_count = sum(path.exists() and not path.is_file() for path in consumed)
+        # A path that exists but is not a regular file cannot be hashed or
+        # licensed, so it is neither a generated product nor a required input.
+        # Directories are traversal metadata and character devices are kernel
+        # interfaces; both are reported by name and kind. Any other kind stays
+        # a blocker, because an unknown read must never be suppressed.
+        for path in sorted(consumed):
+            if not path.exists() or path.is_file():
+                continue
+            if path.is_dir():
+                kind = "directory"
+            elif path.is_char_device():
+                kind = "character-device"
+            elif path.is_block_device():
+                kind = "block-device"
+            elif path.is_fifo():
+                kind = "fifo"
+            elif path.is_socket():
+                kind = "socket"
+            else:
+                kind = "unknown"
+            non_file_entries.append({"path": path.as_posix(), "kind": kind})
+            if kind not in {"directory", "character-device"}:
+                unclassified_non_file.append(path.as_posix())
+        non_file_count = len(non_file_entries)
         external_count = sum(
             not path.is_relative_to(tree) for path in consumed if path.exists()
         )
-        if missing_count or non_file_count:
+        if missing_count or unclassified_non_file:
             errors.append(
-                "trace includes generated, removed, or non-file paths that need "
-                f"classification: missing={missing_count}, non_file={non_file_count}"
+                "trace includes generated, removed, or unclassifiable paths that "
+                f"need classification: missing={missing_count}, "
+                f"unclassified_non_file={len(unclassified_non_file)}"
             )
     except SystemExit as exception:
         errors.append(str(exception).removeprefix("source-closure: ERROR: "))
@@ -83,6 +109,7 @@ def main() -> None:
         "consumed_path_count": consumed_count,
         "missing_path_count": missing_count,
         "non_file_path_count": non_file_count,
+        "non_file_paths": non_file_entries,
         "external_existing_path_count": external_count,
         "depfile_count": len(depfiles),
         "map_files": [path.relative_to(tree).as_posix() for path in maps],
