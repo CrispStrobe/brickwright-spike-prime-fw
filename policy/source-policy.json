@@ -43,9 +43,9 @@
     "third_party/ti-cc2564c/TIInit_6.12.26.bts",
     "third_party/ti-cc2564c/LICENSE.ti"
   ],
-  "forbidden_public_references": [
-    "spike-firmware-backups",
-    "CrispStrobe/brickwright-spike-firmware.git",
-    "fetch_private_firmware.py"
+  "forbidden_public_references_base64": [
+    "c3Bpa2UtZmlybXdhcmUtYmFja3Vwcw==",
+    "ZmV0Y2hfcHJpdmF0ZV9maXJtd2FyZS5weQ==",
+    "Y3Jpc3BzdHJvYmUvYnJpY2t3cmlnaHQtc3Bpa2UtZmlybXdhcmUuZ2l0"
   ]
 }

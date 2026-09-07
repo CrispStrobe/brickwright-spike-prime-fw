@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import subprocess
 import sys
@@ -139,7 +140,8 @@ def main() -> None:
         fail("tracked build artifacts:\n  " + "\n  ".join(forbidden_artifacts))
 
     forbidden_references = [
-        value.lower() for value in policy.get("forbidden_public_references", [])
+        base64.b64decode(value).lower()
+        for value in policy.get("forbidden_public_references_base64", [])
     ]
     reference_hits = []
     for path, (mode, _object_id) in entries.items():
@@ -150,9 +152,12 @@ def main() -> None:
             content = (ROOT / path).read_text(encoding="utf-8").lower()
         except (UnicodeDecodeError, OSError):
             continue
+        searchable = (path + "\n" + content).lower().encode("utf-8")
         for forbidden in forbidden_references:
-            if forbidden in path.lower() or forbidden in content:
-                reference_hits.append(f"{path}: {forbidden}")
+            if forbidden in searchable:
+                reference_hits.append(
+                    f"{path}: forbidden private-repository reference"
+                )
     if reference_hits:
         fail("forbidden public repository references:\n  " +
              "\n  ".join(sorted(reference_hits)))
