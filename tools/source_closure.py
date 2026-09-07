@@ -152,6 +152,27 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
     unfinished: dict[str, str] = {}
     state: dict[str, dict] = {}
     initial_pid: str | None = None
+
+    def ensure_state(pid: str) -> None:
+        if pid in state:
+            return
+        # With vfork(), strace can report the child's exec/open calls before
+        # it reports the parent's resumed syscall and child PID.  At that
+        # point there must be exactly one pending process-creation syscall;
+        # any other situation is ambiguous and must fail closed.
+        parents = [
+            parent
+            for parent, call in unfinished.items()
+            if re.match(r"^(?:clone|clone3|fork|vfork)\(", call) and parent in state
+        ]
+        if len(parents) != 1:
+            die(
+                f"relative path for pid {pid} has no inherited cwd state "
+                "from an unambiguous pending process creation"
+            )
+        parent = parents[0]
+        state[pid] = {"cwd": [state[parent]["cwd"][0]], "fds": dict(state[parent]["fds"])}
+
     for raw_line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         prefix = PID_PREFIX.match(raw_line)
         if not prefix:
@@ -177,17 +198,31 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
         if result < 0:
             continue
         arguments = syscall_arguments(argument_text)
+        path_index = {
+            "open": 0, "openat": 1, "openat2": 1, "execve": 0,
+            "stat": 0, "statx": 1, "newfstatat": 1, "access": 0,
+            "readlink": 0, "readlinkat": 1,
+        }.get(syscall)
+        needs_state = syscall in {
+            "clone", "clone3", "fork", "vfork", "chdir", "fchdir",
+            "close", "dup", "dup2", "dup3",
+        }
+        if path_index is not None:
+            candidate = quoted_path(arguments[path_index], line)
+            needs_state |= not candidate.is_absolute() or "O_DIRECTORY" in argument_text
+        if pid not in state and needs_state:
+            ensure_state(pid)
         if syscall in {"clone", "clone3", "fork", "vfork"}:
             if pid not in state:
                 die(f"successful {syscall} from pid {pid} without cwd state")
             shared_cwd = syscall.startswith("clone") and "CLONE_FS" in argument_text
             child_cwd = state[pid]["cwd"] if shared_cwd else [state[pid]["cwd"][0]]
-            state[str(result)] = {"cwd": child_cwd, "fds": dict(state[pid]["fds"])}
+            state.setdefault(
+                str(result), {"cwd": child_cwd, "fds": dict(state[pid]["fds"])}
+            )
             continue
         if syscall == "chdir":
             target = resolve_trace_path(quoted_path(arguments[0], line), pid, state, None, line)
-            if not target.is_dir():
-                die(f"successful chdir target is unavailable during analysis: {target}")
             state[pid]["cwd"][0] = target
             continue
         if syscall == "fchdir":
@@ -208,18 +243,13 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
             if pid in state and old_descriptor in state[pid]["fds"]:
                 state[pid]["fds"][result] = state[pid]["fds"][old_descriptor]
             continue
-        path_index = {
-            "open": 0, "openat": 1, "openat2": 1, "execve": 0,
-            "stat": 0, "statx": 1, "newfstatat": 1, "access": 0,
-            "readlink": 0, "readlinkat": 1,
-        }.get(syscall)
         if path_index is None:
             continue
         dirfd = arguments[0] if path_index == 1 else None
         resolved = resolve_trace_path(
             quoted_path(arguments[path_index], line), pid, state, dirfd, line
         )
-        if syscall in {"open", "openat", "openat2"} and resolved.is_dir():
+        if syscall in {"open", "openat", "openat2"} and "O_DIRECTORY" in argument_text:
             if pid not in state:
                 die(f"directory fd opened by pid {pid} without inherited state")
             state[pid]["fds"][result] = resolved
