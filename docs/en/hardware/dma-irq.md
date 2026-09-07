@@ -125,7 +125,7 @@ The current `stm32_adc_dma.c` writes `DEFAULT + 3 * STEP` (= 0xB0), which reads 
 | preempt | NVIC value | IRQ | Source |
 |---|---|---|---|
 | 0 | 0x00 | LUMP UART (UART4/5/7-10) | `uart_stm32f4_ll_irq.c:283` |
-| 1 | 0x10 | Bluetooth UART TX DMA (sub=2) | `bluetooth_btstack_uart_block_stm32_hal.c:98` |
+| 1 | 0x10 | Bluetooth UART TX DMA (sub=2) | Pybricks STM32F4 Bluetooth UART source |
 | 1 | 0x10 | Bluetooth UART RX DMA (sub=1) | ibid :100 |
 | 1 | 0x10 | Bluetooth USART2 (sub=0) | ibid :102 |
 | 3 | 0x30 | IMU I2C2_ER (sub=1) | `platform.c:188` |
