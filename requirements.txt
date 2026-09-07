@@ -1,6 +1,5 @@
 mkdocs>=1.6
 mkdocs-material>=9.5
-mkdocs-static-i18n>=1.2
 
 # Testing
 pexpect==4.9.0

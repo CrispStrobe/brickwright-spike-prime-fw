@@ -1,25 +1,26 @@
 site_name: SPIKE Prime Hub NuttX Guide
 site_url: ''
-site_description: SPIKE Prime Hub 上で NuttX RTOS を動作させるためのガイド
+site_description: A guide to running NuttX RTOS on the SPIKE Prime Hub
+docs_dir: docs/en
 repo_url: https://github.com/CrispStrobe/brickwright-spike-prime-fw
 repo_name: CrispStrobe/brickwright-spike-prime-fw
 
 theme:
   name: material
-  language: ja
+  language: en
   palette:
     - scheme: default
       primary: teal
       accent: teal
       toggle:
         icon: material/brightness-7
-        name: ダークモードに切り替え
+        name: Switch to dark mode
     - scheme: slate
       primary: teal
       accent: teal
       toggle:
         icon: material/brightness-4
-        name: ライトモードに切り替え
+        name: Switch to light mode
   features:
     - navigation.tabs
     - navigation.sections
@@ -31,23 +32,6 @@ theme:
 
 plugins:
   - search
-  - i18n:
-      docs_structure: folder
-      languages:
-        - locale: ja
-          name: 日本語
-          default: true
-          build: true
-        - locale: en
-          name: English
-          build: true
-          nav_translations:
-            ハードウェア: Hardware
-            ドライバ: Drivers
-            開発ガイド: Development
-            NuttX: NuttX
-            テスト: Testing
-            利用ガイド: Usage
 
 nav:
   - Home: index.md
@@ -57,12 +41,12 @@ nav:
       - project/classic-protocol.md
       - project/ble-protocol.md
       - project/hub-contract.md
-  - ハードウェア:
+  - Hardware:
       - hardware/hub-overview.md
       - hardware/pin-mapping.md
       - hardware/peripherals.md
       - hardware/dma-irq.md
-  - ドライバ:
+  - Drivers:
       - drivers/architecture.md
       - drivers/implementation-plan.md
       - drivers/port-detection.md
@@ -78,9 +62,9 @@ nav:
       - drivers/sound.md
       - drivers/w25q256.md
       - drivers/bluetooth.md
-  - 利用ガイド:
+  - Usage:
       - usage/01-flash-storage.md
-  - 開発ガイド:
+  - Development:
       - development/getting-started.md
       - development/debugging.md
       - development/file-transfer.md
@@ -96,7 +80,7 @@ nav:
       - nuttx/tickless-timer.md
       - nuttx/watchdog.md
       - nuttx/upstream-issues.md
-  - テスト:
+  - Testing:
       - testing/test-spec.md
 
 markdown_extensions:

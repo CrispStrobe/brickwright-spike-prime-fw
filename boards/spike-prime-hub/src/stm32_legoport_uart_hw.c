@@ -16,7 +16,7 @@
  * (≤ 36 bytes) and per-port kthreads are independent.
  *
  * Pattern follows `stm32_btuart.c` for clock-enable / GPIO AF / IRQ
- * attach.  See `docs/{ja,en}/drivers/lump-protocol.md` for the design.
+ * attach.  See `docs/en/drivers/lump-protocol.md` for the design.
  ****************************************************************************/
 
 #include <nuttx/config.h>

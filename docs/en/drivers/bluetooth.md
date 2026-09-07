@@ -6,7 +6,7 @@
 > Current code uses the pinned Apache-2.0 Zephyr host, the byte-exact unmodified
 > TI CC2564C v1.5 service pack under its separate TI-device-only licence, and
 > host-side eHCILL handling. See
-> [the current host audit](../../project/zephyr-host-audit.md), `THIRD_PARTY.md`,
+> [the current host audit](../project/zephyr-host-audit.md), `THIRD_PARTY.md`,
 > and `SAFETY.md`. Nothing below is a flashing instruction or current design
 > authority.
 
@@ -275,8 +275,8 @@ the no-RFCOMM "I just want raw samples" use case.
       pulses (~150 ms × 2N) one-shot, then off
 - Pairing completion routes through
   `HCI_EVENT_SIMPLE_PAIRING_COMPLETE`: status==0 → PAIRED (LED solid
-  immediately, matching the Issue #56 spec "ペアリング成功で BT LED
-  点灯"), status≠0 → FAIL_BLINK.  A subsequent
+  immediately, matching the Issue #56 requirement that the BT LED turns on
+  after successful pairing), status≠0 → FAIL_BLINK. A subsequent
   `RFCOMM_EVENT_CHANNEL_OPENED` keeps the state at PAIRED (no LED
   change), and a link drop / disconnect routes to CONNECTABLE
   (connectable=1, discoverable=0; LED resumes the slow blink) so
@@ -336,7 +336,7 @@ Implementation notes (Issue #139):
   subsequent GET reflects the live HW state.
 
 The PC-side code lives outside this repo; an example client is
-documented in `docs/{ja,en}/development/pc-receive-spp.md` (Commit
+documented in `docs/en/development/pc-receive-spp.md` (Commit
 E will refresh it for the new wire format).
 
 ## EXTI0 / NVIC priority
@@ -346,7 +346,7 @@ E will refresh it for the new wire format).
 NVIC_SYSH_PRIORITY_STEP) = 0xE0`, placing BUTTON_USER (PA0 EXTI0) in
 the ε layout's lowest peripheral band (alongside ADC and TLC5955) so
 the IRQ stays below BASEPRI and can call NuttX work-queue APIs
-freely.  See the NVIC table in `docs/{ja,en}/hardware/dma-irq.md`.
+freely.  See the NVIC table in `docs/en/hardware/dma-irq.md`.
 
 ## Self-pipe wake (run loop)
 

@@ -4,7 +4,7 @@
  * Public ABI for the SPIKE Prime Hub Bluetooth HCI-UART char device exposed
  * as /dev/ttyBT (Issue #52).  The node is backed by stm32_btuart.c (USART2 +
  * DMA1 S6/S7) and is intended to be consumed by a user-mode Bluetooth host
- * stack such as btstack.  See docs/{ja,en}/drivers/bluetooth.md.
+ * stack such as btstack.  See docs/en/drivers/bluetooth.md.
  *
  * Semantics:
  *   - read(fd, buf, n): copy up to n bytes from the RX ring; blocks when the

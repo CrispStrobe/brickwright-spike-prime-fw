@@ -1,7 +1,7 @@
 """Category H-9 (Issue #108): BT-side NSH shell over SPP.
 
 End-to-end test for the ``MODE SHELL`` / ``MODE TELEMETRY`` exchange
-documented in docs/{ja,en}/development/bt-nsh-shell.md.  Marked
+documented in docs/en/development/bt-nsh-shell.md.  Marked
 @pytest.mark.interactive because it requires a paired Linux host with
 CAP_NET_RAW (same setup as test_bt_spp.py::test_bt_pc_pair_and_stream).
 

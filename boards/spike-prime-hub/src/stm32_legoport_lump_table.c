@@ -6,7 +6,7 @@
  * Six SPIKE Prime Hub I/O ports map to UART7 / UART4 / UART8 / UART5 /
  * UART10 / UART9 (A..F).  UART4/5/7/8 are on APB1 (48 MHz @ HCLK=96 MHz);
  * UART9/10 are on APB2 (96 MHz).  See `boards/spike-prime-hub/include/board.h`
- * for the clock derivation and `docs/{ja,en}/hardware/pin-mapping.md` for
+ * for the clock derivation and `docs/en/hardware/pin-mapping.md` for
  * the GPIO alternate-function map.
  ****************************************************************************/
 

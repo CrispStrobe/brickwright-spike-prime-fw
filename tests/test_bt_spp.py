@@ -9,7 +9,7 @@ and its banners go through syslog → RAMLOG instead of stdout, so the
 HCI_WORKING check polls `dmesg` rather than the live console.
 
 H-5/H-8 are semi-automated: the operator pairs the Hub once via
-``bluetoothctl`` (covered in docs/{ja,en}/development/pc-receive-spp.md)
+``bluetoothctl`` (covered in docs/en/development/pc-receive-spp.md)
 and pytest then opens BTPROTO_RFCOMM directly to drive the link — no
 ``rfcomm bind`` / ``cat /dev/rfcomm0`` step.  H-6/H-7 require a
 physical BT button press and stay manual.
@@ -172,7 +172,7 @@ def test_bt_pc_pair_and_stream(p):
     capability to the python interpreter).  Skipped automatically if
     the socket cannot be created.
 
-    See docs/{ja,en}/development/pc-receive-spp.md for the PC-side
+    See docs/en/development/pc-receive-spp.md for the PC-side
     pairing commands.
     """
     bdaddr = _btsensor_fresh_start(p)
@@ -328,7 +328,7 @@ def test_bt_button_short_press(p):
         p.sendCommand("dmesg", timeout=10)
 
         p.waitUser(
-            "Hub の BT ボタンを 1 回短押し (0.5 秒以下で離す) してから ENTER"
+            "Briefly press the Hub BT button once (release within 0.5 seconds), then press ENTER"
         )
 
         out = _wait_status_field(p, r"bt:\s+advertising", timeout=3.0)
@@ -358,7 +358,7 @@ def test_bt_button_long_press(p):
         p.sendCommand("dmesg", timeout=10)
 
         p.waitUser(
-            "Hub の BT ボタンを 2 秒以上長押ししてから離して ENTER"
+            "Hold the Hub BT button for at least 2 seconds, release it, then press ENTER"
         )
 
         _wait_status_field(p, r"bt:\s+off", timeout=3.0)

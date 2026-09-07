@@ -75,7 +75,7 @@ int stm32_bringup(void)
    *         BUTTON_USER EXTI0
    *   0xF0  PendSV, SysTick
    *
-   * See docs/{ja,en}/hardware/dma-irq.md for the full rationale.
+   * See docs/en/hardware/dma-irq.md for the full rationale.
    */
 
   /* step 1: system handlers */

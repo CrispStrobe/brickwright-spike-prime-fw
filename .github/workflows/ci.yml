@@ -29,11 +29,14 @@ jobs:
           persist-credentials: false
 
       - name: Validate dependencies and restricted-file policy
-        run: python3 tools/check_source_policy.py
+        run: |
+          python3 tools/check_source_policy.py
+          python3 tools/check_english_only.py
 
       - name: Prove forbidden paths fail closed
         run: |
           python3 tools/test_source_policy.py
+          python3 tests/test_english_only_policy.py -v
           python3 tests/test_resource_budgets.py -v
 
       - name: Enforce workflow security policy

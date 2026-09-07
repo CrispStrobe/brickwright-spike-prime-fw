@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.command' | { read -r cmd; if echo \"$cmd\" | grep -qE '\\bgh\\b'; then if echo \"$cmd\" | grep -qE 'apache/nuttx(-apps)?|pybricks/pybricks-micropython'; then if echo \"$cmd\" | grep -qE '(create|comment|close|reopen|edit|delete|merge|review|transfer|pin|unpin|lock|unlock|-X (POST|PUT|PATCH|DELETE)|--method (POST|PUT|PATCH|DELETE))'; then echo '{\"decision\":\"block\",\"reason\":\"Upstream repo への書き込み操作はブロックされています。\"}'; exit 2; fi; fi; fi; }",
+            "command": "jq -r '.tool_input.command' | { read -r cmd; if echo \"$cmd\" | grep -qE '\\bgh\\b'; then if echo \"$cmd\" | grep -qE 'apache/nuttx(-apps)?|pybricks/pybricks-micropython'; then if echo \"$cmd\" | grep -qE '(create|comment|close|reopen|edit|delete|merge|review|transfer|pin|unpin|lock|unlock|-X (POST|PUT|PATCH|DELETE)|--method (POST|PUT|PATCH|DELETE))'; then echo '{\"decision\":\"block\",\"reason\":\"Write operations against upstream repositories are blocked.\"}'; exit 2; fi; fi; fi; }",
             "statusMessage": "Checking gh upstream write..."
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "m=\"$HOME/.claude/.plan-codex-reviewed\"; if [ -f \"$m\" ] && [ $(( $(date +%s) - $(stat -c %Y \"$m\") )) -lt 7200 ]; then exit 0; fi; echo '{\"decision\":\"block\",\"reason\":\"Phase/architecture plan は ExitPlanMode の前に codex-review skill を実行してください (CLAUDE.md Plan+Codex ワークフロー)。LGTM に至ると codex-review が marker を更新して通過します。trivial plan で skip する場合は user 承認後に touch ~/.claude/.plan-codex-reviewed\"}'; exit 2",
+            "command": "m=\"$HOME/.claude/.plan-codex-reviewed\"; if [ -f \"$m\" ] && [ $(( $(date +%s) - $(stat -c %Y \"$m\") )) -lt 7200 ]; then exit 0; fi; echo '{\"decision\":\"block\",\"reason\":\"Run the codex-review skill before ExitPlanMode for phase or architecture plans (see the Plan + Codex workflow in CLAUDE.md). An LGTM review updates the marker. To skip a trivial plan, get user approval before running touch ~/.claude/.plan-codex-reviewed\"}'; exit 2",
             "statusMessage": "Checking codex-review gate..."
           }
         ]
