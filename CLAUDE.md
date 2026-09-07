@@ -1,102 +1,51 @@
-# SPIKE Prime Hub NuttX project
+# Agent instructions
 
-This repository develops a NuttX RTOS environment for the SPIKE Prime Hub.
-Read `SAFETY.md` before proposing or running hardware operations. The current
-public derivative is simulation-only and must not be flashed to real hardware.
+Read `SAFETY.md`, `PLAN.md`, `README.md`, and the contract documents named by
+the selected plan task. `PLAN.md` is the unfinished queue; `HISTORY.md` records
+accepted milestones.
 
-## Development workflow
+## Workflow
 
-Keep changes small and repeat this cycle:
+- Fetch the target, then create a dedicated worktree and feature branch.
+- Treat shared primary checkouts and upstream repositories as read-only.
+- Preserve unrelated changes and pins. Push each accepted plan task separately.
+- Use only approved permissive project/vendor source. Never add BTstack,
+  GPL-family, AGPL, noncommercial, or unknown-license code.
+- Treat Pybricks/PBIO as behavioral evidence unless an individual MIT file and
+  its complete dependency/link closure are approved.
+- Treat the TI service pack as opaque, byte-exact, separately licensed data.
+  Never alter it, inspect vendor parameters, derive code from it, or relicense it.
+- Keep Classic and BLE behind `protocol/hub-contract.schema.json`; preserve port
+  generations, bounded resources, and disconnect-safe motor behavior.
+- Do not bypass production functions to claim unchanged-image execution.
 
-1. Implement one focused change.
-2. Build it with `make` or perform a clean build when configuration changed.
-3. Validate it in the supported Renode simulation.
-4. Run the relevant automated tests and inspect logs.
-5. Update the English documentation with the implementation.
+## Safety and documentation
 
-For phase or architecture plans, run the `codex-review` skill before leaving
-plan mode. A successful review updates `~/.claude/.plan-codex-reviewed` for two
-hours. Skipping review for a trivial plan requires explicit user approval.
+Do not flash hardware, add actionable flashing instructions, or publish firmware
+artifacts. Simulation cannot prove electrical, RF, thermal, charging, motor,
+update, or recovery safety.
 
-## Git and issue workflow
+Maintained prose is English-only. `README.md` contains current capability and
+usage; `PLAN.md` contains only pending ordered work and gates; `HISTORY.md`
+contains accepted summaries. Contract documents state current normative behavior.
+Avoid issue chronology, abandoned approaches, checkpoint diaries, and speculative
+status. Preserve imported documentation and legal notices unchanged.
 
-- Open an issue with a summary, reproduction steps for bugs, environment, and
-  relevant notes.
-- Work on a dedicated branch. Build and test before committing.
-- Use focused commits and include the issue number where useful.
-- Merge only after review and validation, then report the implemented changes,
-  test evidence, and any remaining limitations on the issue.
-- Never write to `apache/nuttx`, `apache/nuttx-apps`, or
-  `pybricks/pybricks-micropython`. Those repositories are read-only references.
+## Verification
 
-## Documentation
-
-Maintained documentation is English-only and lives under `docs/en`:
-
-- `hardware`: board overview, pins, peripherals, DMA, and IRQ allocation
-- `drivers`: driver design and implementation status
-- `development`: build, debugging, application, and protocol workflows
-- `nuttx`: NuttX-specific port notes and upstream issues
-- `testing`: validation specifications
-- `usage`: user-facing procedures
-- `project`: provenance, licensing, and protocol evidence
-
-Build documentation with:
+Run focused tests plus:
 
 ```bash
+python3 tools/check_live_docs.py
+python3 tools/check_english_only.py
+python3 tools/check_source_policy.py
+python3 tools/check_safety_policy.py
+python3 tools/check_workflow_security.py
+python3 tools/test_source_policy.py
+python3 tests/test_live_docs_policy.py
+python3 tests/test_english_only_policy.py
 mkdocs build --strict
 ```
 
-Use source links that point to stable upstream revisions when documenting
-external code. Keep current truth separate from historical issue plans.
-
-## Applications
-
-Applications live in `apps/<name>` and normally contain source, a `CMakeLists`
-file, and Kconfig metadata. Register a new application with the board snapshot
-and add tests and documentation in the same change. Avoid duplicating driver
-logic in applications.
-
-## Build environment
-
-The default board is `spike-prime-hub` with the `usbnsh` configuration.
-
-```bash
-make                         # configure and build
-make nuttx-menuconfig        # edit Kconfig
-make nuttx-savedefconfig     # save defconfig
-make nuttx-clean             # retain .config
-make nuttx-distclean         # remove .config too
-make distclean               # remove build image and deinitialize submodules
-```
-
-NuttX and NuttX Apps are pinned submodules. Pybricks may be consulted as a
-behavioral oracle, but copied code retains its own licensing obligations and
-must not be assumed to be uniformly MIT licensed. See `THIRD_PARTY.md` and the
-project provenance documentation before importing any implementation.
-
-## Testing
-
-Run source-policy, safety, documentation, host-unit, and focused subsystem
-tests in proportion to the change. Hardware-dependent pytest cases use the
-fixtures in `tests/conftest.py`; do not run them against physical hardware
-while the simulation-only safety restriction is active.
-
-When debugging, capture the exact command, expected result, actual result,
-reproduction rate, configuration, and recent relevant commits. Check hardware
-constraints in RM0430 and compare equivalent Pybricks behavior where relevant.
-
-## Device and architecture terms
-
-- Hub: SPIKE Prime Hub
-- MCU: STM32F413VG, Cortex-M4F, up to 96 MHz
-- RTOS: NuttX
-- NSH: NuttShell
-- External flash: W25Q256, 32 MiB SPI NOR
-- Bluetooth controller: TI CC2564C
-
-Treat timer, DMA, IRQ, GPIO, clock, radio, power, and motor assignments as
-shared board resources. Consult `docs/en/hardware/dma-irq.md` and
-`docs/en/hardware/pin-mapping.md` before changing them. A compiling driver is
-not evidence that a peripheral feature exists on STM32F413; verify RM0430 and
-provide simulation or hardware evidence appropriate to the safety policy.
+Firmware changes also require the protected build, resource gate, relevant
+host/ARM tests, and the Renode scenario named by `PLAN.md`.

@@ -1,24 +1,20 @@
-# TI BTS runtime boundary
+# TI BTS loader
 
-The loader code in this directory is MIT-licensed. The public source snapshot
-also carries an exact, unmodified TI service pack under
-`third_party/ti-cc2564c/`; that binary remains governed solely by its adjacent
-TI licence and may be used only with TI devices.
+The MIT-licensed loader streams a caller-supplied BTS container without changing
+its bytes. The actual service pack in `third_party/ti-cc2564c/` remains governed
+only by its adjacent TI licence, is restricted to TI devices, and is not project
+source.
 
-`ti_bts_loader` consumes a caller-supplied BTSB image without changing its
-bytes. It recognizes the public 32-byte container header and action record
-boundaries, forwards complete H4 command actions through callbacks, and checks
-the corresponding standard HCI Command Complete or Command Status event. It
-does not interpret vendor opcodes or their parameters.
+The loader recognizes the public container header and action boundaries,
+forwards complete H4 commands, and accepts standard HCI Command Complete or
+Command Status events. It does not interpret vendor opcodes or parameters.
+Unknown or recursive actions fail closed; required delay or serial callbacks
+must be present.
 
-The importer verifies the allowlisted `.bts` file and creates a byte-for-byte C
-container below the ignored `.local/ti/` directory. The build uses the vendored
-official file by default. It does not decode or modify vendor commands.
+The controller lifecycle opens `/dev/ttyBT`, resets the controller, streams the
+verified service pack, applies declared serial transitions, starts the Zephyr
+host, and owns cleanup. eHCILL is implemented at the host transport seam; TI
+bytes are never patched.
 
-The btsensor hardware adapter opens `/dev/ttyBT`, resets the controller, runs
-the script before starting the Zephyr host, and closes the temporary loader
-connection. Serial reconfiguration and delays are optional callbacks;
-scripts that require an unavailable callback fail closed. Recursive script
-actions and unknown actions are rejected.
-
-Tests construct synthetic BTS records. They contain no TI firmware bytes.
+Tests use synthetic records containing no TI firmware bytes. Hash and licence
+requirements are defined in `docs/en/project/ti-service-pack.md`.

@@ -409,7 +409,9 @@ W25Q256 + LittleFS regression tests plus interactive Zmodem transfer tests via p
 
 ## H. Bluetooth (`test_bt_spp.py`)
 
-Issue #52 replaced the NuttX stock BT host stack with btstack + Classic BT SPP, so the test suite was rewritten accordingly.  The automated tests cover the Hub-side readiness (chardev, bring-up, btsensor builtin, HCI_STATE_WORKING); the PC-side pair + RFCOMM open step is kept manual under `docs/development/pc-receive-spp.md` because it needs a Linux or macOS host.
+The automated tests cover the UART device, bring-up, daemon registration, and
+host-ready state. Physical pairing and RFCOMM interoperability remain blocked
+by the repository safety gate.
 
 ### H-1: test_bt_chardev_exists
 
@@ -432,7 +434,7 @@ Issue #52 replaced the NuttX stock BT host stack with btstack + Classic BT SPP, 
 
 ### H-4: test_bt_btsensor_hci_working
 
-- **Goal**: `btsensor start` drives btstack into HCI_STATE_WORKING and
+- **Goal**: `btsensor start` drives the Zephyr host into its working state and
   logs a plausible BD address
 - **Procedure**:
     1. `reboot` — empirically the first `btsensor start` after a fresh

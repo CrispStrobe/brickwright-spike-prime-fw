@@ -32,10 +32,12 @@ jobs:
         run: |
           python3 tools/check_source_policy.py
           python3 tools/check_english_only.py
+          python3 tools/check_live_docs.py
 
       - name: Prove forbidden paths fail closed
         run: |
           python3 tools/test_source_policy.py
+          python3 tests/test_live_docs_policy.py
           python3 tests/test_english_only_policy.py -v
           python3 tests/test_source_closure.py -v
           python3 tests/test_resource_budgets.py -v

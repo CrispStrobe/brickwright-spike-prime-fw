@@ -474,7 +474,7 @@ sample carries its own `odr_idx` / `fsr_xl_idx` / `fsr_gy_idx` in
 `struct sensor_imu`, and `bundle_emitter` splits a BUNDLE frame on idx
 mismatch so live SET takes effect mid-stream without breaking wire-level
 consistency (the tick immediately after a SET may emit 2–3 frames
-back-to-back; the BTstack queue absorbs the burst).
+back-to-back; the bounded transport queue absorbs the burst).
 
 GET replies carry the driver-internal enum index
 (`lsm6dsl_odr_e` / `lsm6dsl_fsr_xl_e` / `lsm6dsl_fsr_gy_e`) as a decimal
@@ -536,6 +536,5 @@ Hub -> PC:  OK\n
 - `host/ImuViewer/` — desktop visualizer (.NET 10 + Avalonia + Silk.NET) that
   consumes this stream, runs a Madgwick filter, and renders a 3D Cube whose
   orientation tracks the Hub. Linux PoC; macOS / Windows are stubbed.
-- btstack `example/spp_counter.c` — minimal SPP server reference
 - BlueZ `rfcomm(1)` — Linux CLI reference
 - [IOBluetoothRFCOMMChannel Class Reference](https://developer.apple.com/documentation/iobluetooth/iobluetoothrfcommchannel) — macOS API
