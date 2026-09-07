@@ -1,0 +1,18 @@
+{
+  "consumed_path_count": 0,
+  "depfile_count": 23,
+  "errors": [
+    "unresolved dirfd 10 for pid 4149472 in openat(10, \"p256-m\", O_RDONLY|O_NOCTTY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 6"
+  ],
+  "map_files": [
+    "nuttx/System.map",
+    "nuttx/User.map",
+    "nuttx/nuttx.map"
+  ],
+  "schema": 1,
+  "status": "incomplete",
+  "trace": {
+    "lines": 2098191,
+    "sha256": "67bb5ec1041ad970db4af8b36d65bd41e086b09c7d43bd96067b21cd5f1cec2a"
+  }
+}

@@ -18,8 +18,9 @@ trace are not evidence that a source was consumed. PID-prefixed `strace -f`
 output and unfinished/resumed calls are supported. `--cwd` supplies the first
 PID's initial directory; cwd and directory descriptors are inherited by
 `clone`/`fork`/`vfork` and updated by successful `chdir`/`fchdir`. Relative
-paths and `*at` dirfds resolve from that per-PID state. An uninherited PID,
-unknown dirfd, or unavailable successful directory change fails explicitly.
+paths and `*at` dirfds resolve from that per-PID state. An uninherited PID or
+unknown dirfd fails explicitly. Removed build directories remain valid lexical
+cwd evidence because the successful syscall proves they existed.
 Nested `LICENSE`/`COPYING` boundaries require an explicit per-path override,
 which may also require an SPDX tag.
 
@@ -50,3 +51,20 @@ without basename guessing. Ambiguous targets and basename-only map references
 fail closed. Verification checks
 content hashes and requires exact equality between consumed and manifested
 files, catching stale entries and newly consumed, unmanifested files.
+
+## Capture requirement
+
+The trace must include descriptor-changing syscalls, because tools such as
+`find` duplicate directory descriptors before issuing relative `openat` calls.
+Capture a clean build with `%file`, `%process`, and descriptor lifecycle calls:
+
+```sh
+strace -f -qq -s 0 \
+  -e trace=%file,%process,fcntl,dup,dup2,dup3,close,chdir,fchdir \
+  -o build/complete.strace make -j4
+```
+
+Enable compiler depfiles for every C, C++, and assembly compilation. Preserve
+the link maps, archives, and linked objects until evidence generation finishes.
+Run `tools/audit_build_capture.py` before declaring roots; a nonzero result is
+a machine-readable blocker and must not be bypassed by guessing a dirfd.

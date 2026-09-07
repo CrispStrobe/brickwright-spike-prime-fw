@@ -47,3 +47,8 @@ and CI; pending work belongs in `PLAN.md`.
 - Converted maintained documentation to English and enforced it in CI.
 - Recorded protocol, TI, Pybricks/PBIO, other-hub, source-closure, Zephyr-host,
   resource, and provenance boundaries.
+- Audited the first complete protected-build trace. It contains maps and 23
+  depfiles but omitted descriptor duplication needed to resolve one `find`
+  traversal, so no unverified source was vendored. The parser now handles
+  pre-parent `vfork` events and removed intermediate working directories; a
+  structured capture auditor records the remaining recapture requirement.
