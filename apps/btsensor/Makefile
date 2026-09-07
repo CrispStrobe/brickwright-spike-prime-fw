@@ -28,6 +28,7 @@ endif
 # prevents application-local controller firmware or BTstack copies returning.
 CFLAGS += -I$(APPDIR)/external/btsensor
 CFLAGS += -I$(APPDIR)/../bluetooth/zephyr_compat/include
+CFLAGS += -include zephyr/autoconf.h
 CFLAGS += -I$(APPDIR)/../third_party/zephyr-host/upstream/include
 CFLAGS += -I$(APPDIR)/../third_party/zephyr-host/upstream/subsys/bluetooth
 CFLAGS += -I$(APPDIR)/../bluetooth/daemon

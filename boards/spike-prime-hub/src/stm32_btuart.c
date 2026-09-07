@@ -204,22 +204,6 @@ static uint32_t btuart_calc_brr(uint32_t baud)
   return (mantissa << 4) | (fraction & 0x0f);
 }
 
-static void btuart_apply_baud(uint32_t baud)
-{
-  uint32_t cr1 = getreg32(STM32_USART2_CR1);
-
-  /* Stop the peripheral before touching BRR.  This is the canonical
-   * hard-path on F4 — safer than racing the baud generator while the
-   * chip streams data.
-   */
-
-  putreg32(cr1 & ~USART_CR1_UE, STM32_USART2_CR1);
-  putreg32(btuart_calc_brr(baud), STM32_USART2_BRR);
-  putreg32(cr1 | USART_CR1_UE, STM32_USART2_CR1);
-
-  g_btuart.baud = baud;
-}
-
 static void btuart_usart_init(uint32_t baud)
 {
   /* Enable peripheral clock.  USART2 is on APB1ENR bit 17 (RM0430 7.3.11). */
