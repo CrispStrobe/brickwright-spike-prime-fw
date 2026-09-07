@@ -37,6 +37,7 @@ jobs:
         run: |
           python3 tools/test_source_policy.py
           python3 tests/test_english_only_policy.py -v
+          python3 tests/test_source_closure.py -v
           python3 tests/test_resource_budgets.py -v
 
       - name: Enforce workflow security policy
