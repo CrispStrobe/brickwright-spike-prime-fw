@@ -111,51 +111,75 @@ the process is Eligible. One boundary, stated rather than glossed: `crti.o` and
 sources that are not installed here, so their per-file notice was not read on
 this machine.
 
-**newlib — no single SPDX expression is truthful.** `libnewlib-dev` and
-`libnewlib-arm-none-eabi` ship byte-identical notices (sha256 `0383bc85…`) whose
-first line is "The newlib subdirectory is a collection of software from several
-sources"; twenty-eight numbered sources follow, and the file says each source
-file carries its own licence. The honest record is the aggregate —
-BSD-2-Clause, BSD-3-Clause, BSD-4-Clause-UC and other permissive notices — with
-two scoping facts that a single identifier would hide:
+**newlib — an aggregate, and the advertising clause is already retired.**
+`libnewlib-dev` and `libnewlib-arm-none-eabi` ship byte-identical notices
+(sha256 `0383bc85…`) whose first line is "The newlib subdirectory is a collection
+of software from several sources"; twenty-eight numbered sources follow, and the
+file says each source file carries its own licence. No single identifier is
+truthful; `BSD-2-Clause AND BSD-3-Clause AND BSD-4-Clause-UC` is, and the closure
+parses it. Two facts a single identifier would hide:
 
+* Entry (1) is the pre-1999 University of California notice requiring
+  acknowledgement in documentation, which is BSD-4-Clause-UC rather than
+  BSD-3-Clause. **That clause is retired by the notice that carries it.** At
+  lines 192-202, at the end of entry (1) and not after the last entry, the file
+  reads: "there is a statement regarding that acknowledgement must be made in any
+  advertising materials for products using the code. This restriction no longer
+  applies due to the following license change:
+  `ftp://ftp.cs.berkeley.edu/pub/4bsd/README.Impt.License.Change`" — Berkeley's
+  1999 rescission. The same paragraph adds that the defunct clause is removed
+  from some newlib files and left in place in others, so a reader can still find
+  the clause in a source file and it still does not apply. A reader who sees
+  BSD-4-Clause-UC and stops there reaches the wrong conclusion.
 * The only copyleft entries are (21) "Free Software Foundation LGPL License
   (`*-linux*` targets only)" and (22) "Xavier Leroy LGPL License
-  (`i[3456]86-*-linux*` targets only)". This build is `arm-none-eabi`, so
-  neither applies — but that exclusion rests on the parenthetical target
-  annotations in the notice, not on anything in the binary.
-* Entry (1) is the pre-1999 University of California notice that requires
-  acknowledgement in documentation and other materials. That is
-  BSD-4-Clause-UC, not BSD-3-Clause, and it obliges the distributor.
+  (`i[3456]86-*-linux*` targets only)". This build is `arm-none-eabi`, so neither
+  applies — and that is not taken on the notice's word: see below.
 
 **`cmake-data` — `BSD-3-Clause`**, already DEP-5, for the one probe header.
 
-## The answer: the closure cannot be satisfied as written
+## The scoping is a fact about the artifact, not a reading of a text file
 
-Asked of `check_license()` itself, with the expressions above:
+The target annotations that exclude entries (21) and (22) are parentheses in a
+notice. `tools/linked_object_licences.py` decides the same question from the
+artifacts, and records it in
+`evidence/source-closure/linked-object-licences.json`:
 
-| package | expression | the closure's verdict |
-|---|---|---|
-| `gcc-arm-none-eabi` | `GPL-3.0-or-later WITH GCC-exception-3.1` | **refused** — "unknown, compound, or forbidden license expression" |
-| `libnewlib-arm-none-eabi` | none is truthful | **refused** — nothing to test |
-| `libnewlib-dev` | none is truthful | **refused** — nothing to test |
-| `cmake-data` | `BSD-3-Clause` | accepted |
+| link input | members | machines | named for the linux/i386 trees | copyleft notices in the bytes |
+|---|---|---|---|---|
+| `libc.a` (thumb/v7e-m+fp/hard) | 658 | ARM 658 | 0 | none |
+| `libgcc.a` (thumb/v7e-m+fp/hard) | 1755 | ARM 1755 | 0 | none |
+| `crt0.o` (both variants) | 1 each | ARM | 0 | none |
 
-`FORBIDDEN_LICENSE` matches the substring `GPL` anywhere in the expression, so
-the GCC expression is refused for naming the exception it relies on, and would
-be refused however it is written. Independently, `ALLOWED_LICENSES` is
-`{Apache-2.0, BSD-3-Clause, MIT}`, which admits neither `BSD-2-Clause` nor
-`BSD-4-Clause-UC` — so even the wholly permissive parts of newlib fail. Three of
-the four packages supplying linked files are refused, and widening the set only
-for the GCC exception would not fix newlib.
+Every member of every archive the build links is an ARM object; none is named
+for the `linux`, `i386` or `sysdeps` trees those two entries live in; and none
+carries their notices ("GNU C Library", "Xavier Leroy", "sysdeps") anywhere in
+its bytes. An object compiled for a `*-linux*` target is not an ARM object, so
+the exclusion holds on the artifact and not only on the annotation.
 
-**The maintainer's decision, now backed by the text:** the allowed set must be
-widened — at minimum to admit `BSD-2-Clause` and the UC Berkeley variant, and to
-express "GPL with the Runtime Library Exception" without the forbidden-substring
-rule rejecting it — or the closure must gain a per-file override that names the
-cited evidence instead of an identifier. Declaring the files under upstream terms
-alone does not close it, because the refusals are the checker's, not the
-metadata's. This document takes neither decision.
+## What the closure answers
+
+Asked of `check_license()` itself, with the expressions above, all four packages
+that supply linked files are **accepted**: `GPL-3.0-or-later WITH
+GCC-exception-3.1`, `BSD-2-Clause AND BSD-3-Clause AND BSD-4-Clause-UC` for both
+newlib packages, and `BSD-3-Clause`. The report records that answer rather than
+asserting it, so a change to the rule shows up in the evidence rather than in
+prose.
+
+That required two changes to the rule itself, both in `tools/source_closure.py`:
+
+* **Expressions are parsed, not substring-matched.** The previous rule rejected
+  any expression containing `GPL` anywhere, which rejected
+  `GPL-3.0-or-later WITH GCC-exception-3.1` *for naming the exception that makes
+  it linkable*. `AND` now means every operand must be allowed; `WITH` binds a
+  licence to an exception and the pair is the unit, so a licence with a
+  different exception is refused; `OR` is refused outright, because a
+  dual-licensed input is taken under one licence and the manifest must record
+  which; parentheses are refused rather than guessed at.
+* **The allowed set names what the evidence supports:** `Apache-2.0`,
+  `BSD-2-Clause`, `BSD-3-Clause`, `BSD-4-Clause-UC` (with the rescission cited at
+  the constant), `MIT`, and the one licence-with-exception pair above. An
+  unknown identifier still fails closed.
 
 ## Method: three rules, each of which decides a number
 

@@ -66,15 +66,52 @@ class ClosureTest(unittest.TestCase):
                  "--strace", self.trace, "--depfile", self.dep, "--manifest", self.manifest)
 
     def test_forbidden_and_unknown_licenses_rejected(self):
-        for expression in ("GPL-2.0-only", "AGPL-3.0-only", "LGPL-2.1-only", "CC-BY-NC-4.0", "ISC"):
+        for expression, expected in (
+            ("GPL-2.0-only", "forbidden license"),
+            ("AGPL-3.0-only", "forbidden license"),
+            ("LGPL-2.1-only", "forbidden license"),
+            ("CC-BY-NC-4.0", "forbidden license"),
+            ("ISC", "unknown or unadmitted license"),
+        ):
             self.write_roots(expression)
-            self.assertIn("unknown, compound, or forbidden license", self.generate(ok=False).stderr)
+            self.assertIn(expected, self.generate(ok=False).stderr)
         self.write_roots("MIT")
         evil = self.root / "evil.c"; evil.write_text("/* SPDX-License-Identifier: GPL-3.0-only */\n")
         self.dep.write_text(f"x: {evil}\n")
-        self.assertIn("unknown, compound, or forbidden license", self.generate(ok=False).stderr)
+        self.assertIn("forbidden license", self.generate(ok=False).stderr)
+        # A dual-licensed input is still refused: the declarer must record which
+        # license was taken, not hand the gate the choice.
         evil.write_text("/* copyright block */\n" * 2000 + "/* SPDX-License-Identifier: MIT OR Apache-2.0 */\n")
-        self.assertIn("unknown, compound, or forbidden license", self.generate(ok=False).stderr)
+        self.assertIn("dual-licensed expression must be resolved", self.generate(ok=False).stderr)
+
+    def test_license_expressions_are_parsed_not_substring_matched(self):
+        """The substring rule rejected an expression for NAMING its exception.
+
+        The rest of this file is black-box on purpose.  check_license is a pure
+        function and the cases below are cheap to state directly, so this one
+        imports it rather than paying a subprocess per expression.
+        """
+        sys.path.insert(0, str(TOOL.parent))
+        import source_closure as closure
+
+        # Admitted: the GCC runtime pair this build links, and the newlib aggregate.
+        closure.check_license("GPL-3.0-or-later WITH GCC-exception-3.1")
+        closure.check_license("BSD-2-Clause AND BSD-3-Clause AND BSD-4-Clause-UC")
+        closure.check_license("MIT")
+        # Refused, each for its own reason.
+        for expression, expected in (
+            ("GPL-3.0-or-later", "forbidden license"),
+            ("AGPL-3.0-or-later", "forbidden license"),
+            ("GPL-3.0-or-later WITH Autoconf-exception-3.0", "exception that is not admitted"),
+            ("MIT OR Apache-2.0", "dual-licensed"),
+            ("(MIT AND BSD-2-Clause)", "parenthesised"),
+            ("Nonsense-9.9", "unknown or unadmitted"),
+            ("MIT AND GPL-2.0-only", "forbidden license"),
+            ("MIT WITH Foo WITH Bar", "more than one WITH"),
+        ):
+            with self.assertRaises(SystemExit) as refusal:
+                closure.check_license(expression)
+            self.assertIn(expected, str(refusal.exception), expression)
 
     def test_missing_escape_and_escaping_symlink_rejected(self):
         self.dep.write_text(f"x: {self.root}/missing.h\n")

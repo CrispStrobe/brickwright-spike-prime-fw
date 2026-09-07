@@ -1,0 +1,44 @@
+{
+  "schema": "brickwright/linked-object-licences/v1",
+  "question": "is any newlib source under entry (21) FSF LGPL (*-linux* targets only) or entry (22) Xavier Leroy LGPL (i[3456]86-*-linux* targets only) present in the link?",
+  "answer": "no",
+  "basis": "every member is an ARM object, no member is named for the linux/i386 trees those entries live in, and no member carries their notices",
+  "inputs": {
+    "/mnt/volume1/opt/arm-none-eabi/newlib/thumb/v7e-m+fp/hard/libc.a": {
+      "present": true,
+      "members": 658,
+      "machines": {
+        "ARM": 658
+      },
+      "members_named_for_copyleft_trees": [],
+      "copyleft_markers_in_bytes": []
+    },
+    "/mnt/volume1/opt/arm-none-eabi/newlib/thumb/v7e-m+fp/hard/crt0.o": {
+      "present": true,
+      "members": 1,
+      "machines": {
+        "ARM": 1
+      },
+      "members_named_for_copyleft_trees": [],
+      "copyleft_markers_in_bytes": []
+    },
+    "/mnt/volume1/opt/arm-none-eabi/newlib/crt0.o": {
+      "present": true,
+      "members": 1,
+      "machines": {
+        "ARM": 1
+      },
+      "members_named_for_copyleft_trees": [],
+      "copyleft_markers_in_bytes": []
+    },
+    "/usr/lib/gcc/arm-none-eabi/13.2.1/thumb/v7e-m+fp/hard/libgcc.a": {
+      "present": true,
+      "members": 1755,
+      "machines": {
+        "ARM": 1755
+      },
+      "members_named_for_copyleft_trees": [],
+      "copyleft_markers_in_bytes": []
+    }
+  }
+}

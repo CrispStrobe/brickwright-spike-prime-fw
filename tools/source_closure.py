@@ -14,10 +14,63 @@ import subprocess
 from pathlib import Path, PurePosixPath
 
 
-ALLOWED_LICENSES = {"Apache-2.0", "BSD-3-Clause", "MIT"}
-FORBIDDEN_LICENSE = re.compile(
-    r"(?:^|[^A-Za-z])(?:A?GPL|LGPL|CC-BY-NC|NONCOMMERCIAL)", re.IGNORECASE
-)
+# Licences admitted for a linked input, each on evidence recorded in
+# docs/en/project/external-inputs.md.
+#
+# BSD-4-Clause-UC is admitted although it carries the advertising clause: the
+# clause is RETIRED BY THE NOTICE THAT CARRIES IT.
+# /usr/share/doc/libnewlib-arm-none-eabi/copyright:192-202, at the end of entry
+# (1), reads "there is a statement regarding that acknowledgement must be made
+# in any advertising materials for products using the code.  This restriction no
+# longer applies due to the following license change:
+# ftp://ftp.cs.berkeley.edu/pub/4bsd/README.Impt.License.Change" -- Berkeley's
+# 1999 rescission.  The same paragraph notes the defunct clause is removed from
+# some newlib files and left in place in others, so it may still be READ in a
+# source file and still not apply.
+ALLOWED_LICENSES = {
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSD-4-Clause-UC",
+    "MIT",
+}
+
+# A licence admitted ONLY together with a named exception.  The pair is the
+# unit: the licence alone is not allowed, and neither is the licence with a
+# different exception.
+ALLOWED_LICENSE_EXCEPTIONS = {
+    # libgcc, crtbegin/crtend and the GCC headers this build links.
+    # /usr/share/doc/gcc-13/copyright:99 places them under GPLv3-or-later with
+    # version 3.1 of the Runtime Library Exception; line 293 defines the
+    # Eligible Compilation Process the exception requires, and this build meets
+    # it (arm-none-eabi-gcc with binutils, cmake, make and Python; nothing
+    # GPL-incompatible, nothing optimising GCC intermediate representations).
+    ("GPL-3.0-or-later", "GCC-exception-3.1"),
+}
+
+# Refused outright, with or without an exception, unless the pair above admits
+# it.  This is a list of licence identifiers, not a substring search: matching
+# "GPL" anywhere in the text rejected `GPL-3.0-or-later WITH GCC-exception-3.1`
+# for naming the exception that makes it linkable, and would reject an
+# `AGPL-...-WITH-...` expression for the same reason.
+FORBIDDEN_LICENSE_IDS = {
+    "AGPL-1.0", "AGPL-1.0-only", "AGPL-1.0-or-later",
+    "AGPL-3.0", "AGPL-3.0-only", "AGPL-3.0-or-later",
+    "GPL-1.0", "GPL-1.0-only", "GPL-1.0-or-later",
+    "GPL-2.0", "GPL-2.0-only", "GPL-2.0-or-later",
+    "GPL-3.0", "GPL-3.0-only", "GPL-3.0-or-later",
+    "LGPL-2.0", "LGPL-2.0-only", "LGPL-2.0-or-later",
+    "LGPL-2.1", "LGPL-2.1-only", "LGPL-2.1-or-later",
+    "LGPL-3.0", "LGPL-3.0-only", "LGPL-3.0-or-later",
+    "CC-BY-NC-1.0", "CC-BY-NC-2.0", "CC-BY-NC-2.5", "CC-BY-NC-3.0", "CC-BY-NC-4.0",
+    "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5",
+    "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0",
+}
+# Anything whose identifier merely LOOKS copyleft or non-commercial and is not
+# listed above is not silently admitted: an unknown identifier fails closed in
+# check_license, so this set exists to give the common ones a clear refusal
+# rather than to be the only guard.
+LICENSE_TOKEN = re.compile(r"^[A-Za-z0-9.+-]+$")
 PID_PREFIX = re.compile(r"^\s*(?:(?:\[pid\s+(\d+)\]|(\d+))\s+)?(.*)$")
 SYSCALL_RESULT = re.compile(r"^(\w+)\((.*)\)\s+=\s+(-?\d+)")
 SPDX_COMMENT = re.compile(
@@ -52,9 +105,58 @@ def run_git(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
     )
 
 
+def _license_terms(expression: str) -> list[tuple[str, str | None]]:
+    """The (licence, exception) pairs an SPDX expression names.
+
+    Parsed, not pattern-matched.  AND means every operand's obligations apply,
+    so every operand must be allowed.  OR is REFUSED rather than resolved: a
+    dual-licensed input is taken under one licence and the manifest must record
+    which, the way THIRD-PARTY-NOTICES.md already does ("dual-licensed MIT or
+    GPL-3.0-or-later; taken under MIT").  Accepting the expression whole would
+    leave the choice unrecorded.  Parentheses are refused rather than guessed
+    at, because their scoping changes the answer.
+    """
+    if "(" in expression or ")" in expression:
+        die(f"parenthesised license expression is not supported: {expression}")
+    if re.search(r"\s+OR\s+", expression):
+        die(
+            "dual-licensed expression must be resolved before declaring it: "
+            f"state the license taken, not the choice ({expression})"
+        )
+    terms: list[tuple[str, str | None]] = []
+    for operand in re.split(r"\s+AND\s+", expression.strip()):
+        operand = operand.strip()
+        if not operand:
+            die(f"empty operand in license expression: {expression}")
+        parts = re.split(r"\s+WITH\s+", operand)
+        if len(parts) == 1:
+            licence, exception = parts[0], None
+        elif len(parts) == 2:
+            licence, exception = parts[0], parts[1]
+        else:
+            die(f"more than one WITH in a license operand: {operand}")
+        if not LICENSE_TOKEN.match(licence) or (
+            exception is not None and not LICENSE_TOKEN.match(exception)
+        ):
+            die(f"unparsable license expression: {expression}")
+        terms.append((licence, exception))
+    return terms
+
+
 def check_license(expression: str) -> None:
-    if FORBIDDEN_LICENSE.search(expression) or expression not in ALLOWED_LICENSES:
-        die(f"unknown, compound, or forbidden license expression: {expression}")
+    """Refuse anything not positively admitted.  Unknown fails closed."""
+    for licence, exception in _license_terms(expression):
+        if exception is not None:
+            if (licence, exception) not in ALLOWED_LICENSE_EXCEPTIONS:
+                die(
+                    "license with an exception that is not admitted: "
+                    f"{licence} WITH {exception} (in {expression})"
+                )
+            continue
+        if licence in FORBIDDEN_LICENSE_IDS:
+            die(f"forbidden license: {licence} (in {expression})")
+        if licence not in ALLOWED_LICENSES:
+            die(f"unknown or unadmitted license: {licence} (in {expression})")
 
 
 def load_roots(path: Path) -> list[dict]:
