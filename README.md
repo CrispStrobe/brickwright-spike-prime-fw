@@ -11,6 +11,20 @@
 This project ports the SPIKE Prime Hub to NuttX and provides applications,
 host tools, protocol documentation, and a Renode-based validation environment.
 
+## Current implementation state
+
+The protected NuttX image builds with the transport-neutral Classic/BLE host,
+boots in the custom Renode fork, initializes external flash and DMA, streams a
+lawfully supplied opaque TI service pack to the simulated H4 controller,
+completes `bt_enable()`, and reaches the daemon-ready boundary. Official LEGO
+v2/v3, Pybricks, original spike-nx, and Brickwright images also have bounded
+vector/instruction-progress gates.
+
+This is meaningful firmware execution, but it is not yet full hardware
+validation. Radio RF behavior, physical motors and sensors, electrical and
+thermal limits, recovery from interrupted updates, and long-duration operation
+remain outside the completed evidence.
+
 ## Benchmark results
 
 | Board | MCU | CoreMark | CoreMark/MHz | Compiler | Flags |
@@ -18,7 +32,7 @@ host tools, protocol documentation, and a Renode-based validation environment.
 | SPIKE Prime Hub | STM32F413VG (96 MHz) | 171.19 | 1.78 | GCC 13.2.1 | `-Os` |
 | B-L4S5I-IOT01A | STM32L4R5VI (80 MHz) | 143.16 | 1.79 | GCC 13.2.1 | `-Os` |
 
-## Quick start
+## Simulation quick start
 
 Build the default NuttX configuration:
 
@@ -26,11 +40,22 @@ Build the default NuttX configuration:
 make
 ```
 
-Connect to the serial console:
+Install the pinned Renode release and run the protected-image suite:
 
 ```bash
-picocom /dev/tty.usbmodem01
+tools/install_renode.sh
+tools/test_renode_protected_images.sh
 ```
+
+Local official/Pybricks image tests are opt-in, ignored, and hash-verified:
+
+```bash
+tools/test_renode_opaque_images.sh
+```
+
+The repository never fetches or uploads those firmware images.
+
+## Physical hardware status
 
 Physical-hardware flashing is unsupported and unsafe until the
 hardware-validation gate in [SAFETY.md](SAFETY.md) is complete.
