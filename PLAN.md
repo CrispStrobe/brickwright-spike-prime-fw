@@ -232,6 +232,23 @@ machine-readable and cannot be confused with physical-hardware evidence.
 9. [!] Define sacrificial-hardware validation only after steps 1–8; flashing
    remains prohibited until separately authorized.
 
+### Follow-on hub research
+
+- [x] Rank other LEGO firmware targets and document the CPU, memory, boot,
+  radio, and NuttX-port constraints in `docs/project/other-hubs.md`.
+- [ ] After the Prime simulation roadmap is complete, prototype SPIKE
+  Essential by reusing the STM32F4/IMU/LPF2 model and neutral hub contract.
+- [ ] Prototype Technic, City, and Move in that order of available resources;
+  keep already-resident CC2640/BlueNRG controller firmware outside the
+  permissive source closure unless separate redistribution rights are proven.
+- [ ] Use PBIO first as a pinned behavioral oracle. Evaluate only PBIO files
+  carrying the Pybricks MIT header behind the NuttX adaptation layer, and only
+  after complete transitive source/link closure review; a Pybricks repository
+  or firmware build is not MIT as a whole and may contain BTstack, GPL, or
+  proprietary platform components.
+- [ ] Keep RCX/H8 and EV3/AM1808 as separate architecture-port research; do
+  not copy GPL brickOS/legOS code into this repository.
+
 ## Checkpoint log
 
 | UTC date | Checkpoint | Result | Evidence |
