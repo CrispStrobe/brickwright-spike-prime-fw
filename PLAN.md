@@ -41,7 +41,10 @@ This file is the ordered queue for unfinished work. Completed work belongs in
 Build a minimal reproducible source tree for the protected image.
 
 1. Capture successful build inputs with per-process working directories,
-   compiler depfiles, the link map, and archive membership.
+   complete descriptor lifecycles, compiler depfiles, the link map, and archive
+   membership. The retained trace audit in
+   `evidence/source-closure/trace-audit.json` fails on an unresolved duplicated
+   dirfd; recapture with the syscall set in the tooling contract.
 2. Declare immutable roots, pins, patch policy, licence overrides, and generated
    inputs; generate the deterministic manifest, SPDX 2.3 SBOM, and link evidence.
 3. Replace broad NuttX/NuttX Apps gitlinks with only the verified closure.
