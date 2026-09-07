@@ -120,6 +120,19 @@ class ClosureTest(unittest.TestCase):
         self.trace.write_text('3947728 openat(9, "main.c", O_RDONLY) = 4\n')
         self.assertIn("unresolved dirfd 9", self.generate(ok=False).stderr)
 
+    def test_vfork_child_before_parent_resume_and_removed_chdir(self):
+        removed = self.root / "removed-build-directory"
+        self.trace.write_text(
+            f'3947728 chdir("{removed}") = 0\n'
+            '3947728 vfork( <unfinished ...>\n'
+            f'3948000 execve("{self.root}/main.c", ["main.c"], []) = 0\n'
+            '3947728 <... vfork resumed>) = 3948000\n'
+        )
+        self.dep.write_text(f'x: {self.root}/main.c\n')
+        self.generate()
+        files = json.loads(self.manifest.read_text())["files"]
+        self.assertEqual(["main.c"], [item["path"] for item in files])
+
     def test_nested_license_boundary_requires_override(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("different terms\n")
