@@ -68,3 +68,7 @@ Enable compiler depfiles for every C, C++, and assembly compilation. Preserve
 the link maps, archives, and linked objects until evidence generation finishes.
 Run `tools/audit_build_capture.py` before declaring roots; a nonzero result is
 a machine-readable blocker and must not be bypassed by guessing a dirfd.
+Paths first opened with create, truncate, or exclusive-create flags are proved
+generated and excluded from the source set. Read-only and read/write paths are
+retained; missing or non-file candidates require classification before closure
+generation.

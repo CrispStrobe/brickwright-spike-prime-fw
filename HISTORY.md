@@ -52,3 +52,8 @@ and CI; pending work belongs in `PLAN.md`.
   traversal, so no unverified source was vendored. The parser now handles
   pre-parent `vfork` events and removed intermediate working directories; a
   structured capture auditor records the remaining recapture requirement.
+- Rebuilt a clean copied source tree successfully under a descriptor-complete
+  trace. The parser resolved 4,060,664 lines and 6,121 candidate inputs and now
+  excludes proved generated writes and directory traversal. The audit remains
+  incomplete for 355 paths requiring classification, so none was vendored by
+  inference.

@@ -149,6 +149,8 @@ def resolve_trace_path(
 
 def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
     found: set[Path] = set()
+    generated: set[Path] = set()
+    directories: set[Path] = set()
     unfinished: dict[str, str] = {}
     state: dict[str, dict] = {}
     initial_pid: str | None = None
@@ -173,7 +175,8 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
         parent = parents[0]
         state[pid] = {"cwd": [state[parent]["cwd"][0]], "fds": dict(state[parent]["fds"])}
 
-    for raw_line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+    for raw_line in path.open("r", encoding="utf-8", errors="replace"):
+        raw_line = raw_line.rstrip("\n")
         prefix = PID_PREFIX.match(raw_line)
         if not prefix:
             continue
@@ -205,7 +208,6 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
         }.get(syscall)
         needs_state = syscall in {
             "clone", "clone3", "fork", "vfork", "chdir", "fchdir",
-            "close", "dup", "dup2", "dup3",
         }
         if path_index is not None:
             candidate = quoted_path(arguments[path_index], line)
@@ -238,6 +240,14 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
             if pid in state:
                 state[pid]["fds"].pop(int(arguments[0]), None)
             continue
+        if syscall == "fcntl":
+            old_descriptor = int(arguments[0])
+            duplicates = len(arguments) > 1 and arguments[1] in {
+                "F_DUPFD", "F_DUPFD_CLOEXEC"
+            }
+            if duplicates and pid in state and old_descriptor in state[pid]["fds"]:
+                state[pid]["fds"][result] = state[pid]["fds"][old_descriptor]
+            continue
         if syscall in {"dup", "dup2", "dup3"}:
             old_descriptor = int(arguments[0])
             if pid in state and old_descriptor in state[pid]["fds"]:
@@ -249,17 +259,30 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
         resolved = resolve_trace_path(
             quoted_path(arguments[path_index], line), pid, state, dirfd, line
         )
-        if syscall in {"open", "openat", "openat2"} and "O_DIRECTORY" in argument_text:
+        if syscall in {"open", "openat", "openat2"} and (
+            "O_DIRECTORY" in argument_text or candidate in {Path("."), Path("..")}
+        ):
             if pid not in state:
                 die(f"directory fd opened by pid {pid} without inherited state")
             state[pid]["fds"][result] = resolved
+            directories.add(resolved)
         else:
-            # Record unavailable paths too: locate() will reject evidence that
-            # cannot be reproduced instead of silently dropping it.
-            found.add(resolved)
+            if syscall in {"open", "openat", "openat2"}:
+                if any(flag in argument_text for flag in ("O_CREAT", "O_TRUNC", "O_EXCL")):
+                    generated.add(resolved)
+                if "O_WRONLY" not in argument_text:
+                    found.add(resolved)
+            else:
+                if "st_mode=S_IFDIR" in argument_text:
+                    directories.add(resolved)
+                else:
+                    found.add(resolved)
     if unfinished:
         die(f"unterminated syscalls in {path}: pids {sorted(unfinished)}")
-    return found
+    # Build-created intermediates are linkage evidence, not vendored source.
+    # Existing directories are traversal metadata, not source files. Missing
+    # paths remain so locate() fails closed unless the trace proved creation.
+    return found - generated - directories
 
 
 def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
