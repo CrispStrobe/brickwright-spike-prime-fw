@@ -78,6 +78,24 @@ the destination unproved, so a rename cannot launder an undeclared input.
 shell process substitution; they are consumption of a descriptor, not of a file.
 The audit records its own `--cwd` and `--tree` in the report: the same trace
 yields a different external count under a different invocation, so counts
-without the invocation cannot be reproduced. Read-only and read/write paths are
+without the invocation cannot be reproduced.
+
+## Staged upstream sources
+
+`tools/build_zephyr_nuttx_archive.sh` fetches Mbed TLS into a `mktemp`
+directory and deletes it on exit, so the capture consumed 263 paths that no
+longer existed and that no closure can name. Set `MBEDTLS_SOURCE_DIR` to a
+declared root before capturing, and the same build consumes them from a path
+the manifest can record:
+
+```sh
+tools/fetch_mbedtls.sh /srv/closure/mbedtls-3.6.2      # pins by SHA-256
+cd nuttx && MBEDTLS_SOURCE_DIR=/srv/closure/mbedtls-3.6.2 strace -f -qq -s 0 \
+  -e trace=%file,%process,fcntl,dup,dup2,dup3,close,chdir,fchdir \
+  -o build/complete.strace make
+```
+
+Any tool that stages an upstream tree into a temporary directory has the same
+defect: the build is honest, the evidence cannot be written. Read-only and read/write paths are
 retained; missing or non-file candidates require classification before closure
 generation.

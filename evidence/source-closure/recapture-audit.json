@@ -1,25 +1,57 @@
 {
   "capture": {
-    "initial_cwd": "/mnt/volume1/offload/tmp/brickwright-closure-recapture.bRkGxS/nuttx",
-    "tree": "/mnt/volume1/offload/tmp/brickwright-closure-recapture.bRkGxS"
+    "initial_cwd": "/mnt/volume1/offload/closure/recapture2/nuttx",
+    "tree": "/mnt/volume1/offload/closure/recapture2"
   },
-  "consumed_path_count": 6550,
+  "consumed_path_count": 6011,
   "depfile_count": 23,
-  "errors": [
-    "trace includes generated, removed, or non-file paths that need classification: missing=263, non_file=8"
-  ],
-  "external_existing_path_count": 2757,
+  "errors": [],
+  "external_existing_path_count": 1029,
   "map_files": [
     "nuttx/System.map",
     "nuttx/User.map",
     "nuttx/nuttx.map"
   ],
-  "missing_path_count": 263,
+  "missing_path_count": 0,
   "non_file_path_count": 8,
+  "non_file_paths": [
+    {
+      "kind": "character-device",
+      "path": "/dev/urandom"
+    },
+    {
+      "kind": "directory",
+      "path": "/etc/alternatives/gcc-arm-none-eabi-include"
+    },
+    {
+      "kind": "directory",
+      "path": "/etc/alternatives/gcc-arm-none-eabi-lib"
+    },
+    {
+      "kind": "directory",
+      "path": "/mnt/volume1/code/lego/wt-spike-prime-fw-public/nuttx/arch/arm/include/board"
+    },
+    {
+      "kind": "directory",
+      "path": "/mnt/volume1/code/lego/wt-spike-prime-fw-public/nuttx/arch/arm/include/chip"
+    },
+    {
+      "kind": "directory",
+      "path": "/mnt/volume1/opt/arm-none-eabi/include"
+    },
+    {
+      "kind": "directory",
+      "path": "/mnt/volume1/opt/arm-none-eabi/lib"
+    },
+    {
+      "kind": "directory",
+      "path": "/opt/miniconda"
+    }
+  ],
   "schema": 2,
-  "status": "incomplete",
+  "status": "ready",
   "trace": {
-    "lines": 4060664,
-    "sha256": "90f204fcc5789b5fb02e51082dab597fbf603a0946625aa51dab5491bab8aae3"
+    "lines": 2503689,
+    "sha256": "b0709f319839fbd8137a3c90bbdf80bbb16e73a3eaa06eab8b0982956a84e350"
   }
 }
