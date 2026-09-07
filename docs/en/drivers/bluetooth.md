@@ -1,4 +1,14 @@
-# CC2564C Bluetooth (btstack + SPP)
+# Archived pre-permissive Bluetooth implementation
+
+> **Historical document — not the current implementation.** This page records
+> the removed BTstack and modified-v1.4 experiment. BTstack and that payload
+> are absent from the public source/build closure and must not be restored.
+> Current code uses the pinned Apache-2.0 Zephyr host, the byte-exact unmodified
+> TI CC2564C v1.5 service pack under its separate TI-device-only licence, and
+> host-side eHCILL handling. See
+> [the current host audit](../../project/zephyr-host-audit.md), `THIRD_PARTY.md`,
+> and `SAFETY.md`. Nothing below is a flashing instruction or current design
+> authority.
 
 Classic Bluetooth SPP (Serial Port Profile over RFCOMM) streaming of
 LSM6DS3TR-C IMU samples from the SPIKE Prime Hub to a PC (Linux /

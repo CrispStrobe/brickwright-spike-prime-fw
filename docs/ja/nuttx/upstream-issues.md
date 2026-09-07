@@ -34,7 +34,10 @@ if (sizeof(cc256x_firmware) < 10 || sizeof(ble_firmware) < 10)
   }
 ```
 
-**本プロジェクトでの対応**: `CONFIG_BLUETOOTH_UART_CC2564=n` とし、代わりに汎用 upper-half (`CONFIG_BLUETOOTH_UART_OTHER` + `CONFIG_BLUETOOTH_UART_GENERIC`) を使用。firmware blob は pybricks 由来 (TI Text File License、CC2564C と組合せて再配布可) を `boards/spike-prime-hub/src/cc256x_init_script.c` に配置し、bring-up コードが自前でチップに転送する。
+**現在の境界**: 旧 Pybricks 由来 v1.4 配列は削除済み。board-local HCI UART seam
+から `third_party/ti-cc2564c/` の allowlist 済み byte-exact・未改変 TI CC2564C v1.5
+BTS のみを転送し、隣接する TI licence は project licence と分離する。eHCILL は TI byte
+を patch せず host transport 側で処理する。
 
 ## USART2 Kconfig choice の排他性
 

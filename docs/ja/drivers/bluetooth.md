@@ -1,4 +1,11 @@
-# CC2564C Bluetooth (btstack + SPP)
+# Archived pre-permissive Bluetooth implementation
+
+> **Historical document — not the current implementation.** このページは削除済みの
+> BTstack と改変 v1.4 payload の実験記録であり、現在の設計ではない。公開 source/build
+> closure に両者は含まれず、復元してはならない。現在は Apache-2.0 Zephyr host、別個の
+> TI-device-only licence に従う byte-exact・未改変 TI CC2564C v1.5 service pack、host-side
+> eHCILL 処理を使う。`docs/project/zephyr-host-audit.md`、`THIRD_PARTY.md`、`SAFETY.md`
+> を正とする。以下は flashing 手順でも現行設計資料でもない。
 
 SPIKE Prime Hub の **TI CC2564C** (BR/EDR + BLE デュアルモード Bluetooth コントローラ) を使い、Classic BT **SPP (Serial Port Profile over RFCOMM)** で PC (Linux / macOS) に IMU テレメトリをストリーミングするサブシステム。
 

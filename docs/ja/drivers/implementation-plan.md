@@ -137,7 +137,8 @@ PA13 (BAT_PWR_EN) と PA14 (PORT_3V3_EN) の初期化は `stm32_boot.c` に実�
 - nSHUTD=PA2, 32.768 kHz slow clock = TIM8 CH4 → PC9
 - NVIC 優先度 0xA0 (Issue #50 予約枠)
 - board-local `stm32_btuart.c` lower-half + generic upper-half (`CONFIG_BLUETOOTH_UART_OTHER`)
-- TI CC256XC v1.4 init script (6,646 B) を 3 Mbps で転送、btsak 経由 HCI 動作確認済
+- byte-exact・未改変 TI CC2564C v1.5 service pack (10,211 B) を別 licence として
+  hash 検証後に転送する。simulator 証拠は RF・実 controller 動作を証明しない
 - 詳細は [Bluetooth ドライバ](bluetooth.md) を参照
 
 ## 4. ポート GPIO ピン割り当て

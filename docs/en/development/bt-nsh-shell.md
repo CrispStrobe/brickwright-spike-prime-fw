@@ -117,7 +117,7 @@ useful if the BT peer wedged the shell.
   queue and stalled the controller indefinitely; the original Issue
   #109 fix mis-attributed this to RFCOMM credit refresh on the BlueZ
   side.  The current shell pump caps each `rfcomm_send()` at 256 B
-  and paces successive frames through a 5 ms BTstack timer, which
+  and paces successive frames through a 5 ms transport scheduler timer, which
   keeps the controller queue cycling.  Output past the 4 KB TX
   coalescing buffer (default) is dropped at the reader pthread, but
   **the shell session itself stays usable** — `ps`/`ls /dev`/`free`

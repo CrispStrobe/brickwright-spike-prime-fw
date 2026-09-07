@@ -848,7 +848,7 @@ motor が両ポート (odd + even) に挿さっていない可能性。`drivebas
 ### 10.4 stall watchdog が誤発火する
 
 deadline_miss が 5 連続で coast 経路に乗る。`drivebase jitter` で wake latency の histogram を確認:
-- bucket 5+ (≥ 1 ms) が継続的に出る → BTstack / sound DMA / flash I/O との競合の可能性
+- bucket 5+ (≥ 1 ms) が継続的に出る → Bluetooth host / sound DMA / flash I/O との競合の可能性
 - `apps/btsensor/btsensor stop` で BT を止めて再現確認
 - `apps/sound/sound stop` で sound DMA を止めて再現確認
 

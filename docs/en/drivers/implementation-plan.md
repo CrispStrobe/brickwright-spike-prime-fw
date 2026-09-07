@@ -137,7 +137,9 @@ PA13 (BAT_PWR_EN) and PA14 (PORT_3V3_EN) initialization is already implemented i
 - nSHUTD=PA2, 32.768 kHz slow clock = TIM8 CH4 → PC9
 - NVIC priority 0xA0 (Issue #50 reserved slot)
 - Board-local `stm32_btuart.c` lower half + generic upper half (`CONFIG_BLUETOOTH_UART_OTHER`)
-- TI CC256XC v1.4 init script (6,646 B) streamed at 3 Mbps, HCI verified via btsak
+- byte-exact TI CC2564C v1.5 service pack (10,211 B), separately licensed and
+  hash-verified before streaming; simulator evidence does not prove RF or
+  physical-controller behavior
 - See [Bluetooth driver](bluetooth.md) for details
 
 ## 4. Port GPIO Pin Assignment

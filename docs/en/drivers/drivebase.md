@@ -853,7 +853,7 @@ Triage order:
 
 Five consecutive deadline misses route through coast.  Inspect `drivebase jitter`:
 
-- Sustained samples in bucket 5+ (≥ 1 ms) suggest contention with BTstack / sound DMA / flash I/O
+- Sustained samples in bucket 5+ (≥ 1 ms) suggest contention with the Bluetooth host / sound DMA / flash I/O
 - `apps/btsensor/btsensor stop` to silence Bluetooth and re-test
 - `apps/sound/sound stop` to silence the DAC and re-test
 

@@ -105,7 +105,7 @@ SIGINT (Ctrl-C) / SIGTERM はハンドラがフラグを立て、loop 内で観�
 `btsensor mode capture` (NSH) または PC からの `MODE CAPTURE\n` (BT 経由):
 
 1. `/dev/btcap` を `O_RDONLY|O_NONBLOCK` で open。session が無ければ `ENOENT` で即返し (`btsensor: no capture session in flight`)。
-2. session 検出時、BUNDLE emitter (IMU / sensor) を pause し data source を btstack run loop に attach。
+2. session 検出時、BUNDLE emitter (IMU / sensor) を pause し data source を transport-neutral daemon scheduler に attach。
 3. 第 1 frame として **BTCS (4B) + meta (40B = u16 schema_magic + u16 reserved + u32 total_bytes + char[32] name)** を送出。
 4. chardev から 256 B chunk で read → RFCOMM 送信 を 5 ms throttle (`CAP_TX_THROTTLE_MS`) で繰返し。`btsensor_tx` ring が満杯なら read 自体を控えて writer に back-pressure を返す (NFR-9 lossless paced sender)。
 5. EOF を見たら kernel state を query。`READY` → BTCE (4B) を送出 (clean end)、`ABORTED` → BTAB (4B) を送出 (truncated)。

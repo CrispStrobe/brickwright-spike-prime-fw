@@ -129,7 +129,7 @@ the chardev release fop cleans the session up.
 1. Open `/dev/btcap` `O_RDONLY|O_NONBLOCK`.  No session in flight →
    `ENOENT`, prints `btsensor: no capture session in flight`.
 2. Pause the BUNDLE emitters (IMU / sensor) and attach the chardev fd
-   to the btstack run loop as a data source.
+   to the transport-neutral daemon scheduler as a data source.
 3. First frame on the wire: **BTCS (4 B) + meta (40 B = u16
    schema_magic + u16 reserved + u32 total_bytes + char[32] name)**.
 4. Read the chardev in 256-byte chunks → enqueue on RFCOMM with a

@@ -34,7 +34,11 @@ if (sizeof(cc256x_firmware) < 10 || sizeof(ble_firmware) < 10)
   }
 ```
 
-**Workaround in this project**: We set `CONFIG_BLUETOOTH_UART_CC2564=n` and use the generic upper half (`CONFIG_BLUETOOTH_UART_OTHER` + `CONFIG_BLUETOOTH_UART_GENERIC`) instead.  The firmware blob is a pybricks-derived copy of TI's CC256XC v1.4 service pack (TI Text File License permits redistribution with TI devices, and the SPIKE Prime Hub's CC2564C satisfies that clause); it lives at `boards/spike-prime-hub/src/cc256x_init_script.c` and the bring-up code streams it to the chip directly.
+**Current project boundary**: the old Pybricks-derived v1.4 array was removed.
+The host uses the board-local HCI UART seam and streams only the allowlisted,
+byte-exact TI CC2564C v1.5 BTS from `third_party/ti-cc2564c/`; its adjacent TI
+licence remains separate from the project licence. eHCILL is handled by host
+transport code, never by patching TI bytes.
 
 ## USART2 Kconfig choice is mutually exclusive
 
