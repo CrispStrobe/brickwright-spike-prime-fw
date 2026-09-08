@@ -52,11 +52,11 @@ Build a minimal reproducible source tree for the protected image.
 4. Rebuild offline until no undeclared input is consumed. Closure builds remain
    serial until archive creation is made deterministically parallel.
 
-Pending closure details: capture depfiles and the complete linker argv alongside
-the already preserved trace/maps, generate and verify the final manifest, SPDX
-SBOM, link evidence, and minimal copied closure twice, and prove the two builds
-consume no network or undeclared input. Serial archive construction remains
-required until member collection is canonicalized.
+Pending closure details: extend the verified final-linked source closure with
+the traced build-system inputs (Makefiles, configuration generators, and host
+tools) needed to configure the copied tree, then build that copied closure twice
+offline and prove both builds consume no undeclared input. Serial archive
+construction remains required until member collection is canonicalized.
 
 Acceptance: two clean offline builds have identical images/manifests; every
 linked input has allowed licensing and immutable provenance; the verifier rejects
