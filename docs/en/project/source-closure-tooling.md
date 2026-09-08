@@ -30,7 +30,10 @@ run against its exact output manifest. Registry `.pdat` files and `.updated`
 are recorded generator metadata but are not materialized unless independent
 content-consumption evidence selects them.
 
-Only MIT, Apache-2.0, and BSD-3-Clause are accepted. An SPDX identifier on a
+Only MIT, Apache-2.0, BSD-2-Clause, and BSD-3-Clause are generally accepted.
+The NuttX public-domain dedication is reviewed only for the exact
+`nuttx/include/search.h` override: its SPDX identifier and J.T. Conklin notice
+must match, and both are preserved in the SPDX output. An SPDX identifier on a
 file overrides its root declaration and is checked independently. Missing
 files, paths outside a declared root, escaping symlinks, and unknown or
 GPL/AGPL/LGPL/non-commercial expressions fail closed. Failed system calls in a

@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path, PurePosixPath
 
 
-ALLOWED_LICENSES = {"Apache-2.0", "BSD-3-Clause", "MIT"}
+ALLOWED_LICENSES = {"Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "MIT"}
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
 }
