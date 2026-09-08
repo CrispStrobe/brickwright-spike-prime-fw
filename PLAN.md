@@ -58,19 +58,6 @@ Build a minimal reproducible source tree for the protected image.
    clean offline builds through the documented path.
 2. Declare immutable roots, pins, patch policy, licence overrides, and generated
    inputs; generate the deterministic manifest, SPDX 2.3 SBOM, and link evidence.
-   MEASURED FIRST, 2026-09-07, `docs/en/project/external-inputs.md` and
-   `evidence/source-closure/external-inputs.json`: of 6287 existing consumed
-   paths, 5403 are inside the capture tree, 497 in the source checkout and 387
-   external; 265 of those belong to 78 Debian packages and 122 to none. Only 30
-   are compiled or linked into the image, from four packages — and the licence
-   metadata is weakest exactly there: `gcc-arm-none-eabi`, which supplies
-   `libgcc.a` and the C runtime startup objects, carries the single line
-   `Copyright: GNU General Public License`, and both newlib packages carry
-   prose with no DEP-5 field. Upstream the Runtime Library Exception and
-   newlib's BSD-family terms cover them; neither is recorded on the build
-   machine, so this step cannot satisfy `ALLOWED_LICENSES` from package
-   metadata for the linked files. Maintainer decision, stated in that document
-   and not taken here.
 3. Replace broad NuttX/NuttX Apps gitlinks with only the verified closure.
 4. Rebuild offline until no undeclared input is consumed.
 
@@ -84,16 +71,6 @@ licences; all policy, documentation, and resource checks pass.
 Depends on S1. Pin actions, containers, tools, and source inputs by immutable
 digest; use read-only permissions and no network after acquisition; build only
 redistributable inputs; publish no firmware artifacts.
-
-BLOCKER, measured 2026-09-07 (`docs/en/project/external-inputs.md`): the
-protected build ran under an UNPINNED interpreter — 94 consumed paths belong to
-a miniconda Python under `/opt/miniconda` that no package owns, and 14 more come
-from the invoking user's `~/.local` site-packages, three of them `__editable__`
-installs pointing at unrelated projects on the same machine
-(`catfish_search`, `crispasr`, `crisptts`). Nothing they produced is linked into
-the image, so this is not an S1 licence question; it is an S2 reproducibility
-one. Nobody else can reproduce a build whose tool environment includes editable
-installs of directories that no manifest names.
 
 Acceptance: two clean hosted runs report identical hashes; workflow policy proves
 least privilege and immutable pins; logs, caches, and artifacts contain no
