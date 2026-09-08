@@ -54,9 +54,13 @@ Build a minimal reproducible source tree for the protected image.
 
 Pending closure details: extend the verified final-linked source closure with
 the traced build-system inputs (Makefiles, configuration generators, and host
-tools) needed to configure the copied tree, then build that copied closure twice
-offline and prove both builds consume no undeclared input. Serial archive
-construction remains required until member collection is canonicalized.
+tools) needed to configure the copied tree. Recapture after the protected user
+link produces `nuttx_user.map`: the former `User.map` is an `nm` symbol listing
+and cannot prove which `libapps` archive members supplied userspace. Generate
+kernel and userspace reachability from their real linker maps, then build the
+copied closure twice offline and prove both builds consume no undeclared input.
+Serial archive construction remains required until member collection is
+canonicalized.
 
 Acceptance: two clean offline builds have identical images/manifests; every
 linked input has allowed licensing and immutable provenance; the verifier rejects
