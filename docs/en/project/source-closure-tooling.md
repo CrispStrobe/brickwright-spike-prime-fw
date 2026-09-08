@@ -145,9 +145,20 @@ that was never opened with a creating flag, and an unproved source still leaves
 the destination unproved, so a rename cannot launder an undeclared input.
 `/dev/fd/N` and `/proc/<pid>/fd/N` are descriptor aliases handed to a child by a
 shell process substitution; they are consumption of a descriptor, not of a file.
-The audit records its own `--cwd` and `--tree` in the report: the same trace
-yields a different external count under a different invocation, so counts
-without the invocation cannot be reproduced.
+The audit records stable `$TREE` and `$EXTERNAL` identities for its invocation
+and classified paths: the same trace yields a different external count under a
+different invocation, but the report never exposes the capture host layout. It
+also records connection attempts and fails if any `connect(2)` call succeeds;
+endpoints are never serialized.
+Its `trace-ready` status applies only to path and network coverage. Final-link
+provenance is a separate field and remains `not-evaluated` unless a failed map
+and compiler-capture check is recorded explicitly; trace readiness never means
+that the capture can generate an accepted closure.
+
+Before tracing, `tools/check_capture_tree_clean.py` must report zero residual
+objects, archives, depfiles, maps, or firmware images in every configured
+source/build tree. A successful rebuild is insufficient: a stale archive member
+can link correctly while having no compiler producer in the capture.
 
 ## Staged upstream sources
 

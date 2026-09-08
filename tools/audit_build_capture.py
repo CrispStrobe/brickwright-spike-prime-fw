@@ -76,6 +76,10 @@ def main() -> None:
     parser.add_argument("--cwd", required=True)
     parser.add_argument("--tree", required=True)
     parser.add_argument("--output")
+    parser.add_argument(
+        "--link-provenance-error",
+        help="host-path-free reason a separate map/capture provenance check failed",
+    )
     arguments = parser.parse_args()
     trace = Path(arguments.trace).resolve()
     cwd = Path(arguments.cwd).resolve()
@@ -143,16 +147,22 @@ def main() -> None:
     if not maps:
         errors.append("link-map evidence is missing")
     report = {
-        # Schema 3 records a host-path-free invocation and network-connect
+        # Schema 4 separates trace readiness from independently checked final
+        # link provenance. Schema 3's plain `ready` status was too broad.
         # counts. Schema 1 recorded counts alone, and
         # the same trace yields a different external count under a different
         # --cwd/--tree, so those numbers could not be reproduced or checked.
-        "schema": 3,
+        "schema": 4,
+        "scope": "trace-path-and-network-coverage-only",
         "capture": {
             "initial_cwd": public_path(cwd, tree),
             "tree": "$TREE",
         },
-        "status": "ready" if not errors else "incomplete",
+        "status": "trace-ready" if not errors else "incomplete",
+        "link_provenance": {
+            "status": "invalid" if arguments.link_provenance_error else "not-evaluated",
+            **({"reason": arguments.link_provenance_error} if arguments.link_provenance_error else {}),
+        },
         "trace": {"sha256": digest(trace), "lines": sum(1 for _ in trace.open("rb"))},
         "consumed_path_count": consumed_count,
         "missing_path_count": missing_count,

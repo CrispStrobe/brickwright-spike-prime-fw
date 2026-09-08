@@ -62,7 +62,8 @@ class CaptureAuditTest(unittest.TestCase):
             trace = tree / "trace"
             trace.write_text('1 openat(AT_FDCWD, "/dev/null", O_RDONLY) = 3\n')
             result = subprocess.run(
-                [sys.executable, TOOL, "--trace", trace, "--cwd", tree, "--tree", tree],
+                [sys.executable, TOOL, "--trace", trace, "--cwd", tree, "--tree", tree,
+                 "--link-provenance-error", "archive member lacks compiler producer"],
                 text=True,
                 capture_output=True,
             )
@@ -71,6 +72,9 @@ class CaptureAuditTest(unittest.TestCase):
             self.assertTrue(report["non_file_paths"][0]["path"].startswith("$EXTERNAL/path-"))
             self.assertNotIn(str(base), result.stdout)
             self.assertNotIn("/dev/null", result.stdout)
+            self.assertEqual("trace-ready", report["status"])
+            self.assertEqual("trace-path-and-network-coverage-only", report["scope"])
+            self.assertEqual("invalid", report["link_provenance"]["status"])
 
 
 if __name__ == "__main__":

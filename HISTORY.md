@@ -102,6 +102,8 @@ and CI; pending work belongs in `PLAN.md`.
 - Classified dangling-symlink stats as traversal metadata, redacted external
   audit identities, and added an explicit repository-scoped whole-build trace
   mode while retaining fail-closed unscoped traces.
-- Accepted the descriptor-complete serial recapture: 29,931 consumed paths,
-  2,203 depfiles, both GNU linker maps, no missing or unclassified inputs, and
-  zero successful network connections.
+- Accepted only the descriptor/path/network coverage of the serial recapture:
+  29,931 consumed paths, 2,203 depfiles, both GNU linker maps, no missing or
+  unclassified inputs, and zero successful network connections. Final link
+  provenance remains invalid because a mapped kernel archive member reused a
+  stale object without a captured compiler producer.
