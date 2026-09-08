@@ -177,7 +177,11 @@ SHA-256 values:
 | kernel map | `7622cb6c60ac33039ad479633275aade2ff0fa94446d5fdbccef21f47ea7752c` |
 | user map | `4dcaa5352198a5029ac150bb35455a55752b145c15c2907e58d9ae5ad9c9ee7c` |
 
-This is a measured serial build fixed point, not S1 offline acceptance. Immutable
-declarations for LittleFS and the patched NuttX newlib/libm tree, host Kconfig
-tool evidence, linker-argument cross-checks, and final manifest, SPDX SBOM, and
-link evidence remain required.
+This is a measured serial build fixed point, not S1 offline acceptance.
+`policy/firmware-build-inputs.lock.json` now declares the staged LittleFS,
+composed Mbed TLS, patched newlib/libm, and Kconfig frontend inputs. Verify their
+staged-tree, archive, and patch hashes with `tools/firmware_input_boundary.py`.
+The link-input producer expands response files and rejects map outputs or
+explicit toolchain artifacts that disagree with the maps. Final manifest, SPDX
+SBOM, link evidence, and minimal closure generation still require one capture
+that preserves its depfiles and complete linker argv alongside the trace/maps.

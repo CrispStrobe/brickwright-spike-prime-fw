@@ -76,3 +76,7 @@ and CI; pending work belongs in `PLAN.md`.
   reorder user objects, while two clean serial builds produced identical kernel
   and user images and maps. Only hashes are recorded; offline source declarations
   remain a separate gate.
+- Locked the exact staged LittleFS, composed Mbed TLS, patched newlib/libm, and
+  Kconfig frontend inputs and added a fail-closed verifier for their tree,
+  archive, and patch hashes. Link evidence now expands response files and
+  cross-checks explicit toolchain artifacts and map outputs against the maps.
