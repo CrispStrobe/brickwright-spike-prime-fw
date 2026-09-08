@@ -96,6 +96,28 @@ class ClosureTest(unittest.TestCase):
             [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
         )
 
+    def test_capture_proved_compiler_output_is_not_source(self):
+        obj = self.root / "main.o"
+        obj.write_bytes(b"object")
+        trace = self.base / "build.trace"
+        trace.write_text(f'1 openat(AT_FDCWD, "{obj}", O_RDONLY) = 3\n')
+        capture = self.base / "capture"
+        (capture / "compiles").mkdir(parents=True)
+        (capture / "compiles/one.json").write_text(json.dumps({
+            "cwd": str(self.root), "output": "main.o",
+            "output_sha256": hashlib.sha256(b"object").hexdigest(),
+        }))
+        self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--repository", self.base, "--repository-trace", trace,
+            "--capture", capture, "--depfile", self.dep,
+            "--output", self.manifest, "--sbom", self.sbom,
+        )
+        self.assertNotIn(
+            "main.o",
+            [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
+        )
+
     def test_dangling_symlink_metadata_is_not_source_consumption(self):
         link = self.root / "optional"
         link.symlink_to("missing-target")
