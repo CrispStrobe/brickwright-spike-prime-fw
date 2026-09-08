@@ -90,3 +90,5 @@ and CI; pending work belongs in `PLAN.md`.
   `nm` symbol listing, so it could not select `libapps` archive members. The
   protected link now emits a separate GNU linker map as `nuttx_user.map`; the
   old symbol listing remains available for compatibility.
+- Added a configured-tree preflight that rejects symlinks escaping the current
+  worktree without publishing the external target path.

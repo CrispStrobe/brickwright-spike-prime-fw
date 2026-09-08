@@ -10,6 +10,8 @@ This file is the ordered queue for unfinished work. Completed work belongs in
 - Complete tasks in the order below unless two tasks are explicitly independent.
   Commit and push each accepted task before starting its dependent.
 - Preserve unrelated changes and dependency pins.
+- Run `tools/check_build_tree_links.py --tree nuttx --tree nuttx-apps`
+  before capturing a configured tree; copied absolute dirlinks must fail.
 - Project-owned and vendored source must be MIT, Apache-2.0, BSD-3-Clause, or an
   explicitly approved comparable permissive licence. GPL-family, AGPL,
   noncommercial, and source-incompatible code are forbidden.
