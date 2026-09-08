@@ -86,3 +86,7 @@ and CI; pending work belongs in `PLAN.md`.
   SPDX 2.3 SBOM, and host-path-free link evidence. A copied source-only tree
   contains 1,047 files; its offline build correctly fails closed because the
   separately traced build-system Makefiles have not yet joined the closure.
+- Audited the protected userspace evidence and found that `User.map` was an
+  `nm` symbol listing, so it could not select `libapps` archive members. The
+  protected link now emits a separate GNU linker map as `nuttx_user.map`; the
+  old symbol listing remains available for compatibility.

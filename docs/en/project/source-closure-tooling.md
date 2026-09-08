@@ -175,9 +175,13 @@ SHA-256 values:
 | kernel image | `c5e3d4725852f5f46e923970ec893c55ba5aef9a973e345581f03bb6a38a3bb0` |
 | user image | `e5e914a7d59f68be5f193a83b3fdc56a9b1e782a9fcffa1a56ff8cb329ba177e` |
 | kernel map | `7622cb6c60ac33039ad479633275aade2ff0fa94446d5fdbccef21f47ea7752c` |
-| user map | `4dcaa5352198a5029ac150bb35455a55752b145c15c2907e58d9ae5ad9c9ee7c` |
+| user symbol listing | `4dcaa5352198a5029ac150bb35455a55752b145c15c2907e58d9ae5ad9c9ee7c` |
 
 This is a measured serial build fixed point, not S1 offline acceptance.
+The historical `User.map` artifact in that measurement is output from `nm`, not
+a linker map. It proves deterministic symbols but cannot establish archive
+member reachability. Protected links now emit `nuttx_user.map` with GNU ld's
+`-Map` option; S1 requires a fresh capture using that file.
 `policy/firmware-build-inputs.lock.json` now declares the staged LittleFS,
 composed Mbed TLS, patched newlib/libm, and Kconfig frontend inputs. Verify their
 staged-tree, archive, and patch hashes with `tools/firmware_input_boundary.py`.
