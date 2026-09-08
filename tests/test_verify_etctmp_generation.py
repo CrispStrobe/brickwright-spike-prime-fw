@@ -17,7 +17,10 @@ class TestEtctmpProof(unittest.TestCase):
         self.data["outputs"]=[{"path":"rcS","sha256":hashlib.sha256(b"output").hexdigest()},{"path":"rc.sysinit","sha256":hashlib.sha256(b"").hexdigest()}]
         def cmd(s): return ["arm-none-eabi-gcc","-E","-P","-x","c","-isystem","$REPOSITORY/nuttx/include","-isystem","$REPOSITORY/nuttx/include/newlib","-D__NuttX__","-D__KERNEL__","etc/init.d/"+s,"-o","$OUTPUT/"+s]
         self.data["generator_commands"]=[cmd("rc.sysinit"),cmd("rcS")]
-    def tearDown(self): self.tmp.cleanup()
+    def tearDown(self):
+        self.tmp.cleanup()
+        if hasattr(self, "outside"):
+            self.outside.rmdir()
     def invoke(self, ok=True):
         self.proof.write_text(json.dumps(self.data)); result=subprocess.run([sys.executable,str(TOOL),"--proof",self.proof,"--repository",self.repo],text=True,capture_output=True)
         self.assertEqual(ok,result.returncode==0,result.stderr); return result
@@ -31,4 +34,9 @@ class TestEtctmpProof(unittest.TestCase):
         self.data["isolation"]={"network_namespace":"none","successful_connects":0}; self.data["container_image"]="sha256:bad"; self.invoke(False)
     def test_symlink_output_fails(self):
         path=self.repo/self.data["output_root"]/"rcS"; path.unlink(); path.symlink_to(self.repo/"in"); self.invoke(False)
+    def test_symlinked_output_parent_escape_fails(self):
+        outside = self.repo.parent / (self.repo.name + "-outside"); outside.mkdir(); self.outside = outside
+        parent = self.repo / "boards"; original = self.repo / "boards-real"; parent.rename(original)
+        parent.symlink_to(outside, target_is_directory=True)
+        self.invoke(False)
 if __name__ == "__main__": unittest.main()
