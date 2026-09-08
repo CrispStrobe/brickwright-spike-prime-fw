@@ -1,0 +1,36 @@
+{
+  "schema": "brickwright/fixed-point-build/v1",
+  "status": "reproducible-serial-build",
+  "source": {
+    "repository_commit": "cd66067b646cfd9a0f91e693759a8ac675d6fb30",
+    "nuttx_commit": "a67efb31cf4f236e456882589b91862f04594528",
+    "nuttx_apps_commit": "55f0bc216565ccab8dee600a88f4485c7693bf8b"
+  },
+  "environment": {
+    "arm_toolchain_lock": "policy/arm-toolchain.lock.json",
+    "jobs": 1,
+    "source_date_epoch": 0,
+    "empty_inherited_environment": true,
+    "staged_sources_copied_from_hash_verified_inputs": true
+  },
+  "runs": 2,
+  "artifacts": {
+    "nuttx.bin": "c5e3d4725852f5f46e923970ec893c55ba5aef9a973e345581f03bb6a38a3bb0",
+    "nuttx_user.bin": "e5e914a7d59f68be5f193a83b3fdc56a9b1e782a9fcffa1a56ff8cb329ba177e",
+    "nuttx.map": "7622cb6c60ac33039ad479633275aade2ff0fa94446d5fdbccef21f47ea7752c",
+    "User.map": "4dcaa5352198a5029ac150bb35455a55752b145c15c2907e58d9ae5ad9c9ee7c"
+  },
+  "comparison": "byte-identical",
+  "negative_control": {
+    "jobs": 8,
+    "kernel_identical": true,
+    "userspace_identical": false,
+    "cause": "parallel application archive member ordering"
+  },
+  "excluded": [
+    "firmware binaries",
+    "link maps",
+    "absolute host paths",
+    "TI payload bytes"
+  ]
+}

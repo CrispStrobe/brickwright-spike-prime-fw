@@ -65,6 +65,14 @@ and CI; pending work belongs in `PLAN.md`.
 - Established a pinned Arm GNU Toolchain boundary with a digest-locked release,
   immutable upstream revisions and licence evidence, an isolated build
   environment, and separate exact-file policy for linked GCC/newlib inputs.
+- Proved two clean serial protected builds byte-identical under the pinned ARM
+  boundary. Parallel builds remain excluded because application archive member
+  ordering changed the userspace image; hashes and the negative control are in
+  `evidence/source-closure/fixed-point-build.json`.
 - Added deterministic link-input evidence that joins explicit reviewed runtime
   declarations to exact map paths and verifies selected archive membership with
   the pinned Arm archiver, without suffix-based licence classification.
+- Measured the protected build fixed point: parallel application archive updates
+  reorder user objects, while two clean serial builds produced identical kernel
+  and user images and maps. Only hashes are recorded; offline source declarations
+  remain a separate gate.

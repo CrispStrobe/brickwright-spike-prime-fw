@@ -46,8 +46,17 @@ Build a minimal reproducible source tree for the protected image.
    `docs/en/project/source-closure-tooling.md` and `HISTORY.md`.
 2. Declare immutable roots, pins, patch policy, licence overrides, and generated
    inputs; generate the deterministic manifest, SPDX 2.3 SBOM, and link evidence.
+   Derive runtime artifacts from the captured linker command, maps, and archive
+   membership, and cross-check all three sources before accepting the evidence.
 3. Replace broad NuttX/NuttX Apps gitlinks with only the verified closure.
-4. Rebuild offline until no undeclared input is consumed.
+4. Rebuild offline until no undeclared input is consumed. Closure builds remain
+   serial until archive creation is made deterministically parallel.
+
+Pending closure details: pin and declare LittleFS and the patched NuttX
+newlib/libm tree; declare the pinned Kconfig frontend host tool; require serial
+archive construction or canonical member collection; cross-check recorded
+linker arguments against every mapped toolchain artifact; and generate and
+verify the final manifest, SPDX SBOM, and link evidence twice.
 
 Acceptance: two clean offline builds have identical images/manifests; every
 linked input has allowed licensing and immutable provenance; the verifier rejects
