@@ -92,3 +92,5 @@ and CI; pending work belongs in `PLAN.md`.
   old symbol listing remains available for compatibility.
 - Added a configured-tree preflight that rejects symlinks escaping the current
   worktree without publishing the external target path.
+- Made capture-audit reports host-path-free and fail closed when a traced build
+  completes any network connection, without recording remote endpoints.

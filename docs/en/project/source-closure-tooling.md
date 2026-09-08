@@ -137,9 +137,11 @@ that was never opened with a creating flag, and an unproved source still leaves
 the destination unproved, so a rename cannot launder an undeclared input.
 `/dev/fd/N` and `/proc/<pid>/fd/N` are descriptor aliases handed to a child by a
 shell process substitution; they are consumption of a descriptor, not of a file.
-The audit records its own `--cwd` and `--tree` in the report: the same trace
-yields a different external count under a different invocation, so counts
-without the invocation cannot be reproduced.
+The audit records stable `$TREE` and `$EXTERNAL` identities for its invocation
+and classified paths: the same trace yields a different external count under a
+different invocation, but the report never exposes the capture host layout. It
+also records connection attempts and fails if any `connect(2)` call succeeds;
+endpoints are never serialized.
 
 ## Staged upstream sources
 
