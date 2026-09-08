@@ -55,7 +55,15 @@ def main():
     root_label = proof.get("output_root")
     if root_label != OUTPUT_ROOT: fail("unexpected output root")
     output_root = repo.joinpath(*relative(root_label, "output root").parts)
-    if output_root.is_symlink() or not output_root.is_dir(): fail("output root is not a real directory")
+    current = repo
+    for component in relative(root_label, "output root").parts:
+        current /= component
+        if current.is_symlink(): fail("output root contains a symlink component")
+    try:
+        contained = output_root.resolve().is_relative_to(repo)
+    except FileNotFoundError:
+        contained = False
+    if not contained or not output_root.is_dir(): fail("output root is not a contained real directory")
     outputs = proof.get("outputs")
     if not isinstance(outputs, list) or not outputs: fail("outputs are empty")
     expected = set()
