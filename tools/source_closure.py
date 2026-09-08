@@ -141,7 +141,7 @@ def resolve_trace_path(
         return Path(os.path.abspath(raw_path))
     if pid not in state:
         die(f"relative path for pid {pid} has no inherited cwd state in {context}")
-    if dirfd is None or dirfd == "AT_FDCWD":
+    if dirfd is None or re.match(r"^AT_FDCWD(?:<.*>)?$", dirfd):
         base = state[pid]["cwd"][0]
     else:
         descriptor_match = re.match(r"^(\d+)(?:<.*>)?$", dirfd)
@@ -152,6 +152,13 @@ def resolve_trace_path(
             die(f"unresolved dirfd {descriptor} for pid {pid} in {context}")
         base = state[pid]["fds"][descriptor]
     return Path(os.path.abspath(base / raw_path))
+
+
+def trace_descriptor(value: str, pid: str, syscall: str) -> int:
+    match = re.match(r"^(\d+)(?:<.*>)?$", value)
+    if not match:
+        die(f"successful {syscall} has unparseable fd for pid {pid}: {value}")
+    return int(match.group(1))
 
 
 def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
@@ -261,10 +268,10 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
             continue
         if syscall == "close":
             if pid in state:
-                state[pid]["fds"].pop(int(arguments[0]), None)
+                state[pid]["fds"].pop(trace_descriptor(arguments[0], pid, syscall), None)
             continue
         if syscall == "fcntl":
-            old_descriptor = int(arguments[0])
+            old_descriptor = trace_descriptor(arguments[0], pid, syscall)
             duplicates = len(arguments) > 1 and arguments[1] in {
                 "F_DUPFD", "F_DUPFD_CLOEXEC"
             }
@@ -272,7 +279,7 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
                 state[pid]["fds"][result] = state[pid]["fds"][old_descriptor]
             continue
         if syscall in {"dup", "dup2", "dup3"}:
-            old_descriptor = int(arguments[0])
+            old_descriptor = trace_descriptor(arguments[0], pid, syscall)
             if pid in state and old_descriptor in state[pid]["fds"]:
                 state[pid]["fds"][result] = state[pid]["fds"][old_descriptor]
             continue
