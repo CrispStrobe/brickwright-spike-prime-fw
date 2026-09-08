@@ -1,0 +1,48 @@
+{
+  "schema": "brickwright/firmware-build-input-lock/v1",
+  "sources": [
+    {
+      "name": "littlefs",
+      "version": "v2.5.1",
+      "url": "https://github.com/ARMmbed/littlefs/archive/v2.5.1.tar.gz",
+      "archive_sha256": "77acdd699fbc8c62efe1467a90de4bde133517fb370b10a538e25d341a11b4e1",
+      "staged_tree_sha256": "0662d0c90f1edf95e11f5e77fd76a9e6d87db111c5256a46d3d04d648d946e17",
+      "license_expression": "BSD-3-Clause",
+      "patches": []
+    },
+    {
+      "name": "mbedtls",
+      "version": "3.6.2+framework.df3307f2b4fe512def60886024f7be8fd1523ccd",
+      "archives": [
+        {"url": "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/mbedtls-3.6.2.tar.gz", "sha256": "a3c959773bc5d5b22353bc605e96d92fae2eac486dcaf46990412b84a1a0fb5f"},
+        {"url": "https://github.com/Mbed-TLS/mbedtls-framework/archive/df3307f2b4fe512def60886024f7be8fd1523ccd.tar.gz", "sha256": "641fbb913f3ea6748cecbacb30af698d96de585f33d627f12b3ef9275b79726a"}
+      ],
+      "staged_tree_sha256": "1ba2269add21d1e3bfbbf4206cb3806e6fa08ecad34a451baede5c4ef8a0c47e",
+      "license_expression": "Apache-2.0",
+      "patches": []
+    },
+    {
+      "name": "newlib-libm",
+      "version": "4.3.0.20230120",
+      "url": "https://sourceware.org/pub/newlib/newlib-4.3.0.20230120.tar.gz",
+      "staged_tree_sha256": "3003ed69eeedcc7c59ce6a8fca864ae8fa9943ec5cc21be37d61fd78cc12bc79",
+      "license_expression": "LicenseRef-Newlib-Notice-Collection",
+      "patches": [
+        {"path": "nuttx/libs/libm/newlib/0001-newlib-libm-fix-__RCSID-build-error.patch", "sha256": "a9c035105c3a787b28463eaf9b390af20dac6ef6380be7266bf57ef39af9dbfd"},
+        {"path": "nuttx/libs/libm/newlib/0002-newlib-libm-remove-include-reent.h.patch", "sha256": "11ac748575b955ccef04cfaa5375a688e7659460e2b72e70c84f4ff20e0151f2"},
+        {"path": "nuttx/libs/libm/newlib/0003-newlib-fix-compilation-for-x86.patch", "sha256": "f1f059999013f2c9a58a53afb634df88ed6ee755309ad8b7210e1bd0a76c1b1a"},
+        {"path": "nuttx/libs/libm/newlib/0004-newlib-disable-optmisation-for-sincos.patch", "sha256": "63b5a2e7fffd578c1564c18c3356344335fc0b83fc40b30ccfe6b350e3d95961"}
+      ]
+    }
+  ],
+  "host_tools": [
+    {
+      "name": "kconfig-frontends",
+      "repository": "https://github.com/patacongo/tools.git",
+      "commit": "9ad3e1ee75c7d39bfee8019ce44f4fd035d89584",
+      "archive_sha256": "7e0d477edf35b540c874e9312d0c3843440ee2d608bedeeaeda8ccdebf023d91",
+      "license_expression": "GPL-2.0-only",
+      "outputs": ["kconfig-conf", "kconfig-mconf"]
+    }
+  ]
+}
