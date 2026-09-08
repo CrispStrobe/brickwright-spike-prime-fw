@@ -33,6 +33,9 @@ and CI; pending work belongs in `PLAN.md`.
 
 ## Firmware and simulation
 
+- Exposed the permissive dual-mode HCI model through a dedicated Renode firmware
+  profile; it keeps the physical radio off and removes the TI payload from that
+  profile's build graph while preserving the hardware profile unchanged.
 - Routed bounded motor, display, sound, battery, sensor, and telemetry operations
   through the neutral daemon with ownership and disconnect-safe motor shutdown.
 - Established protected memory gates and deterministic host/ARM tests.

@@ -235,10 +235,12 @@ static int services_start(void *context)
       .product_group_device = 0,
     };
   (void)context;
+#ifndef CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER
   size_t service_pack_size;
   if (btsensor_ti_payload(&service_pack_size) == NULL ||
       service_pack_size == 0)
     return -ENOENT;
+#endif
   int rc = btsensor_scheduler_acquire();
   if (rc < 0) return rc;
   memset(&g_modern_timer, 0, sizeof(g_modern_timer));

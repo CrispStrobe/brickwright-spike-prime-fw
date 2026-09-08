@@ -9,6 +9,15 @@ config APP_BTSENSOR
 
 if APP_BTSENSOR
 
+config APP_BTSENSOR_VIRTUAL_CONTROLLER
+	bool "Simulation-only in-process Bluetooth controller"
+	default n
+	---help---
+		Select the permissively licensed deterministic HCI controller used by
+			the Renode profile.  This bypasses the CC2564C power sequence and TI
+			service-pack provider completely.  Do not enable this option in an
+			image intended for physical hardware: it has no radio interface.
+
 config APP_BTSENSOR_PROGNAME
 	string "Program name"
 	default "btsensor"
