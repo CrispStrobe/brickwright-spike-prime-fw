@@ -12,6 +12,11 @@ the Brickwright daemon. It does not power the CC2564C, open `/dev/ttyBT`, load a
 TI service pack, or provide a radio interface. Consequently, this profile is
 for simulation only and must not be flashed to a hub.
 
+The profile also disables the STM32 independent-watchdog automonitor. Renode
+does not model the physical watchdog closely enough for it to be a valid
+firmware safety test, and enabling it resets the simulated CPU during bring-up.
+The hardware profile retains its watchdog configuration.
+
 The normal `usbnsh` profile leaves this option disabled. Its CC2564C power,
 UART, reset, and separately supplied service-pack path are unchanged.
 
