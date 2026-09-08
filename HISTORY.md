@@ -94,3 +94,5 @@ and CI; pending work belongs in `PLAN.md`.
   worktree without publishing the external target path.
 - Made capture-audit reports host-path-free and fail closed when a traced build
   completes any network connection, without recording remote endpoints.
+- Added a hash-verifying materializer that reconstructs an empty source tree
+  from only the reviewed manifest and declared generated inputs.

@@ -52,6 +52,12 @@ fail closed. Verification checks
 content hashes and requires exact equality between consumed and manifested
 files, catching stale entries and newly consumed, unmanifested files.
 
+`tools/materialize_source_closure.py` copies exactly the manifest's reviewed
+source files and declared generated inputs into an empty tree outside the source
+repository. It verifies every hash, rejects path escapes and collisions, and
+does not copy external toolchain inputs. The resulting tree is the only source
+mount accepted by offline fixed-point builds.
+
 ## Toolchain and linked-runtime boundary
 
 Project and vendored source admission remains permissive-only. Compiler
