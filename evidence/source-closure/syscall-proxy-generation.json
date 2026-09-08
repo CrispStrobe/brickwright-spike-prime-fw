@@ -1,0 +1,858 @@
+{
+  "schema": "brickwright/generated-input-proof/v1",
+  "status": "exact-output-match",
+  "generator_argv": [
+    "nuttx/tools/mksyscall",
+    "-p",
+    "nuttx/syscall/syscall.csv"
+  ],
+  "generator_sha256": "244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f",
+  "input_sha256": "8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+  "trace_sha256": "79c470bf4961c87ee698fa558533dcb39f99540371d894cb61071c2dd038e8d5",
+  "isolation": {
+    "network_namespace": "none",
+    "successful_connects": 0
+  },
+  "files": [
+    {
+      "path": "nuttx/syscall/proxies/PROXY__assert.c",
+      "sha256": "2ebd65b46dd79916ac38e0c69824a56a0ecb5e4f4cc94f399b22e078b43c1e20"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY__exit.c",
+      "sha256": "6cb8052d45cbac9dddc75fef334cdf0e64b95d180fb8de19c820da3eb537ee33"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_accept4.c",
+      "sha256": "6cf5ce0a19329cb1f3cd574157955458ae65e4c32487c6c10cd954a6a9ffbaf9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_adjtime.c",
+      "sha256": "ccafed12f546734088557383a348b07b58e90099c898b1fe483fa4a65a2f4e42"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_aio_cancel.c",
+      "sha256": "3e841d7d440a8a10263164fe12b622da1ce0e15236c15e20557e552b29e356d8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_aio_fsync.c",
+      "sha256": "298f86a9801f19fd11aeee93739f716157cec8c4d38a2dbfda1e8853d4eabe65"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_aio_read.c",
+      "sha256": "bb01dcd2c1c7fe7dbd9cd8fbdea94c8d24d8dbdfee788280532e798a372277fb"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_aio_write.c",
+      "sha256": "0ee6a6483e37c15aab551f0cd94d3efaa748dd02233596adc000ba91ed793879"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_bind.c",
+      "sha256": "52ab9b6e11c7ce010ed879600b07071ad9469f3b69971b30610cc076d637a8dd"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_boardctl.c",
+      "sha256": "16d47086ae23d3e23f6577ea5f9f0fdc590442374715470ebbd1769812fe8762"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_chmod.c",
+      "sha256": "d37ebb90572176d6fabbbe5c3d48160c75aea90b726b9949ed71aee3e8212c89"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_chown.c",
+      "sha256": "bd57aa10cd366c2a8530c567a3d44c88e748d2fd9d126c726a0be41571e3575f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_clearenv.c",
+      "sha256": "403d69f7a814f1beb19e6bcd8134e2d8d9b532fe1a2b2fb626451efbe7f7f78c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_clock.c",
+      "sha256": "7d36825a1e09404d627028601a8fa22aace808ee5437d56ae654e4da6955f402"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_clock_adjtime.c",
+      "sha256": "f7d38535862575a3e12c03a236aebfcba3f9f318387e92c63ec9b2464a65d328"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_clock_gettime.c",
+      "sha256": "b284962d9ff9d30e8c3ce9fb0ae17be9715def314bf97ce8882a9d1897bc0554"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_clock_nanosleep.c",
+      "sha256": "8533282d5447947fa24e2afcb195050a931dc026413cd48e903457e837540d68"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_clock_settime.c",
+      "sha256": "a491ecc7e3bb62bc51f76ba714d5e1387da46df7016c048cc7744dbdce1d14d7"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_close.c",
+      "sha256": "36ee34ee735da66948aba072dec2c40e6e094dd0b03e0ce63539016be6cc547d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_connect.c",
+      "sha256": "ffe1d07dd175d184655aa0144ac8b0bef0cb8f23572b3f18f0ad711a842e260b"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_dup.c",
+      "sha256": "b0267bf6412ce56affc674d62e657861efec483f0076786f7ac2c92a97a7e304"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_dup2.c",
+      "sha256": "1f3d928f0e996a3addbe21a1b7b636ca823ce99a6be3539a6cd2c6c7025539c5"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_epoll_close.c",
+      "sha256": "f8b1ab86229c73e1cf9d17c2951ca3d1e5973e2a93facb6fe0bec09a5e761193"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_epoll_create.c",
+      "sha256": "76b0b4fe42239e5b2514c3d95e64e9d5cde8469e33678ca137421fd8eb55a1f3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_epoll_create1.c",
+      "sha256": "5a2ef92fb227bae55b2528bcabc906d07a8c91ea2105da4bfd59caf8fcd18388"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_epoll_ctl.c",
+      "sha256": "11951eab75793a713e7c1ad89e59062669afd0dccb3b2b38b22130f57edea757"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_epoll_pwait.c",
+      "sha256": "2e945a706f459f41ec7e4be35f6673eced1c470c06815d8362dd2e6736654b41"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_epoll_wait.c",
+      "sha256": "7ec7e1de5c8392ab860cb62b7a6256165cfe400d9643b91e9ab62282a7f1c4d3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_eventfd.c",
+      "sha256": "6355ae045aac30fb37fe730f9c7e4d17da1d513447d468dbed910bbf197d61b0"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_exec.c",
+      "sha256": "6480ac872e8984bdce7c653ab98a855f56d369abbd97a31d523789c3fc4a80b7"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_execve.c",
+      "sha256": "7ba70413080f2f9c5857dd939ddf7b9c97725a52f2ae2ad3280aa34e17ff5849"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_fchmod.c",
+      "sha256": "f73bb3675c4868564ff49452ac8884ac099fc5e9a506b4a86cf878e83f329b83"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_fchown.c",
+      "sha256": "4808373dcab6e7ab962ecec4f90b8ee64cffc4df1a1a10a6ccd86095ac9e74e1"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_fcntl.c",
+      "sha256": "0eec25ef6cd1988b5691f3f815de2b0c30b99a28665739a013d24c4c5b65f454"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_fstat.c",
+      "sha256": "30d69e769c773f04b02d2c1d1c1df98792d618b99c87e7d6cbc244793e489ed4"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_fstatfs.c",
+      "sha256": "4e962f38b9da643a6b7c02ae792a82b59702ee9def843835cf6905bad6642933"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_fsync.c",
+      "sha256": "230730c868a134a39ac9bafb7e65a76714ef76a6dce6301a07d2960f4681193d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_ftruncate.c",
+      "sha256": "a468a1ec344a9b5ba1d68280f89298cb20c40c56d2a3273a0dce55258c4af1f1"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_futimens.c",
+      "sha256": "ce87a620cfdd313e65b36fa2f1ec4fe0b96a3e80add79bd94bc3078b05717a0a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_get_environ_ptr.c",
+      "sha256": "f9a2165bf3414f6b0713c9afa7525a782e91b61ac03827e5c7929201e5c37c93"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getegid.c",
+      "sha256": "dcdc90ca9a7a1abad15c63dfd1ed825221b610e9ec3fc2add6e024c835e70e58"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getenv.c",
+      "sha256": "cde6f44856a242d795aa606d6764a82ce4fd35648717bba5090a43db6133fe25"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_geteuid.c",
+      "sha256": "ae5accf142c13cabe1a5686d3562a286afe3ea91d88c5f06f325c47bd6da1a64"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getgid.c",
+      "sha256": "2f23b988ff7fb2ff8748000ecd3cf10ce63e827ea942bcad5512dfebf989677f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_gethostname.c",
+      "sha256": "e27e9c92cd10ebdf9f47c9355b1c54aac7cbdc1e80a0616d00b2c1104041f0c9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getitimer.c",
+      "sha256": "e7192b8e5b6423b822e5e8852cebb99029322f470ea3d98cd54d11ace819f810"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getpeername.c",
+      "sha256": "1f2afccbbc7a344f936a55722519dbbe9bea27eed2ff77abd7e63fbb45ded50d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getppid.c",
+      "sha256": "25eb3feadbbea1f1c9ec737faa224258d79ad8e15cba568e968e59a4e404bd82"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getsockname.c",
+      "sha256": "018d6bcb118b07dbbccad5a76d60bbfee133e5439c1a74cdcfc2009b6b514f34"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getsockopt.c",
+      "sha256": "b53c9ed84318fd4b67132602e9d3a681682d00e19cfae027a63436e9091ac39a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_gettimeofday.c",
+      "sha256": "394c341cf91b6e4f33bf84eabc6c59e0b0f92664625553621c615c3fe1e94848"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_getuid.c",
+      "sha256": "dfd8ed59c2d4509e7dbfd0f81b001bc4c54fb5beac398e7185248ce3b84008d8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_inotify_add_watch.c",
+      "sha256": "e7bf1defceb000fd860eccc2cc3dce46c30f494627554a3b5ef13cf247703350"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_inotify_init.c",
+      "sha256": "256c964a06ed528de5060abf70655c04efe56292677264c77404adb0a4ccdc42"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_inotify_init1.c",
+      "sha256": "449f299ae25642e71faaf5bc65c3cadeeb003f3ca608e5d349b98812fc7ad23a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_inotify_rm_watch.c",
+      "sha256": "6ba097c51b5cf29a946dfcc38b7f6b839bdb853b6064f534f1ac4f7472d49987"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_insmod.c",
+      "sha256": "1d3b4c1eb80a853f86a544f8f5b1f0d01c005bb7c2acd2623a0d7bd17f49e382"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_ioctl.c",
+      "sha256": "fafe2029a3aca6f00cb12367234853eb42d377d520b0f192b238a86888dfb9a9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_kill.c",
+      "sha256": "ae3849e2e3ab42564ef0f4353d288310ebd6b8ff66257be013ce3280de85f552"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_lchmod.c",
+      "sha256": "ac9a03b2e2eb9daadec3643fe672048f03c0d142562aafaf3fca4dd34f841726"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_lchown.c",
+      "sha256": "4dc7ac6dcbab8244c4b85e7aeb676cd424f10ab779470f9607e7915631e925cc"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_link.c",
+      "sha256": "6685ad37bf2ddeabdcc75374b8b0abd2e754fdfeb7a81959cd338887d5c58b0d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_listen.c",
+      "sha256": "34b9649b084c324e811cc5d7ec1de0059bff19e798279f264ddd7a37ad704e6a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_lseek.c",
+      "sha256": "29063af5b2beca6c1369a9f181f7b7dc7d7493d08b65e048ff2f18438cec5fa8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_lstat.c",
+      "sha256": "a5f38e02afd453de72dbda44d1ebb0d841edf90ee7d99cd19c78e4276d9a50be"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_lutimens.c",
+      "sha256": "7f53fb495aa821055230f70a07cf2f05936ad445e36705287e3413eb11f2f7c8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mkdir.c",
+      "sha256": "40b1034a5f522960dc4d015458de3f425d15e4473e2bddee1544db87ddfaa31d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mmap.c",
+      "sha256": "914ad989b4963f8820d26d626882267360e090eef3249e7a2e8137a0204b43da"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_modhandle.c",
+      "sha256": "379a2865bc2ce127ffe378463bc191a8aec21d9ed1c418a1de9af79c9053205a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mount.c",
+      "sha256": "bf57aaab3a13ca5964c65c4a62af276fc32b442de564975607faceb0bd55de1d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_close.c",
+      "sha256": "5413b7a914ea69bfa7abe8e0041dc033a53bfa8f9efb622af2029e1e10752dbc"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_getattr.c",
+      "sha256": "2510c8b9c9ef1d58cb06e842b947ba9f89932c6aa709af5eacc134458818a55d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_notify.c",
+      "sha256": "4325fea26d40697fc04f2a6f5808c17f088458ecdf0bc6f7b6a7cfda173ded5a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_open.c",
+      "sha256": "076ca8905313c2d3d454769f454d34f27efa666c22baabd9e7a481a4b69cb136"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_receive.c",
+      "sha256": "d40f5217e9870fbc13c34f5619bad3efd8c700db6c442646b2d73fa80bfa61c6"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_send.c",
+      "sha256": "42e68826011cbfc699a500db6b8fdbb61e837f8927322505dede575391c65e4c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_setattr.c",
+      "sha256": "3896609ebcc2e7a3904268124a0ee045fa5d33d10b991ee86fd1cc8ae6cd88f5"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_timedreceive.c",
+      "sha256": "0fb0a0b3b79f968f4cbe9c79096975c76f7e0bd1339f287874b274f6aab552bc"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_timedsend.c",
+      "sha256": "24bcdf54f212cca0145d71a7f9a78abb189e61b2c9eb407e277fd5b3b704edd6"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_mq_unlink.c",
+      "sha256": "14a4196e8beda208ab8589c3439e5f560d07adf96662e8376a5f477064494430"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_msync.c",
+      "sha256": "8804220df7894e240d4cfe2477d58eec8d0833b7df259d1a90bbfa942a5a0938"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_munmap.c",
+      "sha256": "82b027182b9326e272b7380065662d87213ab03fb1be47b8cc237b35189727ed"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nanosleep.c",
+      "sha256": "0cabfdd1bbb6b62a2f4d9776d1df5345279e4757987b2d7a92747de7c03288ca"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nx_mkfifo.c",
+      "sha256": "6ae9db2e61f3af5371e4bb868adc4f46b0539e5b5594f1f611d7df4c778390b4"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nx_pthread_create.c",
+      "sha256": "ba65d66f2d903aad4566c18dffcd735fbe56ea56ab6567b85bf4d9bf2e798b6c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nx_pthread_exit.c",
+      "sha256": "61c92e547559f6d8b60612a908d9eb4af4d4b23067de30ac888cb5a796bd43d5"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nx_vsyslog.c",
+      "sha256": "89dab96e4c3ca29117dc1d6f54535ccc56609590792356f482a05f86c37251b8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsched_get_stackinfo.c",
+      "sha256": "585e060d7e86898dbe3dfeb65c35a8012b007e0c36092f08b9a0efa513dd1322"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_clockwait.c",
+      "sha256": "5c8b7e598cd3c58e66b1238c5e85e9b47ae95dc191200ca750618255b99d12e2"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_close.c",
+      "sha256": "37858501c7aedf6aae8c0c82e47cbb117b655005640e4e51d695f70a09d19eb8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_destroy.c",
+      "sha256": "a5972da63bec8c14bb142f43c2d0d84983a3e5bbd3d08bba2b6887e976773b63"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_getprioceiling.c",
+      "sha256": "b54c0d7f6d8b5b3951b8b0cedac9a617f01e2a468e575e08e123eecec9ecb0f5"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_open.c",
+      "sha256": "b42c804c3b4f3755496d99d48e74611e59a542a7a7471dd12908c963c75b76b8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_post_slow.c",
+      "sha256": "cee3d200abcadf5f579ecee1395451d0f6b55fc757754208da120e5b0a1e7a0b"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_reset.c",
+      "sha256": "7d6b19bb21fd5c43bcc9cb319c6312c4ce5308ca49c271ba72d1ad6153f47d63"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_set_protocol.c",
+      "sha256": "f2ca084399a8c695d5929f3c23f7ca34938178956b5736ec672239295038cfca"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_setprioceiling.c",
+      "sha256": "4e6de9e501a2822341e30224e97dadcdef97f8d5eed1e94dc10630fd2121de82"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_tickwait.c",
+      "sha256": "b7f07de2d722c453db1e954ad62223970e71434aaf9ddb4685a868bc5fca00ee"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_timedwait.c",
+      "sha256": "1f8c0f826e47b92b6970f10c6f005fd422e442f583c4f9b7b1d83dc3bd1f54d8"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_trywait_slow.c",
+      "sha256": "220461571a9058662b24cf6a0f0368383e5d8ec0a2d6c36e8e3ad53dd515ec4d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_unlink.c",
+      "sha256": "5df4aa2794dcec01158d9612174cdb4c0f7753f9fa7128ee4b0a63d1a5210ad9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_nxsem_wait_slow.c",
+      "sha256": "06e4e642866b1b4270310889fc6ad356aee0abc2b13cf117cc8d20eba623bd39"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_open.c",
+      "sha256": "0313ab51966c35bf3df133b586d01e376c51573ce83a3e69f9d6bf6be2bd2a65"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_perf_convert.c",
+      "sha256": "167ff3f32e65876615a747fab6d74b584dad376bc0b228cb8ea188bf991bbf0b"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_perf_getfreq.c",
+      "sha256": "bf71657842b0629c33a1648037a0cf9034ab397c680ad1866ffa1334598e5244"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_perf_gettime.c",
+      "sha256": "0cfeb26f529a3357e55223c82b29a46457349850b698f011efcccc42dc2980ff"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pgalloc.c",
+      "sha256": "31126eb3385e7e5bc3e81f5c9f0371cac2f1791c7192431ec7ef57144e4022d7"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pipe2.c",
+      "sha256": "40890111ed84f10daf990b251e0c2df073a3bb1747b65a152bab46f3d71bc44e"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_poll.c",
+      "sha256": "4f18abe2568678c725c403d3636f9c929f5113fd962078f02761efde0d4ce5b5"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_posix_spawn.c",
+      "sha256": "17c33a7d3353e9f50813db561bc2da53f255b6502319387bd02dbf0df44ae17a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_ppoll.c",
+      "sha256": "24b0770490d1f218036e0ff8e66057f47ef678bee7bfae3e49a71ab7c8e9d584"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_prctl.c",
+      "sha256": "f944dfdbe9b0ffcdc4a4744b167b64b81b5fd8ee5c8fab35768dd9a8fc59ee79"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pread.c",
+      "sha256": "feb258ab9280a981117f5078f757f28cfb7ebb393d95ac8d631f20a11eabc69f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pselect.c",
+      "sha256": "a5d0e4a97c0a6b3fdd6b62fda661d6416aef548b6db6a7760f9617f5f2563f06"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_cancel.c",
+      "sha256": "d432519231132fe7566bd2eb3345533c56da07893b1518c30bdb52d84178ccc9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_detach.c",
+      "sha256": "8a8ef49f197c6c125309a691008f866755c23d5952ec4fc9a7c422ccd4c57477"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_getaffinity_np.c",
+      "sha256": "5245f2fc293bcf826b179a56f78aac7b418aa0398adda4ef50c27755df4cee51"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_getschedparam.c",
+      "sha256": "2c73810b2f3c40c8218397114651ce6cff1a27805726162f6b2b90cc84dbe3ee"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_join.c",
+      "sha256": "ffa10fb0b637d43bc2465e54d358c57238f359bb6e4789c9a14da1a8bbbf53a2"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_setaffinity_np.c",
+      "sha256": "f83be0d64009dec4cbd2074b540663f870eea8fefaceff615de5e9bd4eeae1c4"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_setschedparam.c",
+      "sha256": "c0f58344d32fc8d25c56d9c17310fb50c87ef42240b4c24501e8d73d1f71454b"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_setschedprio.c",
+      "sha256": "7646727482d2c4f7c616c7d3784cc34e80e9f67e0476d240e926a5b2fbbd2ef7"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pthread_sigmask.c",
+      "sha256": "a480c71a8db5ed2b46d7e3f83e9afd774c2b123a74cdd42fb637b975696e9397"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_putenv.c",
+      "sha256": "afe9b34596ffbff0b0ffcd15fce35c99004c0f337ddb77999c1b53096e224df3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_pwrite.c",
+      "sha256": "f71e74118bb5ad44b2e96d075b5f4d7cd058bb908a1d2dc01de10043c85f1dd3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_read.c",
+      "sha256": "c7aede884634f796bcf902766a5a7b7ea5e2d0881c6d67c8eec0a7c19137c034"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_readlink.c",
+      "sha256": "c4e1bf7bad782607c2619b47047ace2c88dbe89bed1e338534462011b131acf6"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_readv.c",
+      "sha256": "bc563428a3188dd378b3117f4ae0e5852d9ef3640cabfce7ae89f9ddc3cf7cd3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_recv.c",
+      "sha256": "ba70d4c1dbbbf3718792ba31e049ff78f2534fb479b6109ebeacd19a1942ac3a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_recvfrom.c",
+      "sha256": "87687c5465aecb5d3d9c1754f20afbff8be579687dccf2561ef2ccc4730b5747"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_recvmsg.c",
+      "sha256": "398610f4d2b50f741cc05206f7100a88c7d015d2dd81b5a70940e7208814bb53"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_rename.c",
+      "sha256": "4c1de3084c196c02eab7505a408f6c01a8179419c0fffc50f36adb6211f68e00"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_rmdir.c",
+      "sha256": "e654467ce07b8b64d6232b21c1d7f624bc0e657f4878a7555cb2af077795205e"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_rmmod.c",
+      "sha256": "8fa34e376a9e687a44abfe32ae1e0ce612676d16ae0a839790ae3303365ed693"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_backtrace.c",
+      "sha256": "de8e01ab803e4374fb4571da67365075c99c1b6fc573ef70eb9be16df2c401a3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_getaffinity.c",
+      "sha256": "c7fe986904791ec3f29d9bf7cb67e51bdc8e2327cbb190438f2dc87245e5b761"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_getcpu.c",
+      "sha256": "6b2f47098bfbda93103ab3bec34b77dc1901fa9c1c70406c320e9c808da08b73"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_getparam.c",
+      "sha256": "3f5f7a08aab10964f42e41742b036620188314b5df39c22133497d58f3599b82"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_getscheduler.c",
+      "sha256": "6382f23691ead17b24c33438c679a2475860f309db7f0f0eac7d16bf53d73e0d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_lock.c",
+      "sha256": "a4bfc1e44963c6d22eb4ccae5397d7e9134129e1e179f203468a1d9b5aa61175"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_lockcount.c",
+      "sha256": "2b4a61d687cbc6a13e56b1c1af754e146e8b11eb36a1a75ccbd0791ffba99ea7"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_note_event_ip.c",
+      "sha256": "1eb64b17a3eba25db70bf62a30e658822067b9f2d9405214b61a7f22b33aa99d"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_note_vprintf_ip.c",
+      "sha256": "52b54e4e4619d7552664b909f0a8e1c59849e090eceed25e59cae2f5311a2385"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_rr_get_interval.c",
+      "sha256": "bfcf70b97840dd1ba53860642ceeb45b47fa0b7d74951610749ac4f25fbffd9f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_setaffinity.c",
+      "sha256": "b0c16cf774962a9e73bd30ab3f049d0085486334422a904fe9129d5439185885"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_setparam.c",
+      "sha256": "21ee3d776dda4bf6e570b61a9d06c06caad1a4248bbc8a3c7103042d31ed2955"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_setscheduler.c",
+      "sha256": "09dce34ba563bf72d19967be6fff55e4809d5b98cd832beae595be8058abfdbc"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_unlock.c",
+      "sha256": "9898c8379153bdff5fdbe6473339f68e177c537dd7eab78e082f4ca1c3437610"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sched_yield.c",
+      "sha256": "f0457c7478ff0bd0e45e09150538a8e417e868356aee225051b3ffc8573f8681"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_select.c",
+      "sha256": "98737de472ef78d089eb54d76ddd7a3ca927b8ddcc3049a52e5360456ab89579"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_send.c",
+      "sha256": "ad9586b15c9a9d74b4c372203dd93e0d8027e5e18448a07defd1c5205384a9de"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sendfile.c",
+      "sha256": "3824a1d7312de0197937be4c0c2fc1aeb0edf3d3bdee97967deea3d2678b9c9f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sendmsg.c",
+      "sha256": "15e67ea97dc45ebde17eac292ee95a852f6d50c0ce726b4c713051f1eb67f3ab"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sendto.c",
+      "sha256": "ab13984ae3e1ab7ad714b409c3aad91431e59e2bb069551e4250c63263c17b0c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_setegid.c",
+      "sha256": "5f6a344687b5cc36a3a12f84f51b9222024d919b09726f1956d0ffb884cf4e3c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_setenv.c",
+      "sha256": "b85897e6dc428e4356c194c5244b18c710675be7ea7a931763ac5a77958150c3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_seteuid.c",
+      "sha256": "10b0a3e9cfe71d150c876bf18289e95f0e4a69b72eba5ac96bd70e60adf5bc12"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_setgid.c",
+      "sha256": "ad187786ab7252f34ff35ade5e22b52e80203641c1c505a3db9e0c4e49d30282"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sethostname.c",
+      "sha256": "b54fceddc257a1ecbefea4527a36f64c051ffa08bdde12a0fa7d6adbcc30245c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_setitimer.c",
+      "sha256": "4d0b6b6af535a529706b2e322c5eae421f42220ded8a4a09836127ca7380d231"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_setsockopt.c",
+      "sha256": "baa676131fed3dbd6d8f9c6e7d7bf8ecc50ccad97f488bfb9a10487dd961017e"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_settimeofday.c",
+      "sha256": "8b6bd66ce05c3e9ad42507041e06c95d4adef0271dacc970a639a62d2bbcdb24"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_setuid.c",
+      "sha256": "19de713009a17e15494d7a846cdf2fc807cc9c396c89e5670c504df8dc388f96"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shm_open.c",
+      "sha256": "5d2759a2fed4d9e37e5ad0a9537ae902ddf7d0d5decc782bfa07802d91a67205"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shm_unlink.c",
+      "sha256": "d1d4cecaacd98fa72f314506c14272dd3588f04eb3ce0f38c3dd1a7cf6687657"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shmat.c",
+      "sha256": "b084bb99a7aec7df7bc3c32c554d392ad436108896498e3062cdba9ff0c5a3f1"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shmctl.c",
+      "sha256": "e6d5e5bcef6651acae2b20607079b3e8a78c54c34882d8f97404f5a3c0cd037c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shmdt.c",
+      "sha256": "b7af896c9450de8448762d63f8d9f2be3904258b380767efaecad576069e57d9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shmget.c",
+      "sha256": "41abd6b9a8745b98708f998a99e822cb41b994d23ece726320eb9302d0a78707"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_shutdown.c",
+      "sha256": "be1d501a25a4bbfcaad977476b6d6bc82aef3d835a6687d0a36d3abe15284076"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigaction.c",
+      "sha256": "2d01af50fa4c7b34f25658b39d256cd5053ffb298313bb3cd336c2d66ea7cc64"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_signal.c",
+      "sha256": "4511423cf0278484dc1d5012bb4892953f1380cac6c9ec104103c728e9a379b2"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_signalfd.c",
+      "sha256": "2c9757d043ef15932ca52be5026a47805957b7e3b772eb6fcc2e7ffcdd18c20f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigpending.c",
+      "sha256": "49d6d028dc16a64caf0d8e0a201209fad5a67acddadd5dcdba288b82a24b52ef"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigprocmask.c",
+      "sha256": "2189c73e684489259e68da06b7914680ad8309e18c834e2d13dc82712123fba6"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigqueue.c",
+      "sha256": "4383a8c9f92b7a539cd9eecfe588cf687ca9853d250b11d683cbd64e5ac508ab"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigsuspend.c",
+      "sha256": "0233f8774ffd688cc737881cb12cd79852500171ea2ef61c8baba09cd5a35935"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigtimedwait.c",
+      "sha256": "61d3f07ac1c3b8fef5b6ed79c484c21322b71598dd4a9315b2cfc25f87f57fa4"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sigwaitinfo.c",
+      "sha256": "5c0ae108fc6510f114f501ba2920e3644445888837c417eeb8c779ee2d57e5f2"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_socket.c",
+      "sha256": "160876d5717274e9e971eb7053d9da1350fc7690d34ce5d05b20aa861561d617"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_socketpair.c",
+      "sha256": "8250f34b74695e052941928f3a6e0e0143f7719897f2c920d8759f21035076f4"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_stat.c",
+      "sha256": "065653d02aedbd27974431be2c8853e301ca5bfc6b2dd1ea53abeb8ceca2f000"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_statfs.c",
+      "sha256": "34fd98d48f61c872bbfac2adce10b16887e7063f1b8dd23ec98928c13e3f7cdf"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_symlink.c",
+      "sha256": "12b9d889ec8edbf3f8b07373549f816ea2d1ba705834e14d817fa041f4175dbe"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sync.c",
+      "sha256": "62abc042d0debbfecc77d3836df2526cbe65ec86eeb267dbdf326b79635bc235"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_sysinfo.c",
+      "sha256": "1e04415f7cc4915a5138a31f0dfcbce4fc03340cc76072a96fcc9cd3d934a086"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_task_create.c",
+      "sha256": "d8eeb0618cdb1a889e3ce408a4257c293dbc96d09cc002e67f0059b154eaeb4a"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_task_delete.c",
+      "sha256": "29623e030e0e5fb6b01ec6e9a83115ccf8361e4d600d7e822aa7f006dbe1837f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_task_restart.c",
+      "sha256": "8219a258bb8abe48e3ea05bd6e458d4903f0cceb04e5ae49d6fb53bf132505db"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_task_spawn.c",
+      "sha256": "ec366961d7aeb534be7170d2551da84fbbdeecaaf4b076ba224f0868c364ce67"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_tgkill.c",
+      "sha256": "c06283e0f087b4ea64980834df813286e0628558790ced3adf5a37da94b6782c"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_time.c",
+      "sha256": "54273508aec2e496ad4a04bd14f11559d1f374847447c45f5fece317e677971b"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timer_create.c",
+      "sha256": "9f8fe9cd22daa2d7202c0dd97418932dedd34a9bcb916da95bb7c613403e9f14"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timer_delete.c",
+      "sha256": "a0dcfed738371b9569111e6a05905683a23ca753aaf0ca60ebdeca0a863013fd"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timer_getoverrun.c",
+      "sha256": "5fe15d7a50cf99b0417bb7ae9c5926ee778093ce039950679aea3e97d4071927"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timer_gettime.c",
+      "sha256": "644d307f8210b549717f26936d0657493519759dd979fee047b461c78d2019b1"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timer_settime.c",
+      "sha256": "598b28dfa5982204cfefe38cdb1b8160dad546f4a13409361159b86a08dd14f3"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timerfd_create.c",
+      "sha256": "335740946d0fd797da9511c376a1cc2f43ca8ed695a4a4438cabd32ed329e1f1"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timerfd_gettime.c",
+      "sha256": "88af9cae2c2d95711527d6ea0115c1c14e57194d298d5d49b5dae24cfc917c31"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_timerfd_settime.c",
+      "sha256": "3e9f575a1355dc4a352d56b6b34fe8b5a65a72c42318b40ef23561b133e40c00"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_umount2.c",
+      "sha256": "f357a8ef39c8919b6661a10fe1e5febfd2f36905a5a0e645662439271dc19e3e"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_unlink.c",
+      "sha256": "64938ac15ede0d8eb9fbbaa2e93bcdbd4c7247a9bbda9391e17885d08f05edb9"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_unsetenv.c",
+      "sha256": "f54ea78d477e7ce44ddae2a7af56df51915b198f53731f0595dbbca96e48bfed"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_up_fork.c",
+      "sha256": "6ce9f695fbf83d59e23b0a868e326fc5bc1c395e40b1ff35551a99f74efb91a4"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_utimens.c",
+      "sha256": "1bd5a733fe3bfeb25df6c411947b033ff568b6a3ff4cdb978e9081323e8230ec"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_wait.c",
+      "sha256": "2d6ffe34d9e09102eb5119bb546de44147eb0ead225f1ec9341c0f3b81d18df5"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_waitid.c",
+      "sha256": "80ae11d00033d1bb3441a6a54dbcdb42e1af9d8201a7cc42b48b090255ba646b"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_waitpid.c",
+      "sha256": "6ca9afb614d56a1a453d672caf4ef8c1c15beed277faa1c4532b90282b1bfc01"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_write.c",
+      "sha256": "e790c0eca8efd6ed130432378a4be85bbb3d735d99da2c22bfb22c470609fd9f"
+    },
+    {
+      "path": "nuttx/syscall/proxies/PROXY_writev.c",
+      "sha256": "1fa19138d546558a8ded456a496a4f5723363385c555b90a85b119b74d4d3bd0"
+    }
+  ]
+}
