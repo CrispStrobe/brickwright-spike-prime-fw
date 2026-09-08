@@ -104,3 +104,5 @@ and CI; pending work belongs in `PLAN.md`.
   unclassified inputs, and zero successful network connections. Final link
   provenance remains invalid because a mapped kernel archive member reused a
   stale object without a captured compiler producer.
+- Added host-path-free fixed-point evidence generation for two offline builds,
+  requiring an immutable container ID and byte-identical declared artifacts.

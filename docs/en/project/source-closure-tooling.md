@@ -66,6 +66,11 @@ repository. It verifies every hash, rejects path escapes and collisions, and
 does not copy external toolchain inputs. The resulting tree is the only source
 mount accepted by offline fixed-point builds.
 
+`tools/compare_offline_builds.py` compares an explicit artifact set from two
+fresh materializations. It requires an immutable container image ID, records
+that networking was disabled, hashes the accepted source manifest, emits no run
+paths, and fails if any artifact differs.
+
 ## Toolchain and linked-runtime boundary
 
 Project and vendored source admission remains permissive-only. Compiler
