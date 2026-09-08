@@ -68,13 +68,17 @@ $(BRICKWRIGHT_TI_PAYLOAD): $(BRICKWRIGHT_TI_VENDOR_BTS) \
 	  $(BRICKWRIGHT_TI_VENDOR_BTS) \
 	  --license $(BRICKWRIGHT_TI_VENDOR_DIR)/LICENSE.ti
 
+ifneq ($(CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER),y)
 all:: $(BRICKWRIGHT_TI_PAYLOAD)
+endif
 
 include $(APPDIR)/Application.mk
 
+ifneq ($(CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER),y)
 # If an import appears after a previous payload-free build, its newer
 # timestamp must force the permissive provider shim to be recompiled.
 $(filter %btsensor_ti_payload%,$(COBJS)): $(BRICKWRIGHT_TI_PAYLOAD)
+endif
 
 # Application.mk first places libapps and libgcc in LDLIBS. The Bluetooth
 # archive follows them inside the same start-group, so circular references

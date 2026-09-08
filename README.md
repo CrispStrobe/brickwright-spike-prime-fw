@@ -54,6 +54,11 @@ proves only its named software milestone.
 - `docs/en/`: contracts, hardware notes, and operator guidance
 - `PLAN.md`: ordered unfinished work; `HISTORY.md`: accepted milestones
 
+For Renode, `make nuttx BOARD_CONFIG=renode` builds a simulation-only image
+with the permissive in-process Bluetooth controller. It neither requires TI
+bytes nor operates the physical radio. See
+[the Renode controller profile](docs/en/testing/renode-controller.md).
+
 ## Policy and documentation
 
 Project source is MIT, Apache-2.0, BSD-3-Clause, or an approved comparable

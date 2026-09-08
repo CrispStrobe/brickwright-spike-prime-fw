@@ -34,8 +34,16 @@ int btsensor_transport_start(btsensor_transport_receive_cb receive,
       return -EALREADY;
     }
 
+#ifdef CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER
+  static const uint8_t virtual_address[6] = {
+    0x06, 0x05, 0x04, 0x03, 0x02, 0x01
+  };
+  ret = brickwright_hci_configure(BRICKWRIGHT_HCI_BACKEND_VIRTUAL,
+                                  NULL, virtual_address);
+#else
   ret = brickwright_hci_configure(BRICKWRIGHT_HCI_BACKEND_PHYSICAL,
                                   "/dev/ttyBT", NULL);
+#endif
   if (ret < 0)
     {
       return ret;

@@ -89,9 +89,9 @@ reported separately and never count as unchanged execution.
 
 Depends on S3. HCI and LPF2 work may proceed independently.
 
-1. Implement a transport-neutral H4 controller service with deterministic GAP,
-   L2CAP, RFCOMM, ATT, GATT, SMP, connections, credits, and faults. Vendor
-   commands receive opaque policy-controlled acknowledgements only.
+1. Complete the existing transport-neutral controller model's remaining GAP,
+   L2CAP, RFCOMM, ATT, GATT, SMP, credit, and fault scenarios through the
+   dedicated `renode` firmware profile.
 2. Model six LPF2 ports: identification, UART negotiation, sensor modes/data,
    motor commands, encoder motion, load, stall, detach, and generations.
 3. Complete observable TLC5955, IMU timing/FIFO/interrupt, W25Q256 persistence,

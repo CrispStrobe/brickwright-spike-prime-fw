@@ -76,6 +76,10 @@ static FAR struct btuart_lowerhalf_s *g_bt_lower;
 
 int stm32_bluetooth_initialize(void)
 {
+#ifdef CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER
+  syslog(LOG_INFO, "BT: simulation controller selected; physical radio off\n");
+  return OK;
+#else
   FAR struct btuart_lowerhalf_s *lower;
   int ret;
 
@@ -114,6 +118,7 @@ int stm32_bluetooth_initialize(void)
 
   syslog(LOG_INFO, "BT: CC2564C powered, /dev/ttyBT ready\n");
   return OK;
+#endif
 }
 
 /****************************************************************************
@@ -154,6 +159,9 @@ FAR struct btuart_lowerhalf_s *stm32_btuart_lower(void)
 
 int stm32_bluetooth_chip_reset(void)
 {
+#ifdef CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER
+  return OK;
+#else
   if (g_bt_lower == NULL)
     {
       return -ENODEV;
@@ -164,6 +172,7 @@ int stm32_bluetooth_chip_reset(void)
   stm32_gpiowrite(GPIO_BT_NSHUTD, true);
   up_mdelay(BT_BOOT_SETTLE_MS);
   return OK;
+#endif
 }
 
 #endif /* CONFIG_STM32_USART2 */
