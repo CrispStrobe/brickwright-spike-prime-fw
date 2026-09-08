@@ -1,0 +1,22 @@
+{
+  "boundary": "arm-toolchain",
+  "files": [
+    {
+      "path": "lib/gcc/arm-none-eabi/13.2.1/include/float.h",
+      "sha256": "797fe35b6d174600d8124844ae4d34ed82caee39e6c71fa9dbf539215167c2e0"
+    },
+    {
+      "path": "lib/gcc/arm-none-eabi/13.2.1/include/stdarg.h",
+      "sha256": "5a443943e67d7bab17203591b4ccb508757587d9b955ee883a053d755ed09321"
+    },
+    {
+      "path": "lib/gcc/arm-none-eabi/13.2.1/include/stdatomic.h",
+      "sha256": "e6544cb60cf2b30c69d47424f7b04ab18bd2bc97e03a9c852b238f95ed26f3ca"
+    }
+  ],
+  "lock": {
+    "path": "policy/arm-toolchain.lock.json",
+    "sha256": "f63ffc27105407a9ef7c60931b2705eeeb22ad25d615d29ba112c5a18dbd4c45"
+  },
+  "schema": "brickwright/external-build-inputs/v1"
+}

@@ -226,6 +226,16 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
             candidate = quoted_path(arguments[path_index], line)
             needs_state |= not candidate.is_absolute() or "O_DIRECTORY" in argument_text
         if pid not in state and needs_state:
+            # Under parallel fork/vfork tracing a child can create its redirected
+            # output before strace reports which pending parent returned that PID.
+            # Its relative name cannot be resolved yet, but it is write-created
+            # and therefore cannot be source input. Ignore only this narrow case;
+            # a later relative read still fails unless the parent mapping arrived.
+            creating = syscall in {"open", "openat", "openat2"} and any(
+                flag in argument_text for flag in ("O_CREAT", "O_TRUNC", "O_EXCL")
+            )
+            if creating and path_index is not None and not candidate.is_absolute():
+                continue
             ensure_state(pid)
         if syscall in {"clone", "clone3", "fork", "vfork"}:
             if pid not in state:
@@ -331,9 +341,12 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     for trace in arguments.strace:
         consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
         paths.update(consumed); generated.update(trace_generated)
+    for trace in getattr(arguments, "flow_trace", []):
+        _, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        generated.update(trace_generated)
     for depfile in arguments.depfile:
         paths.update(dep_record(Path(depfile))[1])
-    for record_path in capture_records(arguments):
+    for record_path in reachable_capture_records(arguments):
         record = json.loads(record_path.read_text(encoding="utf-8"))
         depfile = record.get("depfile")
         if not depfile:
@@ -341,9 +354,104 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         record_cwd = Path(record["cwd"])
         _, prerequisites = dep_record(Path(depfile))
         paths.update(path if path.is_absolute() else record_cwd / path for path in prerequisites)
+    for directory in getattr(arguments, "capture", []):
+        for record_path in Path(directory).glob("links/*.json"):
+            record=json.loads(record_path.read_text()); cwd=Path(record["cwd"])
+            argv=record.get("argv",[])
+            for index,value in enumerate(argv):
+                raw = argv[index+1] if value == "-T" and index+1 < len(argv) else value[2:] if value.startswith("-T") else None
+                if raw:
+                    path=Path(raw); paths.add(path if path.is_absolute() else cwd/path)
     cwd = Path(arguments.cwd).resolve()
-    normalized = {path if path.is_absolute() else cwd / path for path in paths}
-    return normalized - generated
+    normalized = {(path if path.is_absolute() else cwd / path).resolve() for path in paths}
+    declared, _ = declared_generated(arguments)
+    return (normalized - generated) | (normalized & declared)
+
+
+def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
+    result, rows = set(), []
+    repository = Path(arguments.repository).resolve()
+    captured = {}
+    for directory in getattr(arguments, "capture", []):
+        capture = Path(directory)
+        for record_path in capture.glob("links/*.json"):
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+            cwd = Path(record["cwd"])
+            for item in record.get("link_inputs", []):
+                logical = Path(item["argument"])
+                logical = logical.resolve() if logical.is_absolute() else (cwd / logical).resolve()
+                preserved = capture / item["path"]
+                if not preserved.is_file() or sha256(preserved) != item.get("sha256"):
+                    die(f"captured generated input is missing or changed: {logical}")
+                if logical in captured and captured[logical] != item["sha256"]:
+                    die(f"ambiguous captured generated input: {logical}")
+                captured[logical] = item["sha256"]
+    for declaration in getattr(arguments, "generated", []):
+        declaration_path = Path(declaration)
+        if declaration_path.is_absolute() or ".." in declaration_path.parts:
+            die("generated-input declaration must be repository-relative")
+        document = json.loads((repository / declaration_path).read_text(encoding="utf-8"))
+        if document.get("schema") != "brickwright/generated-build-inputs/v1":
+            die("invalid generated-input declaration")
+        for item in document.get("files", []):
+            relative = PurePosixPath(item.get("path", ""))
+            if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+                die("generated-input path escapes repository")
+            path = (repository / relative.as_posix()).resolve()
+            try: path.relative_to(repository)
+            except ValueError: die("generated-input symlink escapes repository")
+            actual_hash = sha256(path) if path.is_file() else captured.get(path)
+            if actual_hash is None: die(f"declared generated input is missing: {relative}")
+            if actual_hash != item.get("sha256"):
+                die(f"declared generated input hash mismatch: {relative}")
+            if not isinstance(item.get("generator_argv"), list) or not item["generator_argv"]:
+                die(f"declared generated input lacks generator: {relative}")
+            result.add(path.resolve())
+            rows.append({"path":relative.as_posix(), "sha256":item["sha256"],
+                         "generator_argv":item["generator_argv"], "evidence":item.get("evidence")})
+    return result, sorted(rows, key=lambda x:x["path"])
+
+
+def declared_external(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
+    paths, rows = set(), []
+    allowed = {"arm-toolchain", "host-tool"}
+    repository = Path(arguments.repository).resolve()
+    external_roots = {}
+    for value in getattr(arguments, "external_root", []):
+        if "=" not in value: die("external root must be BOUNDARY=PATH")
+        name, raw = value.split("=", 1)
+        if name in external_roots or name not in allowed: die("invalid external root boundary")
+        external_roots[name] = Path(raw).resolve()
+    for declaration in getattr(arguments, "external", []):
+        declaration_path = Path(declaration)
+        if declaration_path.is_absolute() or ".." in declaration_path.parts:
+            die("external-input declaration must be repository-relative")
+        document = json.loads((repository / declaration_path).read_text(encoding="utf-8"))
+        if document.get("schema") != "brickwright/external-build-inputs/v1":
+            die("invalid external-input declaration")
+        boundary = document.get("boundary")
+        root = external_roots.get(boundary)
+        lock = document.get("lock", {})
+        if boundary not in allowed or root is None or not isinstance(lock, dict):
+            die("external-input boundary is incomplete")
+        lock_relative = PurePosixPath(lock.get("path", ""))
+        if lock_relative.is_absolute() or ".." in lock_relative.parts or not lock_relative.parts:
+            die("external-input lock escapes repository")
+        lock_path = (repository / lock_relative.as_posix()).resolve()
+        if not lock_path.is_file() or sha256(lock_path) != lock.get("sha256"):
+            die("external-input lock is missing or hash differs")
+        for item in document.get("files", []):
+            relative = PurePosixPath(item.get("path", ""))
+            if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+                die("external-input path escapes its boundary")
+            path = (root / relative.as_posix()).resolve()
+            try: path.relative_to(root.resolve())
+            except ValueError: die("external-input symlink escapes its boundary")
+            if not path.is_file() or sha256(path) != item.get("sha256"):
+                die(f"external-input hash mismatch: {boundary}/{relative}")
+            paths.add(path); rows.append({"boundary":boundary, "lock":lock,
+                                          "path":relative.as_posix(), "sha256":item["sha256"]})
+    return paths, sorted(rows, key=lambda x:(x["boundary"],x["path"]))
 
 
 def capture_records(arguments: argparse.Namespace) -> list[Path]:
@@ -351,6 +459,60 @@ def capture_records(arguments: argparse.Namespace) -> list[Path]:
     for directory in getattr(arguments, "capture", []):
         result.extend(Path(directory).glob("compiles/*.json"))
     return sorted(result)
+
+
+def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
+    records = capture_records(arguments)
+    if not getattr(arguments, "map", []):
+        return records
+    cwd = Path(arguments.cwd).resolve()
+    identities = map_identities(arguments.map, cwd)
+    direct = {value for value in identities if "(" not in value}
+    archive_members: dict[str, set[str]] = {}
+    for value in identities:
+        if "(" in value:
+            archive, member = value.rsplit("(", 1)
+            archive_members.setdefault(archive, set()).add(member[:-1])
+    by_basename: dict[str, list[tuple[Path, str]]] = {}
+    selected = set()
+    for record_path in records:
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        output = record.get("output")
+        if not output: continue
+        identity = normalized_build_path(Path(record["cwd"]) / output, cwd)
+        if identity in direct: selected.add(record_path)
+        by_basename.setdefault(Path(output).name, []).append((record_path, identity))
+    archives_by_hash = {}
+    archive_records = []
+    for directory in getattr(arguments, "capture", []):
+        archive_records.extend(Path(directory).glob("archives/*.json"))
+    for record_path in sorted(archive_records):
+        record=json.loads(record_path.read_text()); digest=record.get("output_sha256")
+        if digest: archives_by_hash.setdefault(digest,[]).append(record)
+    for archive_identity, members in archive_members.items():
+        archive_path = cwd / archive_identity
+        if not archive_path.is_file(): continue
+        matches=archives_by_hash.get(sha256(archive_path),[])
+        if not matches:
+            external_roots = [Path(value.split("=",1)[1]).resolve()
+                              for value in getattr(arguments,"external_root",[]) if "=" in value]
+            if any(archive_path.resolve().is_relative_to(root) for root in external_roots):
+                continue
+            try: archive_path.resolve().relative_to(Path(getattr(arguments, "repository", ".")).resolve())
+            except ValueError: continue  # separately declared immutable external runtime
+        if len(matches)!=1: die(f"mapped archive has no unique recorded producer: {archive_identity}")
+        record=matches[0]; inputs=[]
+        for value in record["argv"][2:]:
+            if value.startswith("-"): continue
+            path=Path(value); inputs.append((path if path.is_absolute() else Path(record["cwd"])/path).resolve())
+        for member in members:
+            producers=[p for p in inputs if p.name==member]
+            if len(producers)!=1: die(f"archive member has no unique recorded input: {archive_identity}({member})")
+            exact=normalized_build_path(producers[0],cwd)
+            candidates=[path for path,identity in by_basename.get(member,[]) if identity==exact]
+            if len(candidates)!=1: die(f"archive input has no unique compiler producer: {exact}")
+            selected.add(candidates[0])
+    return sorted(selected)
 
 
 def locate(path: Path, roots: list[dict]) -> tuple[dict, Path, Path]:
@@ -366,12 +528,13 @@ def locate(path: Path, roots: list[dict]) -> tuple[dict, Path, Path]:
         try:
             relative = lexical.relative_to(base)
         except ValueError:
-            continue
-        try:
-            resolved.relative_to(base.resolve())
-        except ValueError:
-            die(f"symlink escapes source root: {lexical}")
-        matches.append((len(base.parts), root, relative))
+            relative = None
+        try: resolved_relative = resolved.relative_to(base.resolve())
+        except ValueError: resolved_relative = None
+        if resolved_relative is not None:
+            matches.append((len(base.parts), root, resolved_relative))
+        elif relative is not None and lexical == resolved:
+            matches.append((len(base.parts), root, relative))
     if not matches:
         die(f"consumed file escapes declared source roots: {lexical}")
     _, root, relative = max(matches, key=lambda item: item[0])
@@ -437,7 +600,12 @@ def origin_for(root: dict, relative: Path, resolved: Path) -> dict:
 
 def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[dict]:
     entries = {}
-    for path in consumed_paths(arguments):
+    external, _ = declared_external(arguments)
+    generated, _ = declared_generated(arguments)
+    consumed = consumed_paths(arguments)
+    unmatched_generated = generated - consumed
+    if unmatched_generated: die("generated declaration contains unconsumed files")
+    for path in consumed - external - generated:
         root, relative, resolved = locate(path, roots)
         key = (root["name"], relative.as_posix())
         entries[key] = {
@@ -475,6 +643,14 @@ def make_sbom(manifest: dict) -> dict:
             "licenseConcluded": entry["license"],
             "licenseInfoInFiles": [entry["license"]],
             "copyrightText": "NOASSERTION",
+        })
+    offset = len(files)
+    for index, entry in enumerate(manifest.get("generated_inputs", []), offset + 1):
+        files.append({
+            "SPDXID": f"SPDXRef-File-{index}", "fileName": "generated/" + entry["path"],
+            "checksums": [{"algorithm":"SHA256", "checksumValue":entry["sha256"]}],
+            "licenseConcluded":"NOASSERTION", "licenseInfoInFiles":["NOASSERTION"],
+            "copyrightText":"NOASSERTION", "comment":"Generated by: " + " ".join(entry["generator_argv"]),
         })
     return {
         "spdxVersion": "SPDX-2.3",
@@ -529,7 +705,7 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
         if target_id in dependencies:
             die(f"ambiguous duplicate depfile target: {target_id}")
         dependencies[target_id] = sources
-    for record_path in capture_records(arguments):
+    for record_path in reachable_capture_records(arguments):
         record = json.loads(record_path.read_text(encoding="utf-8"))
         record_cwd = Path(record["cwd"])
         target, paths = dep_record(Path(record["depfile"]))
@@ -567,12 +743,23 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
             "mentioned_in_map": identity in map_objects,
             "sources": sorted(dependencies.get(identity, set())),
         })
+    repository = Path(arguments.repository).resolve().as_posix()
+    replacements = [(repository, ".")]
+    for value in getattr(arguments, "external_root", []):
+        name, raw = value.split("=", 1)
+        replacements.append((Path(raw).resolve().as_posix(), f"${{{name}}}"))
+    replacements.sort(key=lambda item: len(item[0]), reverse=True)
+    def public_identity(identity: str) -> str:
+        for prefix, replacement in replacements:
+            if identity == prefix or identity.startswith(prefix + "/"):
+                return replacement + identity[len(prefix):]
+        return identity
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
     return {
         "schema": 1,
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "map_files": [{"path": Path(item).name, "sha256": sha256(Path(item))} for item in sorted(arguments.map)],
-        "map_objects": sorted(map_objects),
+        "map_objects": sorted(public_identity(identity) for identity in map_objects),
         "objects": rows,
         "depfile_prerequisites": sorted(all_sources),
     }
@@ -587,6 +774,8 @@ def generate(arguments: argparse.Namespace) -> None:
         "allowed_licenses": sorted(ALLOWED_LICENSES),
         "source_roots": [public_root(root) for root in roots],
         "files": closure_entries(arguments, roots),
+        "external_inputs": declared_external(arguments)[1],
+        "generated_inputs": declared_generated(arguments)[1],
     }
     link_evidence = None
     if arguments.evidence:
@@ -607,7 +796,11 @@ def verify(arguments: argparse.Namespace) -> None:
     actual_files = manifest.get("files", [])
     actual_keys = {(item.get("source_root"), item.get("path")) for item in actual_files}
     consumed_keys = set()
-    for path in consumed_paths(arguments):
+    external, external_rows = declared_external(arguments)
+    generated, generated_rows = declared_generated(arguments)
+    if manifest.get("external_inputs") != external_rows or manifest.get("generated_inputs") != generated_rows:
+        die("declared generated/external inputs differ from manifest")
+    for path in consumed_paths(arguments) - external - generated:
         root, relative, _ = locate(path, roots)
         consumed_keys.add((root["name"], relative.as_posix()))
     if consumed_keys != actual_keys:
@@ -636,8 +829,13 @@ def make_parser() -> argparse.ArgumentParser:
         command.add_argument("--roots", required=True)
         command.add_argument("--cwd", required=True, help="initial cwd inherited by the first traced PID")
         command.add_argument("--strace", action="append", required=True)
+        command.add_argument("--flow-trace", action="append", default=[])
         command.add_argument("--depfile", action="append", default=[])
         command.add_argument("--capture", action="append", default=[])
+        command.add_argument("--generated", action="append", default=[])
+        command.add_argument("--external", action="append", default=[])
+        command.add_argument("--external-root", action="append", default=[])
+        command.add_argument("--repository", default=".")
 
     generate_parser = commands.add_parser("generate")
     add_common(generate_parser)
@@ -649,6 +847,7 @@ def make_parser() -> argparse.ArgumentParser:
     verify_parser = commands.add_parser("verify")
     add_common(verify_parser)
     verify_parser.add_argument("--manifest", required=True)
+    verify_parser.add_argument("--map", action="append", default=[])
     return parser
 
 

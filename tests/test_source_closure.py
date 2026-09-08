@@ -78,11 +78,61 @@ class ClosureTest(unittest.TestCase):
                     "--output", self.manifest, "--sbom", self.sbom)
         self.assertEqual(["main.c"], [x["path"] for x in json.loads(self.manifest.read_text())["files"]])
 
+    def test_removed_object_reachable_through_archive_member_is_retained(self):
+        capture=self.base/"capture"; (capture/"compiles").mkdir(parents=True)
+        dep=capture/"gone.d"; dep.write_text(f"gone.o: {self.root}/main.c\n")
+        (capture/"compiles/gone.json").write_text(json.dumps({"cwd":str(self.base),"depfile":str(dep),"output":"gone.o"}))
+        trace=self.base/"empty.trace"; trace.write_text("")
+        archive=self.base/"libfirmware.a"; archive.write_bytes(b"archive")
+        import hashlib
+        (capture/"archives").mkdir(); (capture/"archives/a.json").write_text(json.dumps({"cwd":str(self.base),
+            "argv":["rcs","libfirmware.a","gone.o"],"output_sha256":hashlib.sha256(b"archive").hexdigest()}))
+        mapfile=self.base/"firmware.map"; mapfile.write_text(f"{archive}(gone.o)\n")
+        self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,
+                    "--capture",capture,"--map",mapfile,"--output",self.manifest,"--sbom",self.sbom)
+        self.assertIn("main.c",[x["path"] for x in json.loads(self.manifest.read_text())["files"]])
+
     def test_compiler_evidence_is_mandatory(self):
         result = self.invoke("generate", "--roots", self.roots, "--cwd", self.base,
                              "--strace", self.trace, "--output", self.manifest,
                              "--sbom", self.sbom, ok=False)
         self.assertIn("compiler evidence requires", result.stderr)
+
+    def test_explicit_generated_input_requires_hash_and_generator(self):
+        generated = self.base / "generated.h"; generated.write_text("generated\n")
+        self.dep.write_text(f"main.o: {self.root}/main.c {generated}\n")
+        declaration = self.base / "generated.json"
+        import hashlib
+        relative=generated.relative_to(self.base).as_posix()
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{
+            "path":relative, "sha256":hashlib.sha256(generated.read_bytes()).hexdigest(), "generator_argv":["fixture"]}]}))
+        self.generate("--repository",self.base,"--generated", declaration.name)
+        data=json.loads(self.manifest.read_text()); self.assertEqual(relative,data["generated_inputs"][0]["path"])
+        self.assertIn("generated/"+relative,[x["fileName"] for x in json.loads(self.sbom.read_text())["files"]])
+        generated.write_text("drift\n")
+        self.assertIn("hash mismatch", self.generate("--repository",self.base,"--generated", declaration.name, ok=False).stderr)
+
+    def test_external_boundary_is_exact_and_not_vendored(self):
+        external = self.base / "toolchain"; external.mkdir(); header=external / "stdint.h"; header.write_text("tool\n")
+        import hashlib
+        lock=self.base/"lock"; lock.write_text("lock\n")
+        declaration=self.base/"external.json"; declaration.write_text(json.dumps({"schema":"brickwright/external-build-inputs/v1",
+          "boundary":"arm-toolchain","lock":{"path":"lock","sha256":hashlib.sha256(lock.read_bytes()).hexdigest()},"files":[{"path":"stdint.h","sha256":hashlib.sha256(header.read_bytes()).hexdigest()}]}))
+        self.dep.write_text(f"main.o: {self.root}/main.c {external}/stdint.h\n")
+        self.generate("--repository",self.base,"--external",declaration.name,"--external-root",f"arm-toolchain={external}"); data=json.loads(self.manifest.read_text())
+        self.assertEqual(["header.h","main.c"],[x["path"] for x in data["files"]]); self.assertEqual("stdint.h",data["external_inputs"][0]["path"])
+        header.write_text("drift\n")
+        self.assertIn("external-input hash mismatch",self.generate("--repository",self.base,"--external",declaration.name,"--external-root",f"arm-toolchain={external}",ok=False).stderr)
+
+    def test_external_lock_and_generated_generator_fail_closed(self):
+        generated=self.base/"generated.h"; generated.write_text("x")
+        import hashlib
+        declaration=self.base/"generated.json"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":"generated.h","sha256":hashlib.sha256(b"x").hexdigest()}]}))
+        self.dep.write_text(f"x.o: {generated}\n")
+        self.assertIn("lacks generator",self.generate("--repository",self.base,"--generated",declaration.name,ok=False).stderr)
+        external=self.base/"external"; external.mkdir(); (external/"h").write_text("h")
+        declaration.write_text(json.dumps({"schema":"brickwright/external-build-inputs/v1","boundary":"host-tool","lock":{"path":"../escape","sha256":"0"*64},"files":[]}))
+        self.assertIn("lock escapes",self.generate("--repository",self.base,"--external",declaration.name,"--external-root",f"host-tool={external}",ok=False).stderr)
 
     def test_forbidden_and_unknown_licenses_rejected(self):
         for expression in ("GPL-2.0-only", "AGPL-3.0-only", "LGPL-2.1-only", "CC-BY-NC-4.0", "ISC"):
@@ -103,7 +153,7 @@ class ClosureTest(unittest.TestCase):
         self.assertIn("escapes declared", self.generate(ok=False).stderr)
         link = self.root / "link.c"; link.symlink_to(outside)
         self.dep.write_text(f"x: {link}\n")
-        self.assertIn("symlink escapes", self.generate(ok=False).stderr)
+        self.assertIn("escapes declared source roots", self.generate(ok=False).stderr)
 
     def test_hash_mismatch_and_unmanifested_file_rejected(self):
         self.generate(); (self.root / "main.c").write_text("changed\n")
