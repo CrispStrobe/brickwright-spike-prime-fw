@@ -6,7 +6,7 @@ from __future__ import annotations
 import hashlib, json, os, shlex, subprocess, sys
 from pathlib import Path
 
-TOOLS = {"arm-none-eabi-gcc", "arm-none-eabi-g++", "arm-none-eabi-ld"}
+TOOLS = {"arm-none-eabi-gcc", "arm-none-eabi-g++", "arm-none-eabi-ld", "arm-none-eabi-ar"}
 
 def die(message: str) -> None:
     raise SystemExit(f"capture-arm-invocation: ERROR: {message}")
@@ -37,7 +37,8 @@ def run_wrapper() -> int:
     real_bin = Path(real_value); capture = Path(capture_value)
     if not real_bin.is_dir(): die("capture environment is incomplete")
     cwd = Path.cwd().resolve(); original = sys.argv[1:]; invoked = list(original)
-    output = output_of(original)
+    archiving = tool == "arm-none-eabi-ar"
+    output = original[1] if archiving and len(original) > 1 else output_of(original)
     dependency_only = any(value in {"-M", "-MM"} for value in original)
     preprocess_only = "-E" in original
     compiling = "-c" in original and output is not None and not dependency_only and not preprocess_only
@@ -58,12 +59,26 @@ def run_wrapper() -> int:
             if not destination.exists(): destination.write_bytes(data)
             responses.append({"argument": value, "sha256": digest, "path": f"responses/{digest}.rsp"})
     result = subprocess.run([real_bin / tool, *invoked])
-    if result.returncode == 0 and not dependency_only and not preprocess_only:
-        kind = "compile" if compiling else "link"
+    if result.returncode == 0 and not dependency_only:
+        link_inputs=[]
+        if not compiling and not archiving and not preprocess_only:
+            for index,value in enumerate(original):
+                raw=original[index+1] if value=="-T" and index+1<len(original) else value[2:] if value.startswith("-T") else None
+                if not raw: continue
+                source=(cwd/raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+                if not source.is_file(): die(f"linker script is missing after successful link: {raw}")
+                data=source.read_bytes(); digest=hashlib.sha256(data).hexdigest(); destination=capture/"link-inputs"/f"{digest}.bin"
+                destination.parent.mkdir(parents=True,exist_ok=True)
+                if not destination.exists(): destination.write_bytes(data)
+                link_inputs.append({"argument":raw,"sha256":digest,"path":f"link-inputs/{digest}.bin"})
+        kind = "archive" if archiving else "compile" if compiling else "generator" if preprocess_only else "link"
         atomic_json(capture / f"{kind}s" / f"{key}.json", {
             "schema": "brickwright/tool-invocation/v1", "tool": tool,
             "cwd": cwd.as_posix(), "argv": original, "output": output,
             "depfile": str(depfile) if depfile else None, "response_files": responses,
+            "link_inputs":link_inputs,
+            "output_sha256": hashlib.sha256((cwd / output).resolve().read_bytes()).hexdigest()
+                if output and (cwd / output).resolve().is_file() else None,
         })
     return result.returncode
 

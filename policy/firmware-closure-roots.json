@@ -1,0 +1,65 @@
+{
+  "roots": [
+    {
+      "commit": "999e2d86f9b692abaf63b22dad77d22aeb03029c",
+      "license": "Apache-2.0",
+      "license_overrides": [],
+      "name": "project",
+      "path": ".",
+      "repository": "https://github.com/CrispStrobe/brickwright-spike-prime-fw.git",
+      "role": "firmware"
+    },
+    {
+      "commit": "a67efb31cf4f236e456882589b91862f04594528",
+      "license": "Apache-2.0",
+      "license_overrides": [],
+      "name": "nuttx",
+      "path": "nuttx",
+      "repository": "https://github.com/apache/nuttx.git",
+      "role": "kernel"
+    },
+    {
+      "commit": "55f0bc216565ccab8dee600a88f4485c7693bf8b",
+      "license": "Apache-2.0",
+      "license_overrides": [],
+      "name": "nuttx-apps",
+      "path": "nuttx-apps",
+      "repository": "https://github.com/apache/nuttx-apps.git",
+      "role": "application"
+    },
+    {
+      "commit": "v2.5.1",
+      "license": "BSD-3-Clause",
+      "license_overrides": [],
+      "name": "littlefs",
+      "patch_policy": "exact staged tree locked by policy/firmware-build-inputs.lock.json",
+      "path": "nuttx/fs/littlefs/littlefs",
+      "provenance": "patched-tree",
+      "repository": "https://github.com/ARMmbed/littlefs.git",
+      "role": "filesystem"
+    },
+    {
+      "commit": "newlib-4.3.0.20230120",
+      "license": "BSD-3-Clause",
+      "license_overrides": [],
+      "name": "newlib-libm",
+      "patch_policy": "exact staged tree and four NuttX patches locked by policy/firmware-build-inputs.lock.json",
+      "path": "nuttx/libs/libm/newlib/newlib",
+      "provenance": "patched-tree",
+      "repository": "https://sourceware.org/git/newlib-cygwin.git",
+      "role": "math-runtime"
+    },
+    {
+      "commit": "mbedtls-3.6.2+framework.df3307f2b4fe512def60886024f7be8fd1523ccd",
+      "license": "Apache-2.0",
+      "license_overrides": [],
+      "name": "mbedtls",
+      "patch_policy": "composed archives locked by policy/firmware-build-inputs.lock.json",
+      "path": ".local/mbedtls-3.6.2",
+      "provenance": "patched-tree",
+      "repository": "https://github.com/Mbed-TLS/mbedtls.git",
+      "role": "crypto"
+    }
+  ],
+  "schema": 1
+}

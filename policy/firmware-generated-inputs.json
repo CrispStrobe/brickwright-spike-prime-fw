@@ -1,0 +1,1634 @@
+{
+  "files": [
+    {
+      "evidence": "same-generation-capture:b5b37e2ec950f30f7f7a658f5ef46db838cb43e47f5c8272c8ef38d7bc15135e;link-input:f1d94db791c5412628aef981a8fe84543e7e70f111a3c9bf7896141a99181e44",
+      "generator_argv": [
+        "-E",
+        "-P",
+        "-x",
+        "c",
+        "-isystem",
+        "./nuttx/include",
+        "-isystem",
+        "./nuttx/include/newlib",
+        "-D__NuttX__",
+        "-D__KERNEL__",
+        "-I",
+        "./nuttx/arch/arm/src/chip",
+        "-I",
+        "./nuttx/arch/arm/src/common",
+        "-I",
+        "./nuttx/arch/arm/src/armv7-m",
+        "-I",
+        "./nuttx/sched",
+        "./nuttx/../boards/spike-prime-hub/scripts/kernel-space.ld",
+        "-o",
+        "./nuttx/../boards/spike-prime-hub/scripts/kernel-space.ld.tmp"
+      ],
+      "path": "boards/spike-prime-hub/scripts/kernel-space.ld.tmp",
+      "sha256": "71e0d23fb84be730c68adef2d0e74215b312282894ae3d00dbe0c815eb3bd960"
+    },
+    {
+      "evidence": "same-generation-capture:01bd001a51a5d5c4e997f1f0919428941becdb2ceaa58d7a00788c87806cf6da;link-input:f1d94db791c5412628aef981a8fe84543e7e70f111a3c9bf7896141a99181e44",
+      "generator_argv": [
+        "-E",
+        "-P",
+        "-x",
+        "c",
+        "-isystem",
+        "./nuttx/include",
+        "-isystem",
+        "./nuttx/include/newlib",
+        "-D__NuttX__",
+        "-D__KERNEL__",
+        "-I",
+        "./nuttx/arch/arm/src/chip",
+        "-I",
+        "./nuttx/arch/arm/src/common",
+        "-I",
+        "./nuttx/arch/arm/src/armv7-m",
+        "-I",
+        "./nuttx/sched",
+        "./nuttx/../boards/spike-prime-hub/scripts/memory.ld",
+        "-o",
+        "./nuttx/../boards/spike-prime-hub/scripts/memory.ld.tmp"
+      ],
+      "path": "boards/spike-prime-hub/scripts/memory.ld.tmp",
+      "sha256": "715aa128be5ff8ac2d2c3052af24447854ce12488ef6351e001c4977f8868e58"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "boards/spike-prime-hub/src/etctmp.c",
+      "sha256": "b4f1aec8131905319bd2e194018c3ce4d259453b030803720d0dcdec5cf60c04"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/include/nuttx/config.h",
+      "sha256": "29cd85a7899e6d08f58a6fcbeea31989841d82990b0d7e8325610dcc41d83ba5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/include/nuttx/version.h",
+      "sha256": "402829754fe24322116b497ce508c6384b128d3e03da44ab4969cf28d0d0b81a"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB__assert.c",
+      "sha256": "cdbb2cc7ca7e60a885346a1f836f49b7aa76ec02216da9526a905514d7894435"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB__exit.c",
+      "sha256": "de0ce211cefaf67bfae464a5099132803c7ae7b507bf529f5995f1760cbbc146"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_boardctl.c",
+      "sha256": "5d3daf6b7253e8c046983f823a3b30a1eed59634421e5e80190889617eb3ae76"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_chmod.c",
+      "sha256": "155c355da91be67f35d796d0a7f1198d9df143f41e3045c5d0a89243b6393b02"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_chown.c",
+      "sha256": "ed9e68368c7e76bd07f412b821383fda869cd23fba1fa48d59a8a45ef832863e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_clearenv.c",
+      "sha256": "156f28d05218c8292255dcbf4e809a71f34a9878df26e6feb364125b7cef18f8"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_clock.c",
+      "sha256": "42dbeda03bb7672fa0c3d625a6de5670027e1d5d2a9ae42b1ba2011f89c771ed"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_clock_gettime.c",
+      "sha256": "81c2a5665c5bc5c4f4ac2e1f0389b31ae6f8ba592c219c8cd589113d5389ae54"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_clock_nanosleep.c",
+      "sha256": "7bc96b82efeb41251adc729aa042e9c40a6190c31b1c3edbe1ddbb6eb49e0d0c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_clock_settime.c",
+      "sha256": "7612ad58ca422f78dbebff79853f2734ee79a1c279e7a360ef33d3c2c4144af1"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_close.c",
+      "sha256": "4b39ce4afb00108536219f1269ea405ebda31ecc9208499e138261cc57dc79e7"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_dup.c",
+      "sha256": "eea5aaa22db0a4638fb15b4b18ae37b52e82c69221cca520985bddbe36ff9dc5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_dup2.c",
+      "sha256": "6d87b1e3e31f11400d12dcfcbfbf61550b3856ba16ac8136c49f293439129986"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_epoll_close.c",
+      "sha256": "e1d3e54f9eee9ad3595d90f6072c9d7f58f45ab8d7b55d5e9ec73ff97a3a80dc"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_epoll_create.c",
+      "sha256": "febbeed9f9a84c7f397faf074d2e5b7ce875d0ea4e5bf18850c9a7898a86488a"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_epoll_create1.c",
+      "sha256": "3014280168b44cd4671fd8a5466c6662c6d9c3e8c87a42a679560c4a276d22d4"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_epoll_ctl.c",
+      "sha256": "52dfd177457bb63faba494611e6eaca14c62a40ffb2e432956b93e8d3fe49c17"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_epoll_pwait.c",
+      "sha256": "f75d8523dd3661b623396b2187cbf7ad243e6a6e2c93213c958c6167cf73d867"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_epoll_wait.c",
+      "sha256": "b33cf125589a19ce14bf3b58a6058c2ddba9bbbfe136a03595305acbc0dcfafe"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_exec.c",
+      "sha256": "c19d9055be6a0cc56a04f99ad2ad1a8001328e5e615f202402215aef34521c18"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_fchmod.c",
+      "sha256": "4749668639a589d6f89931a8eeb6138b1fdceff062d12bacd5bda3d1e9aa6df6"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_fchown.c",
+      "sha256": "6976d00523b3d9d1dd08538916a601a0770be393b32799b84dcd21876ffaca37"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_fcntl.c",
+      "sha256": "1c13aaca826c29e15ef65975642d304552513771bd1d9c894c627a7d39851285"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_fstat.c",
+      "sha256": "9e47fd45ecbd7029e92e2a6360d2395ce0aa49672c8ab8fd94c577fc3ef803fa"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_fstatfs.c",
+      "sha256": "e055f6a4070b6bbc3a899ba383a63a860208e2d4b6f583efb1dd00cd6f27e483"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_fsync.c",
+      "sha256": "1c1cde52a7f9b9aefba9a7dc584fa55e7416525d5f9ffe1b68c3b4815e4505ba"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_ftruncate.c",
+      "sha256": "37e094780e57d7a23ea0163a6b45c0452a492d1f57933e9b2978b098f715367e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_futimens.c",
+      "sha256": "e898e1c260f27b39b7bb0e58a5f67edd8dfc4ec2be63f25b15562c5e7af01421"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_get_environ_ptr.c",
+      "sha256": "861a255afb3f13cd2ecf756ca527d7d974916d0225ee46e7edbca5bc7a4c49ba"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getenv.c",
+      "sha256": "def5106f0075ac698ae2046ad8097f3750bc37915fb10c34a44d2d3413bb1e65"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_gethostname.c",
+      "sha256": "9522abe06635046326fc7d3ff49cc9ed26f658008ed9236b8165abf51ef82168"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getitimer.c",
+      "sha256": "31282d8f1e7983c8f77dd9ef0c89dbb2ed5cbe3527c1079dea63a2196a83ccd3"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_gettimeofday.c",
+      "sha256": "738462bfba9f407ebf33fddccadc06956e5f6c155619be989f3042c1f13576e6"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_ioctl.c",
+      "sha256": "3f3fba6d2f704ca1c905330f128a72b64591e7673f60425862221930b79c0902"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_kill.c",
+      "sha256": "a081131c3d32dd169b039bfd11c13c45cc54c98512db946b9874d5b4a01f408a"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_lchmod.c",
+      "sha256": "7c2a65b2a2b1f18f6fce57b104c903846fed4d408feba32dd5534f81805c6310"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_lchown.c",
+      "sha256": "f4e7ad857c22e8ce301ef8a3e2e15bb316e3f6b0d1f9d5ce4f052f4f4aa4c962"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_lseek.c",
+      "sha256": "a8d1b4b963e9fa4542a29a9e227e26f217f02055de3682e8a826a1b24df86492"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_lstat.c",
+      "sha256": "71cd4f3992d67e53f5c5e90a2d66599918afdfe99fc1fc5db8e3604fd5ff180c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_lutimens.c",
+      "sha256": "b3f992181916ad1916d16b3f9d4a6c05e530f933c698ff6b395213a70e32a795"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mkdir.c",
+      "sha256": "a352e09e0cbebeb847d9425c2cee86ffcf9a0a8973871f704632da0b8831404d"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mmap.c",
+      "sha256": "77bf210590c119feb24358156cf2027b953a157a91c239c25574eafa836f2a42"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mount.c",
+      "sha256": "de57ce6bd736741f7ba389ff6d0545ec03f43aeb09c94623db720e64198cf7fb"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_close.c",
+      "sha256": "0ac7af94514c4fcc1243e1b639d25ce550083f0b3a6c964ae2157cad7dfece5e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_getattr.c",
+      "sha256": "37b8dc81c699f54e2f1154e8fead4a7ae187614e869b8c7bd04c1f887bf0eeb3"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_notify.c",
+      "sha256": "a95abd664f4e4d6532c4964b82cb1dd5e8442686f88d8a4859a27bd84233ecfe"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_open.c",
+      "sha256": "06dcbd3ea62b608c7e00b3f37903693af79ce6c65ade9901c5ac107767da8529"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_receive.c",
+      "sha256": "b8dfbc935d45566fc2e36d7ab0b6fdfb915c88725f5f809e54a011889dcda2e0"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_send.c",
+      "sha256": "0c2c0ea550460b5a742758285a3d5d1991bc42793a7128e81dece59f553a3e0c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_setattr.c",
+      "sha256": "2f34d9da1ae9e118e590567022ed400a666a20b8d566eca509e73480db0447d2"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_timedreceive.c",
+      "sha256": "d80de8657498eaac33ea606336e2529c0277c5181e132d5002952f59ca91402e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_timedsend.c",
+      "sha256": "e141340c3babee3d0e78eb16cfd56ed49418cd2e8c1f5773c7784bdde4266d85"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_mq_unlink.c",
+      "sha256": "886b741175df19a2a10895743fa31e587a5fc6d583940845a2f37749a41cca22"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_msync.c",
+      "sha256": "1caccb0814b124c214edf13780b279d11b9e2ba3310d42ed5cf4ea53599b411e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_munmap.c",
+      "sha256": "f8fce52c2388f597b98623f6c54d3e91d6fef0822ea3afd525959f894d3813a2"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nanosleep.c",
+      "sha256": "f250cc02b0abf017c5094ea03d76ad8960096968eeacc0ca6a82d4a5e0c26bdf"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nx_mkfifo.c",
+      "sha256": "2edec17cd3bcff0fcfd385d40459ab23424ef1aee2803a30e00348f8c6a98dc8"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nx_pthread_create.c",
+      "sha256": "eaa57787dc731fba0a3a13cf46c2a9a45b23733e41527fc3c5c50e09c9f4034c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nx_pthread_exit.c",
+      "sha256": "a33fa2d680088b1eba16cd99873b8a1852c4dff64d7474162634c2ae6955fec5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nx_vsyslog.c",
+      "sha256": "30221f1132f13ce16d253efbf70624737ff65b79794db556afc82051e3eebb2c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsched_get_stackinfo.c",
+      "sha256": "48eae1e041f6497d2d61597e26b29ac47f20db073f536142ef8a2821f768bb1f"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_clockwait.c",
+      "sha256": "462f3a571e2a01f1659a2d206fe6d861f346c969970a6227ebd68f754fa5cff8"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_destroy.c",
+      "sha256": "ce0151784258252d8cf552cac89294840b45f4772005353a84d13bbe280e31d9"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_post_slow.c",
+      "sha256": "282f6d420d6a45ac64d59ead852ad4afd03f1c29533e7e5655d22cb3695562a5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_reset.c",
+      "sha256": "be02b01d82fcb95122ed294a009b4a4a56aa4e30df983e7dc4873d3e3edb8867"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_set_protocol.c",
+      "sha256": "28a1af6b31fda5f63220b85cba8bdc9caa8c376cc788faa9b8e928c3d682685c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_tickwait.c",
+      "sha256": "a2e64bad8b4201d16f8f5b3ed3ade514ebbc2b018a072ed53cf2b2fa431f5b82"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_timedwait.c",
+      "sha256": "02e5793065020d9ea47b204c07ead522293a9cad0af79d3732a5d0942559975f"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_trywait_slow.c",
+      "sha256": "26ea3003cc22000faf1c5f20502d79bf7853530e4a010c54108dadbcbd327e1e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_wait_slow.c",
+      "sha256": "6423bf5c5af695f6ac61d2e6dbc3a4752b8e3400cf3527ce0e909a3f3d3cc0b9"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_open.c",
+      "sha256": "aaab1e8bb114a46f174b51a19267e421a70efb6f8354edc10a18f40d8b32fa11"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_perf_convert.c",
+      "sha256": "333c971378df81c51f5e47b925fe3fd79ea43a9bbd2417a13b83849ce711d11b"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_perf_getfreq.c",
+      "sha256": "742c2df549d23afe3ca226022c917e047e67fed9e21b00256378d2fc5a6c9c62"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_perf_gettime.c",
+      "sha256": "7ef062092e4f797e935d077ee514c106a53af57ffdd718865c672da35fbcd1a5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pipe2.c",
+      "sha256": "06b816bc635df4bcf33c57129eed9c854c2113a676cac6dd37cc639d6644fa65"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_poll.c",
+      "sha256": "2727210d3fcf207ee8ac18660fccceb86d192793f4df6725e18ae35144bd190e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_ppoll.c",
+      "sha256": "51e544267d375b63a4333ca94aae5413840d00c384673a7b811b76fddc165175"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_prctl.c",
+      "sha256": "5f3920193c59a1658b84591f27d9e4c1ce49bae964e4476ea943ca58491e78be"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pread.c",
+      "sha256": "6221dc6a5013cda3d7da910a30b2ff157166ba4a072e468d864d3eccde4fb904"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pselect.c",
+      "sha256": "547ca0dccb769f9e2a374ddcaf1bf69134a7e2925852988013e4e85694fb8664"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_cancel.c",
+      "sha256": "7142a0ca43e9b5344618e2090180c00aec779409f79fd9629f2c417279f68c58"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_detach.c",
+      "sha256": "63aa6b5833c76a7198921bc66d510507f465c027aec18c4e7d1125c3c1c4cb75"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_getschedparam.c",
+      "sha256": "7c6fb2af450f015725ec227f80f279768a0607e63fe3bea6e4de18a7ba3184dd"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_join.c",
+      "sha256": "59dde20627c4002a4bf8b7bbfbd8180710de378939053a75e8119bfdc37a6fde"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_setschedparam.c",
+      "sha256": "9393cc950a377b26e342e74be3d97a81ad52388dc7eff924f33317651c67a147"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_setschedprio.c",
+      "sha256": "1e5ca8c5c3ed4ff608baee285326fd5b937cb4a92e2addad3f0c8afaee9700fd"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_sigmask.c",
+      "sha256": "9114a9b0655880a24257946a264a44fff430747fd70767f3a6aabe864a40e573"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_putenv.c",
+      "sha256": "058ff172c4ea610a346e5b42360c5492058229a974ef694d84748d8b1d44aad4"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pwrite.c",
+      "sha256": "6bb01cf7da946e1690252aae3796e8e459ccef913e29fb26479036d995aa9313"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_read.c",
+      "sha256": "cad7d70b1618663d6e04924dba941aa5284aaf7cc6a0c5ea20e65f5760e8ab9e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_readv.c",
+      "sha256": "8642d2f5e28567942373cfc44da29c854ebfcb680ae2b98dc29e55fc72b17b6c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_rename.c",
+      "sha256": "7576d88027cbe585b5f1cd15600230e37fd3877c9b1468e585e977378ad203a1"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_rmdir.c",
+      "sha256": "858efdcc8dcb49dc6c6f0aab001d8e04b54abed4a4ef8eee8661ec1194776a4a"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_backtrace.c",
+      "sha256": "80de4e070c0ea012419b6259940442a2e690fe74a62e3df7364222cf42f299f8"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_getcpu.c",
+      "sha256": "cf3ed7746c89130017d28010f476b0869bfb06bda301a9b4fc0afd959e60d825"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_getparam.c",
+      "sha256": "bc79a0b0d18783d9bdbd3c270be09fd4b38e3777ff82749581056a58bd4a9aa3"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_getscheduler.c",
+      "sha256": "0913c5942f63f018fcf2da8506ddec3a7693827e6d039cdbfdc9011e6c8d4a9e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_lock.c",
+      "sha256": "b65402ede18fcb73e8a0da4e5cf25f03447faa7ed927d8339d91a45fa6387b79"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_lockcount.c",
+      "sha256": "e7f245ad1916e6c383f504bb0bab993cf133d735038eca8fb95c271e429bf47c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_rr_get_interval.c",
+      "sha256": "ce2e771b55ba39cfa42ac6bab87c93688a21e8720648c25188289dc5c4e189cc"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_setparam.c",
+      "sha256": "db536e0c4a907943041c0fa9fe3040daf3e64d56abfc36ea8e773b46d8569f32"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_setscheduler.c",
+      "sha256": "54d1e6fc4834702157b63a2803fe276fa1aab27a8fe703687c7557ef2c016b2e"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_unlock.c",
+      "sha256": "fc4ff034c853674abcb6c283e24784b9e05bd92a1b135c65a7343cb8111016b7"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_yield.c",
+      "sha256": "aebdaf35f7d4587b1c3d5f027ee7dac5d89eb403c03621dd902638ddf92f0b5d"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_select.c",
+      "sha256": "7d19ea24927d4e4a7788903882f911f96b554e392fe8888b61d2070bb6e4c631"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sendfile.c",
+      "sha256": "393aadc415f28ee0338e12c67c1d4e4205076403ddf42842280a93224fbe1e61"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_setenv.c",
+      "sha256": "c939f46e7d25318b9ec348deb521380209177b6db08adbd4c7c12e71fc90d0b9"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sethostname.c",
+      "sha256": "f5ec2116d800d19f987b5c499355e5e120dc868260a708cdeb301b17e5f3cbd8"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_setitimer.c",
+      "sha256": "955d5c64c4fa3e5fef3506e234be225e9c256d846ffa2dd52e7928f6519a564d"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_settimeofday.c",
+      "sha256": "2a891bd4cb4b131f7fad780d9398e8b98b86157a87a0b53c20375dd862c9c03d"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigaction.c",
+      "sha256": "51d10a6fcf3252d7ee412dfdb839db6e781faabdaf04dac51c747e55bd04b42b"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_signal.c",
+      "sha256": "39aa303a4a15a92097421c22a0ef1466993887c3d233d122fd75bf37b72a7f38"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigpending.c",
+      "sha256": "3559d25377324953c0133d1826e34b7138dc7beabe0c4b6dae768f53f013c620"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigprocmask.c",
+      "sha256": "2e91f55bbf4b5035bd3ae7660c81e8f4e8f04ab5cfbe44fb5d24a7b87e828545"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigqueue.c",
+      "sha256": "49d6e60624c54ada1b32257094547e9b67457b70c16c8060d3b5a11b3c242207"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigsuspend.c",
+      "sha256": "dadeb55938958ba6096504d1103d714104b556e281c658c0da9baab20f99b0f5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigtimedwait.c",
+      "sha256": "a00312f34a06131fc9faf866ce91731c673e7fdcd44bc6ce2551db4afa074c65"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sigwaitinfo.c",
+      "sha256": "480404605147cdb94a07c48b388245d542df8d1baffb0cc59d9ccf3e84d399df"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_stat.c",
+      "sha256": "ea95a915233ff7c9ac87386fb2040cc98ff3d858ff628bc0970c450dba7a453c"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_statfs.c",
+      "sha256": "a246876e2a3e2eef0c79d8e0cd225c069eb90417229588eefa4ec139f25d4346"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sync.c",
+      "sha256": "59631634ccb867ff6eab63b2dc5841a0ffab5dfb8f9e748f57713895b80aea89"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sysinfo.c",
+      "sha256": "39623be655c340f1cb1c87a695412a361a08a3fa294473398a4d2b9078f11d4b"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_task_create.c",
+      "sha256": "ef191154bc295f1aaae46b4dad7279fdcd0bb1c56f807d6198f1a4b0e21722d5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_task_delete.c",
+      "sha256": "61057bdcadd73f91bc77040cdc4e9651119a61d78b1cd0eb0594c0c7806f91b1"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_task_restart.c",
+      "sha256": "fa9db85eae07eb02d20e1c72f47a9bd9896df28202d1f29c054bd2ae404cdd3d"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_task_spawn.c",
+      "sha256": "8718dd10f030f4a639af5d0778757af7ec80d1ee72f0f6bc450d8d76dfadd7b8"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_tgkill.c",
+      "sha256": "7c66f25260b52de97599eef572ac70c1f2cc4bfd46e62cd234be1126c18641ff"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_time.c",
+      "sha256": "cfbbcfa1a20878eba72c280fbed8adf848a1a7a8ef661584e23f10742fba14aa"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timer_create.c",
+      "sha256": "b4d5286be6f6a3b3282653fc4a85a9b7674955b054cf4d4cf1ea55e88ce8e900"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timer_delete.c",
+      "sha256": "96b6ee86a0b1771ab205f951f73dd69c680b38d741ca2d5e189f93931edd7c86"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timer_getoverrun.c",
+      "sha256": "cf2f3e6f46018e8d02f26d83c9c7ef383e89c0c6857143b29b9dfc2a07b33bf2"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timer_gettime.c",
+      "sha256": "1df5e7547c25a337b201f7e3c3826f10eb4c72ab69b7f590276f7e701dbe43ac"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timer_settime.c",
+      "sha256": "a5ea75dd95e64c4eb2650bfd1d9d148a8af96bf555e2bb8c23a6cfe6f26367a5"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_umount2.c",
+      "sha256": "ae3a4789929c253f52dde8bd605e7a9d6d1c4250e60e5fff58b72f7e608359f4"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_unlink.c",
+      "sha256": "329053576246cc45f57e01fc29aadc4fdf5b3e03c9576a0ad202b60e2c6de1ac"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_unsetenv.c",
+      "sha256": "537ebf6aa20d86e8dd685b9e485d657d8342e79d203765a7a35c07ebe4a42209"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_utimens.c",
+      "sha256": "f48b794ab48cade4685867628fb8699437dec968d4eb606ea7c87168efb4ef0b"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_waitpid.c",
+      "sha256": "3b224bb4208ccda9ee73eec617ce8cbe12c7b220dbc418ee25ed2b34cad37b71"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_write.c",
+      "sha256": "d9431143e76771b50324a8272a6662d7a76324c4f9756bdc8a8fd1bcd6a57c08"
+    },
+    {
+      "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx",
+        "-j8"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_writev.c",
+      "sha256": "9032e6c04f9c8a8d80e88d46d5734b84f73e93cb99638ceca59d780125896290"
+    }
+  ],
+  "schema": "brickwright/generated-build-inputs/v1"
+}
