@@ -25,6 +25,11 @@ fail-closed. Exact twin builds guard against a metadata-only file unexpectedly
 affecting selection. The materializer copies declared generated files only
 after checking their hashes.
 
+`tools/verify_builtin_registry.py` checks an isolated native `register_all`
+run against its exact output manifest. Registry `.pdat` files and `.updated`
+are recorded generator metadata but are not materialized unless independent
+content-consumption evidence selects them.
+
 Only MIT, Apache-2.0, and BSD-3-Clause are accepted. An SPDX identifier on a
 file overrides its root declaration and is checked independently. Missing
 files, paths outside a declared root, escaping symlinks, and unknown or

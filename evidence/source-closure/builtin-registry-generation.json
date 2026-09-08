@@ -1,0 +1,269 @@
+{
+  "schema": "brickwright/generated-input-proof/v1",
+  "status": "exact-output-match",
+  "generator_argv": [
+    "make",
+    "-C",
+    "nuttx-apps",
+    "-j1",
+    "register_all",
+    "TOPDIR=$TREE/nuttx",
+    "APPDIR=$TREE/nuttx-apps"
+  ],
+  "generator_inputs": [
+    {
+      "path": "nuttx-apps/Make.defs",
+      "sha256": "db7efa94cccb2530c8fd3cbfd7dd0e0e2522df5dbdc8a171c99ba3a7bfa7c2ea"
+    },
+    {
+      "path": "nuttx-apps/Application.mk",
+      "sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae"
+    },
+    {
+      "path": "nuttx/.config",
+      "sha256": "9dea71c7b139b8c19c154051186f3ada6626dda66a8ed6bbea5557ca7b850b64"
+    }
+  ],
+  "trace_sha256": "4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+  "isolation": {
+    "network_namespace": "none",
+    "successful_connects": 0
+  },
+  "output_set": {
+    "consumed_data_file_count": 16,
+    "metadata_output_count": 17
+  },
+  "files": [
+    {
+      "path": "nuttx-apps/builtin/registry/battery.bdat",
+      "sha256": "122c3795bacd385f36938be62a7f9092c5bca240894fdd3b72520295eda67ea4"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/btsensor.bdat",
+      "sha256": "ef02c5cb44b496e1e5da6fba41e9db7ee257622cabc531acda30facade613bbc"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/crash.bdat",
+      "sha256": "e134a5c7f028894ae7a4501b69a2c7ab01bfb1df1f6519c2c2f5b30274f4ef23"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/dd.bdat",
+      "sha256": "0816cf9f25dc21150ae17726ddbaa93efc6a6de1eff4c6a5b41ca21718e27145"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/drivebase.bdat",
+      "sha256": "fd766ddaac1bfcd100f5170c60898e1705ad160d7e29e15491e23ded670a06c0"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/dumpstack.bdat",
+      "sha256": "ee357d86945e61d18ba22c22f2de79974ad016d22622809d151eee113a851d83"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/imu.bdat",
+      "sha256": "6c0d5aae62583f0cdbf6b4e2e4bdd058afeec093a40b765d9cdff6f49cf8872f"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/led.bdat",
+      "sha256": "67586be135e2ba3dc0f06be65eb14cb28828c56951993207b74439c751ce4883"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/linetrace.bdat",
+      "sha256": "cc85845454a0cfd1d51d9f51972a790c0c8c6811c42c820daeb37f7315b37b58"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/nsh.bdat",
+      "sha256": "4b94528f9cbcd604a1ca2d6bb97f02a4feb7d4cdd310d7071ae9e12a3ac27d2c"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/port.bdat",
+      "sha256": "0df999836eed317eed93168695679a84973582317486383ae963569e099a365f"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/rz.bdat",
+      "sha256": "be9df56c5eaa388413bcaf607d061072048c395506699e927ef5baf949011a2d"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sensor.bdat",
+      "sha256": "be4bc815cdf5b6ccc4ccad9882915fbb7719d2c868e0f5da031f4f54dadd69d7"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sh.bdat",
+      "sha256": "e4e695a419456c1f5d476370594c61865f0b8de142377dde44bfc84097fba32f"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sound.bdat",
+      "sha256": "0a45fc2d5de90102548bbf35fd025e2ee7286066fc7ef45d5b55952b4daf8d30"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sz.bdat",
+      "sha256": "f8955a658dc2cac1ab0a2a3879f99995ae80935d512a118efa027859144e4278"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "nuttx-apps/builtin/registry/.updated",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/battery.bdat",
+      "sha256": "122c3795bacd385f36938be62a7f9092c5bca240894fdd3b72520295eda67ea4",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/battery.pdat",
+      "sha256": "f45c804306d062bb9373819231ebf35900cac0611634ee24738be38f5bf23ab1",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/btsensor.bdat",
+      "sha256": "ef02c5cb44b496e1e5da6fba41e9db7ee257622cabc531acda30facade613bbc",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/btsensor.pdat",
+      "sha256": "d87f5fca8854453c5ac3f2634980996947ff62435546fc6db171b4e65d003ccd",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/crash.bdat",
+      "sha256": "e134a5c7f028894ae7a4501b69a2c7ab01bfb1df1f6519c2c2f5b30274f4ef23",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/crash.pdat",
+      "sha256": "950d054158a3c0c8aba181f697aef6e7c3c5b72e3bfd74807d4ff041d6dff098",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/dd.bdat",
+      "sha256": "0816cf9f25dc21150ae17726ddbaa93efc6a6de1eff4c6a5b41ca21718e27145",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/dd.pdat",
+      "sha256": "dc37323a7ab35188bcde5cc300d3b7036987e40d85f5ee62818da4f580a3c09b",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/drivebase.bdat",
+      "sha256": "fd766ddaac1bfcd100f5170c60898e1705ad160d7e29e15491e23ded670a06c0",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/drivebase.pdat",
+      "sha256": "ae2d31b15ae23aefc7adefb27ba039d1bf378e4514421dad677a59f9f9c976d9",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/dumpstack.bdat",
+      "sha256": "ee357d86945e61d18ba22c22f2de79974ad016d22622809d151eee113a851d83",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/dumpstack.pdat",
+      "sha256": "a7dd2afab45f5e07980b259d3c02d61a6788945e88a3029c4443d37bf4c889fe",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/imu.bdat",
+      "sha256": "6c0d5aae62583f0cdbf6b4e2e4bdd058afeec093a40b765d9cdff6f49cf8872f",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/imu.pdat",
+      "sha256": "224e43c8d95eadf7d4ae8cbe662bc75a3df0fc91b4750bb886694f091ffb9102",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/led.bdat",
+      "sha256": "67586be135e2ba3dc0f06be65eb14cb28828c56951993207b74439c751ce4883",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/led.pdat",
+      "sha256": "dff53f703cf25427bcc729e281d8df1b48b5683d45f2a6c489af7551d42bf48a",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/linetrace.bdat",
+      "sha256": "cc85845454a0cfd1d51d9f51972a790c0c8c6811c42c820daeb37f7315b37b58",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/linetrace.pdat",
+      "sha256": "1cf73d57b191a026d0d8ed1a4ba70630a5abe8a8899c92c4dda3149c4775da35",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/nsh.bdat",
+      "sha256": "4b94528f9cbcd604a1ca2d6bb97f02a4feb7d4cdd310d7071ae9e12a3ac27d2c",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/nsh.pdat",
+      "sha256": "0cedcaad9bb10f08d139f1957d63515050a642b9be50626b85b9a0e8a89c4f95",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/port.bdat",
+      "sha256": "0df999836eed317eed93168695679a84973582317486383ae963569e099a365f",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/port.pdat",
+      "sha256": "fb52208fc33f8d75e1d3fcfe149b411c1a694148d630a5a2da41a417901ac422",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/rz.bdat",
+      "sha256": "be9df56c5eaa388413bcaf607d061072048c395506699e927ef5baf949011a2d",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/rz.pdat",
+      "sha256": "f32ac0cf840e399ae1e6affbf26ee1849afc09c896c29ddb4a9dce6b2dcfaff6",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sensor.bdat",
+      "sha256": "be4bc815cdf5b6ccc4ccad9882915fbb7719d2c868e0f5da031f4f54dadd69d7",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sensor.pdat",
+      "sha256": "7358e44837b03fe8eaf2e0b021f8750ac130cec04b8c5625b9b2482096f23165",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sh.bdat",
+      "sha256": "e4e695a419456c1f5d476370594c61865f0b8de142377dde44bfc84097fba32f",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sh.pdat",
+      "sha256": "b5c0bb9f17d3b2efb78bb801c2735d6549ec5da4ee59b210091b7ebb39df5f28",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sound.bdat",
+      "sha256": "0a45fc2d5de90102548bbf35fd025e2ee7286066fc7ef45d5b55952b4daf8d30",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sound.pdat",
+      "sha256": "94989eaed262ac9c55d1164fb877e7382913b02055df49ce3033f8193082a560",
+      "disposition": "metadata-only"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sz.bdat",
+      "sha256": "f8955a658dc2cac1ab0a2a3879f99995ae80935d512a118efa027859144e4278",
+      "disposition": "consumed-generated-input"
+    },
+    {
+      "path": "nuttx-apps/builtin/registry/sz.pdat",
+      "sha256": "5fb6f914b8b538b711a14fb15f0d391cbf46d31fbee0ddbf3f0373fb2c16efa5",
+      "disposition": "metadata-only"
+    }
+  ]
+}
