@@ -321,7 +321,10 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
                 if "O_WRONLY" not in argument_text:
                     found.add(resolved)
             else:
-                if "st_mode=S_IFDIR" in argument_text:
+                # Metadata-only traversal of directories and symlinks is not
+                # file-content consumption. `find` can successfully stat a
+                # dangling configured-tree link with AT_SYMLINK_NOFOLLOW.
+                if "st_mode=S_IFDIR" in argument_text or "st_mode=S_IFLNK" in argument_text:
                     directories.add(resolved)
                 else:
                     found.add(resolved)
@@ -341,6 +344,11 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     for trace in arguments.strace:
         consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
         paths.update(consumed); generated.update(trace_generated)
+    repository = Path(arguments.repository).resolve()
+    for trace in getattr(arguments, "repository_trace", []):
+        consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        paths.update(path for path in consumed if path.is_relative_to(repository))
+        generated.update(trace_generated)
     for trace in getattr(arguments, "flow_trace", []):
         _, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
         generated.update(trace_generated)
@@ -766,6 +774,8 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
 
 
 def generate(arguments: argparse.Namespace) -> None:
+    if not arguments.strace and not arguments.repository_trace:
+        die("file-consumption evidence requires --strace or --repository-trace")
     if not arguments.depfile and not arguments.capture:
         die("compiler evidence requires --depfile or --capture")
     roots = load_roots(Path(arguments.roots))
@@ -787,6 +797,8 @@ def generate(arguments: argparse.Namespace) -> None:
 
 
 def verify(arguments: argparse.Namespace) -> None:
+    if not arguments.strace and not arguments.repository_trace:
+        die("file-consumption evidence requires --strace or --repository-trace")
     if not arguments.depfile and not arguments.capture:
         die("compiler evidence requires --depfile or --capture")
     manifest = json.loads(Path(arguments.manifest).read_text(encoding="utf-8"))
@@ -828,7 +840,11 @@ def make_parser() -> argparse.ArgumentParser:
     def add_common(command: argparse.ArgumentParser) -> None:
         command.add_argument("--roots", required=True)
         command.add_argument("--cwd", required=True, help="initial cwd inherited by the first traced PID")
-        command.add_argument("--strace", action="append", required=True)
+        command.add_argument("--strace", action="append", default=[])
+        command.add_argument(
+            "--repository-trace", action="append", default=[],
+            help="full build trace whose source inputs are scoped to --repository",
+        )
         command.add_argument("--flow-trace", action="append", default=[])
         command.add_argument("--depfile", action="append", default=[])
         command.add_argument("--capture", action="append", default=[])

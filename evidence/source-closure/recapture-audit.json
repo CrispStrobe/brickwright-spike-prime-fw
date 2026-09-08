@@ -1,57 +1,48 @@
 {
   "capture": {
-    "initial_cwd": "/mnt/volume1/offload/closure/recapture2/nuttx",
-    "tree": "/mnt/volume1/offload/closure/recapture2"
+    "initial_cwd": "$TREE",
+    "tree": "$TREE"
   },
-  "consumed_path_count": 6011,
-  "depfile_count": 23,
+  "consumed_path_count": 29931,
+  "depfile_count": 2203,
   "errors": [],
-  "external_existing_path_count": 1029,
+  "external_existing_path_count": 724,
   "map_files": [
     "nuttx/System.map",
     "nuttx/User.map",
-    "nuttx/nuttx.map"
+    "nuttx/nuttx.map",
+    "nuttx/nuttx_user.map"
   ],
   "missing_path_count": 0,
-  "non_file_path_count": 8,
+  "network_connect_attempt_count": 424,
+  "non_file_path_count": 5,
   "non_file_paths": [
     {
       "kind": "character-device",
-      "path": "/dev/urandom"
+      "path": "$EXTERNAL/path-1cb9ad0a579a8d96"
     },
     {
       "kind": "directory",
-      "path": "/etc/alternatives/gcc-arm-none-eabi-include"
+      "path": "$TREE/nuttx/arch/arm/include/board"
     },
     {
       "kind": "directory",
-      "path": "/etc/alternatives/gcc-arm-none-eabi-lib"
+      "path": "$TREE/nuttx/arch/arm/include/chip"
     },
     {
       "kind": "directory",
-      "path": "/mnt/volume1/code/lego/wt-spike-prime-fw-public/nuttx/arch/arm/include/board"
+      "path": "$EXTERNAL/path-44b13e3e8d49ea84"
     },
     {
       "kind": "directory",
-      "path": "/mnt/volume1/code/lego/wt-spike-prime-fw-public/nuttx/arch/arm/include/chip"
-    },
-    {
-      "kind": "directory",
-      "path": "/mnt/volume1/opt/arm-none-eabi/include"
-    },
-    {
-      "kind": "directory",
-      "path": "/mnt/volume1/opt/arm-none-eabi/lib"
-    },
-    {
-      "kind": "directory",
-      "path": "/opt/miniconda"
+      "path": "$EXTERNAL/path-a6591fdb662442ab"
     }
   ],
-  "schema": 2,
+  "schema": 3,
   "status": "ready",
+  "successful_network_connect_count": 0,
   "trace": {
-    "lines": 2503689,
-    "sha256": "b0709f319839fbd8137a3c90bbdf80bbb16e73a3eaa06eab8b0982956a84e350"
+    "lines": 4326082,
+    "sha256": "f4a8d4b3948a7d126af02f121aa7670b27e94e671a97c2ffdc03c72948a76725"
   }
 }

@@ -95,3 +95,13 @@ and CI; pending work belongs in `PLAN.md`.
   old symbol listing remains available for compatibility.
 - Added a configured-tree preflight that rejects symlinks escaping the current
   worktree without publishing the external target path.
+- Made capture-audit reports host-path-free and fail closed when a traced build
+  completes any network connection, without recording remote endpoints.
+- Added a hash-verifying materializer that reconstructs an empty source tree
+  from only the reviewed manifest and declared generated inputs.
+- Classified dangling-symlink stats as traversal metadata, redacted external
+  audit identities, and added an explicit repository-scoped whole-build trace
+  mode while retaining fail-closed unscoped traces.
+- Accepted the descriptor-complete serial recapture: 29,931 consumed paths,
+  2,203 depfiles, both GNU linker maps, no missing or unclassified inputs, and
+  zero successful network connections.

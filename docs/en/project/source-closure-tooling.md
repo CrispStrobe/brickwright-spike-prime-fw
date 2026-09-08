@@ -10,6 +10,14 @@ A deliberately patched project tree must declare `patched-tree` and a non-empty
 then intersects successful file-consumption evidence from one or more `strace`
 logs with compiler depfile prerequisites.
 
+A whole-build trace also observes operating-system executables and libraries,
+which are build tools governed by the container boundary rather than firmware
+source. Pass it as `--repository-trace`: successful reads beneath
+`--repository` join the source closure, while host paths do not. The capture
+audit still counts external reads, and the fixed-point gate rebuilds the
+materialized tree inside the pinned container with `--network none`. Ordinary
+`--strace` remains fail-closed across all paths.
+
 Only MIT, Apache-2.0, and BSD-3-Clause are accepted. An SPDX identifier on a
 file overrides its root declaration and is checked independently. Missing
 files, paths outside a declared root, escaping symlinks, and unknown or

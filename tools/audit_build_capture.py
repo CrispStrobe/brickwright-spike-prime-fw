@@ -9,6 +9,11 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import re
+
+
+TRACE_PREFIX = re.compile(r"^\s*(?:(?:\[pid\s+(\d+)\]|(\d+))\s+)?(.*)$")
+CONNECT_RESULT = re.compile(r"^connect\(.*\)\s+=\s+(-?\d+)")
 
 
 def digest(path: Path) -> str:
@@ -29,6 +34,42 @@ def load_closure_tool() -> object:
     return module
 
 
+def public_path(path: Path, tree: Path) -> str:
+    """Return a stable identity without exposing the capture host layout."""
+    try:
+        relative = path.relative_to(tree)
+    except ValueError:
+        identity = hashlib.sha256(path.as_posix().encode("utf-8")).hexdigest()[:16]
+        return "$EXTERNAL/path-" + identity
+    return "$TREE" if not relative.parts else "$TREE/" + relative.as_posix()
+
+
+def successful_connects(trace: Path) -> tuple[int, int]:
+    """Count connect attempts/results while joining strace resumed records."""
+    attempts = 0
+    successes = 0
+    unfinished: dict[str, str] = {}
+    for raw_line in trace.open("r", encoding="utf-8", errors="replace"):
+        prefix = TRACE_PREFIX.match(raw_line.rstrip("\n"))
+        if prefix is None:
+            continue
+        pid = prefix.group(1) or prefix.group(2) or "main"
+        line = prefix.group(3)
+        if line.startswith("connect(") and "<unfinished ...>" in line:
+            unfinished[pid] = line.replace("<unfinished ...>", "")
+            attempts += 1
+            continue
+        resumed = re.match(r"^<\.\.\.\s+connect\s+resumed>(.*)$", line)
+        if resumed:
+            line = unfinished.pop(pid, "connect(") + resumed.group(1)
+        elif line.startswith("connect("):
+            attempts += 1
+        match = CONNECT_RESULT.match(line)
+        if match and int(match.group(1)) >= 0:
+            successes += 1
+    return attempts, successes
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--trace", required=True)
@@ -47,6 +88,12 @@ def main() -> None:
     missing_count = 0
     non_file_count = 0
     external_count = 0
+    connect_attempt_count, successful_connect_count = successful_connects(trace)
+    if successful_connect_count:
+        errors.append(
+            "capture contains successful network connections: "
+            f"count={successful_connect_count}"
+        )
     try:
         consumed = closure.trace_paths(trace, cwd)
         consumed_count = len(consumed)
@@ -71,9 +118,9 @@ def main() -> None:
                 kind = "socket"
             else:
                 kind = "unknown"
-            non_file_entries.append({"path": path.as_posix(), "kind": kind})
+            non_file_entries.append({"path": public_path(path, tree), "kind": kind})
             if kind not in {"directory", "character-device"}:
-                unclassified_non_file.append(path.as_posix())
+                unclassified_non_file.append(public_path(path, tree))
         non_file_count = len(non_file_entries)
         external_count = sum(
             not path.is_relative_to(tree) for path in consumed if path.exists()
@@ -96,13 +143,14 @@ def main() -> None:
     if not maps:
         errors.append("link-map evidence is missing")
     report = {
-        # Schema 2 records the invocation. Schema 1 recorded counts alone, and
+        # Schema 3 records a host-path-free invocation and network-connect
+        # counts. Schema 1 recorded counts alone, and
         # the same trace yields a different external count under a different
         # --cwd/--tree, so those numbers could not be reproduced or checked.
-        "schema": 2,
+        "schema": 3,
         "capture": {
-            "initial_cwd": cwd.as_posix(),
-            "tree": tree.as_posix(),
+            "initial_cwd": public_path(cwd, tree),
+            "tree": "$TREE",
         },
         "status": "ready" if not errors else "incomplete",
         "trace": {"sha256": digest(trace), "lines": sum(1 for _ in trace.open("rb"))},
@@ -111,6 +159,8 @@ def main() -> None:
         "non_file_path_count": non_file_count,
         "non_file_paths": non_file_entries,
         "external_existing_path_count": external_count,
+        "network_connect_attempt_count": connect_attempt_count,
+        "successful_network_connect_count": successful_connect_count,
         "depfile_count": len(depfiles),
         "map_files": [path.relative_to(tree).as_posix() for path in maps],
         "errors": errors,

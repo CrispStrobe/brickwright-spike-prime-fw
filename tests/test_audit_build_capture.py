@@ -28,6 +28,27 @@ class CaptureAuditTest(unittest.TestCase):
             self.assertEqual(3, len(report["errors"]))
             self.assertIn("unresolved dirfd", report["errors"][0])
 
+    def test_external_non_file_identity_does_not_expose_host_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            tree = base / "tree"
+            tree.mkdir()
+            (tree / "one.d").write_text("one.o: one.c\n")
+            (tree / "two.d").write_text("two.o: two.c\n")
+            (tree / "firmware.map").write_text("map\n")
+            trace = tree / "trace"
+            trace.write_text('1 openat(AT_FDCWD, "/dev/null", O_RDONLY) = 3\n')
+            result = subprocess.run(
+                [sys.executable, TOOL, "--trace", trace, "--cwd", tree, "--tree", tree],
+                text=True,
+                capture_output=True,
+            )
+            report = json.loads(result.stdout)
+            self.assertEqual("character-device", report["non_file_paths"][0]["kind"])
+            self.assertTrue(report["non_file_paths"][0]["path"].startswith("$EXTERNAL/path-"))
+            self.assertNotIn(str(base), result.stdout)
+            self.assertNotIn("/dev/null", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
