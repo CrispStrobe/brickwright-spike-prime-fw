@@ -120,3 +120,6 @@ and CI; pending work belongs in `PLAN.md`.
 - Proved 43 configured zero-byte context/dependency stamps in a networkless
   overlay, bound each to its pinned Makefile rule, and kept dependency
   temporaries and `Make.dep` outside the closure.
+- Reproduced 210 configured syscall proxy sources byte-for-byte with the exact
+  pinned `mksyscall -p` invocation in a networkless namespace and declared
+  their individual hashes.
