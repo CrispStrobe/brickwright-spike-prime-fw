@@ -109,3 +109,5 @@ and CI; pending work belongs in `PLAN.md`.
 - Made archive provenance understand captured incremental updates while still
   requiring that the captured sequence reaches the exact linked archive bytes
   and that every selected member has one unique recorded object producer.
+- Declared the vendored Zephyr host as a nested Apache-2.0 boundary and require
+  SPDX attribution on every selected source file from that subtree.

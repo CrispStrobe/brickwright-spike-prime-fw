@@ -3,7 +3,13 @@
     {
       "commit": "999e2d86f9b692abaf63b22dad77d22aeb03029c",
       "license": "Apache-2.0",
-      "license_overrides": [],
+      "license_overrides": [
+        {
+          "license": "Apache-2.0",
+          "path": "third_party/zephyr-host/upstream",
+          "require_spdx": true
+        }
+      ],
       "name": "project",
       "path": ".",
       "repository": "https://github.com/CrispStrobe/brickwright-spike-prime-fw.git",
