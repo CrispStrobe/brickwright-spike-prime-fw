@@ -43,9 +43,27 @@ class CompareOfflineBuildsTest(unittest.TestCase):
                 [*base, "--artifact", "x", "--container-image", "latest"], capture_output=True
             ).returncode)
             self.assertNotEqual(0, subprocess.run(
+                [*base, "--artifact", "x", "--container-image", "sha256:short"], capture_output=True
+            ).returncode)
+            self.assertNotEqual(0, subprocess.run(
                 [*base, "--artifact", "../x", "--container-image", "sha256:" + "1" * 64],
                 capture_output=True,
             ).returncode)
+
+    def test_rejects_artifact_symlink_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            outside = root / "outside.bin"; outside.write_bytes(b"same")
+            for name in ("a", "b"):
+                run = root / name; run.mkdir(); (run / "image.bin").symlink_to(outside)
+            manifest = root / "manifest"; manifest.write_text("x")
+            result = subprocess.run([
+                sys.executable, TOOL, "--run-a", root / "a", "--run-b", root / "b",
+                "--artifact", "image.bin", "--source-manifest", manifest,
+                "--container-image", "sha256:" + "1" * 64, "--output", root / "out",
+            ], text=True, capture_output=True)
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("symlink escapes", result.stderr)
 
 
 if __name__ == "__main__":

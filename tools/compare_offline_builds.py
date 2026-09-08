@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
+import re
 
 
 def digest(path: Path) -> str:
@@ -35,7 +36,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
 
-    if not arguments.container_image.startswith("sha256:"):
+    if re.fullmatch(r"sha256:[0-9a-f]{64}", arguments.container_image) is None:
         raise SystemExit("compare-offline-builds: ERROR: container image must be an immutable ID")
     artifacts = []
     identical = True
@@ -43,6 +44,11 @@ def main() -> int:
         relative = relative_path(raw)
         first = arguments.run_a / relative
         second = arguments.run_b / relative
+        for run, artifact in ((arguments.run_a, first), (arguments.run_b, second)):
+            try:
+                artifact.resolve().relative_to(run.resolve())
+            except ValueError:
+                raise SystemExit("compare-offline-builds: ERROR: artifact symlink escapes run tree")
         if not first.is_file() or not second.is_file():
             raise SystemExit(f"compare-offline-builds: ERROR: missing artifact: {relative.as_posix()}")
         first_hash = digest(first)
