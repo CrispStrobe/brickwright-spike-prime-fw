@@ -114,3 +114,6 @@ and CI; pending work belongs in `PLAN.md`.
 - Reproduced the configured syscall stubs with the exact NuttX generator,
   matched 70 newly consumed files byte-for-byte, and recorded a path-free
   generator/input/trace proof for their generated-input declarations.
+- Proved 43 configured zero-byte context/dependency stamps in a networkless
+  overlay, bound each to its pinned Makefile rule, and kept dependency
+  temporaries and `Make.dep` outside the closure.
