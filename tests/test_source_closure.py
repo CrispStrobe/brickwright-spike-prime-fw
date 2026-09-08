@@ -99,6 +99,48 @@ class ClosureTest(unittest.TestCase):
             [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
         )
 
+    def test_stat_only_unlinked_license_is_not_source_content(self):
+        unused = self.root / "unused.c"
+        unused.write_text("/* SPDX-License-Identifier: OAR */\n")
+        trace = self.base / "metadata.trace"
+        trace.write_text(
+            f'1 newfstatat(AT_FDCWD, "{unused}", '
+            '{st_mode=S_IFREG|0644}, 0) = 0\n'
+            f'1 stat("{unused}", {{st_mode=S_IFREG|0644}}) = 0\n'
+            f'1 statx(AT_FDCWD, "{unused}", 0, STATX_MODE, '
+            '{stx_mode=S_IFREG|0644}) = 0\n'
+            f'1 access("{unused}", F_OK) = 0\n'
+        )
+        self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--repository", self.base, "--repository-trace", trace,
+            "--depfile", self.dep, "--output", self.manifest,
+            "--sbom", self.sbom,
+        )
+        self.assertNotIn(
+            "unused.c",
+            [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
+        )
+
+    def test_opened_or_depfile_input_still_enforces_license(self):
+        consumed = self.root / "consumed.c"
+        consumed.write_text("/* SPDX-License-Identifier: OAR */\n")
+        for mode in ("open", "depfile"):
+            trace = self.base / f"{mode}.trace"
+            trace.write_text(
+                f'1 openat(AT_FDCWD, "{consumed}", O_RDONLY) = 3\n'
+                if mode == "open" else ""
+            )
+            depfile = self.base / f"{mode}.d"
+            depfile.write_text(f"x: {consumed}\n" if mode == "depfile" else "x:\n")
+            result = self.invoke(
+                "generate", "--roots", self.roots, "--cwd", self.base,
+                "--repository", self.base, "--repository-trace", trace,
+                "--depfile", depfile, "--output", self.manifest,
+                "--sbom", self.sbom, ok=False,
+            )
+            self.assertIn("unknown, compound, or forbidden license expression: OAR", result.stderr)
+
     def test_capture_proved_compiler_output_is_not_source(self):
         obj = self.root / "main.o"
         obj.write_bytes(b"object")
