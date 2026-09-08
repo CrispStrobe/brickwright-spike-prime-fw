@@ -134,6 +134,9 @@ class ClosureTest(unittest.TestCase):
         (capture / "compiles").mkdir(parents=True)
         (capture / "archives").mkdir()
         archive = self.base / "libapps.a"; archive.write_bytes(b"final")
+        staged_archive = self.base / "staging" / "libapps.a"
+        staged_archive.parent.mkdir()
+        staged_archive.write_bytes(b"final")
         for name, source in (("first.o", "main.c"), ("second.o", "header.h")):
             dep = capture / f"{name}.d"
             dep.write_text(f"{name}: {self.root / source}\n")
@@ -150,7 +153,9 @@ class ClosureTest(unittest.TestCase):
             "output": str(archive), "output_sha256": hashlib.sha256(b"final").hexdigest(),
         }))
         mapfile = self.base / "firmware.map"
-        mapfile.write_text(f"{archive}(first.o)\n{archive}(second.o)\n")
+        mapfile.write_text(
+            f"{staged_archive}(first.o)\n{staged_archive}(second.o)\n"
+        )
         trace = self.base / "empty.trace"; trace.write_text("")
         self.invoke(
             "generate", "--roots", self.roots, "--cwd", self.base,
