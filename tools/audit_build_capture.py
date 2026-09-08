@@ -39,8 +39,8 @@ def public_path(path: Path, tree: Path) -> str:
     try:
         relative = path.relative_to(tree)
     except ValueError:
-        relative = Path(*path.parts[1:]) if path.is_absolute() else path
-        return "$EXTERNAL/" + relative.as_posix()
+        identity = hashlib.sha256(path.as_posix().encode("utf-8")).hexdigest()[:16]
+        return "$EXTERNAL/path-" + identity
     return "$TREE" if not relative.parts else "$TREE/" + relative.as_posix()
 
 

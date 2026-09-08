@@ -15,6 +15,7 @@ class ClosureTest(unittest.TestCase):
         subprocess.run(["git", "-C", str(self.root), "config", "user.name", "Test"], check=True)
         (self.root / "main.c").write_text("/* SPDX-License-Identifier: Apache-2.0 */\nint main(void) { return 0; }\n")
         (self.root / "header.h").write_text("#define ANSWER 42\n")
+        (self.root / "build.mk").write_text("# build input\n")
         subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
         subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "fixture"], check=True)
         self.commit = subprocess.check_output(["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True).strip()
@@ -77,6 +78,42 @@ class ClosureTest(unittest.TestCase):
                     "--strace", trace, "--capture", capture,
                     "--output", self.manifest, "--sbom", self.sbom)
         self.assertEqual(["main.c"], [x["path"] for x in json.loads(self.manifest.read_text())["files"]])
+
+    def test_repository_trace_adds_build_inputs_but_not_host_tools(self):
+        trace = self.base / "build.trace"
+        trace.write_text(
+            f'1 openat(AT_FDCWD, "{self.root / "build.mk"}", O_RDONLY) = 3\n'
+            '1 openat(AT_FDCWD, "/usr/bin/make", O_RDONLY) = 4\n'
+        )
+        self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--repository", self.base, "--repository-trace", trace,
+            "--depfile", self.dep, "--output", self.manifest,
+            "--sbom", self.sbom,
+        )
+        self.assertEqual(
+            ["build.mk", "header.h", "main.c"],
+            [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
+        )
+
+    def test_dangling_symlink_metadata_is_not_source_consumption(self):
+        link = self.root / "optional"
+        link.symlink_to("missing-target")
+        trace = self.base / "symlink.trace"
+        trace.write_text(
+            f'1 newfstatat(AT_FDCWD, "{link}", '
+            '{st_mode=S_IFLNK|0777}, AT_SYMLINK_NOFOLLOW) = 0\n'
+        )
+        self.dep.write_text(f"main.o: {self.root}/main.c\n")
+        self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--strace", trace, "--depfile", self.dep,
+            "--output", self.manifest, "--sbom", self.sbom,
+        )
+        self.assertEqual(
+            ["main.c"],
+            [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
+        )
 
     def test_removed_object_reachable_through_archive_member_is_retained(self):
         capture=self.base/"capture"; (capture/"compiles").mkdir(parents=True)
