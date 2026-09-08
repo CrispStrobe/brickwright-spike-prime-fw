@@ -65,3 +65,6 @@ and CI; pending work belongs in `PLAN.md`.
 - Established a pinned Arm GNU Toolchain boundary with a digest-locked release,
   immutable upstream revisions and licence evidence, an isolated build
   environment, and separate exact-file policy for linked GCC/newlib inputs.
+- Added deterministic link-input evidence that joins explicit reviewed runtime
+  declarations to exact map paths and verifies selected archive membership with
+  the pinned Arm archiver, without suffix-based licence classification.

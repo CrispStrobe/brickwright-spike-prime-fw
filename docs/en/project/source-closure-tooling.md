@@ -76,6 +76,33 @@ escaping paths, symlink escapes, duplicate files, unknown components, hash
 drift, and policy mismatches fail closed. A producer must obtain those exact
 paths from the linker command, map, and archive membership, not suffixes.
 
+`tools/link_input_evidence.py` is that producer. Its input declaration maps
+each reviewed toolchain-relative file to a component in the lock; it never
+infers a component or licence from a basename. It requires the linker's argv as
+a JSON string array, its lexical working directory, and every link map. Exact
+toolchain paths selected by a map must equal the declarations. For an archive,
+the pinned `arm-none-eabi-ar` must find each selected member exactly once; the
+report hashes the archive and the bytes of every selected member. Direct
+objects are hashed as files. Escapes, missing or stale declarations, unknown
+components, ambiguous relative paths, and absent or duplicate members fail.
+
+Example declaration and invocation:
+
+```json
+{"schema":"brickwright/runtime-input-declaration/v1","artifacts":[
+  {"path":"lib/gcc/arm-none-eabi/13.2.1/thumb/v7e-m+fp/hard/libgcc.a",
+   "component":"gcc-runtime"}
+]}
+```
+
+```sh
+python3 -I tools/link_input_evidence.py \
+  --toolchain-root /opt/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-eabi \
+  --declarations build/runtime-inputs.json --link-argv build/link-argv.json \
+  --link-cwd "$PWD/nuttx" --map nuttx/nuttx.map \
+  --output build/link-input-evidence.json
+```
+
 `tools/run_pinned_arm_build.sh` validates the extracted toolchain and runs under
 an empty environment with a temporary home, fixed PATH, `PYTHONNOUSERSITE=1`,
 and no inherited `PYTHONPATH`, Conda variables, or editable site packages. The
