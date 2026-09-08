@@ -7,6 +7,10 @@
   "depfile_count": 2203,
   "errors": [],
   "external_existing_path_count": 724,
+  "link_provenance": {
+    "reason": "mapped archive member lacks captured compiler producer",
+    "status": "invalid"
+  },
   "map_files": [
     "nuttx/System.map",
     "nuttx/User.map",
@@ -38,8 +42,9 @@
       "path": "$EXTERNAL/path-a6591fdb662442ab"
     }
   ],
-  "schema": 3,
-  "status": "ready",
+  "schema": 4,
+  "scope": "trace-path-and-network-coverage-only",
+  "status": "trace-ready",
   "successful_network_connect_count": 0,
   "trace": {
     "lines": 4326082,

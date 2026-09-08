@@ -12,6 +12,8 @@ This file is the ordered queue for unfinished work. Completed work belongs in
 - Preserve unrelated changes and dependency pins.
 - Run `tools/check_build_tree_links.py --tree nuttx --tree nuttx-apps`
   before capturing a configured tree; copied absolute dirlinks must fail.
+- Run `tools/check_capture_tree_clean.py` across every configured source/build
+  tree before capture; any residual object, archive, depfile, or image must fail.
 - Capture network syscalls; published audits must contain no host paths or
   endpoints and must fail when a network connection succeeds.
 - Project-owned and vendored source must be MIT, Apache-2.0, BSD-3-Clause, or an
