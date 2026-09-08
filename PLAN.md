@@ -42,20 +42,8 @@ Build a minimal reproducible source tree for the protected image.
 
 1. Capture successful build inputs with per-process working directories,
    complete descriptor lifecycles, compiler depfiles, the link map, and archive
-   membership. Done: `evidence/source-closure/recapture-audit.json` reports
-   `ready` — no missing path, and eight non-file paths named by kind
-   (directories and character devices, which cannot be hashed or licensed).
-   Eighty-five of the earlier candidates needed a proof rather than a
-   classification: a `rename(2)` destination inherits its source's proof, so
-   the build products CMake writes as `X.tmpNNNN` and renames onto `X` are
-   proved generated, and `/dev/fd/N` is a descriptor alias, not a file. The
-   remaining 263 were one staged tree, and staging is the defect: a source
-   fetched into a `mktemp` directory cannot be named by a manifest, so the
-   capture sets `MBEDTLS_SOURCE_DIR` to a declared root. The capture that
-   proves this ran `make` natively in `nuttx/` after `make clean`, because the
-   documented `make nuttx-distclean && make` needs Docker; it is a capture of
-   this tree's configuration, and the acceptance below still requires two
-   clean offline builds through the documented path.
+   membership. The accepted capture contract and evidence are recorded in
+   `docs/en/project/source-closure-tooling.md` and `HISTORY.md`.
 2. Declare immutable roots, pins, patch policy, licence overrides, and generated
    inputs; generate the deterministic manifest, SPDX 2.3 SBOM, and link evidence.
 3. Replace broad NuttX/NuttX Apps gitlinks with only the verified closure.

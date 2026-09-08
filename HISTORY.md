@@ -57,3 +57,8 @@ and CI; pending work belongs in `PLAN.md`.
   excludes proved generated writes and directory traversal. The audit remains
   incomplete for 355 paths requiring classification, so none was vendored by
   inference.
+- Completed the capture classification: renamed generated products retain their
+  creation proof, descriptor aliases are not files, staged Mbed TLS inputs use a
+  declared source root, and every remaining non-file is named by kind. The
+  recapture audit is ready; source declaration and offline fixed-point builds
+  remain separate gates.
