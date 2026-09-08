@@ -123,3 +123,6 @@ and CI; pending work belongs in `PLAN.md`.
 - Reproduced 210 configured syscall proxy sources byte-for-byte with the exact
   pinned `mksyscall -p` invocation in a networkless namespace and declared
   their individual hashes.
+- Rebuilt the native application registry in a networkless overlay, admitted
+  only the 16 content-read `.bdat` files, and added an exact 33-output verifier
+  that rejects missing, extra, or changed generator results.

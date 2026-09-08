@@ -68,6 +68,198 @@
       "sha256": "b4f1aec8131905319bd2e194018c3ce4d259453b030803720d0dcdec5cf60c04"
     },
     {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/battery.bdat",
+      "sha256": "122c3795bacd385f36938be62a7f9092c5bca240894fdd3b72520295eda67ea4"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/btsensor.bdat",
+      "sha256": "ef02c5cb44b496e1e5da6fba41e9db7ee257622cabc531acda30facade613bbc"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/crash.bdat",
+      "sha256": "e134a5c7f028894ae7a4501b69a2c7ab01bfb1df1f6519c2c2f5b30274f4ef23"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/dd.bdat",
+      "sha256": "0816cf9f25dc21150ae17726ddbaa93efc6a6de1eff4c6a5b41ca21718e27145"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/drivebase.bdat",
+      "sha256": "fd766ddaac1bfcd100f5170c60898e1705ad160d7e29e15491e23ded670a06c0"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/dumpstack.bdat",
+      "sha256": "ee357d86945e61d18ba22c22f2de79974ad016d22622809d151eee113a851d83"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/imu.bdat",
+      "sha256": "6c0d5aae62583f0cdbf6b4e2e4bdd058afeec093a40b765d9cdff6f49cf8872f"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/led.bdat",
+      "sha256": "67586be135e2ba3dc0f06be65eb14cb28828c56951993207b74439c751ce4883"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/linetrace.bdat",
+      "sha256": "cc85845454a0cfd1d51d9f51972a790c0c8c6811c42c820daeb37f7315b37b58"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/nsh.bdat",
+      "sha256": "4b94528f9cbcd604a1ca2d6bb97f02a4feb7d4cdd310d7071ae9e12a3ac27d2c"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/port.bdat",
+      "sha256": "0df999836eed317eed93168695679a84973582317486383ae963569e099a365f"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/rz.bdat",
+      "sha256": "be9df56c5eaa388413bcaf607d061072048c395506699e927ef5baf949011a2d"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/sensor.bdat",
+      "sha256": "be4bc815cdf5b6ccc4ccad9882915fbb7719d2c868e0f5da031f4f54dadd69d7"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/sh.bdat",
+      "sha256": "e4e695a419456c1f5d476370594c61865f0b8de142377dde44bfc84097fba32f"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/sound.bdat",
+      "sha256": "0a45fc2d5de90102548bbf35fd025e2ee7286066fc7ef45d5b55952b4daf8d30"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/sz.bdat",
+      "sha256": "f8955a658dc2cac1ab0a2a3879f99995ae80935d512a118efa027859144e4278"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
