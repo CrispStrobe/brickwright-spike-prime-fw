@@ -118,6 +118,28 @@ class ClosureTest(unittest.TestCase):
             [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
         )
 
+    def test_unverifiable_capture_output_cannot_hide_consumed_file(self):
+        for case in ("mismatch", "missing"):
+            with self.subTest(case=case):
+                obj = self.root / f"{case}.o"
+                if case == "mismatch":
+                    obj.write_bytes(b"current")
+                trace = self.base / f"{case}.trace"
+                trace.write_text(f'1 openat(AT_FDCWD, "{obj}", O_RDONLY) = 3\n')
+                capture = self.base / f"capture-{case}"
+                (capture / "compiles").mkdir(parents=True)
+                (capture / "compiles/one.json").write_text(json.dumps({
+                    "cwd": str(self.root), "output": obj.name,
+                    "output_sha256": hashlib.sha256(b"recorded").hexdigest(),
+                }))
+                result = self.invoke(
+                    "generate", "--roots", self.roots, "--cwd", self.base,
+                    "--repository", self.base, "--repository-trace", trace,
+                    "--capture", capture, "--depfile", self.dep,
+                    "--output", self.manifest, "--sbom", self.sbom, ok=False,
+                )
+                self.assertRegex(result.stderr, "consumed file is missing|file absent from declared origin")
+
     def test_dangling_symlink_metadata_is_not_source_consumption(self):
         link = self.root / "optional"
         link.symlink_to("missing-target")
