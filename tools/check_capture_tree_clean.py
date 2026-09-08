@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import subprocess
 
 
 BUILD_SUFFIXES = {".o", ".a", ".d", ".dep"}
@@ -20,20 +21,56 @@ BUILD_NAMES = {
 def residuals(repository: Path, trees: list[Path], allowed: set[Path]) -> list[str]:
     found: list[str] = []
     root = repository.resolve()
+    pending: list[Path] = []
     for relative_tree in trees:
         tree = repository / relative_tree
         if not tree.is_dir():
             found.append(f"missing-tree:{relative_tree.as_posix()}")
             continue
-        for directory, _, files in os.walk(tree, followlinks=False):
-            for name in files:
+        pending.append(tree)
+    visited: set[Path] = set()
+    while pending:
+        directory = pending.pop()
+        resolved_directory = directory.resolve()
+        if resolved_directory in visited:
+            continue
+        try:
+            resolved_directory.relative_to(root)
+        except ValueError:
+            found.append("escaping-directory-link")
+            continue
+        visited.add(resolved_directory)
+        with os.scandir(resolved_directory) as entries:
+            for entry in entries:
+                if entry.is_dir(follow_symlinks=True):
+                    pending.append(Path(entry.path))
+                    continue
+                name = entry.name
                 if Path(name).suffix not in BUILD_SUFFIXES and name not in BUILD_NAMES:
                     continue
-                path = Path(directory) / name
+                path = Path(entry.path)
                 relative = path.relative_to(root)
                 if relative not in allowed:
                     found.append(relative.as_posix())
     return sorted(found)
+
+
+def is_tracked(repository: Path, relative: Path) -> bool:
+    absolute = repository / relative
+    current = absolute.parent
+    root = repository.resolve()
+    while current == root or root in current.parents:
+        if (current / ".git").exists():
+            result = subprocess.run(
+                ["git", "-C", current, "ls-files", "--error-unmatch", "--", absolute.relative_to(current)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return result.returncode == 0
+        if current == root:
+            break
+        current = current.parent
+    return False
 
 
 def main() -> int:
@@ -46,6 +83,9 @@ def main() -> int:
     for path in arguments.allow:
         if path.is_absolute() or ".." in path.parts:
             print("capture-tree-clean: ERROR: allow path escapes repository")
+            return 1
+        if not is_tracked(arguments.repository.resolve(), path):
+            print("capture-tree-clean: ERROR: allow path is not git-tracked")
             return 1
         allowed.add(path)
     found = residuals(arguments.repository, arguments.tree, allowed)

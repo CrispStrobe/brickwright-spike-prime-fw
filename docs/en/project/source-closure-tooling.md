@@ -165,6 +165,9 @@ Before tracing, `tools/check_capture_tree_clean.py` must report zero residual
 objects, archives, depfiles, maps, or firmware images in every configured
 source/build tree. A successful rebuild is insufficient: a stale archive member
 can link correctly while having no compiler producer in the capture.
+The gate follows internal directory links once, rejects escaping targets, and
+permits an `--allow` exception only when the exact path is Git-tracked in its
+own repository or submodule.
 
 ## Staged upstream sources
 

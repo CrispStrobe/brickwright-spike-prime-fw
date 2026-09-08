@@ -33,6 +33,8 @@ class CaptureTreeCleanTest(unittest.TestCase):
             root = Path(temporary)
             (root / "tree").mkdir()
             (root / "tree/fixture.d").write_text("tracked fixture\n")
+            subprocess.run(["git", "init", "-q", root], check=True)
+            subprocess.run(["git", "-C", root, "add", "tree/fixture.d"], check=True)
             result = subprocess.run(
                 [sys.executable, TOOL, "--repository", root, "--tree", "tree",
                  "--allow", "tree/fixture.d"],
@@ -40,6 +42,32 @@ class CaptureTreeCleanTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertEqual(0, result.returncode, result.stdout)
+
+    def test_rejects_untracked_allow(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "tree").mkdir()
+            (root / "tree/stale.o").write_bytes(b"stale")
+            subprocess.run(["git", "init", "-q", root], check=True)
+            result = subprocess.run(
+                [sys.executable, TOOL, "--repository", root, "--tree", "tree",
+                 "--allow", "tree/stale.o"],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("not git-tracked", result.stdout)
+
+    def test_checks_internal_directory_symlink_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "tree").mkdir()
+            (root / "target").mkdir()
+            (root / "target/stale.a").write_bytes(b"stale")
+            (root / "tree/linked").symlink_to(root / "target")
+            result = self.invoke(root)
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("target/stale.a", result.stdout)
 
     @staticmethod
     def invoke(root: Path) -> subprocess.CompletedProcess[str]:
