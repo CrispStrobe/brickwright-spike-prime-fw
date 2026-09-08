@@ -24,6 +24,10 @@ generated-input declarations even when link reachability later excludes them.
 The pre-capture clean gate removes compiler and archive products but preserves
 configured sources; this is the explicit configure/build phase boundary. The
 materializer copies only declared generated files after checking their hashes.
+Zero-byte `.context` and `.depend` stamps are admitted only when an isolated
+trace recreates their exact paths with no network and the governing pinned
+Makefile rule ends in `touch $@`. Dependency-generator temporaries and
+`Make.dep` never enter the declaration or materialized tree.
 
 Only MIT, Apache-2.0, and BSD-3-Clause are accepted. An SPDX identifier on a
 file overrides its root declaration and is checked independently. Missing

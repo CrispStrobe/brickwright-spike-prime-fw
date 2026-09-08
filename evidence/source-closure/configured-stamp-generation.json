@@ -1,0 +1,313 @@
+{
+  "schema": "brickwright/generated-stamp-proof/v1",
+  "status": "exact-output-match",
+  "isolation": {
+    "network_namespace": "none",
+    "successful_connects": 0,
+    "persistent_output_count": 43
+  },
+  "trace_sha256": "51a3cc1259ad9835fc4d83a22a94d2b710da049ebd0986ff9738de8b83c06a86",
+  "files": [
+    {
+      "path": "nuttx-apps/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx-apps/builtin/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/battery/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/btsensor/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/capture/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/crash/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/drivebase/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/imu/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/led/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/linetrace/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/port/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/sensor/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/external/sound/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/netutils/codecs/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/nshlib/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/platform/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/system/dd/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/system/dumpstack/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/system/nsh/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/system/readline/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx-apps/system/zmodem/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx-apps/Application.mk",
+      "rule_file_sha256": "3c2e451cb4b8ed5106188f237191fbb680ae67e9314c94971603298f94a7d0ae",
+      "rule_identity": "$(PREFIX).depend"
+    },
+    {
+      "path": "nuttx/arch/arm/src/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/arch/arm/src/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/arch/arm/src/Makefile",
+      "rule_file_sha256": "4c348d14c36384c043870965eef73322f36d5d1518346bb1ca2e29cf44d7cd42",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/binfmt/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/binfmt/Makefile",
+      "rule_file_sha256": "ea486ec49b7ae1f02bcf14750fd45b5b1b46b0587e992a49c3525d3f05348403",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/boards/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/boards/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/boards/Makefile",
+      "rule_file_sha256": "660b78d3185fb502e88f467f592e2e9e63a0c16523bfd38a62582f0d6312f694",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/drivers/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/drivers/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/drivers/Makefile",
+      "rule_file_sha256": "2f452d5da8288903109b67f571b488f1cb2f9b5f85cdba157900a1175e0b7978",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/fs/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/fs/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/fs/Makefile",
+      "rule_file_sha256": "0a477139a2c241c4f705e2fb1ecab22ad54947354e9e126f57e3b506e23a7d27",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/libs/libbuiltin/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/libs/libc/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/libs/libc/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/libs/libc/Makefile",
+      "rule_file_sha256": "ba1ec15aae2ed0795ac838be6c94b05b8113c38c08439e741df1a08b71c4452c",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/libs/libm/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/libs/libm/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/libs/libm/Makefile",
+      "rule_file_sha256": "de90e57a747eb6cd203eb5cbe1a6506c2c150e7bcfec815f78d2b3b04f193a58",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/libs/libnx/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/libs/libxx/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/libs/libxx/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/libs/libxx/Makefile",
+      "rule_file_sha256": "a7723f63476b39baca336dc95ee86b7ac456c71fadd5ec5afad3de24988c6750",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/mm/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/mm/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/mm/Makefile",
+      "rule_file_sha256": "93d0df84bc6e0e1d2fd9fdfa5a749970468cff066fea972288050346c80e8e74",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/sched/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/sched/Makefile",
+      "rule_file_sha256": "8874981bad582744200645f9509e503dce77e0ac115e75bb23eb6f4321b6f890",
+      "rule_identity": ".depend"
+    },
+    {
+      "path": "nuttx/syscall/.context",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/tools/Unix.mk",
+      "rule_file_sha256": "b3b6c978c4ad13bb3146059c641c1f662805041a6fd6f4a6f7f512929fa2ddc4",
+      "rule_identity": "%.context"
+    },
+    {
+      "path": "nuttx/syscall/.depend",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rule_file": "nuttx/syscall/Makefile",
+      "rule_file_sha256": "af69c7643f03743bc84b01a0fcf5581bf159dbdabf6cfc6c6df67796470bcb84",
+      "rule_identity": ".depend"
+    }
+  ]
+}
