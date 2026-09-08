@@ -1,0 +1,42 @@
+{
+  "schema": "brickwright/arm-toolchain-lock/v1",
+  "release": "Arm GNU Toolchain 13.2.Rel1",
+  "platform": "x86_64-linux",
+  "archive": {
+    "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.2.Rel1/binrel/arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-eabi.tar.xz",
+    "sha256": "6cd1bbc1d9ae57312bcd169ae283153a9572bd6a8e4eeae2fedfbc33b115fdbb",
+    "directory": "arm-gnu-toolchain-13.2.Rel1-x86_64-arm-none-eabi"
+  },
+  "release_notes": {
+    "url": "https://documentation-service.arm.com/static/666180bfd72aaf32efecd262",
+    "gcc_commit": "452a69cc676d7dbf7e9c9295ad1eb31ead69fa7b",
+    "newlib_commit": "fe5886a500e66cddf0f57eea3049d25d5f8765e9",
+    "binutils_commit": "8a6295d22f3a8c2c4ae7f4237657cb1be4833bbb"
+  },
+  "tools": [
+    "arm-none-eabi-ar",
+    "arm-none-eabi-gcc",
+    "arm-none-eabi-ld",
+    "arm-none-eabi-nm",
+    "arm-none-eabi-objcopy",
+    "arm-none-eabi-size"
+  ],
+  "runtime_policy": {
+    "gcc-runtime": {
+      "license_expression": "GPL-3.0-or-later WITH GCC-exception-3.1",
+      "source_repository": "https://gcc.gnu.org/git/gcc.git",
+      "source_commit": "452a69cc676d7dbf7e9c9295ad1eb31ead69fa7b",
+      "license_url": "https://gcc.gnu.org/git/?p=gcc.git;a=blob_plain;f=COPYING.RUNTIME;hb=452a69cc676d7dbf7e9c9295ad1eb31ead69fa7b",
+      "license_file": "gcc-COPYING.RUNTIME",
+      "license_sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+    },
+    "newlib": {
+      "license_expression": "LicenseRef-Newlib-Notice-Collection",
+      "source_repository": "https://sourceware.org/git/newlib-cygwin.git",
+      "source_commit": "fe5886a500e66cddf0f57eea3049d25d5f8765e9",
+      "license_url": "https://sourceware.org/git/?p=newlib-cygwin.git;a=blob_plain;f=COPYING.NEWLIB;hb=fe5886a500e66cddf0f57eea3049d25d5f8765e9",
+      "license_file": "newlib-COPYING.NEWLIB",
+      "license_sha256": "9a59b4ee3af067045fe0ea78786201c42d54756fe48cbccf44f3dfc398474717"
+    }
+  }
+}

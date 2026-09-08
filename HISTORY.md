@@ -62,3 +62,6 @@ and CI; pending work belongs in `PLAN.md`.
   declared source root, and every remaining non-file is named by kind. The
   recapture audit is ready; source declaration and offline fixed-point builds
   remain separate gates.
+- Established a pinned Arm GNU Toolchain boundary with a digest-locked release,
+  immutable upstream revisions and licence evidence, an isolated build
+  environment, and separate exact-file policy for linked GCC/newlib inputs.

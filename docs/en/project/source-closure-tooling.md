@@ -52,6 +52,40 @@ fail closed. Verification checks
 content hashes and requires exact equality between consumed and manifested
 files, catching stale entries and newly consumed, unmanifested files.
 
+## Toolchain and linked-runtime boundary
+
+Project and vendored source admission remains permissive-only. Compiler
+executables are build tools, while runtime archives and startup objects selected
+by the linker are product inputs. The latter are reviewed separately through
+`policy/arm-toolchain.lock.json` and `tools/toolchain_boundary.py`.
+
+The lock names one Arm release archive by HTTPS URL and SHA-256 and records the
+exact GCC, newlib, and binutils revisions from Arm's release notes. GCC runtime
+and newlib licence evidence is tied to those revisions by URL and content hash.
+That is provenance evidence; the verifier never derives a source licence from
+strings or machine code in a compiled object.
+
+Licence texts are fetched explicitly from the locked URLs and supplied via
+`--license-dir`; their bytes must match the lock before review evidence is
+accepted. They are not bundled with the firmware or toolchain.
+
+Linked-runtime evidence uses `brickwright/linked-runtime-evidence/v1`. Each
+actually linked file has a path relative to the extracted toolchain, SHA-256,
+reviewed component, and the component's exact licence expression. Absolute and
+escaping paths, symlink escapes, duplicate files, unknown components, hash
+drift, and policy mismatches fail closed. A producer must obtain those exact
+paths from the linker command, map, and archive membership, not suffixes.
+
+`tools/run_pinned_arm_build.sh` validates the extracted toolchain and runs under
+an empty environment with a temporary home, fixed PATH, `PYTHONNOUSERSITE=1`,
+and no inherited `PYTHONPATH`, Conda variables, or editable site packages. The
+build container uses the same toolchain digest and an immutable Ubuntu image
+digest. Its remaining apt packages are not yet locked to an immutable snapshot,
+so this checkpoint is the ARM boundary, not a claim of whole-container
+reproducibility. Completing S1 still requires producing exact runtime evidence
+from a clean build; the boundary deliberately does not guess a selected
+multilib.
+
 ## Capture requirement
 
 The trace must include descriptor-changing syscalls, because tools such as
