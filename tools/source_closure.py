@@ -154,7 +154,7 @@ def resolve_trace_path(
     return Path(os.path.abspath(base / raw_path))
 
 
-def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
+def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
     found: set[Path] = set()
     generated: set[Path] = set()
     directories: set[Path] = set()
@@ -321,17 +321,36 @@ def trace_paths(path: Path, initial_cwd: Path) -> set[Path]:
     # Existing directories are traversal metadata, not source files. Missing
     # paths remain so locate() fails closed unless the trace proved creation.
     aliases = {path for path in found if DESCRIPTOR_ALIAS.match(path.as_posix())}
-    return found - generated - directories - aliases
+    consumed = found - generated - directories - aliases
+    return (consumed, generated) if with_generated else consumed
 
 
 def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     paths: set[Path] = set()
+    generated: set[Path] = set()
     for trace in arguments.strace:
-        paths.update(trace_paths(Path(trace), Path(arguments.cwd)))
+        consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        paths.update(consumed); generated.update(trace_generated)
     for depfile in arguments.depfile:
         paths.update(dep_record(Path(depfile))[1])
+    for record_path in capture_records(arguments):
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        depfile = record.get("depfile")
+        if not depfile:
+            continue
+        record_cwd = Path(record["cwd"])
+        _, prerequisites = dep_record(Path(depfile))
+        paths.update(path if path.is_absolute() else record_cwd / path for path in prerequisites)
     cwd = Path(arguments.cwd).resolve()
-    return {path if path.is_absolute() else cwd / path for path in paths}
+    normalized = {path if path.is_absolute() else cwd / path for path in paths}
+    return normalized - generated
+
+
+def capture_records(arguments: argparse.Namespace) -> list[Path]:
+    result = []
+    for directory in getattr(arguments, "capture", []):
+        result.extend(Path(directory).glob("compiles/*.json"))
+    return sorted(result)
 
 
 def locate(path: Path, roots: list[dict]) -> tuple[dict, Path, Path]:
@@ -491,6 +510,11 @@ def map_identities(map_paths: list[str], cwd: Path) -> set[str]:
 
 def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: list[dict]) -> dict:
     cwd = Path(arguments.cwd).resolve()
+    manifested_paths = {}
+    roots_by_name = {root["name"]: root for root in roots}
+    for entry in manifest["files"]:
+        absolute = (Path(roots_by_name[entry["source_root"]]["path"]) / entry["path"]).resolve()
+        manifested_paths[absolute] = f"{entry['source_root']}/{entry['path']}"
     dependencies: dict[str, set[str]] = {}
     all_sources = set()
     for depfile in arguments.depfile:
@@ -504,6 +528,21 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
             all_sources.add(source_id)
         if target_id in dependencies:
             die(f"ambiguous duplicate depfile target: {target_id}")
+        dependencies[target_id] = sources
+    for record_path in capture_records(arguments):
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record_cwd = Path(record["cwd"])
+        target, paths = dep_record(Path(record["depfile"]))
+        target_id = normalized_build_path(record_cwd / target, cwd)
+        sources = set()
+        for path in paths:
+            absolute = (path if path.is_absolute() else record_cwd / path).resolve()
+            source_id = manifested_paths.get(absolute)
+            if source_id is None:
+                continue  # closure_entries already proved this prerequisite generated
+            sources.add(source_id); all_sources.add(source_id)
+        if target_id in dependencies and dependencies[target_id] != sources:
+            die(f"ambiguous duplicate captured target: {target_id}")
         dependencies[target_id] = sources
     objects = {}
     basename_index: dict[str, list[str]] = {}
@@ -540,6 +579,8 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
 
 
 def generate(arguments: argparse.Namespace) -> None:
+    if not arguments.depfile and not arguments.capture:
+        die("compiler evidence requires --depfile or --capture")
     roots = load_roots(Path(arguments.roots))
     manifest = {
         "schema": 1,
@@ -557,6 +598,8 @@ def generate(arguments: argparse.Namespace) -> None:
 
 
 def verify(arguments: argparse.Namespace) -> None:
+    if not arguments.depfile and not arguments.capture:
+        die("compiler evidence requires --depfile or --capture")
     manifest = json.loads(Path(arguments.manifest).read_text(encoding="utf-8"))
     roots = load_roots(Path(arguments.roots))
     if manifest.get("source_roots") != [public_root(root) for root in roots]:
@@ -593,7 +636,8 @@ def make_parser() -> argparse.ArgumentParser:
         command.add_argument("--roots", required=True)
         command.add_argument("--cwd", required=True, help="initial cwd inherited by the first traced PID")
         command.add_argument("--strace", action="append", required=True)
-        command.add_argument("--depfile", action="append", required=True)
+        command.add_argument("--depfile", action="append", default=[])
+        command.add_argument("--capture", action="append", default=[])
 
     generate_parser = commands.add_parser("generate")
     add_common(generate_parser)
