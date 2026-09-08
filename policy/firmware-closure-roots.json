@@ -18,7 +18,13 @@
     {
       "commit": "a67efb31cf4f236e456882589b91862f04594528",
       "license": "Apache-2.0",
-      "license_overrides": [],
+      "license_overrides": [
+        {
+          "license": "LicenseRef-NuttX-PublicDomain",
+          "path": "include/search.h",
+          "require_spdx": true
+        }
+      ],
       "name": "nuttx",
       "path": "nuttx",
       "repository": "https://github.com/apache/nuttx.git",

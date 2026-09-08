@@ -575,6 +575,85 @@ class ClosureTest(unittest.TestCase):
                 self.generate(ok=False).stderr,
             )
 
+    def test_exact_nuttx_search_public_domain_override_is_preserved(self):
+        include = self.root / "include"; include.mkdir()
+        source = include / "search.h"
+        source.write_text(
+            "/*\n * SPDX-License-Identifier: LicenseRef-NuttX-PublicDomain\n"
+            " * Written by J.T. Conklin <jtc@netbsd.org>\n * Public domain.\n */\n"
+        )
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "search"], check=True)
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["commit"] = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        document["roots"][0]["license_overrides"] = [{
+            "path": "include/search.h",
+            "license": "LicenseRef-NuttX-PublicDomain",
+            "require_spdx": True,
+        }]
+        self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n")
+        self.generate()
+        entry = next(item for item in json.loads(self.manifest.read_text())["files"]
+                     if item["path"] == "include/search.h")
+        self.assertEqual("LicenseRef-NuttX-PublicDomain", entry["license"])
+        sbom = json.loads(self.sbom.read_text())
+        notice = "Written by J.T. Conklin <jtc@netbsd.org>\nPublic domain."
+        sbom_file = next(item for item in sbom["files"]
+                         if item["fileName"] == "nuttx/include/search.h")
+        self.assertEqual(notice, sbom_file["copyrightText"])
+        self.assertEqual("LicenseRef-NuttX-PublicDomain",
+                         sbom["hasExtractedLicensingInfos"][0]["licenseId"])
+        self.assertEqual(notice, sbom["hasExtractedLicensingInfos"][0]["extractedText"])
+
+    def test_public_domain_reference_outside_exact_override_fails(self):
+        source = self.root / "other.h"
+        source.write_text("/* SPDX-License-Identifier: LicenseRef-NuttX-PublicDomain */\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "other"], check=True)
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["commit"] = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n")
+        self.assertIn("unknown, compound, or forbidden license expression",
+                      self.generate(ok=False).stderr)
+
+    def test_exact_public_domain_override_rejects_notice_drift(self):
+        include = self.root / "include"; include.mkdir()
+        source = include / "search.h"
+        source.write_text(
+            "/*\n * SPDX-License-Identifier: LicenseRef-NuttX-PublicDomain\n"
+            " * Public domain.\n */\n"
+        )
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "search"], check=True)
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["commit"] = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        document["roots"][0]["license_overrides"] = [{
+            "path": "include/search.h",
+            "license": "LicenseRef-NuttX-PublicDomain",
+            "require_spdx": True,
+        }]
+        self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n")
+        self.assertIn("reviewed license notice mismatch", self.generate(ok=False).stderr)
+
+    def test_public_domain_reference_cannot_be_overridden_elsewhere(self):
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["license_overrides"] = [{
+            "path": "other.h", "license": "LicenseRef-NuttX-PublicDomain",
+            "require_spdx": True,
+        }]
+        self.roots.write_text(json.dumps(document))
+        self.assertIn("unknown, compound, or forbidden license expression",
+                      self.generate(ok=False).stderr)
+
     def test_same_basename_objects_are_not_joined_ambiguously(self):
         first = self.base / "one"; second = self.base / "two"
         first.mkdir(); second.mkdir()
