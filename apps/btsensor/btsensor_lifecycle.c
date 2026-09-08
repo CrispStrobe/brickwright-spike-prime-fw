@@ -49,6 +49,17 @@ static __attribute__((noinline)) void daemon_wait_for_stop(void)
     }
 }
 
+#ifdef CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER
+/* Stable Renode milestone: services and the HCI host are live when execution
+ * reaches this function.  It has no side effects and is absent from hardware
+ * builds so it cannot become a physical-firmware behavior dependency. */
+
+__attribute__((noinline)) void brickwright_simulation_daemon_ready(void)
+{
+  __asm__ __volatile__("" ::: "memory");
+}
+#endif
+
 static int daemon_main(int argc, char **argv)
 {
   int ret = 0;
@@ -74,6 +85,9 @@ static int daemon_main(int argc, char **argv)
 
   if (ret == 0)
     {
+#ifdef CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER
+      brickwright_simulation_daemon_ready();
+#endif
       daemon_wait_for_stop();
     }
 
