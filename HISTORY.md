@@ -57,3 +57,6 @@ and CI; pending work belongs in `PLAN.md`.
   excludes proved generated writes and directory traversal. The audit remains
   incomplete for 355 paths requiring classification, so none was vendored by
   inference.
+- Established a pinned Arm GNU Toolchain boundary with a digest-locked release,
+  immutable upstream revisions and licence evidence, an isolated build
+  environment, and separate exact-file policy for linked GCC/newlib inputs.
