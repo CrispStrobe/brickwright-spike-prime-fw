@@ -506,19 +506,26 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
     for archive_identity, members in archive_members.items():
         archive_path = cwd / archive_identity
         if not archive_path.is_file(): continue
-        matches = archives_by_output.get(archive_path.resolve(), [])
-        final_matches = [
-            record for record in matches
-            if record.get("output_sha256") == sha256(archive_path)
+        archive_digest = sha256(archive_path)
+        exact_matches = archives_by_output.get(archive_path.resolve(), [])
+        candidate_groups = [
+            records for records in archives_by_output.values()
+            if any(record.get("output_sha256") == archive_digest for record in records)
         ]
-        if not final_matches:
+        # NuttX copies most completed archives into staging before linking. An
+        # exact captured producer wins; otherwise immutable byte identity must
+        # identify exactly one captured archive-update sequence.
+        matches = (exact_matches if any(
+            record.get("output_sha256") == archive_digest for record in exact_matches
+        ) else candidate_groups[0] if len(candidate_groups) == 1 else [])
+        if not matches:
             external_roots = [Path(value.split("=",1)[1]).resolve()
                               for value in getattr(arguments,"external_root",[]) if "=" in value]
             if any(archive_path.resolve().is_relative_to(root) for root in external_roots):
                 continue
             try: archive_path.resolve().relative_to(Path(getattr(arguments, "repository", ".")).resolve())
             except ValueError: continue  # separately declared immutable external runtime
-            die(f"mapped archive has no recorded final producer: {archive_identity}")
+            die(f"mapped archive has no unique recorded final producer: {archive_identity}")
         # NuttX Apps updates libapps.a incrementally from multiple directories.
         # A final-hash record proves this archive generation reached the mapped
         # bytes; every selected member must still have exactly one input across
