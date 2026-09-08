@@ -106,3 +106,6 @@ and CI; pending work belongs in `PLAN.md`.
   stale object without a captured compiler producer.
 - Added host-path-free fixed-point evidence generation for two offline builds,
   requiring an immutable container ID and byte-identical declared artifacts.
+- Made archive provenance understand captured incremental updates while still
+  requiring that the captured sequence reaches the exact linked archive bytes
+  and that every selected member has one unique recorded object producer.

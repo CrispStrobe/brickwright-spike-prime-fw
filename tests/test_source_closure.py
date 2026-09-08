@@ -129,6 +129,39 @@ class ClosureTest(unittest.TestCase):
                     "--capture",capture,"--map",mapfile,"--output",self.manifest,"--sbom",self.sbom)
         self.assertIn("main.c",[x["path"] for x in json.loads(self.manifest.read_text())["files"]])
 
+    def test_incremental_archive_updates_retain_earlier_member_source(self):
+        capture = self.base / "capture"
+        (capture / "compiles").mkdir(parents=True)
+        (capture / "archives").mkdir()
+        archive = self.base / "libapps.a"; archive.write_bytes(b"final")
+        for name, source in (("first.o", "main.c"), ("second.o", "header.h")):
+            dep = capture / f"{name}.d"
+            dep.write_text(f"{name}: {self.root / source}\n")
+            (capture / "compiles" / f"{name}.json").write_text(json.dumps({
+                "cwd": str(self.base), "depfile": str(dep), "output": name,
+            }))
+        import hashlib
+        (capture / "archives/first.json").write_text(json.dumps({
+            "cwd": str(self.base), "argv": ["rcs", "libapps.a", "first.o"],
+            "output": str(archive), "output_sha256": hashlib.sha256(b"partial").hexdigest(),
+        }))
+        (capture / "archives/second.json").write_text(json.dumps({
+            "cwd": str(self.base), "argv": ["rcs", "libapps.a", "second.o"],
+            "output": str(archive), "output_sha256": hashlib.sha256(b"final").hexdigest(),
+        }))
+        mapfile = self.base / "firmware.map"
+        mapfile.write_text(f"{archive}(first.o)\n{archive}(second.o)\n")
+        trace = self.base / "empty.trace"; trace.write_text("")
+        self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--strace", trace, "--capture", capture, "--map", mapfile,
+            "--output", self.manifest, "--sbom", self.sbom,
+        )
+        self.assertEqual(
+            ["header.h", "main.c"],
+            [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
+        )
+
     def test_compiler_evidence_is_mandatory(self):
         result = self.invoke("generate", "--roots", self.roots, "--cwd", self.base,
                              "--strace", self.trace, "--output", self.manifest,
