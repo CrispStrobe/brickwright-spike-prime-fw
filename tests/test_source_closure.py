@@ -417,6 +417,41 @@ class ClosureTest(unittest.TestCase):
         self.dep.write_text(f"x: {source}\n")
         self.assertIn("nested license boundary lacks an override", self.generate(ok=False).stderr)
 
+    def test_required_spdx_accepts_block_comment_interior(self):
+        nested = self.root / "vendor"; nested.mkdir()
+        (nested / "LICENSE").write_text("Apache License, Version 2.0\n")
+        source = nested / "source.c"
+        source.write_text("/*\n * SPDX-License-Identifier: Apache-2.0\n */\nint x;\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "vendor"], check=True)
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["commit"] = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        document["roots"][0]["license_overrides"] = [{
+            "path": "vendor", "license": "Apache-2.0", "require_spdx": True,
+        }]
+        self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n")
+        self.generate()
+
+    def test_required_spdx_rejects_prose_and_near_miss(self):
+        nested = self.root / "vendor"; nested.mkdir()
+        (nested / "LICENSE").write_text("Apache License, Version 2.0\n")
+        source = nested / "source.c"
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["license_overrides"] = [{
+            "path": "vendor", "license": "Apache-2.0", "require_spdx": True,
+        }]
+        self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n")
+        for text in (
+            "SPDX-License-Identifier: Apache-2.0\n",
+            "/*\n * SPDX-License-Identifer: Apache-2.0\n */\n",
+        ):
+            source.write_text(text)
+            self.assertIn("SPDX identifier required", self.generate(ok=False).stderr)
+
     def test_same_basename_objects_are_not_joined_ambiguously(self):
         first = self.base / "one"; second = self.base / "two"
         first.mkdir(); second.mkdir()
