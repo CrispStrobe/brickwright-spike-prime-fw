@@ -37,7 +37,10 @@ def run_wrapper() -> int:
     real_bin = Path(real_value); capture = Path(capture_value)
     if not real_bin.is_dir(): die("capture environment is incomplete")
     cwd = Path.cwd().resolve(); original = sys.argv[1:]; invoked = list(original)
-    output = output_of(original); compiling = "-c" in original and output is not None
+    output = output_of(original)
+    dependency_only = any(value in {"-M", "-MM"} for value in original)
+    preprocess_only = "-E" in original
+    compiling = "-c" in original and output is not None and not dependency_only and not preprocess_only
     key = identity(tool, cwd, original)
     depfile = None
     if compiling and not any(x in original for x in ("-M", "-MM", "-MD", "-MMD", "-MF")):
@@ -55,7 +58,7 @@ def run_wrapper() -> int:
             if not destination.exists(): destination.write_bytes(data)
             responses.append({"argument": value, "sha256": digest, "path": f"responses/{digest}.rsp"})
     result = subprocess.run([real_bin / tool, *invoked])
-    if result.returncode == 0:
+    if result.returncode == 0 and not dependency_only and not preprocess_only:
         kind = "compile" if compiling else "link"
         atomic_json(capture / f"{kind}s" / f"{key}.json", {
             "schema": "brickwright/tool-invocation/v1", "tool": tool,
