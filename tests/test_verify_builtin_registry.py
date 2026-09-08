@@ -45,9 +45,18 @@ class RegistryProofTest(unittest.TestCase):
             self.evidence.write_text(json.dumps(document))
             self.assertIn("escapes root",self.invoke(False).stderr)
         document["generator_inputs"][0]["path"]="Make.defs"
+        document["generator_inputs"].append(dict(document["generator_inputs"][0]))
+        self.evidence.write_text(json.dumps(document))
+        self.assertIn("duplicate generator input",self.invoke(False).stderr)
+        document["generator_inputs"].pop()
         self.evidence.write_text(json.dumps(document))
         (self.out / "app.bdat").unlink()
         (self.out / "app.bdat").symlink_to(self.repo / "Make.defs")
         self.assertIn("symlink",self.invoke(False).stderr)
+
+    def test_output_root_symlink_is_rejected(self):
+        link=self.root / "output-link"; link.symlink_to(self.out, target_is_directory=True)
+        self.out=link
+        self.assertIn("output root",self.invoke(False).stderr)
 
 if __name__ == "__main__": unittest.main()
