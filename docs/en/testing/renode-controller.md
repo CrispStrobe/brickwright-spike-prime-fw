@@ -17,6 +17,13 @@ does not model the physical watchdog closely enough for it to be a valid
 firmware safety test, and enabling it resets the simulated CPU during bring-up.
 The hardware profile retains its watchdog configuration.
 
+Board bring-up likewise does not arm the HPWORK starvation softdog in this
+profile. Simulation scheduling and peripheral-model latency are not equivalent
+to real-time hardware deadlines and can otherwise produce a false `PANIC()`.
+`CONFIG_SCHED_HPWORK` remains enabled because the firmware services use the
+queue; only the physical safety monitor is omitted. Hardware builds still arm
+the monitor.
+
 The normal `usbnsh` profile leaves this option disabled. Its CC2564C power,
 UART, reset, and separately supplied service-pack path are unchanged.
 
