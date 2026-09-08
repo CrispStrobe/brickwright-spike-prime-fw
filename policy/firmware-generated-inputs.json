@@ -68,6 +68,18 @@
       "sha256": "b4f1aec8131905319bd2e194018c3ce4d259453b030803720d0dcdec5cf60c04"
     },
     {
+      "evidence": "evidence/source-closure/etctmp-generation.json",
+      "generator_argv": ["arm-none-eabi-gcc", "-E", "-P", "-x", "c", "etc/init.d/rcS"],
+      "path": "boards/spike-prime-hub/src/etctmp/etc/init.d/rcS",
+      "sha256": "30e22fccc2e790bbfa4e46f890863e3ca775b8540ba2f753103e778371c21764"
+    },
+    {
+      "evidence": "evidence/source-closure/etctmp-generation.json",
+      "generator_argv": ["arm-none-eabi-gcc", "-E", "-P", "-x", "c", "etc/init.d/rc.sysinit"],
+      "path": "boards/spike-prime-hub/src/etctmp/etc/init.d/rc.sysinit",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
       "generator_argv": [
         "make",
