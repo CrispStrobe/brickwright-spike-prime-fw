@@ -65,6 +65,25 @@ class ClosureTest(unittest.TestCase):
         self.invoke("verify", "--roots", self.roots, "--cwd", self.base,
                  "--strace", self.trace, "--depfile", self.dep, "--manifest", self.manifest)
 
+    def test_capture_depfiles_use_recorded_cwd_and_exclude_proved_generated(self):
+        sub = self.root / "sub"; sub.mkdir(); generated = sub / "generated.h"
+        generated.write_text("generated\n")
+        capture = self.base / "capture"; (capture / "compiles").mkdir(parents=True)
+        depfile = capture / "one.d"; depfile.write_text("one.o: ../main.c generated.h\n")
+        (capture / "compiles/one.json").write_text(json.dumps({"cwd": str(sub), "depfile": str(depfile)}))
+        trace = self.base / "generated.trace"
+        trace.write_text(f'1 openat(AT_FDCWD, "{generated}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3\n')
+        self.invoke("generate", "--roots", self.roots, "--cwd", self.base,
+                    "--strace", trace, "--capture", capture,
+                    "--output", self.manifest, "--sbom", self.sbom)
+        self.assertEqual(["main.c"], [x["path"] for x in json.loads(self.manifest.read_text())["files"]])
+
+    def test_compiler_evidence_is_mandatory(self):
+        result = self.invoke("generate", "--roots", self.roots, "--cwd", self.base,
+                             "--strace", self.trace, "--output", self.manifest,
+                             "--sbom", self.sbom, ok=False)
+        self.assertIn("compiler evidence requires", result.stderr)
+
     def test_forbidden_and_unknown_licenses_rejected(self):
         for expression in ("GPL-2.0-only", "AGPL-3.0-only", "LGPL-2.1-only", "CC-BY-NC-4.0", "ISC"):
             self.write_roots(expression)
