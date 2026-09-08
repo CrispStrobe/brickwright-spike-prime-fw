@@ -117,9 +117,9 @@ and CI; pending work belongs in `PLAN.md`.
 - Reproduced the configured syscall stubs with the exact NuttX generator,
   matched 70 newly consumed files byte-for-byte, and recorded a path-free
   generator/input/trace proof for their generated-input declarations.
-- Proved 43 configured zero-byte context/dependency stamps in a networkless
-  overlay, bound each to its pinned Makefile rule, and kept dependency
-  temporaries and `Make.dep` outside the closure.
+- Recreated 43 configured zero-byte context/dependency stamps in a networkless
+  overlay, then excluded them from source declarations when regular-file
+  metadata checks were correctly separated from content consumption.
 - Reproduced 210 configured syscall proxy sources byte-for-byte with the exact
   pinned `mksyscall -p` invocation in a networkless namespace and declared
   their individual hashes.

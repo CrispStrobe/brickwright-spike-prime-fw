@@ -18,16 +18,12 @@ audit still counts external reads, and the fixed-point gate rebuilds the
 materialized tree inside the pinned container with `--network none`. Ordinary
 `--strace` remains fail-closed across all paths.
 
-The repository trace deliberately treats successful metadata reads of regular
-files as consumption. Consequently, configure-generated sources must be exact
-generated-input declarations even when link reachability later excludes them.
-The pre-capture clean gate removes compiler and archive products but preserves
-configured sources; this is the explicit configure/build phase boundary. The
-materializer copies only declared generated files after checking their hashes.
-Zero-byte `.context` and `.depend` stamps are admitted only when an isolated
-trace recreates their exact paths with no network and the governing pinned
-Makefile rule ends in `touch $@`. Dependency-generator temporaries and
-`Make.dep` never enter the declaration or materialized tree.
+Regular-file `stat` and `access` calls are metadata checks, not content
+consumption. Content candidates opened for reading, executed files, successful
+readlinks, compiler depfile prerequisites, and explicit linker inputs remain
+fail-closed. Exact twin builds guard against a metadata-only file unexpectedly
+affecting selection. The materializer copies declared generated files only
+after checking their hashes.
 
 Only MIT, Apache-2.0, and BSD-3-Clause are accepted. An SPDX identifier on a
 file overrides its root declaration and is checked independently. Missing
