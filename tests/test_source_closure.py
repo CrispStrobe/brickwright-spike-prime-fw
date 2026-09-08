@@ -313,6 +313,14 @@ class ClosureTest(unittest.TestCase):
         self.write_roots("BSD-3-Clause")
         self.assertIn("unknown, compound, or forbidden license", self.generate(ok=False).stderr)
 
+    def test_bsd_2_clause_is_allowed_as_permissive(self):
+        self.write_roots("BSD-2-Clause")
+        self.generate()
+        manifest = json.loads(self.manifest.read_text())
+        self.assertIn("BSD-2-Clause", manifest["allowed_licenses"])
+        header = next(item for item in manifest["files"] if item["path"] == "header.h")
+        self.assertEqual("BSD-2-Clause", header["license"])
+
     def test_missing_escape_and_escaping_symlink_rejected(self):
         self.dep.write_text(f"x: {self.root}/missing.h\n")
         self.assertIn("missing", self.generate(ok=False).stderr)
