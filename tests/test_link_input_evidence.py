@@ -32,9 +32,10 @@ class LinkInputEvidenceTest(unittest.TestCase):
         self.declarations.write_text(json.dumps({"schema": "brickwright/runtime-input-declaration/v1", "artifacts": [
             {"path": "lib/libgcc.a", "component": "gcc-runtime"},
             {"path": "lib/crt0.o", "component": "newlib"}]}))
-        self.argv = self.base / "argv.json"; self.argv.write_text('["arm-none-eabi-ld","@link.rsp"]')
         self.map = self.base / "firmware.map"
         self.map.write_text(f"LOAD {runtime / 'crt0.o'}\n {runtime / 'libgcc.a'}(one.o)\n")
+        (self.base / "link.rsp").write_text(f"-Map={self.map} {runtime / 'libgcc.a'} {runtime / 'crt0.o'}")
+        self.argv = self.base / "argv.json"; self.argv.write_text('["arm-none-eabi-ld","@link.rsp"]')
         self.output = self.base / "evidence.json"
 
     def tearDown(self): self.temporary.cleanup()
@@ -56,6 +57,11 @@ class LinkInputEvidenceTest(unittest.TestCase):
         self.assertEqual("brickwright/linked-runtime-evidence/v1", evidence["schema"])
         archive = next(x for x in evidence["artifacts"] if x["path"].endswith("libgcc.a"))
         self.assertEqual(["one.o"], [x["path"] for x in archive["selected_members"]])
+        self.assertEqual(["firmware.map"], evidence["link_argv_cross_check"]["map_outputs"])
+
+    def test_argv_map_disagreement_fails_closed(self):
+        (self.base / "link.rsp").write_text(f"-Map=other.map {self.root / 'lib/libgcc.a'}")
+        self.assertIn("does not name captured maps", self.invoke(ok=False).stderr)
 
     def test_undeclared_and_stale_artifacts_fail_closed(self):
         data = json.loads(self.declarations.read_text()); data["artifacts"].pop()

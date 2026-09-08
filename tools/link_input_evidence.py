@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import subprocess
 from pathlib import Path, PurePosixPath
 
@@ -101,6 +102,39 @@ def archive_members(ar: Path, archive: Path) -> list[str]:
     return [line for line in result.stdout.splitlines() if line]
 
 
+def expand_argv(argv: list[str], cwd: Path, seen: set[Path] | None = None) -> list[str]:
+    """Expand linker response files so the recorded command is auditable."""
+    seen = set() if seen is None else seen
+    result = []
+    for value in argv:
+        if not value.startswith("@"):
+            result.append(value); continue
+        response = (cwd / value[1:]).resolve()
+        if response in seen or not response.is_file():
+            fail(f"missing or recursive linker response file: {value}")
+        seen.add(response)
+        result.extend(expand_argv(shlex.split(response.read_text()), response.parent, seen))
+    return result
+
+
+def cross_check_argv(argv: list[str], cwd: Path, root: Path, selected: set[str], maps: list[Path]) -> dict:
+    expanded = expand_argv(argv, cwd)
+    referenced = set()
+    for token in expanded:
+        candidate = Path(token)
+        if candidate.suffix not in {".a", ".o"}: continue
+        absolute = (cwd / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+        try: referenced.add(absolute.relative_to(root).as_posix())
+        except ValueError: pass
+    unselected = sorted(referenced - selected)
+    if unselected: fail(f"link argv names toolchain artifacts absent from maps: {unselected}")
+    joined = "\n".join(expanded)
+    missing_maps = sorted(path.name for path in maps if path.name not in joined)
+    if missing_maps: fail(f"link argv does not name captured maps: {missing_maps}")
+    return {"expanded_argv": expanded, "explicit_toolchain_artifacts": sorted(referenced),
+            "map_outputs": sorted(path.name for path in maps)}
+
+
 def member_bytes(ar: Path, archive: Path, member: str) -> bytes:
     result = subprocess.run([ar, "p", archive, member], capture_output=True)
     if result.returncode:
@@ -123,6 +157,8 @@ def produce(arguments: argparse.Namespace) -> dict:
     argv_document = json.loads(arguments.link_argv.read_text(encoding="utf-8"))
     if not isinstance(argv_document, list) or not argv_document or not all(isinstance(x, str) for x in argv_document):
         fail("link argv must be a nonempty JSON string array")
+    argv_cross_check = cross_check_argv(argv_document, arguments.link_cwd.resolve(), root,
+                                        set(selected), arguments.map)
     ar = root / "bin" / "arm-none-eabi-ar"
     if not ar.is_file() or not os.access(ar, os.X_OK):
         fail("pinned arm-none-eabi-ar is missing")
@@ -148,6 +184,7 @@ def produce(arguments: argparse.Namespace) -> dict:
         })
     argv_bytes = (json.dumps(argv_document, separators=(",", ":"), ensure_ascii=True) + "\n").encode()
     return {"schema": SCHEMA, "link_argv": argv_document, "link_argv_sha256": digest_bytes(argv_bytes),
+            "link_argv_cross_check": argv_cross_check,
             "maps": maps, "artifacts": rows}
 
 
