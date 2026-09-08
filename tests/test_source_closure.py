@@ -369,6 +369,42 @@ class ClosureTest(unittest.TestCase):
         files = json.loads(self.manifest.read_text())["files"]
         self.assertEqual(["main.c"], [item["path"] for item in files])
 
+    def test_opened_directory_is_not_source_content(self):
+        stat_trace = self.base / "directory-stat.trace"
+        stat_trace.write_text(
+            f'1 newfstatat(AT_FDCWD, "{self.root}", '
+            '{st_mode=S_IFDIR|0755}, 0) = 0\n'
+        )
+        open_trace = self.base / "directory-open.trace"
+        open_trace.write_text(
+            f'1 openat(AT_FDCWD, "{self.root}", O_RDONLY) = 3\n'
+        )
+        self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--repository", self.base,
+            "--repository-trace", stat_trace,
+            "--repository-trace", open_trace,
+            "--depfile", self.dep, "--output", self.manifest,
+            "--sbom", self.sbom,
+        )
+        self.assertEqual(
+            ["header.h", "main.c"],
+            [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
+        )
+
+    def test_opened_directory_symlink_is_not_silently_dropped(self):
+        directory = self.root / "directory"; directory.mkdir()
+        link = self.root / "directory-link"; link.symlink_to(directory)
+        trace = self.base / "directory-link.trace"
+        trace.write_text(f'1 openat(AT_FDCWD, "{link}", O_RDONLY) = 3\n')
+        result = self.invoke(
+            "generate", "--roots", self.roots, "--cwd", self.base,
+            "--repository", self.base, "--repository-trace", trace,
+            "--depfile", self.dep, "--output", self.manifest,
+            "--sbom", self.sbom, ok=False,
+        )
+        self.assertIn("consumed path is not a file", result.stderr)
+
     def test_fcntl_directory_descriptor_duplication(self):
         self.trace.write_text(
             f'3947728 openat(AT_FDCWD, "{self.root}", O_RDONLY|O_DIRECTORY) = 3\n'

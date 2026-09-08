@@ -388,7 +388,12 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
                 if raw:
                     path=Path(raw); paths.add(path if path.is_absolute() else cwd/path)
     cwd = Path(arguments.cwd).resolve()
-    normalized = {(path if path.is_absolute() else cwd / path).resolve() for path in paths}
+    lexical = {
+        Path(os.path.abspath(path if path.is_absolute() else cwd / path))
+        for path in paths
+    }
+    lexical = {path for path in lexical if not (path.is_dir() and not path.is_symlink())}
+    normalized = {path.resolve() for path in lexical}
     declared, _ = declared_generated(arguments)
     return (normalized - generated) | (normalized & declared)
 
