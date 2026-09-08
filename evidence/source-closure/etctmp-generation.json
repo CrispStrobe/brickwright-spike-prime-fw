@@ -1,0 +1,20 @@
+{
+  "container_image": "sha256:8d304601acccf0fd2d6bcbf4e1ec1377b5e89cbdd669a60c1cf5c0e581b3c3fa",
+  "generator_commands": [
+    ["arm-none-eabi-gcc", "-E", "-P", "-x", "c", "-isystem", "$REPOSITORY/nuttx/include", "-isystem", "$REPOSITORY/nuttx/include/newlib", "-D__NuttX__", "-D__KERNEL__", "etc/init.d/rc.sysinit", "-o", "$OUTPUT/rc.sysinit"],
+    ["arm-none-eabi-gcc", "-E", "-P", "-x", "c", "-isystem", "$REPOSITORY/nuttx/include", "-isystem", "$REPOSITORY/nuttx/include/newlib", "-D__NuttX__", "-D__KERNEL__", "etc/init.d/rcS", "-o", "$OUTPUT/rcS"]
+  ],
+  "generator_inputs": [
+    {"path": "boards/spike-prime-hub/src/etc/init.d/rcS", "sha256": "8920883fd351dcbba4929cc3075e93a25c24ccbf4fede1aaf1e27191e61e14a9"},
+    {"path": "boards/spike-prime-hub/src/etc/init.d/rc.sysinit", "sha256": "1bb1252cfa065b31d04e52bdd66cae2765d18333c6544745cf6420f3e74ed691"},
+    {"path": "nuttx/include/nuttx/config.h", "sha256": "29cd85a7899e6d08f58a6fcbeea31989841d82990b0d7e8325610dcc41d83ba5"}
+  ],
+  "isolation": {"network_namespace": "none", "successful_connects": 0},
+  "output_root": "boards/spike-prime-hub/src/etctmp/etc/init.d",
+  "outputs": [
+    {"path": "rcS", "sha256": "30e22fccc2e790bbfa4e46f890863e3ca775b8540ba2f753103e778371c21764"},
+    {"path": "rc.sysinit", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
+  ],
+  "schema": "brickwright/etctmp-generation-proof/v1",
+  "status": "exact-output-match"
+}

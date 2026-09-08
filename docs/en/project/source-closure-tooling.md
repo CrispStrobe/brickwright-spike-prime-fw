@@ -29,6 +29,9 @@ after checking their hashes.
 run against its exact output manifest. Registry `.pdat` files and `.updated`
 are recorded generator metadata but are not materialized unless independent
 content-consumption evidence selects them.
+`tools/verify_etctmp_generation.py` checks the two content-consumed board ROMFS
+startup scripts against their pinned, networkless compiler proof. Both outputs
+are materialized; no other staging-tree file is admitted.
 
 Only MIT, Apache-2.0, BSD-2-Clause, and BSD-3-Clause are generally accepted.
 The NuttX public-domain dedication is reviewed only for the exact
