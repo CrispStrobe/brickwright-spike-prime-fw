@@ -310,6 +310,7 @@ class ClosureTest(unittest.TestCase):
         self.dep.write_text(f"x: {evil}\n")
         self.assertIn("unknown, compound, or forbidden license", self.generate(ok=False).stderr)
         evil.write_text("/* copyright block */\n" * 2000 + "/* SPDX-License-Identifier: MIT OR Apache-2.0 */\n")
+        self.write_roots("BSD-3-Clause")
         self.assertIn("unknown, compound, or forbidden license", self.generate(ok=False).stderr)
 
     def test_missing_escape_and_escaping_symlink_rejected(self):
@@ -529,6 +530,50 @@ class ClosureTest(unittest.TestCase):
         ):
             source.write_text(text)
             self.assertIn("SPDX identifier required", self.generate(ok=False).stderr)
+
+    def test_alternate_license_concludes_declared_root_choice(self):
+        source = self.root / "dual.c"
+        source.write_text("/* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later */\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "dual"], check=True)
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["commit"] = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        document["roots"][0]["license"] = "Apache-2.0"
+        self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n")
+        self.generate()
+        entry = json.loads(self.manifest.read_text())["files"][0]
+        self.assertEqual("Apache-2.0", entry["license"])
+        self.assertEqual("Apache-2.0 OR GPL-2.0-or-later", entry["declared_license"])
+        sbom_entry = json.loads(self.sbom.read_text())["files"][0]
+        self.assertEqual("Apache-2.0", sbom_entry["licenseConcluded"])
+        self.assertEqual(["Apache-2.0 OR GPL-2.0-or-later"], sbom_entry["licenseInfoInFiles"])
+
+    def test_compound_license_selection_fails_closed(self):
+        cases = {
+            "and.c": "Apache-2.0 AND MIT",
+            "parenthesized.c": "(Apache-2.0 OR GPL-2.0-or-later)",
+            "no_allowed.c": "GPL-2.0-or-later OR OAR",
+            "ambiguous.c": "MIT OR BSD-3-Clause",
+        }
+        for name, expression in cases.items():
+            (self.root / name).write_text(f"/* SPDX-License-Identifier: {expression} */\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "compounds"], check=True)
+        document = json.loads(self.roots.read_text())
+        document["roots"][0]["commit"] = subprocess.check_output(
+            ["git", "-C", str(self.root), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        document["roots"][0]["license"] = "Apache-2.0"
+        self.roots.write_text(json.dumps(document))
+        for name in cases:
+            self.dep.write_text(f"x: {self.root / name}\n")
+            self.assertIn(
+                "unknown, compound, or forbidden license expression",
+                self.generate(ok=False).stderr,
+            )
 
     def test_same_basename_objects_are_not_joined_ambiguously(self):
         first = self.base / "one"; second = self.base / "two"
