@@ -80,3 +80,9 @@ and CI; pending work belongs in `PLAN.md`.
   Kconfig frontend inputs and added a fail-closed verifier for their tree,
   archive, and patch hashes. Link evidence now expands response files and
   cross-checks explicit toolchain artifacts and map outputs against the maps.
+- Captured one same-generation compiler, archiver, preprocessor, and linker
+  graph; retained removed linker-script bytes by hash; and generated and
+  verified the 902-file permissive source manifest, 145 generated-input records,
+  SPDX 2.3 SBOM, and host-path-free link evidence. A copied source-only tree
+  contains 1,047 files; its offline build correctly fails closed because the
+  separately traced build-system Makefiles have not yet joined the closure.
