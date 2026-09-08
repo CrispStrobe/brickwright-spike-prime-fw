@@ -296,7 +296,8 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SCHED_HPWORK
+#if defined(CONFIG_SCHED_HPWORK) && \
+    !defined(CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER)
   ret = stm32_hpwork_softdog_initialize();
   if (ret < 0)
     {
