@@ -368,7 +368,9 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
             output = record.get("output")
             if output and record.get("output_sha256"):
                 path = Path(output)
-                generated.add((path if path.is_absolute() else Path(record["cwd"]) / path).resolve())
+                path = (path if path.is_absolute() else Path(record["cwd"]) / path).resolve()
+                if path.is_file() and sha256(path) == record["output_sha256"]:
+                    generated.add(path)
         for record_path in Path(directory).glob("links/*.json"):
             record=json.loads(record_path.read_text()); cwd=Path(record["cwd"])
             argv=record.get("argv",[])
