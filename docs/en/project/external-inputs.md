@@ -86,76 +86,14 @@ from package metadata for the files that are actually linked into the firmware �
 it would read "GPL" for the package supplying `libgcc.a` and the C runtime
 startup objects, and nothing parseable for the one supplying `libc.a`.
 
-## The SPDX expressions, read from the licence text
+Two ways to close it, for the maintainer to choose between:
 
-Recorded in `evidence/source-closure/external-inputs.json` under
-`linked_licence_findings`, each with the file and line it was read from.
-Acceptance is not asserted there: the report calls the closure's own
-`check_license()` and records what it answers.
+1. Declare those files under their upstream terms with a cited source — the
+   exception text in the GCC sources, `COPYING.NEWLIB` in newlib — so the
+   override names the evidence rather than asserting a licence.
+2. Widen the allowed set to name the Runtime Library Exception explicitly.
 
-**`gcc-arm-none-eabi` — `GPL-3.0-or-later WITH GCC-exception-3.1`, and the
-exception's condition holds.** The package's own copyright file covers "only the
-packaging of the compiler and not the compiler itself" and points at the `gcc`
-package. There, `/usr/share/doc/gcc-13/copyright:99` states that "The following
-runtime libraries are licensed under the terms of the GNU General Public License
-(v3 or later) with version 3.1 of the GCC Runtime Library Exception" and lists
-libgcc and `gcc/crtstuff.c`, from which `crtbegin.o` and `crtend.o` are built.
-The exception's condition is at line 293: "A Compilation Process is 'Eligible'
-if it is done using GCC, alone or with other GPL-compatible software", with the
-disqualifying example being non-GPL-compatible software optimising GCC
-intermediate representations. This build compiles with `arm-none-eabi-gcc`,
-links with GNU binutils, and is driven by cmake, make and Python; no measured
-tool is GPL-incompatible and none touches GCC intermediate representations, so
-the process is Eligible. One boundary, stated rather than glossed: `crti.o` and
-`crtn.o` are shipped by `gcc-arm-none-eabi` but built from GCC ARM configuration
-sources that are not installed here, so their per-file notice was not read on
-this machine.
-
-**newlib — no single SPDX expression is truthful.** `libnewlib-dev` and
-`libnewlib-arm-none-eabi` ship byte-identical notices (sha256 `0383bc85…`) whose
-first line is "The newlib subdirectory is a collection of software from several
-sources"; twenty-eight numbered sources follow, and the file says each source
-file carries its own licence. The honest record is the aggregate —
-BSD-2-Clause, BSD-3-Clause, BSD-4-Clause-UC and other permissive notices — with
-two scoping facts that a single identifier would hide:
-
-* The only copyleft entries are (21) "Free Software Foundation LGPL License
-  (`*-linux*` targets only)" and (22) "Xavier Leroy LGPL License
-  (`i[3456]86-*-linux*` targets only)". This build is `arm-none-eabi`, so
-  neither applies — but that exclusion rests on the parenthetical target
-  annotations in the notice, not on anything in the binary.
-* Entry (1) is the pre-1999 University of California notice that requires
-  acknowledgement in documentation and other materials. That is
-  BSD-4-Clause-UC, not BSD-3-Clause, and it obliges the distributor.
-
-**`cmake-data` — `BSD-3-Clause`**, already DEP-5, for the one probe header.
-
-## The answer: the closure cannot be satisfied as written
-
-Asked of `check_license()` itself, with the expressions above:
-
-| package | expression | the closure's verdict |
-|---|---|---|
-| `gcc-arm-none-eabi` | `GPL-3.0-or-later WITH GCC-exception-3.1` | **refused** — "unknown, compound, or forbidden license expression" |
-| `libnewlib-arm-none-eabi` | none is truthful | **refused** — nothing to test |
-| `libnewlib-dev` | none is truthful | **refused** — nothing to test |
-| `cmake-data` | `BSD-3-Clause` | accepted |
-
-`FORBIDDEN_LICENSE` matches the substring `GPL` anywhere in the expression, so
-the GCC expression is refused for naming the exception it relies on, and would
-be refused however it is written. Independently, `ALLOWED_LICENSES` is
-`{Apache-2.0, BSD-3-Clause, MIT}`, which admits neither `BSD-2-Clause` nor
-`BSD-4-Clause-UC` — so even the wholly permissive parts of newlib fail. Three of
-the four packages supplying linked files are refused, and widening the set only
-for the GCC exception would not fix newlib.
-
-**The maintainer's decision, now backed by the text:** the allowed set must be
-widened — at minimum to admit `BSD-2-Clause` and the UC Berkeley variant, and to
-express "GPL with the Runtime Library Exception" without the forbidden-substring
-rule rejecting it — or the closure must gain a per-file override that names the
-cited evidence instead of an identifier. Declaring the files under upstream terms
-alone does not close it, because the refusals are the checker's, not the
-metadata's. This document takes neither decision.
+This document does neither.
 
 ## Method: three rules, each of which decides a number
 
