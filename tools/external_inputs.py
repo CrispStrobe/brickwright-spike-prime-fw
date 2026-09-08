@@ -79,10 +79,9 @@ LINKED_LICENCE_FINDINGS = {
             'gcc-arm-none-eabi but are built from GCC ARM config sources that are not '
             'installed here, so their per-file notice was not read.',
     },
-    'libnewlib-dev': {'spdx': 'BSD-2-Clause AND BSD-3-Clause AND BSD-4-Clause-UC',
-                      'basis': ['see libnewlib-arm-none-eabi (identical file, sha256 0383bc85…)']},
+    'libnewlib-dev': {'spdx': None, 'basis': ['see libnewlib-arm-none-eabi (identical file, sha256 0383bc85…)']},
     'libnewlib-arm-none-eabi': {
-        'spdx': 'BSD-2-Clause AND BSD-3-Clause AND BSD-4-Clause-UC',
+        'spdx': None,
         'aggregate': 'BSD-2-Clause AND BSD-3-Clause AND BSD-4-Clause-UC AND other permissive notices',
         'basis': [
             '/usr/share/doc/libnewlib-arm-none-eabi/copyright:11 — "The newlib '
@@ -94,21 +93,11 @@ LINKED_LICENCE_FINDINGS = {
             'build is arm-none-eabi',
             'line 40 — entry (1) is the pre-1999 UC Berkeley notice requiring '
             'acknowledgement in documentation, i.e. BSD-4-Clause-UC, not BSD-3-Clause',
-            'lines 192-202, at the END OF ENTRY (1) and not after entry (28) — the '
-            'advertising clause is retired by the notice that carries it: "there is a '
-            'statement regarding that acknowledgement must be made in any advertising '
-            'materials for products using the code.  This restriction no longer applies '
-            'due to the following license change: '
-            'ftp://ftp.cs.berkeley.edu/pub/4bsd/README.Impt.License.Change". The same '
-            'paragraph adds that the defunct clause is removed from some newlib files '
-            'and left in place in others, so it may still be READ and still not apply.',
         ],
         'note':
-            'No SINGLE identifier is truthful; the AND expression above is, and the '
-            'closure now parses it. The collection is per-file and the notice says each '
-            'file carries its own licence, so the expression records the aggregate. The '
-            'target scoping of the two copyleft entries is not taken on the notice\'s '
-            'word: see evidence/source-closure/linked-object-licences.json.',
+            'No single SPDX expression is truthful. The collection is per-file and the '
+            'notice itself says each file carries its own licence; the honest record is '
+            'the aggregate plus the target scoping.',
     },
     'cmake-data': {
         'spdx': 'BSD-3-Clause',
