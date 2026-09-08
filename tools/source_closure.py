@@ -622,7 +622,7 @@ def license_rule(root: dict, relative: Path) -> tuple[str, bool]:
     return selected
 
 
-def file_license(path: Path, root: dict, relative: Path) -> str:
+def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str]:
     expressions = set()
     for line in path.read_bytes().splitlines():
         match = SPDX_COMMENT.match(line)
@@ -634,8 +634,18 @@ def file_license(path: Path, root: dict, relative: Path) -> str:
     if require_spdx and not expressions:
         die(f"SPDX identifier required by override: {root['name']}/{relative}")
     expression = next(iter(expressions), declared)
+    if expression in ALLOWED_LICENSES:
+        return expression, expression
+    alternatives = expression.split(" OR ")
+    if len(alternatives) > 1 and all(
+        re.fullmatch(r"[A-Za-z0-9.-]+", item) for item in alternatives
+    ):
+        allowed = [item for item in alternatives if item in ALLOWED_LICENSES]
+        concluded = declared if declared in allowed else allowed[0] if len(allowed) == 1 else None
+        if concluded is not None:
+            return concluded, expression
     check_license(expression)
-    return expression
+    raise AssertionError("unreachable")
 
 
 def origin_for(root: dict, relative: Path, resolved: Path) -> dict:
@@ -670,11 +680,13 @@ def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[di
     for path in consumed - external - generated:
         root, relative, resolved = locate(path, roots)
         key = (root["name"], relative.as_posix())
+        concluded_license, declared_license = file_license(resolved, root, relative)
         entries[key] = {
             "source_root": root["name"],
             "path": relative.as_posix(),
             "sha256": sha256(resolved),
-            "license": file_license(resolved, root, relative),
+            "license": concluded_license,
+            "declared_license": declared_license,
             "role": root["role"],
             "origin": origin_for(root, relative, resolved),
         }
@@ -703,7 +715,7 @@ def make_sbom(manifest: dict) -> dict:
             "fileName": f"{entry['source_root']}/{entry['path']}",
             "checksums": [{"algorithm": "SHA256", "checksumValue": entry["sha256"]}],
             "licenseConcluded": entry["license"],
-            "licenseInfoInFiles": [entry["license"]],
+            "licenseInfoInFiles": [entry["declared_license"]],
             "copyrightText": "NOASSERTION",
         })
     offset = len(files)
@@ -879,7 +891,7 @@ def verify(arguments: argparse.Namespace) -> None:
     for actual in actual_files:
         key = (actual["source_root"], actual["path"])
         wanted = expected_by_key[key]
-        for field in ("sha256", "license", "role", "origin"):
+        for field in ("sha256", "license", "declared_license", "role", "origin"):
             if actual.get(field) != wanted[field]:
                 die(f"{field} mismatch: {key[0]}/{key[1]}")
     if actual_files != expected:
