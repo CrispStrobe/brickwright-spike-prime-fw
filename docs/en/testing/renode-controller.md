@@ -22,3 +22,7 @@ The two profiles are fail-separated at build time:
 
 Controller selection is compile-time only. Firmware filenames, environment
 variables, and simulator behavior cannot silently select the virtual backend.
+
+Renode may use the global `brickwright_simulation_daemon_ready` symbol as its
+daemon-ready milestone. Execution reaches it only after services and the HCI
+host start successfully. Hardware builds do not contain this symbol.

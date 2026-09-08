@@ -15,7 +15,9 @@ CSRCS += btsensor_tx.c btsensor_cmd_neutral.c btsensor_classic.c
 CSRCS += btsensor_modern.c btsensor_modern_backend.c btsensor_modern_notify.c
 CSRCS += btsensor_scheduler.c btsensor_sound.c
 CSRCS += hub_protocol.c spike_codec.c
+ifneq ($(CONFIG_APP_BTSENSOR_VIRTUAL_CONTROLLER),y)
 CSRCS += btsensor_ti_payload.c
+endif
 
 ifeq ($(CONFIG_APP_BTSENSOR_NUTTX_PERIPHERALS),y)
 CSRCS += bundle_emitter.c
