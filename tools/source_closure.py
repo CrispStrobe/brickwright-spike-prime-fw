@@ -21,7 +21,7 @@ FORBIDDEN_LICENSE = re.compile(
 PID_PREFIX = re.compile(r"^\s*(?:(?:\[pid\s+(\d+)\]|(\d+))\s+)?(.*)$")
 SYSCALL_RESULT = re.compile(r"^(\w+)\((.*)\)\s+=\s+(-?\d+)")
 SPDX_COMMENT = re.compile(
-    rb"^\s*(?:/\*+|//+|#+|--+)\s*SPDX-License-Identifier:\s*([^\r\n*]+)"
+    rb"^\s*(?:/\*+|\*|//+|#+|--+)\s*SPDX-License-Identifier:\s*([^\r\n*]+)"
 )
 MAP_OBJECT = re.compile(r"(?<!\S)([^\s()]+\.a\([^)]+\.o\)|[^\s()]+\.o)(?!\S)")
 LICENSE_BOUNDARY_NAMES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING")
