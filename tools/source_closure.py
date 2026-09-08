@@ -490,29 +490,45 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
         identity = normalized_build_path(Path(record["cwd"]) / output, cwd)
         if identity in direct: selected.add(record_path)
         by_basename.setdefault(Path(output).name, []).append((record_path, identity))
-    archives_by_hash = {}
     archive_records = []
     for directory in getattr(arguments, "capture", []):
         archive_records.extend(Path(directory).glob("archives/*.json"))
+    archives_by_output: dict[Path, list[dict]] = {}
     for record_path in sorted(archive_records):
-        record=json.loads(record_path.read_text()); digest=record.get("output_sha256")
-        if digest: archives_by_hash.setdefault(digest,[]).append(record)
+        record = json.loads(record_path.read_text())
+        argv = record.get("argv", [])
+        output = record.get("output") or (argv[1] if len(argv) > 1 else None)
+        if not output or not record.get("output_sha256"):
+            continue
+        path = Path(output)
+        absolute = (path if path.is_absolute() else Path(record["cwd"]) / path).resolve()
+        archives_by_output.setdefault(absolute, []).append(record)
     for archive_identity, members in archive_members.items():
         archive_path = cwd / archive_identity
         if not archive_path.is_file(): continue
-        matches=archives_by_hash.get(sha256(archive_path),[])
-        if not matches:
+        matches = archives_by_output.get(archive_path.resolve(), [])
+        final_matches = [
+            record for record in matches
+            if record.get("output_sha256") == sha256(archive_path)
+        ]
+        if not final_matches:
             external_roots = [Path(value.split("=",1)[1]).resolve()
                               for value in getattr(arguments,"external_root",[]) if "=" in value]
             if any(archive_path.resolve().is_relative_to(root) for root in external_roots):
                 continue
             try: archive_path.resolve().relative_to(Path(getattr(arguments, "repository", ".")).resolve())
             except ValueError: continue  # separately declared immutable external runtime
-        if len(matches)!=1: die(f"mapped archive has no unique recorded producer: {archive_identity}")
-        record=matches[0]; inputs=[]
-        for value in record["argv"][2:]:
-            if value.startswith("-"): continue
-            path=Path(value); inputs.append((path if path.is_absolute() else Path(record["cwd"])/path).resolve())
+            die(f"mapped archive has no recorded final producer: {archive_identity}")
+        # NuttX Apps updates libapps.a incrementally from multiple directories.
+        # A final-hash record proves this archive generation reached the mapped
+        # bytes; every selected member must still have exactly one input across
+        # all captured updates to that same absolute archive path.
+        inputs=[]
+        for record in matches:
+            for value in record["argv"][2:]:
+                if value.startswith("-"): continue
+                path=Path(value)
+                inputs.append((path if path.is_absolute() else Path(record["cwd"])/path).resolve())
         for member in members:
             producers=[p for p in inputs if p.name==member]
             if len(producers)!=1: die(f"archive member has no unique recorded input: {archive_identity}({member})")
