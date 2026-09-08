@@ -363,6 +363,12 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         _, prerequisites = dep_record(Path(depfile))
         paths.update(path if path.is_absolute() else record_cwd / path for path in prerequisites)
     for directory in getattr(arguments, "capture", []):
+        for record_path in Path(directory).glob("compiles/*.json"):
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+            output = record.get("output")
+            if output and record.get("output_sha256"):
+                path = Path(output)
+                generated.add((path if path.is_absolute() else Path(record["cwd"]) / path).resolve())
         for record_path in Path(directory).glob("links/*.json"):
             record=json.loads(record_path.read_text()); cwd=Path(record["cwd"])
             argv=record.get("argv",[])
