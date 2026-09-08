@@ -111,3 +111,6 @@ and CI; pending work belongs in `PLAN.md`.
   and that every selected member has one unique recorded object producer.
 - Declared the vendored Zephyr host as a nested Apache-2.0 boundary and require
   SPDX attribution on every selected source file from that subtree.
+- Reproduced the configured syscall stubs with the exact NuttX generator,
+  matched 70 newly consumed files byte-for-byte, and recorded a path-free
+  generator/input/trace proof for their generated-input declarations.

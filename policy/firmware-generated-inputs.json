@@ -112,6 +112,76 @@
       "sha256": "de0ce211cefaf67bfae464a5099132803c7ae7b507bf529f5995f1760cbbc146"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_accept4.c",
+      "sha256": "152c23ef1ad1642eda1d5df3fe3381fc7fdc53693fa25ed8c249485d551eee8d"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_adjtime.c",
+      "sha256": "77f394fc343e7702546fcda686d450795de1c0b292f3bd6fd91f442f997c6cbd"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_aio_cancel.c",
+      "sha256": "a4aedff2c107dfc12170926bd3ff6358ec95060a8808198ac9c4bfaef0dceb2f"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_aio_fsync.c",
+      "sha256": "9ec21f80f7006e340d3fd2802c1cd097d3aee06a5491f947148f4cce41884872"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_aio_read.c",
+      "sha256": "c18b59d9a0728e2cf671898c2f911705b5c60a9eab246409be333f5d2e000350"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_aio_write.c",
+      "sha256": "0d94089fa193cdb6f37ee3ce0dc9f4be0756d4a6a32b647a61da1278d5bb33e4"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_bind.c",
+      "sha256": "93917b83d2423c12f6dfa2b17a5dda32a56b4f812a0bb590df916780bd046a6b"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -167,6 +237,16 @@
       "sha256": "42dbeda03bb7672fa0c3d625a6de5670027e1d5d2a9ae42b1ba2011f89c771ed"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_clock_adjtime.c",
+      "sha256": "6d14062eabe352b1900bfe5ed752ff1740daa75a8530f537d77152f60b2004ef"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -209,6 +289,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_close.c",
       "sha256": "4b39ce4afb00108536219f1269ea405ebda31ecc9208499e138261cc57dc79e7"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_connect.c",
+      "sha256": "18fd231a4b6ce7ec5a7b6d1bd8bfcc147b53a6185ce18c004ee05b200844ebcd"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -299,6 +389,16 @@
       "sha256": "b33cf125589a19ce14bf3b58a6058c2ddba9bbbfe136a03595305acbc0dcfafe"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_eventfd.c",
+      "sha256": "3544b2b5feff9cab77b15afecf8d6f3e0ab94b8a18dbc1dd9e0c23cde5158897"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -308,6 +408,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_exec.c",
       "sha256": "c19d9055be6a0cc56a04f99ad2ad1a8001328e5e615f202402215aef34521c18"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_execve.c",
+      "sha256": "ba87ff7fc5d30c83bb779028f276862a261c05ceecd361454cbf1f709777bc06"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -409,6 +519,16 @@
       "sha256": "861a255afb3f13cd2ecf756ca527d7d974916d0225ee46e7edbca5bc7a4c49ba"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getegid.c",
+      "sha256": "e7a1ac34ebfbc8cf612bafeabd01094d246641f8c1de3734e11c7e38ee02f2cb"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -418,6 +538,26 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_getenv.c",
       "sha256": "def5106f0075ac698ae2046ad8097f3750bc37915fb10c34a44d2d3413bb1e65"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_geteuid.c",
+      "sha256": "4c3a75c641c17c353bff4d00519b983c0b1be54a1af4c58b22cbd596351ffdc3"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getgid.c",
+      "sha256": "26898fb1cb3eae2d1040872b2797bdf11ac74401fd64da816c03eb503d50dbb0"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -442,6 +582,46 @@
       "sha256": "31282d8f1e7983c8f77dd9ef0c89dbb2ed5cbe3527c1079dea63a2196a83ccd3"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getpeername.c",
+      "sha256": "b653fbadf07cd1457ce164d4ddb6fe4995a44cb279172b3a0feabb7d274a7a66"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getppid.c",
+      "sha256": "ccf23c4e34c326830ebf2c0f3c492a52d399471a4f24d08373c72af9203ade2d"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getsockname.c",
+      "sha256": "4a9b163a2b50ce1df0169b0ac4d831012ca8e2f3e1e0841408f9961701ac407d"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getsockopt.c",
+      "sha256": "cfc6118599447eb54a65f301f180a0572ccf6a5645f4a0c3d22bb8315507bed3"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -451,6 +631,66 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_gettimeofday.c",
       "sha256": "738462bfba9f407ebf33fddccadc06956e5f6c155619be989f3042c1f13576e6"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_getuid.c",
+      "sha256": "5c02410477d03e0041243a92cbebee97557cf736a33ce8f3187f0e7c76349a03"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_inotify_add_watch.c",
+      "sha256": "67c6df95276d61cd030f821c813dd63f628e85b397d48858851dbf8917f1da0e"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_inotify_init.c",
+      "sha256": "e744dbad967e920c756f0429c9e3e7556a3f43ac6a813f6a3f2ed207d5b14b05"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_inotify_init1.c",
+      "sha256": "3bd35be033f60f17025378752c09de84df2b49471989232327b8a74ca5eb6670"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_inotify_rm_watch.c",
+      "sha256": "1cde039a5692a46aa0533c3e6dbca1bc774f7538faab0eb86472d0aa133a0861"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_insmod.c",
+      "sha256": "cc7db974ecebbd568571b52a38af756d6ba7cc2f87e57da48887b0e577e3ed31"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -495,6 +735,26 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_lchown.c",
       "sha256": "f4e7ad857c22e8ce301ef8a3e2e15bb316e3f6b0d1f9d5ce4f052f4f4aa4c962"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_link.c",
+      "sha256": "c1264308e829a9a85258417562d13668511ef335f510ea00664ee034f37783b8"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_listen.c",
+      "sha256": "bad6262941e7cb3a6e2d36a9ac388c811e8e4de113f9babdd256d2600295d6aa"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -550,6 +810,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_mmap.c",
       "sha256": "77bf210590c119feb24358156cf2027b953a157a91c239c25574eafa836f2a42"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_modhandle.c",
+      "sha256": "f2ac0c806c7dafd20cf5b911aac4a17529640787996bd983ec2df122a694ea99"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -772,6 +1042,16 @@
       "sha256": "462f3a571e2a01f1659a2d206fe6d861f346c969970a6227ebd68f754fa5cff8"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_close.c",
+      "sha256": "8f457e7d35ef6d8e1618de3e1026dd02564f1b41fd3e34b4753e660e6d65d14f"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -781,6 +1061,26 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_nxsem_destroy.c",
       "sha256": "ce0151784258252d8cf552cac89294840b45f4772005353a84d13bbe280e31d9"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_getprioceiling.c",
+      "sha256": "69ee113482612f01410068562d3ab0fe86dbfd28e9f3e3362931671d3d9577f3"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_open.c",
+      "sha256": "95db09727e0f2ec2656e7afe6ea26abcf369b7021f06e5043678cacc76454401"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -816,6 +1116,16 @@
       "sha256": "28a1af6b31fda5f63220b85cba8bdc9caa8c376cc788faa9b8e928c3d682685c"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_setprioceiling.c",
+      "sha256": "201eb15a1f6a2f865fcd8499d2dffc99b1521e59a6e730681125e8f6f2498822"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -847,6 +1157,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_nxsem_trywait_slow.c",
       "sha256": "26ea3003cc22000faf1c5f20502d79bf7853530e4a010c54108dadbcbd327e1e"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_nxsem_unlink.c",
+      "sha256": "edaba0d6cd0766558f549166644c89393693a557930447e00fed457eff7921cb"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -904,6 +1224,16 @@
       "sha256": "7ef062092e4f797e935d077ee514c106a53af57ffdd718865c672da35fbcd1a5"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pgalloc.c",
+      "sha256": "75aac9d7b0a3e74b9293b0840448dea011cfe978923bd2bde144e584cfbb8e7d"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -924,6 +1254,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_poll.c",
       "sha256": "2727210d3fcf207ee8ac18660fccceb86d192793f4df6725e18ae35144bd190e"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_posix_spawn.c",
+      "sha256": "c54dfebd0ada34ccbf8587446516847005ebbde7554dee2a726c47648d0dd7dd"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -992,6 +1332,16 @@
       "sha256": "63aa6b5833c76a7198921bc66d510507f465c027aec18c4e7d1125c3c1c4cb75"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_getaffinity_np.c",
+      "sha256": "733626bb786980eff7ac0eaeee685d92220a224950c853cbf69b8962fd3b1cf0"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1012,6 +1362,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_pthread_join.c",
       "sha256": "59dde20627c4002a4bf8b7bbfbd8180710de378939053a75e8119bfdc37a6fde"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_pthread_setaffinity_np.c",
+      "sha256": "cdfa07a40d3e7a0cb31df10f38ecd235685a2cd985ce41c813c71b1b8d7240a3"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1080,6 +1440,16 @@
       "sha256": "cad7d70b1618663d6e04924dba941aa5284aaf7cc6a0c5ea20e65f5760e8ab9e"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_readlink.c",
+      "sha256": "1afe2fa6d9e20ceb38fc78a6c8e4543af4421882a22cba3ef539e51248e49480"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1089,6 +1459,36 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_readv.c",
       "sha256": "8642d2f5e28567942373cfc44da29c854ebfcb680ae2b98dc29e55fc72b17b6c"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_recv.c",
+      "sha256": "554d59e78ad55c91bca2f7fda655b51e5459eb76e0b9e9098c603f526348ad10"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_recvfrom.c",
+      "sha256": "9045f4b8114c4f121cdb9e8158fe77161e6e54b66a41964a4c5c2e36ad5c30ba"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_recvmsg.c",
+      "sha256": "3f4fb1220d9916439b5467dcd75c20ccc171a40585b35cbb00ac199e88d748df"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1113,6 +1513,16 @@
       "sha256": "858efdcc8dcb49dc6c6f0aab001d8e04b54abed4a4ef8eee8661ec1194776a4a"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_rmmod.c",
+      "sha256": "47dff25ba4d8b39d14acbed775720853ace1580e4844a5f648e0022f5897f957"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1122,6 +1532,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_sched_backtrace.c",
       "sha256": "80de4e070c0ea012419b6259940442a2e690fe74a62e3df7364222cf42f299f8"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_getaffinity.c",
+      "sha256": "ccac3db043e2deacd5b9b385abf702098e3cec044c73c75eede0e035b1e645e0"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1179,6 +1599,26 @@
       "sha256": "e7f245ad1916e6c383f504bb0bab993cf133d735038eca8fb95c271e429bf47c"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_note_event_ip.c",
+      "sha256": "a06a6fe4c1039c1e897b1e282f544dc44fd4effd44c13135ea288851f3c6c882"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_note_vprintf_ip.c",
+      "sha256": "026d4737e9ced59f23bb640bf53d2dd2f181cc66377bcb257b3f709b1f44237d"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1188,6 +1628,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_sched_rr_get_interval.c",
       "sha256": "ce2e771b55ba39cfa42ac6bab87c93688a21e8720648c25188289dc5c4e189cc"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sched_setaffinity.c",
+      "sha256": "729f6e12be5afb74e860803c595826d3b75959859b3a88119cf15b38067999fa"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1245,6 +1695,16 @@
       "sha256": "7d19ea24927d4e4a7788903882f911f96b554e392fe8888b61d2070bb6e4c631"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_send.c",
+      "sha256": "31e086f0e76bc872ba7c120b38e49688739b83b40621617e287628ec694eb7ed"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1256,6 +1716,36 @@
       "sha256": "393aadc415f28ee0338e12c67c1d4e4205076403ddf42842280a93224fbe1e61"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sendmsg.c",
+      "sha256": "defb7985f3cf1ecec5378cf7d898081161a7a1bbec5f618b51373414850efab3"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_sendto.c",
+      "sha256": "8cbd9a3cf0fece9ada82552af34ad159467964210b161f340a3bc4f8c3aa6588"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_setegid.c",
+      "sha256": "738902f09a42eaf45a5844aef3c34d8757b2d0f682292bb7596a53d728dcac86"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1265,6 +1755,26 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_setenv.c",
       "sha256": "c939f46e7d25318b9ec348deb521380209177b6db08adbd4c7c12e71fc90d0b9"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_seteuid.c",
+      "sha256": "856c0c9c2b6c761731451fe962c81e0d8c49ed1f5edcf58955b7ea7a4cf00503"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_setgid.c",
+      "sha256": "3b6c8cd81247b91d9bc8b323b5b5bbcad1bd0087216b975cb3bf9771724bd196"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1289,6 +1799,16 @@
       "sha256": "955d5c64c4fa3e5fef3506e234be225e9c256d846ffa2dd52e7928f6519a564d"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_setsockopt.c",
+      "sha256": "8e19d1579d6124ff1f506b17abf62295f5861ff5bb114e93f0689cb5e8a2885e"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1298,6 +1818,86 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_settimeofday.c",
       "sha256": "2a891bd4cb4b131f7fad780d9398e8b98b86157a87a0b53c20375dd862c9c03d"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_setuid.c",
+      "sha256": "0e6f9ca1c21c36435faf3828d276d0a2aff2efeb8464f235e5331715e365f58f"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shm_open.c",
+      "sha256": "e47141645fc64400e8030c61e7534027c83378fabe34cc6b82e7f73e0bb9d14d"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shm_unlink.c",
+      "sha256": "0714cab9eeea1f1d6a73b77be390e5d9154fa28f0b1b0fb5d122195e05577a7e"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shmat.c",
+      "sha256": "b188536dad60a7f5a09c5c011113df2b56d8d9b26fb73c24d9a4fbece429de59"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shmctl.c",
+      "sha256": "271061344f896cf92391324639656ed2c119bc66281331affbfdbdbd6cbfb3f4"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shmdt.c",
+      "sha256": "a212d88a50591e3429987c360ce21c0bef3e36e0f95ebec7b34cda01e55b5c0a"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shmget.c",
+      "sha256": "6c3c4bcec2af8bac5deb3d2b9ec828912affa6b8ac8ddbbc8b930c8074c62251"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_shutdown.c",
+      "sha256": "2301873a1fd4f78366f957c2f71ecf6603e6e9b8f1ef34ff67cc3bad5c8fc801"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1320,6 +1920,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_signal.c",
       "sha256": "39aa303a4a15a92097421c22a0ef1466993887c3d233d122fd75bf37b72a7f38"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_signalfd.c",
+      "sha256": "11d465288dd75d113140833107182c6265feef8ddf3be44df2fec611c6ef1e32"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1388,6 +1998,26 @@
       "sha256": "480404605147cdb94a07c48b388245d542df8d1baffb0cc59d9ccf3e84d399df"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_socket.c",
+      "sha256": "bb4874ff4d052c9cc90cb46779234dbbbc36092446c8cb10378545ab22ee4bef"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_socketpair.c",
+      "sha256": "d1bc7a1a6671cb1fe6d3e088d9d073fff7167021672f110da2caa03ebb50a6f2"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1408,6 +2038,16 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_statfs.c",
       "sha256": "a246876e2a3e2eef0c79d8e0cd225c069eb90417229588eefa4ec139f25d4346"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_symlink.c",
+      "sha256": "f7a0a282370920944991c2e7a6daf76595c4625276d24d198ab5a0fbf375f531"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
@@ -1553,6 +2193,36 @@
       "sha256": "a5ea75dd95e64c4eb2650bfd1d9d148a8af96bf555e2bb8c23a6cfe6f26367a5"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timerfd_create.c",
+      "sha256": "528a5df3bba223995b29db3cff816262bc70d375f51c9b6ea07c25706b3aec8a"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timerfd_gettime.c",
+      "sha256": "2627ab088f6f3d2ba38bfcd3f4632292bd19d4e6dbd810562914318ac11a4138"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_timerfd_settime.c",
+      "sha256": "520ca6bfbd89b4cfd4331b077e231360421cfdc8468a471859ed3d24f759a1f1"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1586,6 +2256,16 @@
       "sha256": "537ebf6aa20d86e8dd685b9e485d657d8342e79d203765a7a35c07ebe4a42209"
     },
     {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_up_fork.c",
+      "sha256": "a9fe8559fcd91f2170b75dc7ca827e6bce4e0357adc974d90a012c450ac135b2"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
@@ -1595,6 +2275,26 @@
       ],
       "path": "nuttx/syscall/stubs/STUB_utimens.c",
       "sha256": "f48b794ab48cade4685867628fb8699437dec968d4eb606ea7c87168efb4ef0b"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_wait.c",
+      "sha256": "26f3338c24c57dd9558fe42b8c8c99969379a7bd651107529b274efc309ee6d0"
+    },
+    {
+      "evidence": "syscall-generator-trace:fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01;generator-sha256:244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f;input-sha256:8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+      "generator_argv": [
+        "nuttx/tools/mksyscall",
+        "-s",
+        "nuttx/syscall/syscall.csv"
+      ],
+      "path": "nuttx/syscall/stubs/STUB_waitid.c",
+      "sha256": "99f41d8abc0c62191536b1a611bd125707cf9c92150969a28d5483d76223dd5e"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",

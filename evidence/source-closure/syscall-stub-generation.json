@@ -1,0 +1,13 @@
+{
+  "generated_file_count": 70,
+  "generator_argv": [
+    "nuttx/tools/mksyscall",
+    "-s",
+    "nuttx/syscall/syscall.csv"
+  ],
+  "generator_sha256": "244f11b7d020147c8c87fe2e7c30e20674e4c54884146944224bcf3f00eac13f",
+  "input_sha256": "8e1ef0128a9395957054f146444896d1acdd6ec06125a4f2df6278d14db82cfd",
+  "schema": "brickwright/generated-input-proof/v1",
+  "status": "exact-output-match",
+  "trace_sha256": "fba282a9bca80895a39b0e423bc3e4868e466d03dc69d0289df9381a75498a01"
+}
