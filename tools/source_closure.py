@@ -482,6 +482,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
             archive, member = value.rsplit("(", 1)
             archive_members.setdefault(archive, set()).add(member[:-1])
     by_basename: dict[str, list[tuple[Path, str]]] = {}
+    by_digest: dict[str, list[Path]] = {}
     selected = set()
     for record_path in records:
         record = json.loads(record_path.read_text(encoding="utf-8"))
@@ -490,6 +491,8 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
         identity = normalized_build_path(Path(record["cwd"]) / output, cwd)
         if identity in direct: selected.add(record_path)
         by_basename.setdefault(Path(output).name, []).append((record_path, identity))
+        if record.get("output_sha256"):
+            by_digest.setdefault(record["output_sha256"], []).append(record_path)
     archive_records = []
     for directory in getattr(arguments, "capture", []):
         archive_records.extend(Path(directory).glob("archives/*.json"))
@@ -541,6 +544,12 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
             if len(producers)!=1: die(f"archive member has no unique recorded input: {archive_identity}({member})")
             exact=normalized_build_path(producers[0],cwd)
             candidates=[path for path,identity in by_basename.get(member,[]) if identity==exact]
+            # NuttX Apps disambiguates colliding object names by copying an
+            # object to a suffixed name before archiving it. Exact identity is
+            # preferred; otherwise require one compiler output with the same
+            # immutable bytes as the captured archive input.
+            if not candidates and producers[0].is_file():
+                candidates = by_digest.get(sha256(producers[0]), [])
             if len(candidates)!=1: die(f"archive input has no unique compiler producer: {exact}")
             selected.add(candidates[0])
     return sorted(selected)

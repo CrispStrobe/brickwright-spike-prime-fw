@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Black-box tests for tools/source_closure.py."""
 from __future__ import annotations
-import json, subprocess, sys, tempfile, unittest
+import hashlib, json, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parents[1] / "tools/source_closure.py"
@@ -138,23 +138,26 @@ class ClosureTest(unittest.TestCase):
         staged_archive.parent.mkdir()
         staged_archive.write_bytes(b"final")
         for name, source in (("first.o", "main.c"), ("second.o", "header.h")):
+            object_path = self.base / name
+            object_path.write_bytes(name.encode())
             dep = capture / f"{name}.d"
             dep.write_text(f"{name}: {self.root / source}\n")
             (capture / "compiles" / f"{name}.json").write_text(json.dumps({
                 "cwd": str(self.base), "depfile": str(dep), "output": name,
+                "output_sha256": hashlib.sha256(name.encode()).hexdigest(),
             }))
-        import hashlib
+        (self.base / "second_1.o").write_bytes(b"second.o")
         (capture / "archives/first.json").write_text(json.dumps({
             "cwd": str(self.base), "argv": ["rcs", "libapps.a", "first.o"],
             "output": str(archive), "output_sha256": hashlib.sha256(b"partial").hexdigest(),
         }))
         (capture / "archives/second.json").write_text(json.dumps({
-            "cwd": str(self.base), "argv": ["rcs", "libapps.a", "second.o"],
+            "cwd": str(self.base), "argv": ["rcs", "libapps.a", "second_1.o"],
             "output": str(archive), "output_sha256": hashlib.sha256(b"final").hexdigest(),
         }))
         mapfile = self.base / "firmware.map"
         mapfile.write_text(
-            f"{staged_archive}(first.o)\n{staged_archive}(second.o)\n"
+            f"{staged_archive}(first.o)\n{staged_archive}(second_1.o)\n"
         )
         trace = self.base / "empty.trace"; trace.write_text("")
         self.invoke(
