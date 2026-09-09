@@ -21,6 +21,7 @@ ALLOWED_LICENSES = {
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
+    ("nuttx", "libs/libc/search/hash_func.c"): "BSD-3-Clause-UC",
 }
 EXTRACTED_LICENSES = {
     "LicenseRef-NuttX-PublicDomain": {
@@ -33,7 +34,9 @@ REVIEWED_LICENSE_NOTICES = {
         b"Written by J.T. Conklin <jtc@netbsd.org>\n * Public domain."
     ),
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
+    ("nuttx", "libs/libc/search/hash_func.c"): b"Neither the name of the University nor the names of its contributors",
 }
+REVIEWED_LICENSE_HASHES = {("nuttx", "libs/libc/search/hash_func.c"): "6826243ed593eabc859b30aecdd7ed737efddf89ea192a7a66c30daddbb2fc40"}
 REVIEWED_NESTED_BOUNDARIES = {
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): {
         "boundary_path": "graphics/nxwidgets/COPYING",
@@ -768,6 +771,9 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict
         notice = REVIEWED_LICENSE_NOTICES[(root["name"], relative.as_posix())]
         if notice not in path.read_bytes():
             die(f"reviewed license notice mismatch: {root['name']}/{relative}")
+        expected_hash=REVIEWED_LICENSE_HASHES.get((root["name"],relative.as_posix()))
+        if expected_hash and sha256(path)!=expected_hash:
+            die(f"reviewed license file drift: {root['name']}/{relative}")
         boundary = REVIEWED_NESTED_BOUNDARIES.get((root["name"], relative.as_posix()))
         if boundary is not None:
             boundary_path = Path(root["path"]) / boundary["boundary_path"]
