@@ -47,7 +47,9 @@ def main():
   outputs[name]=item["sha256"]
  if set(outputs)!=OUTPUTS: fail("output set mismatch")
  identities=d.get("source_identities")
- roots=json.loads(Path(a.roots).read_text()).get("roots",[])
+ roots_document=json.loads(Path(a.roots).read_text())
+ if roots_document.get("schema")!=1: fail("invalid roots declaration schema")
+ roots=roots_document.get("roots",[])
  if not isinstance(roots,list) or any(not isinstance(item,dict) for item in roots): fail("invalid roots declaration")
  names=[item.get("name") for item in roots]
  if None in names or len(names)!=len(set(names)): fail("duplicate or missing source root name")
