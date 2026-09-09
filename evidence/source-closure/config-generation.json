@@ -30,7 +30,7 @@
     {"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory"}
   ],
   "source_identities": [
-    {"commit": "999e2d86f9b692abaf63b22dad77d22aeb03029c", "path": "apps", "root": ".", "tree": "87478a45a4db3cdb21374f18d86a78d32e435491"},
+    {"commit": "553a3161116db2c49033b3e7f948563bd9824e94", "path": "apps", "root": ".", "tree": "87478a45a4db3cdb21374f18d86a78d32e435491"},
     {"commit": "a67efb31cf4f236e456882589b91862f04594528", "path": ".", "root": "nuttx", "tree": "f828c9b54198a9adcc01c5042b6d1cc64472e385"},
     {"commit": "55f0bc216565ccab8dee600a88f4485c7693bf8b", "path": ".", "root": "nuttx-apps", "tree": "2dca909c592142cc9c496165ef46de3a7496eca7"}
   ],
