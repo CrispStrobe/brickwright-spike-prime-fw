@@ -28,14 +28,20 @@ def main():
  commands=d.get("generator_commands");
  if commands!=COMMANDS: fail("generator commands differ")
  seen=set()
- for item in d.get("generator_inputs",[]):
+ inputs=d.get("generator_inputs")
+ if not isinstance(inputs,list) or not inputs: fail("generator inputs are missing")
+ for item in inputs:
+  if not isinstance(item,dict): fail("invalid generator input")
   name=rel(item.get("path"),"input").as_posix(); path=regular(repo,name,"input")
   if name in seen: fail("duplicate input")
   seen.add(name)
   if not HEX.fullmatch(item.get("sha256",'')) or sha(path)!=item["sha256"]: fail("input missing or changed: "+name)
  if seen!={"boards/spike-prime-hub/configs/usbnsh/defconfig","nuttx/tools/version.sh"}: fail("input set mismatch")
  outputs={}
- for item in d.get("outputs",[]):
+ output_items=d.get("outputs")
+ if not isinstance(output_items,list) or not output_items: fail("outputs are missing")
+ for item in output_items:
+  if not isinstance(item,dict): fail("invalid output")
   name=rel(item.get("path"),"output").as_posix(); path=regular(repo,name,"output")
   if name in outputs: fail("duplicate output")
   if not HEX.fullmatch(item.get("sha256",'')) or sha(path)!=item["sha256"]: fail("output missing or changed: "+name)
