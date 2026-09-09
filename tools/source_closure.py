@@ -23,6 +23,7 @@ REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
     ("nuttx-apps", "graphics/nxwidgets/Kconfig"): "Apache-2.0 AND BSD-3-Clause",
     ("nuttx-apps", "graphics/twm4nx/Kconfig"): "Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
+    ("nuttx-apps", "graphics/twm4nx/apps/Kconfig"): "Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
     ("nuttx-apps", "graphics/nxwm/Kconfig"): "Apache-2.0",
     ("nuttx-apps", "graphics/twm4nx/Make.defs"): "Apache-2.0",
     ("nuttx-apps", "graphics/nxwm/Make.defs"): "Apache-2.0",
@@ -86,6 +87,13 @@ REVIEWED_BOUNDARY_LICENSE_SELECTIONS = {
     },
     ("nuttx-apps", "graphics/twm4nx/Kconfig"): {
         "source_sha256":"967046555f90d88eccc87c75b2857341ec4f1dfdf78fb9a9d237fb4fd63cd2ab",
+        "boundary_path":"graphics/twm4nx/COPYING", "boundary_sha256":"f1f9cb0ed8a020522b4de0a5b84a2745d4de9609cf58f3b892abb689f6c8cb45",
+        "declared":"Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X", "concluded":"Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
+        "required_notice":"graphics/twm4nx/COPYING",
+        "markers":[b"Copyright 1989, 1994, 1998  The Open Group",b"Copyright 1988 by Evans & Sutherland Computer Corporation",b"Copyright (C) 1998 The XFree86 Project, Inc.",b"Permission to use, copy, modify, distribute, and sell this software"],
+    },
+    ("nuttx-apps", "graphics/twm4nx/apps/Kconfig"): {
+        "source_sha256":"29e459b002d49ea4ae82b0106253cbf43480b83c11364170c2c38dd70ed07900",
         "boundary_path":"graphics/twm4nx/COPYING", "boundary_sha256":"f1f9cb0ed8a020522b4de0a5b84a2745d4de9609cf58f3b892abb689f6c8cb45",
         "declared":"Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X", "concluded":"Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
         "required_notice":"graphics/twm4nx/COPYING",
@@ -934,7 +942,10 @@ def license_rule(root: dict, relative: Path) -> tuple[str, bool]:
     while current.parts:
         if any((Path(root["path"]) / current / name).is_file() for name in LICENSE_BOUNDARY_NAMES):
             if selected_length < len(current.as_posix()):
-                die(f"nested license boundary lacks an override: {root['name']}/{current}")
+                die(
+                    f"nested license boundary lacks an override: {root['name']}/{current}; "
+                    f"while evaluating {root['name']}/{relative_text}"
+                )
         current = current.parent
     return selected
 

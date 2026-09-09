@@ -70,6 +70,11 @@
           "require_spdx": false
         },
         {
+          "license": "Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
+          "path": "graphics/twm4nx/apps/Kconfig",
+          "require_spdx": false
+        },
+        {
           "license": "Apache-2.0",
           "path": "graphics/nxwm/Make.defs",
           "require_spdx": true
