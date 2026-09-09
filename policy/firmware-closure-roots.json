@@ -30,6 +30,11 @@
           "require_spdx": true
         },
         {
+          "license": "BSD-3-Clause-UC",
+          "path": "libs/libc/stdlib/lib_wctomb.c",
+          "require_spdx": true
+        },
+        {
           "license": "ISC",
           "path": "libs/libc/string/lib_timingsafe_bcmp.c",
           "require_spdx": true
