@@ -101,6 +101,11 @@ never serialized. `.github`, `.gitignore`, nested `.git`, and other `.git*`
 paths remain ordinary fail-closed inputs. Offline builds use pinned `.version`
 and source identities and must not require Git metadata.
 
+Captured builds may be replayed elsewhere only with explicit
+`--captured-repository-root OLD`. Absolute paths strictly beneath `OLD` are
+mapped to the current repository; external paths and prefix lookalikes are not.
+Evidence records only that relocation was enabled, never either host path.
+
 `tools/compare_offline_builds.py` compares an explicit artifact set from two
 fresh materializations. It requires an immutable container image ID, records
 that networking was disabled, hashes the accepted source manifest, emits no run
