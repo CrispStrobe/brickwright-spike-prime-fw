@@ -489,6 +489,42 @@ def cached_trace_paths(arguments: argparse.Namespace, path: Path, initial_cwd: P
     return set(consumed), set(generated)
 
 
+def repository_tool_roots(arguments: argparse.Namespace) -> dict[str, tuple[Path, str]]:
+    repository = Path(arguments.repository).resolve()
+    roots = getattr(arguments, "_closure_roots", None)
+    if roots is None:
+        roots = load_roots(Path(arguments.roots))
+    result: dict[str, tuple[Path, str]] = {}
+    resolved_roots: list[Path] = []
+    for value in getattr(arguments, "repository_tool_root", []):
+        if "=" not in value:
+            die("repository tool root must be LABEL=PATH")
+        label, raw = value.split("=", 1)
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", label) or label in result:
+            die("invalid or duplicate repository tool-root label")
+        lexical = Path(raw)
+        lexical = lexical if lexical.is_absolute() else repository / lexical
+        resolved = lexical.resolve()
+        if resolved == repository or not resolved.is_relative_to(repository):
+            die("repository tool root must resolve strictly beneath repository")
+        if not resolved.is_dir():
+            die("repository tool root is missing or not a directory")
+        if any(resolved == other or resolved in other.parents or other in resolved.parents for other in resolved_roots):
+            die("repository tool roots overlap")
+        for source in roots:
+            source_path = Path(source["path"]).resolve()
+            # The broad project root owns the repository namespace; explicit
+            # nested source roots (for example mbedTLS) must never be waived.
+            if source_path != repository and (
+                resolved == source_path or resolved in source_path.parents or source_path in resolved.parents
+            ):
+                die(f"repository tool root overlaps declared source root: {source['name']}")
+        logical = resolved.relative_to(repository).as_posix()
+        result[label] = (resolved, logical)
+        resolved_roots.append(resolved)
+    return result
+
+
 def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     paths: set[Path] = set()
     generated: set[Path] = set()
@@ -497,11 +533,25 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         consumed={replay_path(path,arguments) for path in consumed}; trace_generated={replay_path(path,arguments) for path in trace_generated}
         paths.update(consumed); generated.update(trace_generated)
     repository = Path(arguments.repository).resolve()
+    tool_roots = repository_tool_roots(arguments)
+    tool_excluded = {label: set() for label in tool_roots}
     for trace in getattr(arguments, "repository_trace", []):
         consumed, trace_generated = cached_trace_paths(arguments, Path(trace), Path(arguments.cwd))
         consumed={replay_path(path,arguments) for path in consumed}; trace_generated={replay_path(path,arguments) for path in trace_generated}
-        paths.update(path for path in consumed if path.is_relative_to(repository))
+        for path in consumed:
+            if not path.is_relative_to(repository):
+                continue
+            resolved = path.resolve()
+            matched = [label for label,(root,_) in tool_roots.items() if resolved == root or resolved.is_relative_to(root)]
+            if matched:
+                tool_excluded[matched[0]].add(resolved)
+            else:
+                paths.add(path)
         generated.update(trace_generated)
+    arguments._repository_tool_audit = [
+        {"label":label,"path":tool_roots[label][1],"count":len(tool_excluded[label]),"scope":"repository-trace-only"}
+        for label in sorted(tool_roots)
+    ]
     for trace in getattr(arguments, "flow_trace", []):
         _, trace_generated = cached_trace_paths(arguments, Path(trace), Path(arguments.cwd))
         trace_generated={replay_path(path,arguments) for path in trace_generated}
@@ -1186,6 +1236,7 @@ def generate(arguments: argparse.Namespace) -> None:
     if not arguments.depfile and not arguments.capture:
         die("compiler evidence requires --depfile or --capture")
     roots = load_roots(Path(arguments.roots))
+    arguments._closure_roots = roots
     manifest = {
         "schema": 1,
         "allowed_licenses": sorted(ALLOWED_LICENSES),
@@ -1195,6 +1246,7 @@ def generate(arguments: argparse.Namespace) -> None:
         "generated_inputs": declared_generated(arguments)[1],
         "generated_symlinks": declared_symlinks(arguments)[1],
         "vcs_administration": vcs_administration(consumed_paths(arguments), roots)[1],
+        "repository_tool_roots": arguments._repository_tool_audit,
         "capture_relocation": {"enabled":mapping is not None,"source_identity":"captured-repository-root" if mapping else None},
     }
     link_evidence = None
@@ -1215,9 +1267,11 @@ def verify(arguments: argparse.Namespace) -> None:
     manifest = json.loads(Path(arguments.manifest).read_text(encoding="utf-8"))
     if manifest.get("capture_relocation")!={"enabled":mapping is not None,"source_identity":"captured-repository-root" if mapping else None}: die("capture relocation audit differs")
     roots = load_roots(Path(arguments.roots))
+    arguments._closure_roots = roots
     if manifest.get("source_roots") != [public_root(root) for root in roots]:
         die("manifest source-root metadata differs from declarations")
     consumed_all=consumed_paths(arguments); vcs_excluded,vcs_rows=vcs_administration(consumed_all,roots)
+    if manifest.get("repository_tool_roots") != arguments._repository_tool_audit: die("repository tool-root audit differs")
     if manifest.get("vcs_administration")!=vcs_rows: die("VCS administration audit differs")
     actual_files = manifest.get("files", [])
     actual_keys = {(item.get("source_root"), item.get("path")) for item in actual_files}
@@ -1269,6 +1323,10 @@ def make_parser() -> argparse.ArgumentParser:
         command.add_argument("--external-root", action="append", default=[])
         command.add_argument("--repository", default=".")
         command.add_argument("--captured-repository-root")
+        command.add_argument(
+            "--repository-tool-root", action="append", default=[], metavar="LABEL=PATH",
+            help="exclude an explicit nested host/build-tool directory from repository traces only",
+        )
 
     generate_parser = commands.add_parser("generate")
     add_common(generate_parser)

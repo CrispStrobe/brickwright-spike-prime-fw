@@ -120,6 +120,24 @@ class ClosureTest(unittest.TestCase):
             [item["path"] for item in json.loads(self.manifest.read_text())["files"]],
         )
 
+    def test_repository_tool_root_excludes_only_repository_trace(self):
+        tools=self.base/".local/toolchain"; tools.mkdir(parents=True); executable=tools/"compiler"; executable.write_bytes(b"host tool")
+        trace=self.base/"tool.trace"; trace.write_text(f'1 openat(AT_FDCWD, "{executable}", O_RDONLY) = 3\n')
+        arguments=("--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--repository-tool-root",f"toolchain={tools}","--depfile",self.dep,"--output",self.manifest,"--sbom",self.sbom)
+        self.invoke("generate",*arguments,"--repository-trace",trace)
+        report=json.loads(self.manifest.read_text()); self.assertEqual([{"label":"toolchain","path":".local/toolchain","count":1,"scope":"repository-trace-only"}],report["repository_tool_roots"]); self.assertNotIn(str(self.base),self.manifest.read_text())
+        self.assertIn("escapes declared",self.invoke("generate",*arguments,"--strace",trace,ok=False).stderr)
+        dep=self.base/"tool.d"; dep.write_text(f'x: {self.root / "main.c"} {executable}\n')
+        self.assertIn("escapes declared",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--repository-tool-root",f"toolchain={tools}","--repository-trace",trace,"--depfile",dep,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+
+    def test_repository_tool_root_rejects_missing_escape_overlap_and_duplicates(self):
+        valid=self.base/"tools"; valid.mkdir(); outside=self.base.parent
+        common=("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--repository-trace",self.trace,"--depfile",self.dep,"--output",self.manifest,"--sbom",self.sbom)
+        self.assertIn("missing",self.invoke(*common,"--repository-tool-root","missing=absent",ok=False).stderr)
+        self.assertIn("strictly beneath",self.invoke(*common,"--repository-tool-root",f"outside={outside}",ok=False).stderr)
+        self.assertIn("overlaps declared",self.invoke(*common,"--repository-tool-root",f"source={self.root}",ok=False).stderr)
+        self.assertIn("duplicate",self.invoke(*common,"--repository-tool-root",f"same={valid}","--repository-tool-root",f"same={valid}",ok=False).stderr)
+
     def test_stat_only_unlinked_license_is_not_source_content(self):
         unused = self.root / "unused.c"
         unused.write_text("/* SPDX-License-Identifier: OAR */\n")

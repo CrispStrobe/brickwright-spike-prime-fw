@@ -17,6 +17,12 @@ source. Pass it as `--repository-trace`: successful reads beneath
 audit still counts external reads, and the fixed-point gate rebuilds the
 materialized tree inside the pinned container with `--network none`. Ordinary
 `--strace` remains fail-closed across all paths.
+Nested host/build-tool directories can be removed from repository-trace input
+only with repeated `--repository-tool-root LABEL=PATH` declarations. Each must
+be an existing directory strictly below the repository, may not overlap a
+nested declared source root, and is recorded by logical path and excluded-file
+count. Ordinary traces, depfiles, and capture inputs are never filtered by this
+boundary.
 
 Regular-file `stat` and `access` calls are metadata checks, not content
 consumption. Content candidates opened for reading, executed files, successful
