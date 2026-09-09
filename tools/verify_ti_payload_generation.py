@@ -49,7 +49,7 @@ def main():
  if declaration.get("schema")!="brickwright/generated-build-inputs/v1" or len(matches)!=1 or matches[0].get("sha256")!=expected["ti_bts_local_payload.h"][0] or matches[0].get("license_boundary")!=boundary or matches[0].get("generator_argv")!=ARGV: fail("generated declaration differs")
  with tempfile.TemporaryDirectory(prefix="brickwright-ti-proof-") as tmp:
   docker=["docker"] if shutil.which("docker") and os.access("/var/run/docker.sock",os.W_OK) else ["sudo","-n","docker"]
-  command=docker+["run","--rm","--network","none","--read-only","--tmpfs","/tmp","--user",f"{os.getuid()}:{os.getgid()}","-v",str(repo)+":/src:ro","-v",tmp+":/out","-w","/src",IMAGE]+ARGV[:-1]+["/out"]
+  command=docker+["run","--rm","--network","none","--read-only","--cap-drop","ALL","--security-opt","no-new-privileges","--pids-limit","64","--tmpfs","/tmp:rw,noexec,nosuid,nodev,size=16m","--user",f"{os.getuid()}:{os.getgid()}","-v",str(repo)+":/src:ro","-v",tmp+":/out","-w","/src",IMAGE]+ARGV[:-1]+["/out"]
   result=subprocess.run(command,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
   if result.returncode: fail("network-none regeneration failed")
   found={p.name for p in Path(tmp).iterdir()}
