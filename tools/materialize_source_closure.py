@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
+import re
 
 
 def fail(message: str) -> None:
@@ -77,15 +78,16 @@ def main() -> None:
         fail("destination must be outside the source repository")
     if destination.exists() and any(destination.iterdir()):
         fail("destination is not empty")
-    destination.mkdir(parents=True, exist_ok=True)
-
     roots = load_roots(arguments.roots, repository)
     manifest = json.loads(arguments.manifest.read_text(encoding="utf-8"))
     if manifest.get("schema") != 1 or not isinstance(manifest.get("files"), list):
         fail("invalid source-closure manifest")
 
     copied: dict[Path, str] = {}
+    copy_plan: dict[Path, tuple[Path, str]] = {}
     for item in manifest["files"]:
+        if not isinstance(item, dict):
+            fail("invalid manifest input")
         root_name = item.get("source_root")
         if root_name not in roots:
             fail("manifest names an undeclared source root")
@@ -93,39 +95,60 @@ def main() -> None:
         relative = safe_relative(item.get("path", ""), "manifest path")
         target = destination_root / relative
         expected = item.get("sha256")
-        if not isinstance(expected, str):
+        if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
             fail("manifest input lacks SHA-256")
-        if target in copied and copied[target] != expected:
+        if target in copied or any(path in target.parents or target in path.parents for path in copied):
             fail("manifest inputs collide at destination")
-        copy_checked(source_root / relative, destination / target, expected)
+        source = source_root / relative
+        if not source.is_file() or source.is_symlink() or digest(source) != expected:
+            fail("source input is missing or changed")
         copied[target] = expected
+        copy_plan[target] = (source, expected)
 
-    for item in manifest.get("generated_inputs", []):
+    generated_items = manifest.get("generated_inputs", [])
+    if not isinstance(generated_items, list):
+        fail("generated inputs must be a list")
+    for item in generated_items:
+        if not isinstance(item, dict): fail("invalid generated input")
         relative = safe_relative(item.get("path", ""), "generated input path")
         expected = item.get("sha256")
-        if not isinstance(expected, str):
+        if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
             fail("generated input lacks SHA-256")
-        if relative in copied and copied[relative] != expected:
+        if relative in copied or any(path in relative.parents or relative in path.parents for path in copied):
             fail("generated input collides at destination")
-        copy_checked(repository / relative, destination / relative, expected)
+        source = repository / relative
+        if not source.is_file() or source.is_symlink() or digest(source) != expected:
+            fail("source input is missing or changed")
         copied[relative] = expected
+        copy_plan[relative] = (source, expected)
 
-    symlinked=set(); symlink_items=manifest.get("generated_symlinks", [])
+    symlinked=set(); symlink_plan=[]; symlink_items=manifest.get("generated_symlinks", [])
     if not isinstance(symlink_items,list): fail("generated symlinks must be a list")
     for item in symlink_items:
         if not isinstance(item,dict): fail("invalid generated symlink")
         relative=safe_relative(item.get("path",""),"generated symlink path")
         target=safe_relative(item.get("target",""),"generated symlink target")
         if relative in copied or relative in symlinked: fail("generated symlink collides at destination")
-        link=destination/relative; resolved=destination/target
-        if any(path.is_symlink() for path in [destination.joinpath(*relative.parts[:i]) for i in range(1,len(relative.parts))]): fail("generated symlink parent contains symlink")
-        if any(path.is_symlink() for path in [destination.joinpath(*target.parts[:i]) for i in range(1,len(target.parts)+1)]): fail("generated symlink target contains symlink")
         kind=item.get("target_type")
-        if not resolved.exists() or kind not in {"file","directory"} or (kind=="directory")!=resolved.is_dir() or (kind=="file")!=resolved.is_file(): fail("generated symlink target is missing or wrong type")
+        if kind not in {"file","directory"}: fail("generated symlink target is missing or wrong type")
+        symlink_plan.append((relative,target,kind)); symlinked.add(relative)
+    for relative,target,kind in symlink_plan:
+        if kind=="file" and target not in copy_plan: fail("generated symlink target is missing or wrong type")
+        if kind=="directory" and not any(target in path.parents for path in copy_plan): fail("generated symlink target is missing or wrong type")
+        if any(parent in symlinked for parent in relative.parents) or any(parent in symlinked for parent in (target,*target.parents)): fail("generated symlink topology traverses another symlink")
+        if any(parent in copied for parent in relative.parents): fail("generated symlink collides at destination")
+        if any(relative in path.parents for path in copy_plan): fail("generated symlink collides at destination")
+
+    # No destination mutation occurs until every row, byte hash, collision and
+    # symlink target has passed preflight.
+    destination.mkdir(parents=True, exist_ok=True)
+    for relative,(source,expected) in copy_plan.items():
+        copy_checked(source,destination/relative,expected)
+    for relative,target,kind in symlink_plan:
+        link=destination/relative; resolved=destination/target
         link.parent.mkdir(parents=True,exist_ok=True)
         link.symlink_to(Path(os.path.relpath(resolved,link.parent)))
         if not link.resolve().is_relative_to(destination) or link.resolve()!=resolved.resolve(): fail("materialized symlink escapes or differs")
-        symlinked.add(relative)
 
     print(f"materialize-source-closure: copied {len(copied)} files and {len(symlinked)} symlinks")
 

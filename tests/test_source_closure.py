@@ -377,6 +377,13 @@ class ClosureTest(unittest.TestCase):
         trace=self.base/"collision.trace"; trace.write_text(f'1 readlink("{link}", "target", 1023) = 6\n')
         self.assertIn("collide",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
 
+    def test_consumed_file_symlink_manifests_its_target(self):
+        link=self.base/"Make.defs"; link.symlink_to(self.root/"build.mk")
+        declaration=self.base/"generated.json"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[{"path":"Make.defs","target":"upstream/build.mk","target_type":"file"}]}))
+        trace=self.base/"file-link.trace"; trace.write_text(f'1 openat(AT_FDCWD, "{link}", O_RDONLY) = 3\n')
+        self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--strace",trace,"--depfile",self.dep,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom)
+        self.assertIn("build.mk",[item["path"] for item in json.loads(self.manifest.read_text())["files"]])
+
     def test_external_boundary_is_exact_and_not_vendored(self):
         external = self.base / "toolchain"; external.mkdir(); header=external / "stdint.h"; header.write_text("tool\n")
         import hashlib
