@@ -14,7 +14,9 @@ import subprocess
 from pathlib import Path, PurePosixPath
 
 
-ALLOWED_LICENSES = {"Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "MIT"}
+ALLOWED_LICENSES = {
+    "Apache-2.0", "BSD-2-Clause", "BSD-2-Clause-FreeBSD", "BSD-3-Clause", "MIT"
+}
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
 }
@@ -66,9 +68,10 @@ def run_git(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
     )
 
 
-def check_license(expression: str) -> None:
+def check_license(expression: str, context: str | None = None) -> None:
     if FORBIDDEN_LICENSE.search(expression) or expression not in ALLOWED_LICENSES:
-        die(f"unknown, compound, or forbidden license expression: {expression}")
+        suffix = f" at {context}" if context else ""
+        die(f"unknown, compound, or forbidden license expression: {expression}{suffix}")
 
 
 def load_roots(path: Path) -> list[dict]:
@@ -668,7 +671,7 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str]:
         concluded = declared if declared in allowed else allowed[0] if len(allowed) == 1 else None
         if concluded is not None:
             return concluded, expression
-    check_license(expression)
+    check_license(expression, f"{root['name']}/{relative.as_posix()}")
     raise AssertionError("unreachable")
 
 
