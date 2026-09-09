@@ -603,13 +603,17 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         die("consumed and declared generated symlink sets differ")
     lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink() and path.name != ".git")}
     normalized = {path.resolve() for path in lexical}
+    # Generated writes can be observed through a configured directory alias
+    # and later read through the real path (or vice versa). Compare the same
+    # resolved identities; strict=False intentionally retains removed outputs.
+    normalized_generated = {path.resolve(strict=False) for path in generated}
     # A file symlink is topology plus a byte-bearing target.  Directory links
     # need only topology here; their consumed descendants enter independently.
     normalized.update(
         (repository / item["target"]).resolve()
         for item in symlink_rows if item["target_type"] == "file"
     )
-    return (normalized - generated) | (normalized & declared)
+    return (normalized - normalized_generated) | (normalized & declared)
 
 
 def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:

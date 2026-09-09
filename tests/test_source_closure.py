@@ -74,6 +74,20 @@ class ClosureTest(unittest.TestCase):
         self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--output",self.manifest,"--sbom",self.sbom)
         self.assertNotIn("temporary.ddc",[item["path"] for item in json.loads(self.manifest.read_text())["files"]])
 
+    def test_generated_directory_alias_matches_real_read_identity(self):
+        alias=self.base/"apps-alias"; alias.symlink_to(self.root,target_is_directory=True)
+        product=self.root/"Make.dep"; product.write_bytes(b"generated")
+        trace=self.base/"alias-generated.trace"; trace.write_text(
+            f'1 openat(AT_FDCWD, "{alias / "Make.dep"}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3\n'
+            f'1 openat(AT_FDCWD, "{product}", O_RDONLY) = 4\n'
+        )
+        arguments=("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--strace",trace,"--depfile",self.dep,"--output",self.manifest,"--sbom",self.sbom)
+        self.invoke(*arguments)
+        self.assertNotIn("Make.dep",[item["path"] for item in json.loads(self.manifest.read_text())["files"]])
+        declaration=self.base/"generated.json"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":"upstream/Make.dep","sha256":hashlib.sha256(product.read_bytes()).hexdigest(),"generator_argv":["fixture"]}]}))
+        self.invoke(*arguments,"--generated",declaration.name)
+        self.assertEqual("upstream/Make.dep",json.loads(self.manifest.read_text())["generated_inputs"][0]["path"])
+
     def test_deterministic_manifest_sbom_and_link_evidence(self):
         obj = self.base / "main.o"; obj.write_bytes(b"object")
         mapfile = self.base / "firmware.map"; mapfile.write_text("LOAD main.o\n")
