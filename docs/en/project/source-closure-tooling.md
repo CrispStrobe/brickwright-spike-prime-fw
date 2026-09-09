@@ -26,9 +26,9 @@ affecting selection. The materializer copies declared generated files only
 after checking their hashes.
 
 `tools/verify_builtin_registry.py` checks an isolated native `register_all`
-run against its exact output manifest. Registry `.pdat` files and `.updated`
-are recorded generator metadata but are not materialized unless independent
-content-consumption evidence selects them.
+run against its exact output manifest and generated-input declaration. Registry
+`.bdat` and `.pdat` files are content-consumed and materialized; `.updated` is
+generator metadata only.
 `tools/verify_etctmp_generation.py` checks the two content-consumed board ROMFS
 startup scripts against their pinned, networkless compiler proof. Both outputs
 are materialized; no other staging-tree file is admitted.
