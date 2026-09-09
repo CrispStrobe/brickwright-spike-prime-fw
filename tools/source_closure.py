@@ -115,6 +115,23 @@ def sha256(path: Path) -> str:
             digest.update(chunk)
     return digest.hexdigest()
 
+def relocation(arguments: argparse.Namespace) -> tuple[Path,Path] | None:
+    raw=getattr(arguments,"captured_repository_root",None)
+    if raw is None: return None
+    old=Path(raw)
+    if not old.is_absolute() or old==Path("/"): die("captured repository root must be an absolute non-root path")
+    old=Path(os.path.abspath(old)); new=Path(arguments.repository).resolve()
+    if old==new or old in new.parents or new in old.parents: die("captured and replay repository roots overlap")
+    return old,new
+
+def replay_path(path: Path, arguments: argparse.Namespace) -> Path:
+    mapping=relocation(arguments)
+    if mapping is None or not path.is_absolute(): return path
+    old,new=mapping
+    try: relative=path.relative_to(old)
+    except ValueError: return path
+    return new/relative
+
 
 def run_git(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
@@ -433,17 +450,19 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     generated: set[Path] = set()
     for trace in arguments.strace:
         consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        consumed={replay_path(path,arguments) for path in consumed}; trace_generated={replay_path(path,arguments) for path in trace_generated}
         paths.update(consumed); generated.update(trace_generated)
     repository = Path(arguments.repository).resolve()
     for trace in getattr(arguments, "repository_trace", []):
         consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        consumed={replay_path(path,arguments) for path in consumed}; trace_generated={replay_path(path,arguments) for path in trace_generated}
         paths.update(path for path in consumed if path.is_relative_to(repository))
         generated.update(trace_generated)
     for trace in getattr(arguments, "flow_trace", []):
         _, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
         generated.update(trace_generated)
     for depfile in arguments.depfile:
-        paths.update(dep_record(Path(depfile))[1])
+        paths.update(replay_path(path,arguments) for path in dep_record(Path(depfile))[1])
     reachable_records = reachable_capture_records(arguments)
     generated.update(linked_archive_producer_outputs(arguments))
     for record_path in reachable_records:
@@ -451,20 +470,20 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         depfile = record.get("depfile")
         if not depfile:
             continue
-        record_cwd = Path(record["cwd"])
+        record_cwd = replay_path(Path(record["cwd"]),arguments)
         _, prerequisites = dep_record(Path(depfile))
-        paths.update(path if path.is_absolute() else record_cwd / path for path in prerequisites)
+        paths.update(replay_path(path,arguments) if path.is_absolute() else record_cwd / path for path in prerequisites)
     for directory in getattr(arguments, "capture", []):
         for record_path in Path(directory).glob("compiles/*.json"):
             record = json.loads(record_path.read_text(encoding="utf-8"))
             output = record.get("output")
             if output and record.get("output_sha256"):
                 path = Path(output)
-                path = (path if path.is_absolute() else Path(record["cwd"]) / path).resolve()
+                path = (replay_path(path,arguments) if path.is_absolute() else replay_path(Path(record["cwd"]),arguments) / path).resolve()
                 if path.is_file() and sha256(path) == record["output_sha256"]:
                     generated.add(path)
         for record_path in Path(directory).glob("links/*.json"):
-            record=json.loads(record_path.read_text()); cwd=Path(record["cwd"])
+            record=json.loads(record_path.read_text()); cwd=replay_path(Path(record["cwd"]),arguments)
             argv=record.get("argv",[])
             for index,value in enumerate(argv):
                 raw = argv[index+1] if value == "-T" and index+1 < len(argv) else value[2:] if value.startswith("-T") else None
@@ -495,7 +514,7 @@ def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[d
         capture = Path(directory)
         for record_path in capture.glob("links/*.json"):
             record = json.loads(record_path.read_text(encoding="utf-8"))
-            cwd = Path(record["cwd"])
+            cwd = replay_path(Path(record["cwd"]),arguments)
             for item in record.get("link_inputs", []):
                 logical = Path(item["argument"])
                 logical = logical.resolve() if logical.is_absolute() else (cwd / logical).resolve()
@@ -624,7 +643,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
     if not getattr(arguments, "map", []):
         return records
     cwd = Path(arguments.cwd).resolve()
-    identities = map_identities(arguments.map, cwd)
+    identities = map_identities(arguments.map, cwd, arguments)
     direct = {value for value in identities if "(" not in value}
     archive_members: dict[str, set[str]] = {}
     for value in identities:
@@ -638,7 +657,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
         record = json.loads(record_path.read_text(encoding="utf-8"))
         output = record.get("output")
         if not output: continue
-        identity = normalized_build_path(Path(record["cwd"]) / output, cwd)
+        identity = normalized_build_path(replay_path(Path(record["cwd"]),arguments) / output, cwd)
         if identity in direct: selected.add(record_path)
         by_basename.setdefault(Path(output).name, []).append((record_path, identity))
         if record.get("output_sha256"):
@@ -654,7 +673,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
         if not output or not record.get("output_sha256"):
             continue
         path = Path(output)
-        absolute = (path if path.is_absolute() else Path(record["cwd"]) / path).resolve()
+        absolute = (replay_path(path,arguments) if path.is_absolute() else replay_path(Path(record["cwd"]),arguments) / path).resolve()
         archives_by_output.setdefault(absolute, []).append(record)
     for archive_identity, members in archive_members.items():
         archive_path = cwd / archive_identity
@@ -688,7 +707,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
             for value in record["argv"][2:]:
                 if value.startswith("-"): continue
                 path=Path(value)
-                inputs.append((path if path.is_absolute() else Path(record["cwd"])/path).resolve())
+                inputs.append((replay_path(path,arguments) if path.is_absolute() else replay_path(Path(record["cwd"]),arguments)/path).resolve())
         for member in members:
             producers=[p for p in inputs if p.name==member]
             if len(producers)!=1: die(f"archive member has no unique recorded input: {archive_identity}({member})")
@@ -709,7 +728,7 @@ def linked_archive_producer_outputs(arguments: argparse.Namespace) -> set[Path]:
     """Return current captured archive outputs whose bytes feed a mapped archive."""
     cwd = Path(arguments.cwd).resolve()
     mapped = {
-        value.rsplit("(", 1)[0] for value in map_identities(getattr(arguments, "map", []), cwd)
+        value.rsplit("(", 1)[0] for value in map_identities(getattr(arguments, "map", []), cwd, arguments)
         if "(" in value
     }
     records = []
@@ -719,7 +738,7 @@ def linked_archive_producer_outputs(arguments: argparse.Namespace) -> set[Path]:
             output = record.get("output")
             if output and record.get("output_sha256"):
                 item = Path(output)
-                records.append((record, (item if item.is_absolute() else Path(record["cwd"]) / item).resolve()))
+                records.append((record, (replay_path(item,arguments) if item.is_absolute() else replay_path(Path(record["cwd"]),arguments) / item).resolve()))
     result = set()
     for identity in mapped:
         mapped_path = (cwd / identity).resolve()
@@ -974,15 +993,17 @@ def normalized_build_path(path: Path, cwd: Path) -> str:
         return normalized.as_posix()
 
 
-def map_identities(map_paths: list[str], cwd: Path) -> set[str]:
+def map_identities(map_paths: list[str], cwd: Path, arguments: argparse.Namespace | None = None) -> set[str]:
     identities = set()
     for map_path in map_paths:
         for token in MAP_OBJECT.findall(Path(map_path).read_text(encoding="utf-8", errors="replace")):
             archive = re.fullmatch(r"(.+\.a)\((.+\.o)\)", token)
             if archive:
-                identities.add(normalized_build_path(Path(archive.group(1)), cwd) + f"({archive.group(2)})")
+                value=Path(archive.group(1)); value=replay_path(value,arguments) if arguments else value
+                identities.add(normalized_build_path(value, cwd) + f"({archive.group(2)})")
             else:
-                identities.add(normalized_build_path(Path(token), cwd))
+                value=Path(token); value=replay_path(value,arguments) if arguments else value
+                identities.add(normalized_build_path(value, cwd))
     return identities
 
 
@@ -1009,7 +1030,7 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
         dependencies[target_id] = sources
     for record_path in reachable_capture_records(arguments):
         record = json.loads(record_path.read_text(encoding="utf-8"))
-        record_cwd = Path(record["cwd"])
+        record_cwd = replay_path(Path(record["cwd"]),arguments)
         target, paths = dep_record(Path(record["depfile"]))
         target_id = normalized_build_path(record_cwd / target, cwd)
         sources = set()
@@ -1033,7 +1054,7 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
             die(f"duplicate object input: {identity}")
         objects[identity] = path
         basename_index.setdefault(path.name, []).append(identity)
-    map_objects = map_identities(arguments.map, cwd)
+    map_objects = map_identities(arguments.map, cwd, arguments)
     for identity in map_objects:
         if "/" not in identity and "(" not in identity and len(basename_index.get(identity, [])) > 1:
             die(f"ambiguous basename-only map object: {identity}")
@@ -1068,6 +1089,7 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
 
 
 def generate(arguments: argparse.Namespace) -> None:
+    mapping=relocation(arguments)
     if not arguments.strace and not arguments.repository_trace:
         die("file-consumption evidence requires --strace or --repository-trace")
     if not arguments.depfile and not arguments.capture:
@@ -1082,6 +1104,7 @@ def generate(arguments: argparse.Namespace) -> None:
         "generated_inputs": declared_generated(arguments)[1],
         "generated_symlinks": declared_symlinks(arguments)[1],
         "vcs_administration": vcs_administration(consumed_paths(arguments), roots)[1],
+        "capture_relocation": {"enabled":mapping is not None,"source_identity":"captured-repository-root" if mapping else None},
     }
     link_evidence = None
     if arguments.evidence:
@@ -1093,11 +1116,13 @@ def generate(arguments: argparse.Namespace) -> None:
 
 
 def verify(arguments: argparse.Namespace) -> None:
+    mapping=relocation(arguments)
     if not arguments.strace and not arguments.repository_trace:
         die("file-consumption evidence requires --strace or --repository-trace")
     if not arguments.depfile and not arguments.capture:
         die("compiler evidence requires --depfile or --capture")
     manifest = json.loads(Path(arguments.manifest).read_text(encoding="utf-8"))
+    if manifest.get("capture_relocation")!={"enabled":mapping is not None,"source_identity":"captured-repository-root" if mapping else None}: die("capture relocation audit differs")
     roots = load_roots(Path(arguments.roots))
     if manifest.get("source_roots") != [public_root(root) for root in roots]:
         die("manifest source-root metadata differs from declarations")
@@ -1152,6 +1177,7 @@ def make_parser() -> argparse.ArgumentParser:
         command.add_argument("--external", action="append", default=[])
         command.add_argument("--external-root", action="append", default=[])
         command.add_argument("--repository", default=".")
+        command.add_argument("--captured-repository-root")
 
     generate_parser = commands.add_parser("generate")
     add_common(generate_parser)

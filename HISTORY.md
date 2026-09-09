@@ -7,6 +7,7 @@ and CI; pending work belongs in `PLAN.md`.
 
 - Added path-free VCS-administration audit records so source closures never
   serialize worktree metadata or host paths.
+- Added explicit, path-free repository relocation for immutable capture replay.
 
 - Created a parentless public snapshot from
   `owhinata/spike-nx@00524ea5464bddb46c852967e382f8f6b073abe6`.
