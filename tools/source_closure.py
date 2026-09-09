@@ -274,12 +274,18 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
     strong_content: set[Path] = set()
     generated: set[Path] = set()
     directories: set[Path] = set()
+    deferred_generated: dict[str, list[tuple[Path, str | None, str]]] = {}
     unfinished: dict[str, str] = {}
     state: dict[str, dict] = {}
     initial_pid: str | None = None
 
+    def resolve_deferred(pid: str) -> None:
+        for candidate, dirfd, context in deferred_generated.pop(pid, []):
+            generated.add(resolve_trace_path(candidate, pid, state, dirfd, context))
+
     def ensure_state(pid: str) -> None:
         if pid in state:
+            resolve_deferred(pid)
             return
         # With vfork(), strace can report the child's exec/open calls before
         # it reports the parent's resumed syscall and child PID.  At that
@@ -297,6 +303,7 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
             )
         parent = parents[0]
         state[pid] = {"cwd": [state[parent]["cwd"][0]], "fds": dict(state[parent]["fds"])}
+        resolve_deferred(pid)
 
     for raw_line in trace_lines(path):
         raw_line = raw_line.rstrip("\n")
@@ -351,6 +358,8 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
                 flag in argument_text for flag in ("O_CREAT", "O_TRUNC", "O_EXCL")
             )
             if creating and path_index is not None and not candidate.is_absolute():
+                dirfd = arguments[0] if path_index == 1 else None
+                deferred_generated.setdefault(pid, []).append((candidate, dirfd, line))
                 continue
             ensure_state(pid)
         if syscall in {"clone", "clone3", "fork", "vfork"}:
@@ -361,6 +370,7 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
             state.setdefault(
                 str(result), {"cwd": child_cwd, "fds": dict(state[pid]["fds"])}
             )
+            resolve_deferred(str(result))
             continue
         if syscall == "chdir":
             target = resolve_trace_path(quoted_path(arguments[0], line), pid, state, None, line)
@@ -449,6 +459,8 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
                     strong_content.add(resolved)
     if unfinished:
         die(f"unterminated syscalls in {path}: pids {sorted(unfinished)}")
+    if deferred_generated:
+        die(f"generated paths lack unambiguous inherited cwd state: pids {sorted(deferred_generated)}")
     # Build-created intermediates are linkage evidence, not vendored source.
     # Existing directories are traversal metadata, not source files. Missing
     # paths remain so locate() fails closed unless the trace proved creation.

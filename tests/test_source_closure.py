@@ -60,6 +60,20 @@ class ClosureTest(unittest.TestCase):
         self.trace.write_text(f'1 openat(AT_FDCWD, "{self.root / "build.mk"}", O_RDONLY) = 3\n')
         third,_=cached(arguments,self.trace,self.base); self.assertEqual({self.root/"build.mk"},third)
 
+    def test_child_create_before_resumed_vfork_is_deferred_and_excluded(self):
+        product=self.root/"temporary.ddc"; product.write_bytes(b"generated")
+        trace=self.base/"vfork-create.trace"; trace.write_text(
+            f'1 chdir("{self.root}") = 0\n'
+            '1 openat(AT_FDCWD, ".", O_RDONLY|O_DIRECTORY) = 5\n'
+            '1 vfork( <unfinished ...>\n'
+            '2 openat(5, "temporary.ddc", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3\n'
+            '1 <... vfork resumed>) = 2\n'
+            '2 openat(AT_FDCWD, "temporary.ddc", O_RDONLY) = 4\n'
+            '2 unlink("temporary.ddc") = 0\n'
+        )
+        self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--output",self.manifest,"--sbom",self.sbom)
+        self.assertNotIn("temporary.ddc",[item["path"] for item in json.loads(self.manifest.read_text())["files"]])
+
     def test_deterministic_manifest_sbom_and_link_evidence(self):
         obj = self.base / "main.o"; obj.write_bytes(b"object")
         mapfile = self.base / "firmware.map"; mapfile.write_text("LOAD main.o\n")
