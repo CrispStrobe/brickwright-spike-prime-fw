@@ -922,11 +922,12 @@ def vcs_administration(consumed: set[Path], roots: list[dict]) -> tuple[set[Path
     excluded=set(); rows=[]
     for root in roots:
         path=Path(root["path"])/".git"
-        if path not in consumed: continue
         if path.is_symlink(): continue
         kind="directory" if path.is_dir() else "file" if path.is_file() else None
         if kind is None: continue
-        excluded.add(path); rows.append({"source_root":root["name"],"path":".git","kind":kind,"reason":"VCS administration; source identity is pinned separately"})
+        affected={item for item in consumed if item==path or (kind=="directory" and path in item.parents)}
+        if not affected: continue
+        excluded.update(affected); rows.append({"source_root":root["name"],"path":".git","kind":kind,"count":len(affected),"reason":"VCS administration; source identity is pinned separately"})
     return excluded,sorted(rows,key=lambda x:x["source_root"])
 
 
