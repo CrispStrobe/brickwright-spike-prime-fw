@@ -13,6 +13,7 @@ class RegistryProofTest(unittest.TestCase):
         (self.out / "app.bdat").write_bytes(b"data"); (self.out / ".updated").write_bytes(b"")
         sha = lambda data: hashlib.sha256(data).hexdigest()
         self.evidence = self.root / "evidence.json"
+        self.declaration = self.root / "generated.json"
         self.evidence.write_text(json.dumps({
             "schema":"brickwright/generated-input-proof/v1",
             "status":"exact-output-match",
@@ -27,9 +28,10 @@ class RegistryProofTest(unittest.TestCase):
                 {"path":"app.bdat","sha256":sha(b"data"),"disposition":"consumed-generated-input"},
             ],
         }))
+        self.declaration.write_text(json.dumps({"files":[{"path":"app.bdat","sha256":sha(b"data")}] }))
     def tearDown(self): self.temp.cleanup()
     def invoke(self, ok=True):
-        result=subprocess.run([sys.executable,TOOL,"--evidence",self.evidence,"--repository",self.repo,"--output-root",self.out],text=True,capture_output=True)
+        result=subprocess.run([sys.executable,TOOL,"--evidence",self.evidence,"--repository",self.repo,"--output-root",self.out,"--declaration",self.declaration],text=True,capture_output=True)
         self.assertEqual(ok,result.returncode==0,result.stderr); return result
     def test_exact_and_negative_cases(self):
         self.invoke()
@@ -58,5 +60,13 @@ class RegistryProofTest(unittest.TestCase):
         link=self.root / "output-link"; link.symlink_to(self.out, target_is_directory=True)
         self.out=link
         self.assertIn("output root",self.invoke(False).stderr)
+
+    def test_consumed_disposition_must_match_generated_declaration(self):
+        document=json.loads(self.evidence.read_text())
+        document["outputs"][1]["disposition"]="metadata-only"
+        document["files"]=[]
+        document["output_set"]={"consumed_data_file_count":0,"metadata_output_count":2}
+        self.evidence.write_text(json.dumps(document))
+        self.assertIn("generated declaration differs", self.invoke(False).stderr)
 
 if __name__ == "__main__": unittest.main()

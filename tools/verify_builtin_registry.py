@@ -26,6 +26,7 @@ def main() -> None:
     parser.add_argument("--evidence", required=True)
     parser.add_argument("--repository", required=True)
     parser.add_argument("--output-root", required=True)
+    parser.add_argument("--declaration", required=True)
     args = parser.parse_args()
     evidence = json.loads(Path(args.evidence).read_text())
     if evidence.get("schema") != "brickwright/generated-input-proof/v1":
@@ -86,6 +87,14 @@ def main() -> None:
     }
     if admitted != concluded:
         fail("admitted generated inputs differ from consumed outputs")
+    declaration = json.loads(Path(args.declaration).read_text())
+    declared = {
+        item.get("path"): item.get("sha256")
+        for item in declaration.get("files", [])
+        if isinstance(item, dict) and item.get("path") in expected
+    }
+    if declared != admitted:
+        fail("generated declaration differs from consumed registry outputs")
     counts = evidence.get("output_set", {})
     if counts.get("consumed_data_file_count") != len(concluded) or counts.get("metadata_output_count") != len(expected) - len(concluded):
         fail("output disposition counts differ")

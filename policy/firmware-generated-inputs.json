@@ -69,15 +69,29 @@
     },
     {
       "evidence": "evidence/source-closure/etctmp-generation.json",
-      "generator_argv": ["arm-none-eabi-gcc", "-E", "-P", "-x", "c", "etc/init.d/rcS"],
-      "path": "boards/spike-prime-hub/src/etctmp/etc/init.d/rcS",
-      "sha256": "30e22fccc2e790bbfa4e46f890863e3ca775b8540ba2f753103e778371c21764"
+      "generator_argv": [
+        "arm-none-eabi-gcc",
+        "-E",
+        "-P",
+        "-x",
+        "c",
+        "etc/init.d/rc.sysinit"
+      ],
+      "path": "boards/spike-prime-hub/src/etctmp/etc/init.d/rc.sysinit",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "evidence": "evidence/source-closure/etctmp-generation.json",
-      "generator_argv": ["arm-none-eabi-gcc", "-E", "-P", "-x", "c", "etc/init.d/rc.sysinit"],
-      "path": "boards/spike-prime-hub/src/etctmp/etc/init.d/rc.sysinit",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "generator_argv": [
+        "arm-none-eabi-gcc",
+        "-E",
+        "-P",
+        "-x",
+        "c",
+        "etc/init.d/rcS"
+      ],
+      "path": "boards/spike-prime-hub/src/etctmp/etc/init.d/rcS",
+      "sha256": "30e22fccc2e790bbfa4e46f890863e3ca775b8540ba2f753103e778371c21764"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -100,8 +114,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/battery.pdat",
+      "sha256": "f45c804306d062bb9373819231ebf35900cac0611634ee24738be38f5bf23ab1"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/btsensor.bdat",
       "sha256": "ef02c5cb44b496e1e5da6fba41e9db7ee257622cabc531acda30facade613bbc"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/btsensor.pdat",
+      "sha256": "d87f5fca8854453c5ac3f2634980996947ff62435546fc6db171b4e65d003ccd"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -124,8 +162,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/crash.pdat",
+      "sha256": "950d054158a3c0c8aba181f697aef6e7c3c5b72e3bfd74807d4ff041d6dff098"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/dd.bdat",
       "sha256": "0816cf9f25dc21150ae17726ddbaa93efc6a6de1eff4c6a5b41ca21718e27145"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/dd.pdat",
+      "sha256": "dc37323a7ab35188bcde5cc300d3b7036987e40d85f5ee62818da4f580a3c09b"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -148,8 +210,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/drivebase.pdat",
+      "sha256": "ae2d31b15ae23aefc7adefb27ba039d1bf378e4514421dad677a59f9f9c976d9"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/dumpstack.bdat",
       "sha256": "ee357d86945e61d18ba22c22f2de79974ad016d22622809d151eee113a851d83"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/dumpstack.pdat",
+      "sha256": "a7dd2afab45f5e07980b259d3c02d61a6788945e88a3029c4443d37bf4c889fe"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -172,8 +258,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/imu.pdat",
+      "sha256": "224e43c8d95eadf7d4ae8cbe662bc75a3df0fc91b4750bb886694f091ffb9102"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/led.bdat",
       "sha256": "67586be135e2ba3dc0f06be65eb14cb28828c56951993207b74439c751ce4883"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/led.pdat",
+      "sha256": "dff53f703cf25427bcc729e281d8df1b48b5683d45f2a6c489af7551d42bf48a"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -196,8 +306,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/linetrace.pdat",
+      "sha256": "1cf73d57b191a026d0d8ed1a4ba70630a5abe8a8899c92c4dda3149c4775da35"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/nsh.bdat",
       "sha256": "4b94528f9cbcd604a1ca2d6bb97f02a4feb7d4cdd310d7071ae9e12a3ac27d2c"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/nsh.pdat",
+      "sha256": "0cedcaad9bb10f08d139f1957d63515050a642b9be50626b85b9a0e8a89c4f95"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -220,8 +354,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/port.pdat",
+      "sha256": "fb52208fc33f8d75e1d3fcfe149b411c1a694148d630a5a2da41a417901ac422"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/rz.bdat",
       "sha256": "be9df56c5eaa388413bcaf607d061072048c395506699e927ef5baf949011a2d"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/rz.pdat",
+      "sha256": "f32ac0cf840e399ae1e6affbf26ee1849afc09c896c29ddb4a9dce6b2dcfaff6"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -244,8 +402,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/sensor.pdat",
+      "sha256": "7358e44837b03fe8eaf2e0b021f8750ac130cec04b8c5625b9b2482096f23165"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/sh.bdat",
       "sha256": "e4e695a419456c1f5d476370594c61865f0b8de142377dde44bfc84097fba32f"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/sh.pdat",
+      "sha256": "b5c0bb9f17d3b2efb78bb801c2735d6549ec5da4ee59b210091b7ebb39df5f28"
     },
     {
       "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
@@ -268,8 +450,32 @@
         "-j1",
         "register_all"
       ],
+      "path": "nuttx-apps/builtin/registry/sound.pdat",
+      "sha256": "94989eaed262ac9c55d1164fb877e7382913b02055df49ce3033f8193082a560"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
       "path": "nuttx-apps/builtin/registry/sz.bdat",
       "sha256": "f8955a658dc2cac1ab0a2a3879f99995ae80935d512a118efa027859144e4278"
+    },
+    {
+      "evidence": "builtin-registry-generator-trace:4178edc35db96b728250724d08bb3b86ac1af9561d0c10c7e6834d6ce2d15fbb",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx-apps",
+        "-j1",
+        "register_all"
+      ],
+      "path": "nuttx-apps/builtin/registry/sz.pdat",
+      "sha256": "5fb6f914b8b538b711a14fb15f0d391cbf46d31fbee0ddbf3f0373fb2c16efa5"
     },
     {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
