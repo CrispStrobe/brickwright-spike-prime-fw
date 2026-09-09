@@ -770,6 +770,21 @@ class ClosureTest(unittest.TestCase):
         self.dep.write_text(f"x: {future}\n")
         self.assertIn("nested license boundary lacks an override",self.generate(ok=False).stderr)
 
+    def test_exact_nxwidgets_kconfig_requires_compound_notice_payload(self):
+        repository=Path(__file__).resolve().parents[1]; directory=self.root/"graphics/nxwidgets"; directory.mkdir(parents=True)
+        source=directory/"Kconfig"; source.write_bytes((repository/"nuttx-apps/graphics/nxwidgets/Kconfig").read_bytes())
+        copying=directory/"COPYING"; copying.write_bytes((repository/"nuttx-apps/graphics/nxwidgets/COPYING").read_bytes())
+        subprocess.run(["git","-C",self.root,"add","."],check=True); subprocess.run(["git","-C",self.root,"commit","-qm","nxwidgets kconfig"],check=True)
+        self.commit=subprocess.check_output(["git","-C",self.root,"rev-parse","HEAD"],text=True).strip()
+        self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"nuttx-apps","path":str(self.root),"repository":"https://example.invalid/apps","commit":self.commit,"license":"Apache-2.0","role":"application","license_overrides":[{"path":"graphics/nxwidgets/Kconfig","license":"Apache-2.0 AND BSD-3-Clause","require_spdx":False}]}]})); self.dep.write_text(f"x: {source}\n")
+        self.generate(); manifest=json.loads(self.manifest.read_text()); entries={item["path"]:item for item in manifest["files"]}
+        self.assertEqual("Apache-2.0 AND BSD-3-Clause",entries["graphics/nxwidgets/Kconfig"]["license"]); self.assertEqual("reviewed-boundary-license-selection",entries["graphics/nxwidgets/Kconfig"]["license_audit"]["kind"])
+        notice=entries["graphics/nxwidgets/COPYING"]; self.assertEqual("required-license-notice",notice["license_audit"]["kind"]); self.assertEqual(["nuttx-apps/graphics/nxwidgets/Kconfig"],notice["license_audit"]["required_by"])
+        self.invoke("verify","--roots",self.roots,"--cwd",self.base,"--strace",self.trace,"--depfile",self.dep,"--manifest",self.manifest)
+        source.write_bytes(source.read_bytes()+b"drift\n"); self.assertIn("boundary-selected source drift",self.generate(ok=False).stderr)
+        source.write_bytes((repository/"nuttx-apps/graphics/nxwidgets/Kconfig").read_bytes()); copying.write_bytes(copying.read_bytes()+b"drift\n"); self.assertIn("boundary license drift",self.generate(ok=False).stderr)
+        copying.write_bytes((repository/"nuttx-apps/graphics/nxwidgets/COPYING").read_bytes()); outside=self.base/"nxwidgets-copying"; outside.write_bytes(copying.read_bytes()); copying.unlink(); copying.symlink_to(outside); self.assertIn("boundary license drift",self.generate(ok=False).stderr)
+
     def test_exact_twm4nx_discovery_override_pins_boundary(self):
         source=self.root/"graphics/twm4nx/Make.defs"; source.parent.mkdir(parents=True); repository=Path(__file__).resolve().parents[1]
         source.write_bytes((repository/"nuttx-apps/graphics/twm4nx/Make.defs").read_bytes()); copying=source.parent/"COPYING"; copying.write_bytes((repository/"nuttx-apps/graphics/twm4nx/COPYING").read_bytes())
