@@ -482,7 +482,7 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     observed_symlinks={path for path in lexical if path.is_symlink()}
     if not symlinks.issubset(observed_symlinks):
         die("consumed and declared generated symlink sets differ")
-    lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink())}
+    lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink() and path.name != ".git")}
     normalized = {path.resolve() for path in lexical}
     return (normalized - generated) | (normalized & declared)
 
@@ -876,6 +876,7 @@ def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[di
     external, _ = declared_external(arguments)
     generated, _ = declared_generated(arguments)
     consumed = consumed_paths(arguments)
+    consumed -= vcs_administration(consumed, roots)[0]
     unmatched_generated = generated - consumed
     if unmatched_generated: die("generated declaration contains unconsumed files")
     for path in consumed - external - generated:
@@ -894,6 +895,17 @@ def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[di
         if license_audit is not None:
             entries[key]["license_audit"] = license_audit
     return [entries[key] for key in sorted(entries)]
+
+def vcs_administration(consumed: set[Path], roots: list[dict]) -> tuple[set[Path],list[dict]]:
+    excluded=set(); rows=[]
+    for root in roots:
+        path=Path(root["path"])/".git"
+        if path not in consumed: continue
+        if path.is_symlink(): continue
+        kind="directory" if path.is_dir() else "file" if path.is_file() else None
+        if kind is None: continue
+        excluded.add(path); rows.append({"source_root":root["name"],"path":".git","kind":kind,"reason":"VCS administration; source identity is pinned separately"})
+    return excluded,sorted(rows,key=lambda x:x["source_root"])
 
 
 def public_root(root: dict) -> dict:
@@ -1069,6 +1081,7 @@ def generate(arguments: argparse.Namespace) -> None:
         "external_inputs": declared_external(arguments)[1],
         "generated_inputs": declared_generated(arguments)[1],
         "generated_symlinks": declared_symlinks(arguments)[1],
+        "vcs_administration": vcs_administration(consumed_paths(arguments), roots)[1],
     }
     link_evidence = None
     if arguments.evidence:
@@ -1088,6 +1101,8 @@ def verify(arguments: argparse.Namespace) -> None:
     roots = load_roots(Path(arguments.roots))
     if manifest.get("source_roots") != [public_root(root) for root in roots]:
         die("manifest source-root metadata differs from declarations")
+    consumed_all=consumed_paths(arguments); vcs_excluded,vcs_rows=vcs_administration(consumed_all,roots)
+    if manifest.get("vcs_administration")!=vcs_rows: die("VCS administration audit differs")
     actual_files = manifest.get("files", [])
     actual_keys = {(item.get("source_root"), item.get("path")) for item in actual_files}
     consumed_keys = set()
@@ -1097,7 +1112,7 @@ def verify(arguments: argparse.Namespace) -> None:
             or manifest.get("generated_inputs") != generated_rows
             or manifest.get("generated_symlinks") != declared_symlinks(arguments)[1]):
         die("declared generated/external inputs differ from manifest")
-    for path in consumed_paths(arguments) - external - generated:
+    for path in consumed_all - vcs_excluded - external - generated:
         root, relative, _ = locate(path, roots)
         consumed_keys.add((root["name"], relative.as_posix()))
     if consumed_keys != actual_keys:
