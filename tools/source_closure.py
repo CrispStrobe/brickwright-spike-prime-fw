@@ -132,6 +132,10 @@ def replay_path(path: Path, arguments: argparse.Namespace) -> Path:
     except ValueError: return path
     return new/relative
 
+def recorded_path(value: str | Path, cwd: Path, arguments: argparse.Namespace) -> Path:
+    path=Path(value)
+    return replay_path(path,arguments) if path.is_absolute() else cwd/path
+
 
 def run_git(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
@@ -460,6 +464,7 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         generated.update(trace_generated)
     for trace in getattr(arguments, "flow_trace", []):
         _, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        trace_generated={replay_path(path,arguments) for path in trace_generated}
         generated.update(trace_generated)
     for depfile in arguments.depfile:
         paths.update(replay_path(path,arguments) for path in dep_record(Path(depfile))[1])
@@ -478,8 +483,7 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
             record = json.loads(record_path.read_text(encoding="utf-8"))
             output = record.get("output")
             if output and record.get("output_sha256"):
-                path = Path(output)
-                path = (replay_path(path,arguments) if path.is_absolute() else replay_path(Path(record["cwd"]),arguments) / path).resolve()
+                path = recorded_path(output,replay_path(Path(record["cwd"]),arguments),arguments).resolve()
                 if path.is_file() and sha256(path) == record["output_sha256"]:
                     generated.add(path)
         for record_path in Path(directory).glob("links/*.json"):
@@ -488,7 +492,7 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
             for index,value in enumerate(argv):
                 raw = argv[index+1] if value == "-T" and index+1 < len(argv) else value[2:] if value.startswith("-T") else None
                 if raw:
-                    path=Path(raw); paths.add(path if path.is_absolute() else cwd/path)
+                    paths.add(recorded_path(raw,cwd,arguments))
     cwd = Path(arguments.cwd).resolve()
     lexical = {
         Path(os.path.abspath(path if path.is_absolute() else cwd / path))
@@ -516,8 +520,7 @@ def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[d
             record = json.loads(record_path.read_text(encoding="utf-8"))
             cwd = replay_path(Path(record["cwd"]),arguments)
             for item in record.get("link_inputs", []):
-                logical = Path(item["argument"])
-                logical = logical.resolve() if logical.is_absolute() else (cwd / logical).resolve()
+                logical = recorded_path(item["argument"],cwd,arguments).resolve()
                 preserved = capture / item["path"]
                 if not preserved.is_file() or sha256(preserved) != item.get("sha256"):
                     die(f"captured generated input is missing or changed: {logical}")
@@ -657,7 +660,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
         record = json.loads(record_path.read_text(encoding="utf-8"))
         output = record.get("output")
         if not output: continue
-        identity = normalized_build_path(replay_path(Path(record["cwd"]),arguments) / output, cwd)
+        identity = normalized_build_path(recorded_path(output,replay_path(Path(record["cwd"]),arguments),arguments), cwd)
         if identity in direct: selected.add(record_path)
         by_basename.setdefault(Path(output).name, []).append((record_path, identity))
         if record.get("output_sha256"):
@@ -673,7 +676,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
         if not output or not record.get("output_sha256"):
             continue
         path = Path(output)
-        absolute = (replay_path(path,arguments) if path.is_absolute() else replay_path(Path(record["cwd"]),arguments) / path).resolve()
+        absolute = recorded_path(path,replay_path(Path(record["cwd"]),arguments),arguments).resolve()
         archives_by_output.setdefault(absolute, []).append(record)
     for archive_identity, members in archive_members.items():
         archive_path = cwd / archive_identity
@@ -707,7 +710,7 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
             for value in record["argv"][2:]:
                 if value.startswith("-"): continue
                 path=Path(value)
-                inputs.append((replay_path(path,arguments) if path.is_absolute() else replay_path(Path(record["cwd"]),arguments)/path).resolve())
+                inputs.append(recorded_path(path,replay_path(Path(record["cwd"]),arguments),arguments).resolve())
         for member in members:
             producers=[p for p in inputs if p.name==member]
             if len(producers)!=1: die(f"archive member has no unique recorded input: {archive_identity}({member})")
@@ -738,7 +741,7 @@ def linked_archive_producer_outputs(arguments: argparse.Namespace) -> set[Path]:
             output = record.get("output")
             if output and record.get("output_sha256"):
                 item = Path(output)
-                records.append((record, (replay_path(item,arguments) if item.is_absolute() else replay_path(Path(record["cwd"]),arguments) / item).resolve()))
+                records.append((record, recorded_path(item,replay_path(Path(record["cwd"]),arguments),arguments).resolve()))
     result = set()
     for identity in mapped:
         mapped_path = (cwd / identity).resolve()
@@ -1018,10 +1021,10 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
     all_sources = set()
     for depfile in arguments.depfile:
         target, paths = dep_record(Path(depfile))
-        target_id = normalized_build_path(target, cwd)
+        target_id = normalized_build_path(recorded_path(target,cwd,arguments), cwd)
         sources = set()
         for path in paths:
-            root, relative, _ = locate(path if path.is_absolute() else cwd / path, roots)
+            root, relative, _ = locate(recorded_path(path,cwd,arguments), roots)
             source_id = f"{root['name']}/{relative.as_posix()}"
             sources.add(source_id)
             all_sources.add(source_id)
@@ -1032,10 +1035,10 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
         record = json.loads(record_path.read_text(encoding="utf-8"))
         record_cwd = replay_path(Path(record["cwd"]),arguments)
         target, paths = dep_record(Path(record["depfile"]))
-        target_id = normalized_build_path(record_cwd / target, cwd)
+        target_id = normalized_build_path(recorded_path(target,record_cwd,arguments), cwd)
         sources = set()
         for path in paths:
-            absolute = (path if path.is_absolute() else record_cwd / path).resolve()
+            absolute = recorded_path(path,record_cwd,arguments).resolve()
             source_id = manifested_paths.get(absolute)
             if source_id is None:
                 continue  # closure_entries already proved this prerequisite generated
