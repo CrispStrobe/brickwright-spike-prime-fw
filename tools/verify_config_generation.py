@@ -4,8 +4,10 @@
 import argparse, hashlib, json, re, stat, subprocess
 from pathlib import Path, PurePosixPath
 HEX=re.compile(r"[0-9a-f]{64}"); IMAGE="sha256:8d304601acccf0fd2d6bcbf4e1ec1377b5e89cbdd669a60c1cf5c0e581b3c3fa"
-OUTPUTS={"nuttx/.config","nuttx/.version"}
-COMMANDS=[["ln","-s","$TREE/apps","$TREE/nuttx-apps/external"],["nuttx/tools/configure.sh","-l","-a","../nuttx-apps","../boards/spike-prime-hub/configs/usbnsh"],["make","-C","nuttx","olddefconfig"],["nuttx/tools/version.sh","-v","12.12.0","-b","a67efb31cf","nuttx/.version"]]
+OUTPUTS={"nuttx/.config","nuttx/.version","nuttx/tools/incdir"}
+INPUTS={"boards/spike-prime-hub/configs/usbnsh/defconfig","nuttx/tools/version.sh","nuttx/tools/incdir.c"}
+COMMANDS=[["ln","-s","$TREE/apps","$TREE/nuttx-apps/external"],["nuttx/tools/configure.sh","-l","-a","../nuttx-apps","../boards/spike-prime-hub/configs/usbnsh"],["make","-C","nuttx","olddefconfig"],["nuttx/tools/version.sh","-v","12.12.0","-b","a67efb31cf","nuttx/.version"],["make","-C","nuttx/tools","-f","Makefile.host","incdir"]]
+HOST_TOOL={"compiler_argv":["cc","-O2","-Wall","-Wstrict-prototypes","-Wshadow","-DHAVE_STRTOK_C=1","-DHAVE_STRNDUP=1","-o","incdir","incdir.c"],"makefile":"nuttx/tools/Makefile.host","makefile_sha256":"4433262b615aae57a80b1b9d60248e78089632520e0d4855fe3576e240b49d1b","rule":"incdir$(HOSTEXEEXT): incdir.c"}
 def fail(s): raise SystemExit("config-proof: ERROR: "+s)
 def rel(s,label):
  p=PurePosixPath(s) if isinstance(s,str) else PurePosixPath()
@@ -26,6 +28,8 @@ def main():
  if d.get("container_image")!=IMAGE or d.get("isolation")!={"network_namespace":"none","successful_connects":0}: fail("invalid isolation identity")
  commands=d.get("generator_commands");
  if commands!=COMMANDS: fail("generator commands differ")
+ if d.get("native_host_tool")!=HOST_TOOL: fail("native host-tool proof differs")
+ if sha(regular(repo,HOST_TOOL["makefile"],"host-tool Makefile"))!=HOST_TOOL["makefile_sha256"]: fail("host-tool Makefile changed")
  seen=set()
  inputs=d.get("generator_inputs")
  if not isinstance(inputs,list) or not inputs: fail("generator inputs are missing")
@@ -35,7 +39,7 @@ def main():
   if name in seen: fail("duplicate input")
   seen.add(name)
   if not HEX.fullmatch(item.get("sha256",'')) or sha(path)!=item["sha256"]: fail("input missing or changed: "+name)
- if seen!={"boards/spike-prime-hub/configs/usbnsh/defconfig","nuttx/tools/version.sh"}: fail("input set mismatch")
+ if seen!=INPUTS: fail("input set mismatch")
  outputs={}
  output_items=d.get("outputs")
  if not isinstance(output_items,list) or not output_items: fail("outputs are missing")
@@ -83,5 +87,5 @@ def main():
   if not HEX.fullmatch(item.get("sha256",'')): fail("invalid declared config hash")
   declared[name]=item["sha256"]
  if declared!=outputs: fail("generated declaration differs from config outputs")
- print("config-proof: verified 2 outputs")
+ print("config-proof: verified 3 outputs")
 if __name__=="__main__": main()
