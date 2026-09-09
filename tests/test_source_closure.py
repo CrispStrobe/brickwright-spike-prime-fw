@@ -319,12 +319,18 @@ class ClosureTest(unittest.TestCase):
 
     def test_capture_relocation_emits_canonical_link_evidence(self):
         old=self.base.parent/"old-capture"; obj=self.base/"main.o"; obj.write_bytes(b"object"); capture=self.base/"capture"; (capture/"compiles").mkdir(parents=True); dep=capture/"main.d"; dep.write_text(f"{old}/main.o: {old}/upstream/main.c\n"); (capture/"compiles/main.json").write_text(json.dumps({"cwd":str(old),"depfile":str(dep),"output":str(old/"main.o"),"output_sha256":hashlib.sha256(b"object").hexdigest()})); mapfile=self.base/"firmware.map"; mapfile.write_text(str(old/"main.o")+"\n"); trace=self.base/"empty.trace"; trace.write_text(""); evidence=self.base/"link.json"
-        encoded=str(old).replace("/","."); current_encoded=str(self.base).replace("/","."); mapfile.write_text(str(old/"main.o")+f"\nlibapps.a(prefix{encoded}.apps.demo.o)\nlibnuttx.a(prefix{current_encoded}.nuttx.demo.o)\n")
+        encoded=str(old).replace("/","."); current_encoded=str(self.base).replace("/","."); mapfile.write_text(str(old/"main.o")+f"\nlibapps.a(prefix{encoded}.apps.demo.o)\nlibnuttx.a(prefix{current_encoded}.nuttx.demo.o)\nlibsame.a(prefix{encoded}.same.o)\nlibsame.a(prefix{current_encoded}.same.o)\n")
         self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--captured-repository-root",old,"--strace",trace,"--capture",capture,"--map",mapfile,"--object",obj,"--output",self.manifest,"--sbom",self.sbom,"--evidence",evidence)
-        linked=json.loads(evidence.read_text()); row=linked["objects"][0]; self.assertEqual("main.o",row["path"]); self.assertEqual(["nuttx/main.c"],row["sources"]); self.assertTrue(row["mentioned_in_map"]); self.assertIn("libapps.a(prefix.repository.apps.demo.o)",linked["map_objects"]); self.assertIn("libnuttx.a(prefix.repository.nuttx.demo.o)",linked["map_objects"])
+        linked=json.loads(evidence.read_text()); row=linked["objects"][0]; self.assertEqual("main.o",row["path"]); self.assertEqual(["nuttx/main.c"],row["sources"]); self.assertTrue(row["mentioned_in_map"]); self.assertIn("libapps.a(prefix.repository.apps.demo.o)",linked["map_objects"]); self.assertIn("libnuttx.a(prefix.repository.nuttx.demo.o)",linked["map_objects"]); self.assertEqual(1,linked["map_objects"].count("libsame.a(prefix.repository.same.o)"))
         emitted=self.manifest.read_text()+evidence.read_text(); self.assertNotIn(str(old),emitted); self.assertNotIn(str(self.base),emitted); self.assertNotIn(encoded,emitted); self.assertNotIn(current_encoded,emitted)
         mapfile.write_text(f"libapps.a(prefix{encoded}ish.apps.demo.o)\n")
         self.assertIn("repository path material",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--captured-repository-root",old,"--strace",trace,"--capture",capture,"--map",mapfile,"--object",obj,"--output",self.manifest,"--sbom",self.sbom,"--evidence",evidence,ok=False).stderr)
+
+    def test_distinct_objects_cannot_collapse_to_one_public_identity(self):
+        old=self.base.parent/"old-capture"; encoded=str(old).replace("/","."); current_encoded=str(self.base).replace("/",".")
+        first=self.base/f"prefix{encoded}.same.o"; second=self.base/f"prefix{current_encoded}.same.o"; first.write_bytes(b"first"); second.write_bytes(b"second")
+        trace=self.base/"empty.trace"; trace.write_text(""); evidence=self.base/"link.json"
+        self.assertIn("collapse",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--captured-repository-root",old,"--strace",trace,"--depfile",self.dep,"--object",first,"--object",second,"--output",self.manifest,"--sbom",self.sbom,"--evidence",evidence,ok=False).stderr)
 
     def test_compiler_evidence_is_mandatory(self):
         result = self.invoke("generate", "--roots", self.roots, "--cwd", self.base,

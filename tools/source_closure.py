@@ -1101,13 +1101,22 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
         ):
             die("published build identity contains repository path material")
         return identity
+    public_objects = []
+    public_object_identities = set()
+    for row in rows:
+        identity = public_identity(row["path"])
+        if identity in public_object_identities:
+            die("distinct object inputs collapse to one published identity")
+        public_object_identities.add(identity)
+        public_objects.append(dict(row, path=identity))
+    public_map_objects = sorted({public_identity(identity) for identity in map_objects})
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
     result = {
         "schema": 1,
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "map_files": [{"path": Path(item).name, "sha256": sha256(Path(item))} for item in sorted(arguments.map)],
-        "map_objects": sorted(public_identity(identity) for identity in map_objects),
-        "objects": [dict(row, path=public_identity(row["path"])) for row in rows],
+        "map_objects": public_map_objects,
+        "objects": public_objects,
         "depfile_prerequisites": sorted(all_sources),
     }
     serialized = json.dumps(result, sort_keys=True)
