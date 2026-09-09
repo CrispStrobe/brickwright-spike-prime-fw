@@ -88,11 +88,17 @@ def main() -> None:
     if admitted != concluded:
         fail("admitted generated inputs differ from consumed outputs")
     declaration = json.loads(Path(args.declaration).read_text())
-    declared = {
-        item.get("path"): item.get("sha256")
-        for item in declaration.get("files", [])
-        if isinstance(item, dict) and item.get("path") in expected
-    }
+    if declaration.get("schema") != "brickwright/generated-build-inputs/v1" or not isinstance(declaration.get("files"), list):
+        fail("invalid generated declaration")
+    declared = {}
+    for item in declaration["files"]:
+        if not isinstance(item, dict): fail("invalid generated declaration item")
+        item_path = item.get("path")
+        if item_path not in expected: continue
+        safe_relative(item_path, "declared registry input")
+        if item_path in declared: fail(f"duplicate declared registry input: {item_path}")
+        if not valid_hash(item.get("sha256")): fail(f"invalid declared registry hash: {item_path}")
+        declared[item_path] = item["sha256"]
     if declared != admitted:
         fail("generated declaration differs from consumed registry outputs")
     counts = evidence.get("output_set", {})

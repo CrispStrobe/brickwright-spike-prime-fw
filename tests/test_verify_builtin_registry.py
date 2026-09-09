@@ -28,7 +28,7 @@ class RegistryProofTest(unittest.TestCase):
                 {"path":"app.bdat","sha256":sha(b"data"),"disposition":"consumed-generated-input"},
             ],
         }))
-        self.declaration.write_text(json.dumps({"files":[{"path":"app.bdat","sha256":sha(b"data")}] }))
+        self.declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":"app.bdat","sha256":sha(b"data")}] }))
     def tearDown(self): self.temp.cleanup()
     def invoke(self, ok=True):
         result=subprocess.run([sys.executable,TOOL,"--evidence",self.evidence,"--repository",self.repo,"--output-root",self.out,"--declaration",self.declaration],text=True,capture_output=True)
@@ -68,5 +68,14 @@ class RegistryProofTest(unittest.TestCase):
         document["output_set"]={"consumed_data_file_count":0,"metadata_output_count":2}
         self.evidence.write_text(json.dumps(document))
         self.assertIn("generated declaration differs", self.invoke(False).stderr)
+
+    def test_declaration_schema_and_duplicate_fail(self):
+        declaration=json.loads(self.declaration.read_text())
+        declaration["schema"]="wrong"; self.declaration.write_text(json.dumps(declaration))
+        self.assertIn("invalid generated declaration", self.invoke(False).stderr)
+        declaration["schema"]="brickwright/generated-build-inputs/v1"
+        declaration["files"].append(dict(declaration["files"][0]))
+        self.declaration.write_text(json.dumps(declaration))
+        self.assertIn("duplicate declared registry input", self.invoke(False).stderr)
 
 if __name__ == "__main__": unittest.main()
