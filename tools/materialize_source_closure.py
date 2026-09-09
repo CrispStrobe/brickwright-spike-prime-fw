@@ -84,6 +84,7 @@ def main() -> None:
         fail("invalid source-closure manifest")
 
     copied: dict[Path, str] = {}
+    copied_parents: set[Path] = set()
     copy_plan: dict[Path, tuple[Path, str]] = {}
     for item in manifest["files"]:
         if not isinstance(item, dict):
@@ -97,12 +98,13 @@ def main() -> None:
         expected = item.get("sha256")
         if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
             fail("manifest input lacks SHA-256")
-        if target in copied or any(path in target.parents or target in path.parents for path in copied):
+        if target in copied or any(parent in copied for parent in target.parents) or target in copied_parents:
             fail("manifest inputs collide at destination")
         source = source_root / relative
         if not source.is_file() or source.is_symlink() or digest(source) != expected:
             fail("source input is missing or changed")
         copied[target] = expected
+        copied_parents.update(target.parents)
         copy_plan[target] = (source, expected)
 
     generated_items = manifest.get("generated_inputs", [])
@@ -114,12 +116,13 @@ def main() -> None:
         expected = item.get("sha256")
         if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
             fail("generated input lacks SHA-256")
-        if relative in copied or any(path in relative.parents or relative in path.parents for path in copied):
+        if relative in copied or any(parent in copied for parent in relative.parents) or relative in copied_parents:
             fail("generated input collides at destination")
         source = repository / relative
         if not source.is_file() or source.is_symlink() or digest(source) != expected:
             fail("source input is missing or changed")
         copied[relative] = expected
+        copied_parents.update(relative.parents)
         copy_plan[relative] = (source, expected)
 
     symlinked=set(); symlink_plan=[]; symlink_items=manifest.get("generated_symlinks", [])
@@ -137,7 +140,7 @@ def main() -> None:
         if kind=="directory" and not any(target in path.parents for path in copy_plan): fail("generated symlink target is missing or wrong type")
         if any(parent in symlinked for parent in relative.parents) or any(parent in symlinked for parent in (target,*target.parents)): fail("generated symlink topology traverses another symlink")
         if any(parent in copied for parent in relative.parents): fail("generated symlink collides at destination")
-        if any(relative in path.parents for path in copy_plan): fail("generated symlink collides at destination")
+        if relative in copied_parents: fail("generated symlink collides at destination")
 
     # No destination mutation occurs until every row, byte hash, collision and
     # symlink target has passed preflight.
