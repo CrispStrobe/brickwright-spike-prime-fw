@@ -4,16 +4,25 @@
     ["ln", "-s", "$TREE/apps", "$TREE/nuttx-apps/external"],
     ["nuttx/tools/configure.sh", "-l", "-a", "../nuttx-apps", "../boards/spike-prime-hub/configs/usbnsh"],
     ["make", "-C", "nuttx", "olddefconfig"],
-    ["nuttx/tools/version.sh", "-v", "12.12.0", "-b", "a67efb31cf", "nuttx/.version"]
+    ["nuttx/tools/version.sh", "-v", "12.12.0", "-b", "a67efb31cf", "nuttx/.version"],
+    ["make", "-C", "nuttx/tools", "-f", "Makefile.host", "incdir"]
   ],
   "generator_inputs": [
     {"path": "boards/spike-prime-hub/configs/usbnsh/defconfig", "sha256": "870ef610586721e976cf317bf3d712507ae916d4a393b5e95f67adeb25b561be"},
-    {"path": "nuttx/tools/version.sh", "sha256": "15e12188273d3be9e106bdf89b62e44999893a5daa53aceaa2411ddd9af0dd71"}
+    {"path": "nuttx/tools/version.sh", "sha256": "15e12188273d3be9e106bdf89b62e44999893a5daa53aceaa2411ddd9af0dd71"},
+    {"path": "nuttx/tools/incdir.c", "sha256": "13e1e475dd39cb855f82aa761ad1c9f8288f9540c81f25d3a62332838e0bcba2"}
   ],
   "isolation": {"network_namespace": "none", "successful_connects": 0},
+  "native_host_tool": {
+    "compiler_argv": ["cc", "-O2", "-Wall", "-Wstrict-prototypes", "-Wshadow", "-DHAVE_STRTOK_C=1", "-DHAVE_STRNDUP=1", "-o", "incdir", "incdir.c"],
+    "makefile": "nuttx/tools/Makefile.host",
+    "makefile_sha256": "4433262b615aae57a80b1b9d60248e78089632520e0d4855fe3576e240b49d1b",
+    "rule": "incdir$(HOSTEXEEXT): incdir.c"
+  },
   "outputs": [
     {"path": "nuttx/.config", "sha256": "9dea71c7b139b8c19c154051186f3ada6626dda66a8ed6bbea5557ca7b850b64"},
-    {"path": "nuttx/.version", "sha256": "1db101750b130862c43a0f14616990693cb373d33a2a361a0a0a4e73e913531d"}
+    {"path": "nuttx/.version", "sha256": "1db101750b130862c43a0f14616990693cb373d33a2a361a0a0a4e73e913531d"},
+    {"path": "nuttx/tools/incdir", "sha256": "67fb05e4c3ce557b27ad66313c8f47e59977be53a745ab24469fa188dd79c350"}
   ],
   "source_identities": [
     {"commit": "999e2d86f9b692abaf63b22dad77d22aeb03029c", "path": "apps", "root": ".", "tree": "87478a45a4db3cdb21374f18d86a78d32e435491"},

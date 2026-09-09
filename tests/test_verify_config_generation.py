@@ -15,13 +15,14 @@ class ConfigProofTest(unittest.TestCase):
    subprocess.run(["git","-C",root,"add","."],check=True); subprocess.run(["git","-C",root,"commit","-qm","fixture"],check=True)
    return subprocess.check_output(["git","-C",root,"rev-parse","HEAD"],text=True).strip()
   project=git_root(self.repo,{"apps/Kconfig":b"apps\n","boards/spike-prime-hub/configs/usbnsh/defconfig":b"defconfig\n"})
-  nuttx=git_root(self.repo/"nuttx",{"tools/version.sh":b"version\n"})
+  real_makefile=Path(__file__).resolve().parents[1]/"nuttx/tools/Makefile.host"
+  nuttx=git_root(self.repo/"nuttx",{"tools/version.sh":b"version\n","tools/incdir.c":b"incdir source\n","tools/Makefile.host":real_makefile.read_bytes()})
   apps=git_root(self.repo/"nuttx-apps",{"Kconfig":b"apps upstream\n"})
-  (self.repo/"nuttx/.config").write_bytes(b"config\n"); (self.repo/"nuttx/.version").write_bytes(b"version output\n")
+  (self.repo/"nuttx/.config").write_bytes(b"config\n"); (self.repo/"nuttx/.version").write_bytes(b"version output\n"); (self.repo/"nuttx/tools/incdir").write_bytes(b"incdir output\n")
   self.roots=Path(self.tmp.name)/"roots.json"; self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"project","path":".","commit":project},{"name":"nuttx","path":"nuttx","commit":nuttx},{"name":"nuttx-apps","path":"nuttx-apps","commit":apps}]}))
   d=json.loads(PROOF.read_text()); sha=lambda b:hashlib.sha256(b).hexdigest()
-  d["generator_inputs"]=[{"path":"boards/spike-prime-hub/configs/usbnsh/defconfig","sha256":sha(b"defconfig\n")},{"path":"nuttx/tools/version.sh","sha256":sha(b"version\n")}]
-  d["outputs"]=[{"path":"nuttx/.config","sha256":sha(b"config\n")},{"path":"nuttx/.version","sha256":sha(b"version output\n")}]
+  d["generator_inputs"]=[{"path":"boards/spike-prime-hub/configs/usbnsh/defconfig","sha256":sha(b"defconfig\n")},{"path":"nuttx/tools/version.sh","sha256":sha(b"version\n")},{"path":"nuttx/tools/incdir.c","sha256":sha(b"incdir source\n")}]
+  d["outputs"]=[{"path":"nuttx/.config","sha256":sha(b"config\n")},{"path":"nuttx/.version","sha256":sha(b"version output\n")},{"path":"nuttx/tools/incdir","sha256":sha(b"incdir output\n")}]
   d["source_identities"]=[{"commit":project,"path":"apps","root":".","tree":subprocess.check_output(["git","-C",self.repo,"rev-parse",project+":apps"],text=True).strip()},{"commit":nuttx,"path":".","root":"nuttx","tree":subprocess.check_output(["git","-C",self.repo/"nuttx","rev-parse",nuttx+"^{tree}"],text=True).strip()},{"commit":apps,"path":".","root":"nuttx-apps","tree":subprocess.check_output(["git","-C",self.repo/"nuttx-apps","rev-parse",apps+"^{tree}"],text=True).strip()}]
   self.proof=Path(self.tmp.name)/"proof.json"; self.proof.write_text(json.dumps(d))
   self.declaration=Path(self.tmp.name)/"generated.json"; self.declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":x["path"],"sha256":x["sha256"]} for x in d["outputs"]]}))
@@ -48,4 +49,6 @@ class ConfigProofTest(unittest.TestCase):
   d=dict(original); d["outputs"]=[None]; self.proof.write_text(json.dumps(d)); self.assertIn("invalid output",self.invoke(False).stderr)
  def test_wrong_roots_schema_fails(self):
   d=json.loads(self.roots.read_text()); d["schema"]=2; self.roots.write_text(json.dumps(d)); self.assertIn("roots declaration schema",self.invoke(False).stderr)
+ def test_host_tool_argv_tamper_fails(self):
+  d=json.loads(self.proof.read_text()); d["native_host_tool"]["compiler_argv"][0]="gcc"; self.proof.write_text(json.dumps(d)); self.assertIn("host-tool proof",self.invoke(False).stderr)
 if __name__=="__main__": unittest.main()

@@ -503,6 +503,19 @@
       "sha256": "1db101750b130862c43a0f14616990693cb373d33a2a361a0a0a4e73e913531d"
     },
     {
+      "evidence": "evidence/source-closure/config-generation.json",
+      "generator_argv": [
+        "make",
+        "-C",
+        "nuttx/tools",
+        "-f",
+        "Makefile.host",
+        "incdir"
+      ],
+      "path": "nuttx/tools/incdir",
+      "sha256": "67fb05e4c3ce557b27ad66313c8f47e59977be53a745ab24469fa188dd79c350"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
