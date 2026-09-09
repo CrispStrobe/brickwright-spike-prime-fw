@@ -23,6 +23,11 @@
           "license": "LicenseRef-NuttX-PublicDomain",
           "path": "include/search.h",
           "require_spdx": true
+        },
+        {
+          "license": "BSD-3-Clause-UC",
+          "path": "libs/libc/search/hash_func.c",
+          "require_spdx": true
         }
       ],
       "name": "nuttx",
