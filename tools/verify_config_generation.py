@@ -8,6 +8,7 @@ OUTPUTS={"nuttx/.config","nuttx/.version","nuttx/tools/incdir"}
 INPUTS={"boards/spike-prime-hub/configs/usbnsh/defconfig","nuttx/tools/version.sh","nuttx/tools/incdir.c"}
 COMMANDS=[["ln","-s","$TREE/apps","$TREE/nuttx-apps/external"],["nuttx/tools/configure.sh","-l","-a","../nuttx-apps","../boards/spike-prime-hub/configs/usbnsh"],["make","-C","nuttx","olddefconfig"],["nuttx/tools/version.sh","-v","12.12.0","-b","a67efb31cf","nuttx/.version"],["make","-C","nuttx/tools","-f","Makefile.host","incdir"]]
 HOST_TOOL={"compiler_argv":["cc","-O2","-Wall","-Wstrict-prototypes","-Wshadow","-DHAVE_STRTOK_C=1","-DHAVE_STRNDUP=1","-o","incdir","incdir.c"],"makefile":"nuttx/tools/Makefile.host","makefile_sha256":"4433262b615aae57a80b1b9d60248e78089632520e0d4855fe3576e240b49d1b","rule":"incdir$(HOSTEXEEXT): incdir.c"}
+SYMLINKS=[{"path":"nuttx/arch/arm/include/board","target":"boards/spike-prime-hub/include","target_type":"directory"},{"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory"},{"path":"nuttx/arch/arm/src/chip","target":"nuttx/arch/arm/src/stm32","target_type":"directory"},{"path":"nuttx/include/arch","target":"nuttx/arch/arm/include","target_type":"directory"},{"path":"nuttx/include/newlib","target":"nuttx/libs/libm/newlib/include","target_type":"directory"},{"path":"nuttx-apps/platform/board","target":"nuttx-apps/platform/dummy","target_type":"directory"}]
 def fail(s): raise SystemExit("config-proof: ERROR: "+s)
 def rel(s,label):
  p=PurePosixPath(s) if isinstance(s,str) else PurePosixPath()
@@ -50,6 +51,17 @@ def main():
   if not HEX.fullmatch(item.get("sha256",'')) or sha(path)!=item["sha256"]: fail("output missing or changed: "+name)
   outputs[name]=item["sha256"]
  if set(outputs)!=OUTPUTS: fail("output set mismatch")
+ if d.get("symlinks")!=SYMLINKS: fail("configured symlink set differs")
+ for item in SYMLINKS:
+  logical=rel(item["path"],"symlink"); target_relative=rel(item["target"],"symlink target")
+  link=repo/logical.as_posix(); target_path=repo/target_relative.as_posix()
+  if any(repo.joinpath(*logical.parts[:i]).is_symlink() for i in range(1,len(logical.parts))): fail("configured symlink parent contains symlink")
+  if any(repo.joinpath(*target_relative.parts[:i]).is_symlink() for i in range(1,len(target_relative.parts)+1)): fail("configured symlink target contains symlink")
+  target=target_path.resolve()
+  if not link.is_symlink() or not target.is_relative_to(repo): fail("configured symlink is missing or escaping")
+  try: actual=link.resolve(strict=True)
+  except (OSError,RuntimeError): fail("configured symlink is dangling or loops")
+  if actual!=target or not target.is_dir(): fail("configured symlink target differs")
  identities=d.get("source_identities")
  roots_document=json.loads(Path(a.roots).read_text())
  if roots_document.get("schema")!=1: fail("invalid roots declaration schema")
@@ -87,5 +99,8 @@ def main():
   if not HEX.fullmatch(item.get("sha256",'')): fail("invalid declared config hash")
   declared[name]=item["sha256"]
  if declared!=outputs: fail("generated declaration differs from config outputs")
+ declared_links=declaration.get("symlinks")
+ expected_links=[dict(item,evidence="evidence/source-closure/config-generation.json") for item in SYMLINKS]
+ if declared_links!=expected_links: fail("generated symlink declaration differs")
  print("config-proof: verified 3 outputs")
 if __name__=="__main__": main()

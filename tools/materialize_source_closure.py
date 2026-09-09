@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import shutil
 
@@ -109,7 +110,24 @@ def main() -> None:
         copy_checked(repository / relative, destination / relative, expected)
         copied[relative] = expected
 
-    print(f"materialize-source-closure: copied {len(copied)} files")
+    symlinked=set(); symlink_items=manifest.get("generated_symlinks", [])
+    if not isinstance(symlink_items,list): fail("generated symlinks must be a list")
+    for item in symlink_items:
+        if not isinstance(item,dict): fail("invalid generated symlink")
+        relative=safe_relative(item.get("path",""),"generated symlink path")
+        target=safe_relative(item.get("target",""),"generated symlink target")
+        if relative in copied or relative in symlinked: fail("generated symlink collides at destination")
+        link=destination/relative; resolved=destination/target
+        if any(path.is_symlink() for path in [destination.joinpath(*relative.parts[:i]) for i in range(1,len(relative.parts))]): fail("generated symlink parent contains symlink")
+        if any(path.is_symlink() for path in [destination.joinpath(*target.parts[:i]) for i in range(1,len(target.parts)+1)]): fail("generated symlink target contains symlink")
+        kind=item.get("target_type")
+        if not resolved.exists() or kind not in {"file","directory"} or (kind=="directory")!=resolved.is_dir() or (kind=="file")!=resolved.is_file(): fail("generated symlink target is missing or wrong type")
+        link.parent.mkdir(parents=True,exist_ok=True)
+        link.symlink_to(Path(os.path.relpath(resolved,link.parent)))
+        if not link.resolve().is_relative_to(destination) or link.resolve()!=resolved.resolve(): fail("materialized symlink escapes or differs")
+        symlinked.add(relative)
+
+    print(f"materialize-source-closure: copied {len(copied)} files and {len(symlinked)} symlinks")
 
 
 if __name__ == "__main__":

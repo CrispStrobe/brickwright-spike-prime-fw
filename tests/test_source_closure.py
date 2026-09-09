@@ -314,6 +314,17 @@ class ClosureTest(unittest.TestCase):
         generated.write_text("drift\n")
         self.assertIn("hash mismatch", self.generate("--repository",self.base,"--generated", declaration.name, ok=False).stderr)
 
+    def test_generated_symlink_is_structured_and_escape_fails(self):
+        link=self.base/"configured"; link.symlink_to(self.root,target_is_directory=True)
+        trace=self.base/"symlink.trace"; trace.write_text(f'1 readlink("{link}", "upstream", 1023) = 8\n')
+        declaration=self.base/"generated.json"
+        item={"path":"configured","target":"upstream","target_type":"directory","evidence":"fixture"}
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
+        self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom)
+        self.assertEqual([item],json.loads(self.manifest.read_text())["generated_symlinks"])
+        item["target"]="../escape"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
+        self.assertIn("escapes",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+
     def test_external_boundary_is_exact_and_not_vendored(self):
         external = self.base / "toolchain"; external.mkdir(); header=external / "stdint.h"; header.write_text("tool\n")
         import hashlib

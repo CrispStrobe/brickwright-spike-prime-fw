@@ -18,6 +18,9 @@ class ConfigProofTest(unittest.TestCase):
   real_makefile=Path(__file__).resolve().parents[1]/"nuttx/tools/Makefile.host"
   nuttx=git_root(self.repo/"nuttx",{"tools/version.sh":b"version\n","tools/incdir.c":b"incdir source\n","tools/Makefile.host":real_makefile.read_bytes()})
   apps=git_root(self.repo/"nuttx-apps",{"Kconfig":b"apps upstream\n"})
+  links=json.loads(PROOF.read_text())["symlinks"]
+  for item in links:
+   target=self.repo/item["target"]; target.mkdir(parents=True,exist_ok=True); link=self.repo/item["path"]; link.parent.mkdir(parents=True,exist_ok=True); link.symlink_to(target)
   (self.repo/"nuttx/.config").write_bytes(b"config\n"); (self.repo/"nuttx/.version").write_bytes(b"version output\n"); (self.repo/"nuttx/tools/incdir").write_bytes(b"incdir output\n")
   self.roots=Path(self.tmp.name)/"roots.json"; self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"project","path":".","commit":project},{"name":"nuttx","path":"nuttx","commit":nuttx},{"name":"nuttx-apps","path":"nuttx-apps","commit":apps}]}))
   d=json.loads(PROOF.read_text()); sha=lambda b:hashlib.sha256(b).hexdigest()
@@ -25,7 +28,7 @@ class ConfigProofTest(unittest.TestCase):
   d["outputs"]=[{"path":"nuttx/.config","sha256":sha(b"config\n")},{"path":"nuttx/.version","sha256":sha(b"version output\n")},{"path":"nuttx/tools/incdir","sha256":sha(b"incdir output\n")}]
   d["source_identities"]=[{"commit":project,"path":"apps","root":".","tree":subprocess.check_output(["git","-C",self.repo,"rev-parse",project+":apps"],text=True).strip()},{"commit":nuttx,"path":".","root":"nuttx","tree":subprocess.check_output(["git","-C",self.repo/"nuttx","rev-parse",nuttx+"^{tree}"],text=True).strip()},{"commit":apps,"path":".","root":"nuttx-apps","tree":subprocess.check_output(["git","-C",self.repo/"nuttx-apps","rev-parse",apps+"^{tree}"],text=True).strip()}]
   self.proof=Path(self.tmp.name)/"proof.json"; self.proof.write_text(json.dumps(d))
-  self.declaration=Path(self.tmp.name)/"generated.json"; self.declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":x["path"],"sha256":x["sha256"]} for x in d["outputs"]]}))
+  self.declaration=Path(self.tmp.name)/"generated.json"; self.declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":x["path"],"sha256":x["sha256"]} for x in d["outputs"]],"symlinks":[dict(x,evidence="evidence/source-closure/config-generation.json") for x in links]}))
   self.original_proof=self.proof.read_bytes(); self.original_declaration=self.declaration.read_bytes()
  def tearDown(self): self.tmp.cleanup()
  def invoke(self,ok=True):
@@ -51,4 +54,7 @@ class ConfigProofTest(unittest.TestCase):
   d=json.loads(self.roots.read_text()); d["schema"]=2; self.roots.write_text(json.dumps(d)); self.assertIn("roots declaration schema",self.invoke(False).stderr)
  def test_host_tool_argv_tamper_fails(self):
   d=json.loads(self.proof.read_text()); d["native_host_tool"]["compiler_argv"][0]="gcc"; self.proof.write_text(json.dumps(d)); self.assertIn("host-tool proof",self.invoke(False).stderr)
+ def test_symlink_target_and_declaration_tamper_fail(self):
+  d=json.loads(self.proof.read_text()); d["symlinks"][0]["target"]="nuttx"; self.proof.write_text(json.dumps(d)); self.assertIn("symlink set",self.invoke(False).stderr)
+  self.proof.write_bytes(self.original_proof); d=json.loads(self.declaration.read_text()); d["symlinks"][0]["target"]="nuttx"; self.declaration.write_text(json.dumps(d)); self.assertIn("symlink declaration",self.invoke(False).stderr)
 if __name__=="__main__": unittest.main()
