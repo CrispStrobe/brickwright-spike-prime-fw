@@ -444,6 +444,15 @@ class ClosureTest(unittest.TestCase):
         trace=self.base/"collision.trace"; trace.write_text(f'1 readlink("{link}", "target", 1023) = 6\n')
         self.assertIn("collide",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
 
+    def test_explicit_generated_directory_is_safe_and_evidenced(self):
+        directory=self.base/"empty-directory"; directory.mkdir(); declaration=self.base/"generated.json"
+        self.generate("--repository",self.base); self.assertEqual([],json.loads(self.manifest.read_text())["generated_directories"])
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"directories":[{"path":directory.name,"evidence":"fixture"}]})); self.generate("--repository",self.base,"--generated",declaration.name)
+        self.assertEqual([{"path":"empty-directory","evidence":"fixture"}],json.loads(self.manifest.read_text())["generated_directories"])
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"directories":[{"path":"../escape","evidence":"fixture"}]})); self.assertIn("escapes",self.generate("--repository",self.base,"--generated",declaration.name,ok=False).stderr)
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"directories":[{"path":directory.name}]})); self.assertIn("lacks evidence",self.generate("--repository",self.base,"--generated",declaration.name,ok=False).stderr)
+        target=self.base/"target-directory"; target.mkdir(); directory.rmdir(); directory.symlink_to(target,target_is_directory=True); declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"directories":[{"path":directory.name,"evidence":"fixture"}]})); self.assertIn("contains symlink",self.generate("--repository",self.base,"--generated",declaration.name,ok=False).stderr)
+
     def test_consumed_file_symlink_manifests_its_target(self):
         link=self.base/"Make.defs"; link.symlink_to(self.root/"build.mk")
         declaration=self.base/"generated.json"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[{"path":"Make.defs","target":"upstream/build.mk","target_type":"file"}]}))

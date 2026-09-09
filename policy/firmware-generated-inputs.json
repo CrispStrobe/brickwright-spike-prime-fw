@@ -4888,6 +4888,9 @@
     }
   ],
   "schema": "brickwright/generated-build-inputs/v1",
+  "directories": [
+    {"path":"nuttx/boards/dummy","evidence":"evidence/source-closure/config-generation.json"}
+  ],
   "symlinks": [
     {"path":"nuttx-apps/platform/board","target":"nuttx-apps/platform/dummy","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"},
     {"path":"nuttx/Make.defs","target":"boards/spike-prime-hub/scripts/Make.defs","target_type":"file","evidence":"evidence/source-closure/config-generation.json"},

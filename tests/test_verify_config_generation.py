@@ -19,6 +19,8 @@ class ConfigProofTest(unittest.TestCase):
   nuttx=git_root(self.repo/"nuttx",{"tools/version.sh":b"version\n","tools/incdir.c":b"incdir source\n","tools/Makefile.host":real_makefile.read_bytes()})
   apps=git_root(self.repo/"nuttx-apps",{"Kconfig":b"apps upstream\n"})
   links=json.loads(PROOF.read_text())["symlinks"]
+  directories=json.loads(PROOF.read_text())["directories"]
+  for item in directories: (self.repo/item["path"]).mkdir(parents=True,exist_ok=True)
   for item in links:
    target=self.repo/item["target"]
    if item["target_type"]=="directory": target.mkdir(parents=True,exist_ok=True)
@@ -31,7 +33,7 @@ class ConfigProofTest(unittest.TestCase):
   d["outputs"]=[{"path":"nuttx/.config","sha256":sha(b"config\n")},{"path":"nuttx/.version","sha256":sha(b"version output\n")},{"path":"nuttx/tools/incdir","sha256":sha(b"incdir output\n")}]
   d["source_identities"]=[{"commit":project,"path":"apps","root":".","tree":subprocess.check_output(["git","-C",self.repo,"rev-parse",project+":apps"],text=True).strip()},{"commit":nuttx,"path":".","root":"nuttx","tree":subprocess.check_output(["git","-C",self.repo/"nuttx","rev-parse",nuttx+"^{tree}"],text=True).strip()},{"commit":apps,"path":".","root":"nuttx-apps","tree":subprocess.check_output(["git","-C",self.repo/"nuttx-apps","rev-parse",apps+"^{tree}"],text=True).strip()}]
   self.proof=Path(self.tmp.name)/"proof.json"; self.proof.write_text(json.dumps(d))
-  self.declaration=Path(self.tmp.name)/"generated.json"; self.declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":x["path"],"sha256":x["sha256"]} for x in d["outputs"]],"symlinks":[dict(x,evidence="evidence/source-closure/config-generation.json") for x in links]}))
+  self.declaration=Path(self.tmp.name)/"generated.json"; self.declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":x["path"],"sha256":x["sha256"]} for x in d["outputs"]],"directories":[{"path":x["path"],"evidence":"evidence/source-closure/config-generation.json"} for x in directories],"symlinks":[dict(x,evidence="evidence/source-closure/config-generation.json") for x in links]}))
   self.original_proof=self.proof.read_bytes(); self.original_declaration=self.declaration.read_bytes()
  def tearDown(self): self.tmp.cleanup()
  def invoke(self,ok=True):
@@ -60,4 +62,7 @@ class ConfigProofTest(unittest.TestCase):
  def test_symlink_target_and_declaration_tamper_fail(self):
   d=json.loads(self.proof.read_text()); d["symlinks"][0]["target"]="nuttx"; self.proof.write_text(json.dumps(d)); self.assertIn("symlink set",self.invoke(False).stderr)
   self.proof.write_bytes(self.original_proof); d=json.loads(self.declaration.read_text()); d["symlinks"][0]["target"]="nuttx"; self.declaration.write_text(json.dumps(d)); self.assertIn("symlink declaration",self.invoke(False).stderr)
+ def test_directory_proof_and_declaration_tamper_fail(self):
+  d=json.loads(self.proof.read_text()); d["directories"]=[]; self.proof.write_text(json.dumps(d)); self.assertIn("directory set",self.invoke(False).stderr)
+  self.proof.write_bytes(self.original_proof); d=json.loads(self.declaration.read_text()); d["directories"]=[]; self.declaration.write_text(json.dumps(d)); self.assertIn("directory declaration",self.invoke(False).stderr)
 if __name__=="__main__": unittest.main()

@@ -638,8 +638,10 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     }
     declared, generated_rows = declared_generated(arguments)
     symlinks, symlink_rows = declared_symlinks(arguments)
-    if {item["path"] for item in generated_rows} & {item["path"] for item in symlink_rows}:
-        die("generated file and symlink paths collide")
+    _, directory_rows = declared_directories(arguments)
+    kinds=[{item["path"] for item in rows} for rows in (generated_rows,symlink_rows,directory_rows)]
+    if any(kinds[left] & kinds[right] for left in range(len(kinds)) for right in range(left+1,len(kinds))):
+        die("generated file, symlink, and directory paths collide")
     observed_symlinks={path for path in lexical if path.is_symlink()}
     if symlinks != observed_symlinks:
         die("consumed and declared generated symlink sets differ")
@@ -745,6 +747,29 @@ def declared_symlinks(arguments: argparse.Namespace) -> tuple[set[Path], list[di
             if link in paths: die("duplicate generated symlink")
             paths.add(link); rows.append({"path":logical.as_posix(),"target":target.as_posix(),"target_type":kind,"evidence":item.get("evidence")})
     return paths, sorted(rows,key=lambda x:x["path"])
+
+
+def declared_directories(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
+    repository=Path(arguments.repository).resolve(); paths=set(); rows=[]
+    for declaration in getattr(arguments,"generated",[]):
+        declaration_path=Path(declaration)
+        if declaration_path.is_absolute() or ".." in declaration_path.parts: die("generated-input declaration must be repository-relative")
+        document=json.loads((repository/declaration_path).read_text())
+        items=document.get("directories",[])
+        if not isinstance(items,list): die("invalid generated directory declaration")
+        for item in items:
+            if not isinstance(item,dict): die("invalid generated directory")
+            relative=PurePosixPath(item.get("path","")); evidence=item.get("evidence")
+            if relative.is_absolute() or not relative.parts or ".." in relative.parts: die("generated directory path escapes repository")
+            if not isinstance(evidence,str) or not evidence: die("generated directory lacks evidence")
+            current=repository
+            for part in relative.parts:
+                current/=part
+                if current.is_symlink(): die("generated directory path contains symlink")
+            if not current.is_dir() or not current.resolve().is_relative_to(repository): die("declared generated directory is missing or escaping")
+            if current in paths: die("duplicate generated directory")
+            paths.add(current); rows.append({"path":relative.as_posix(),"evidence":evidence})
+    return paths,sorted(rows,key=lambda item:item["path"])
 
 
 def declared_external(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
@@ -1332,6 +1357,7 @@ def generate(arguments: argparse.Namespace) -> None:
         "external_inputs": declared_external(arguments)[1],
         "generated_inputs": declared_generated(arguments)[1],
         "generated_symlinks": declared_symlinks(arguments)[1],
+        "generated_directories": declared_directories(arguments)[1],
         "vcs_administration": vcs_administration(consumed_paths(arguments), roots)[1],
         "repository_tool_roots": arguments._repository_tool_audit,
         "capture_relocation": {"enabled":mapping is not None,"source_identity":"captured-repository-root" if mapping else None},
@@ -1366,7 +1392,8 @@ def verify(arguments: argparse.Namespace) -> None:
     generated, generated_rows = declared_generated(arguments)
     if (manifest.get("external_inputs") != external_rows
             or manifest.get("generated_inputs") != generated_rows
-            or manifest.get("generated_symlinks") != declared_symlinks(arguments)[1]):
+            or manifest.get("generated_symlinks") != declared_symlinks(arguments)[1]
+            or manifest.get("generated_directories") != declared_directories(arguments)[1]):
         die("declared generated/external inputs differ from manifest")
     consumed_keys = set()
     for path in consumed_all - vcs_excluded - external - generated:

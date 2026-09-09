@@ -9,6 +9,7 @@ INPUTS={"boards/spike-prime-hub/configs/usbnsh/defconfig","nuttx/tools/version.s
 COMMANDS=[["ln","-s","$TREE/apps","$TREE/nuttx-apps/external"],["nuttx/tools/configure.sh","-l","-a","../nuttx-apps","../boards/spike-prime-hub/configs/usbnsh"],["make","-C","nuttx","olddefconfig"],["nuttx/tools/version.sh","-v","12.12.0","-b","a67efb31cf","nuttx/.version"],["make","-C","nuttx/tools","-f","Makefile.host","incdir"]]
 HOST_TOOL={"compiler_argv":["cc","-O2","-Wall","-Wstrict-prototypes","-Wshadow","-DHAVE_STRTOK_C=1","-DHAVE_STRNDUP=1","-o","incdir","incdir.c"],"makefile":"nuttx/tools/Makefile.host","makefile_sha256":"4433262b615aae57a80b1b9d60248e78089632520e0d4855fe3576e240b49d1b","rule":"incdir$(HOSTEXEEXT): incdir.c"}
 SYMLINKS=[{"path":"nuttx-apps/platform/board","target":"nuttx-apps/platform/dummy","target_type":"directory"},{"path":"nuttx/Make.defs","target":"boards/spike-prime-hub/scripts/Make.defs","target_type":"file"},{"path":"nuttx/arch/arm/include/board","target":"boards/spike-prime-hub/include","target_type":"directory"},{"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory"},{"path":"nuttx/arch/arm/src/chip","target":"nuttx/arch/arm/src/stm32","target_type":"directory"},{"path":"nuttx/include/arch","target":"nuttx/arch/arm/include","target_type":"directory"},{"path":"nuttx/include/newlib","target":"nuttx/libs/libm/newlib/include","target_type":"directory"}]
+DIRECTORIES=[{"path":"nuttx/boards/dummy","reason":"native configure output required by Kconfig generation"}]
 def fail(s): raise SystemExit("config-proof: ERROR: "+s)
 def rel(s,label):
  p=PurePosixPath(s) if isinstance(s,str) else PurePosixPath()
@@ -52,6 +53,13 @@ def main():
   outputs[name]=item["sha256"]
  if set(outputs)!=OUTPUTS: fail("output set mismatch")
  if d.get("symlinks")!=SYMLINKS: fail("configured symlink set differs")
+ if d.get("directories")!=DIRECTORIES: fail("configured directory set differs")
+ for item in DIRECTORIES:
+  relative=rel(item["path"],"configured directory"); current=repo
+  for component in relative.parts:
+   current/=component
+   if current.is_symlink(): fail("configured directory path contains symlink")
+  if not current.is_dir() or not current.resolve().is_relative_to(repo): fail("configured directory is missing or escaping")
  for item in SYMLINKS:
   logical=rel(item["path"],"symlink"); target_relative=rel(item["target"],"symlink target")
   link=repo/logical.as_posix(); target_path=repo/target_relative.as_posix()
@@ -102,5 +110,7 @@ def main():
  declared_links=declaration.get("symlinks")
  expected_links=[dict(item,evidence="evidence/source-closure/config-generation.json") for item in SYMLINKS]
  if declared_links!=expected_links: fail("generated symlink declaration differs")
+ expected_directories=[{"path":item["path"],"evidence":"evidence/source-closure/config-generation.json"} for item in DIRECTORIES]
+ if declaration.get("directories")!=expected_directories: fail("generated directory declaration differs")
  print("config-proof: verified 3 outputs")
 if __name__=="__main__": main()
