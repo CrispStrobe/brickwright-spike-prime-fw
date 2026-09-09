@@ -33,8 +33,10 @@ generator metadata only.
 startup scripts against their pinned, networkless compiler proof. Both outputs
 are materialized; no other staging-tree file is admitted.
 
-Only MIT, Apache-2.0, BSD-2-Clause, BSD-2-Clause-FreeBSD, and BSD-3-Clause are
-generally accepted. The deprecated `BSD-2-Clause-FreeBSD` SPDX identifier is
+Only MIT, Apache-2.0, BSD-2-Clause, BSD-2-Clause-FreeBSD, BSD-3-Clause, and
+TwistedSNMP are generally accepted. TwistedSNMP is an explicitly reviewed
+BSD-like grant with attribution, non-endorsement, and disclaimer conditions;
+its SPDX identifier is preserved. The deprecated `BSD-2-Clause-FreeBSD` identifier is
 preserved as declared rather than silently rewritten.
 The NuttX public-domain dedication is reviewed only for the exact
 `nuttx/include/search.h` override: its SPDX identifier and J.T. Conklin notice
