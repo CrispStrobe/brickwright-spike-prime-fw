@@ -31,6 +31,14 @@ REVIEWED_LICENSE_NOTICES = {
         b"Written by J.T. Conklin <jtc@netbsd.org>\n * Public domain."
     ),
 }
+REVIEWED_SPDX_ANOMALIES = {
+    ("nuttx", "fs/mnemofs/Make.defs"): {
+        "sha256": "020f7d73c2e8647520012db2c76d9702657c0368f601cd7415207067bfd5c3d3",
+        "raw_tags": ["Apache-2.0 or BSD-3-Clause", "BSD-3-Clause"],
+        "concluded": "BSD-3-Clause",
+        "markers": [b"Alternatively, the contents of this file may be used under the terms of", b"Redistribution and use in source and binary forms"],
+    },
+}
 FORBIDDEN_LICENSE = re.compile(
     r"(?:^|[^A-Za-z])(?:A?GPL|LGPL|CC-BY-NC|NONCOMMERCIAL)", re.IGNORECASE
 )
@@ -643,12 +651,21 @@ def license_rule(root: dict, relative: Path) -> tuple[str, bool]:
     return selected
 
 
-def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str]:
+def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict | None]:
     expressions = set()
     for line in path.read_bytes().splitlines():
         match = SPDX_COMMENT.match(line)
         if match:
             expressions.add(match.group(1).decode("ascii", "replace").strip())
+    anomaly = REVIEWED_SPDX_ANOMALIES.get((root["name"], relative.as_posix()))
+    if anomaly is not None:
+        raw = path.read_bytes()
+        if (sha256(path) != anomaly["sha256"] or sorted(expressions) != sorted(anomaly["raw_tags"])
+                or any(marker not in raw for marker in anomaly["markers"])):
+            die(f"reviewed SPDX anomaly drift: {root['name']}/{relative}")
+        return anomaly["concluded"], anomaly["concluded"], {
+            "kind": "reviewed-multiple-spdx-anomaly", "raw_tags": anomaly["raw_tags"]
+        }
     if len(expressions) > 1:
         die(f"multiple SPDX expressions in {path}: {sorted(expressions)}")
     declared, require_spdx = license_rule(root, relative)
@@ -660,9 +677,9 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str]:
         notice = REVIEWED_LICENSE_NOTICES[(root["name"], relative.as_posix())]
         if notice not in path.read_bytes():
             die(f"reviewed license notice mismatch: {root['name']}/{relative}")
-        return expression, expression
+        return expression, expression, None
     if expression in ALLOWED_LICENSES:
-        return expression, expression
+        return expression, expression, None
     alternatives = expression.split(" OR ")
     if len(alternatives) > 1 and all(
         re.fullmatch(r"[A-Za-z0-9.-]+", item) for item in alternatives
@@ -670,7 +687,7 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str]:
         allowed = [item for item in alternatives if item in ALLOWED_LICENSES]
         concluded = declared if declared in allowed else allowed[0] if len(allowed) == 1 else None
         if concluded is not None:
-            return concluded, expression
+            return concluded, expression, None
     check_license(expression, f"{root['name']}/{relative.as_posix()}")
     raise AssertionError("unreachable")
 
@@ -707,7 +724,7 @@ def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[di
     for path in consumed - external - generated:
         root, relative, resolved = locate(path, roots)
         key = (root["name"], relative.as_posix())
-        concluded_license, declared_license = file_license(resolved, root, relative)
+        concluded_license, declared_license, license_audit = file_license(resolved, root, relative)
         entries[key] = {
             "source_root": root["name"],
             "path": relative.as_posix(),
@@ -717,6 +734,8 @@ def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[di
             "role": root["role"],
             "origin": origin_for(root, relative, resolved),
         }
+        if license_audit is not None:
+            entries[key]["license_audit"] = license_audit
     return [entries[key] for key in sorted(entries)]
 
 
@@ -747,6 +766,8 @@ def make_sbom(manifest: dict) -> dict:
                 EXTRACTED_LICENSES[entry["license"]]["extractedText"]
                 if entry["license"] in EXTRACTED_LICENSES else "NOASSERTION"
             ),
+            **({"comment": json.dumps(entry["license_audit"], sort_keys=True)}
+               if "license_audit" in entry else {}),
         })
     offset = len(files)
     for index, entry in enumerate(manifest.get("generated_inputs", []), offset + 1):
@@ -929,8 +950,8 @@ def verify(arguments: argparse.Namespace) -> None:
     for actual in actual_files:
         key = (actual["source_root"], actual["path"])
         wanted = expected_by_key[key]
-        for field in ("sha256", "license", "declared_license", "role", "origin"):
-            if actual.get(field) != wanted[field]:
+        for field in ("sha256", "license", "declared_license", "license_audit", "role", "origin"):
+            if actual.get(field) != wanted.get(field):
                 die(f"{field} mismatch: {key[0]}/{key[1]}")
     if actual_files != expected:
         die("manifest file ordering is not canonical")
