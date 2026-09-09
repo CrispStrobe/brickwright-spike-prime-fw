@@ -345,7 +345,7 @@ class ClosureTest(unittest.TestCase):
 
     def test_generated_symlink_is_structured_and_escape_fails(self):
         link=self.base/"configured"; link.symlink_to(self.root,target_is_directory=True)
-        trace=self.base/"symlink.trace"; trace.write_text(f'1 newfstatat(AT_FDCWD, "{link}", {{st_mode=S_IFLNK|0777}}, AT_SYMLINK_NOFOLLOW) = 0\n1 readlink("{link}", "upstream", 1023) = 8\n')
+        trace=self.base/"symlink.trace"; trace.write_text(f'1 newfstatat(AT_FDCWD, "{link}", {{st_mode=S_IFLNK|0777}}, AT_SYMLINK_NOFOLLOW) = 0\n1 readlink("{link}", "upstream", 1023) = 8\n1 newfstatat(AT_FDCWD, "{link}", {{st_mode=S_IFDIR|0755}}, 0) = 0\n')
         declaration=self.base/"generated.json"
         item={"path":"configured","target":"upstream","target_type":"directory","evidence":"fixture"}
         declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))

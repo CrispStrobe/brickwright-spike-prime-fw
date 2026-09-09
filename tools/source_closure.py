@@ -265,6 +265,7 @@ def trace_descriptor(value: str, pid: str, syscall: str) -> int:
 
 def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
     found: set[Path] = set()
+    strong_content: set[Path] = set()
     generated: set[Path] = set()
     directories: set[Path] = set()
     unfinished: dict[str, str] = {}
@@ -439,13 +440,17 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
                     directories.add(resolved)
                 elif syscall in {"execve", "readlink", "readlinkat"}:
                     found.add(resolved)
+                    strong_content.add(resolved)
     if unfinished:
         die(f"unterminated syscalls in {path}: pids {sorted(unfinished)}")
     # Build-created intermediates are linkage evidence, not vendored source.
     # Existing directories are traversal metadata, not source files. Missing
     # paths remain so locate() fails closed unless the trace proved creation.
     aliases = {path for path in found if DESCRIPTOR_ALIAS.match(path.as_posix())}
-    consumed = found - generated - directories - aliases
+    # A configure/build traversal may first read a symlink and later stat the
+    # same lexical name after following it to a directory.  The successful
+    # readlink is content evidence and must dominate that directory metadata.
+    consumed = (found - generated - aliases) - (directories - strong_content)
     return (consumed, generated) if with_generated else consumed
 
 
