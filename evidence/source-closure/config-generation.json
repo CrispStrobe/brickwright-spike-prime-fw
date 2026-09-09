@@ -12,6 +12,9 @@
     {"path": "nuttx/tools/version.sh", "sha256": "15e12188273d3be9e106bdf89b62e44999893a5daa53aceaa2411ddd9af0dd71"},
     {"path": "nuttx/tools/incdir.c", "sha256": "13e1e475dd39cb855f82aa761ad1c9f8288f9540c81f25d3a62332838e0bcba2"}
   ],
+  "directories": [
+    {"path":"nuttx/boards/dummy","reason":"native configure output required by Kconfig generation"}
+  ],
   "isolation": {"network_namespace": "none", "successful_connects": 0},
   "native_host_tool": {
     "compiler_argv": ["cc", "-O2", "-Wall", "-Wstrict-prototypes", "-Wshadow", "-DHAVE_STRTOK_C=1", "-DHAVE_STRNDUP=1", "-o", "incdir", "incdir.c"],

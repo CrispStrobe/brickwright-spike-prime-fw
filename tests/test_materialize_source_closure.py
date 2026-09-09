@@ -98,6 +98,12 @@ class MaterializeSourceClosureTest(unittest.TestCase):
         result=self.invoke(); self.assertEqual(0,result.returncode,result.stderr); self.assertFalse((self.destination/"generated.h").exists()); self.assertIn("copied 1 files",result.stdout)
         shutil.rmtree(self.destination); document["generated_inputs"][0]["materialize"]="unknown"; self.manifest.write_text(json.dumps(document)); result=self.invoke(); self.assertNotEqual(0,result.returncode); self.assertIn("must be boolean",result.stderr); self.assertFalse(self.destination.exists())
 
+    def test_explicit_generated_directory_and_collisions(self) -> None:
+        document=json.loads(self.manifest.read_text()); document["generated_directories"]=[{"path":"empty","evidence":"fixture"}]; self.manifest.write_text(json.dumps(document)); result=self.invoke(); self.assertEqual(0,result.returncode,result.stderr); self.assertTrue((self.destination/"empty").is_dir())
+        shutil.rmtree(self.destination); document["generated_directories"]=[{"path":"../escape","evidence":"fixture"}]; self.manifest.write_text(json.dumps(document)); self.assertIn("safe relative",self.invoke().stderr); self.assertFalse(self.destination.exists())
+        document["generated_directories"]=[{"path":"generated.h","evidence":"fixture"}]; self.manifest.write_text(json.dumps(document)); self.assertIn("collides",self.invoke().stderr); self.assertFalse(self.destination.exists())
+        document["generated_directories"]=[{"path":"alias/child","evidence":"fixture"}]; document["generated_symlinks"]=[{"path":"alias","target":"upstream","target_type":"directory"}]; self.manifest.write_text(json.dumps(document)); self.assertIn("traverses a symlink",self.invoke().stderr); self.assertFalse(self.destination.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

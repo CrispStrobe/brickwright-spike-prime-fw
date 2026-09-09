@@ -125,13 +125,23 @@ def main() -> None:
                 fail("source input is missing or changed")
             copy_plan[relative] = (source, expected)
 
+    directory_items=manifest.get("generated_directories",[]); directories=set()
+    if not isinstance(directory_items,list): fail("generated directories must be a list")
+    for item in directory_items:
+        if not isinstance(item,dict): fail("invalid generated directory")
+        relative=safe_relative(item.get("path",""),"generated directory path"); evidence=item.get("evidence")
+        if not isinstance(evidence,str) or not evidence: fail("generated directory lacks evidence")
+        if relative in directories: fail("duplicate generated directory")
+        if relative in copied or any(parent in copied for parent in relative.parents): fail("generated directory collides at destination")
+        directories.add(relative)
+
     symlinked=set(); symlink_plan=[]; symlink_items=manifest.get("generated_symlinks", [])
     if not isinstance(symlink_items,list): fail("generated symlinks must be a list")
     for item in symlink_items:
         if not isinstance(item,dict): fail("invalid generated symlink")
         relative=safe_relative(item.get("path",""),"generated symlink path")
         target=safe_relative(item.get("target",""),"generated symlink target")
-        if relative in copied or relative in symlinked: fail("generated symlink collides at destination")
+        if relative in copied or relative in directories or relative in symlinked: fail("generated symlink collides at destination")
         kind=item.get("target_type")
         if kind not in {"file","directory"}: fail("generated symlink target is missing or wrong type")
         symlink_plan.append((relative,target,kind)); symlinked.add(relative)
@@ -141,19 +151,22 @@ def main() -> None:
         if any(parent in symlinked for parent in relative.parents) or any(parent in symlinked for parent in (target,*target.parents)): fail("generated symlink topology traverses another symlink")
         if any(parent in copied for parent in relative.parents): fail("generated symlink collides at destination")
         if any(relative in path.parents for path in copy_plan): fail("generated symlink collides at destination")
+    if any(parent in symlinked for directory in directories for parent in directory.parents): fail("generated directory topology traverses a symlink")
 
     # No destination mutation occurs until every row, byte hash, collision and
     # symlink target has passed preflight.
     destination.mkdir(parents=True, exist_ok=True)
     for relative,(source,expected) in copy_plan.items():
         copy_checked(source,destination/relative,expected)
+    for relative in sorted(directories):
+        (destination/relative).mkdir(parents=True,exist_ok=True)
     for relative,target,kind in symlink_plan:
         link=destination/relative; resolved=destination/target
         link.parent.mkdir(parents=True,exist_ok=True)
         link.symlink_to(Path(os.path.relpath(resolved,link.parent)))
         if not link.resolve().is_relative_to(destination) or link.resolve()!=resolved.resolve(): fail("materialized symlink escapes or differs")
 
-    print(f"materialize-source-closure: copied {len(copy_plan)} files and {len(symlinked)} symlinks")
+    print(f"materialize-source-closure: copied {len(copy_plan)} files, {len(directories)} directories, and {len(symlinked)} symlinks")
 
 
 if __name__ == "__main__":
