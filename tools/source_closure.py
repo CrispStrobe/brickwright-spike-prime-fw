@@ -1081,20 +1081,41 @@ def make_link_evidence(arguments: argparse.Namespace, manifest: dict, roots: lis
         name, raw = value.split("=", 1)
         replacements.append((Path(raw).resolve().as_posix(), f"${{{name}}}"))
     replacements.sort(key=lambda item: len(item[0]), reverse=True)
+    repository_roots = [Path(arguments.repository).resolve()]
+    mapping = relocation(arguments)
+    if mapping is not None:
+        repository_roots.append(mapping[0])
+    encoded_roots = [root.as_posix().replace("/", ".") for root in repository_roots]
     def public_identity(identity: str) -> str:
         for prefix, replacement in replacements:
             if identity == prefix or identity.startswith(prefix + "/"):
-                return replacement + identity[len(prefix):]
+                identity = replacement + identity[len(prefix):]
+                break
+        # NuttX archive staging can flatten an absolute producer path into an
+        # archive member name.  Preserve raw identities for map matching, then
+        # redact only an exact encoded repository-root token at publication.
+        for encoded in encoded_roots:
+            identity = re.sub(re.escape(encoded) + r"(?=$|[./()])", ".repository", identity)
+        if any(root.as_posix() in identity for root in repository_roots) or any(
+            encoded in identity for encoded in encoded_roots
+        ):
+            die("published build identity contains repository path material")
         return identity
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
-    return {
+    result = {
         "schema": 1,
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "map_files": [{"path": Path(item).name, "sha256": sha256(Path(item))} for item in sorted(arguments.map)],
         "map_objects": sorted(public_identity(identity) for identity in map_objects),
-        "objects": rows,
+        "objects": [dict(row, path=public_identity(row["path"])) for row in rows],
         "depfile_prerequisites": sorted(all_sources),
     }
+    serialized = json.dumps(result, sort_keys=True)
+    if any(root.as_posix() in serialized for root in repository_roots) or any(
+        encoded in serialized for encoded in encoded_roots
+    ):
+        die("published link evidence contains repository path material")
+    return result
 
 
 def generate(arguments: argparse.Namespace) -> None:
