@@ -15,7 +15,8 @@ from pathlib import Path, PurePosixPath
 
 
 ALLOWED_LICENSES = {
-    "Apache-2.0", "BSD-2-Clause", "BSD-2-Clause-FreeBSD", "BSD-3-Clause", "MIT"
+    "Apache-2.0", "BSD-2-Clause", "BSD-2-Clause-FreeBSD", "BSD-3-Clause", "MIT",
+    "TwistedSNMP",
 }
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",

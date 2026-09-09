@@ -332,6 +332,15 @@ class ClosureTest(unittest.TestCase):
                            if item["fileName"] == "nuttx/header.h")
         self.assertEqual(["BSD-2-Clause-FreeBSD"], sbom_header["licenseInfoInFiles"])
 
+    def test_twistedsnmp_is_allowed_and_preserved(self):
+        self.write_roots("TwistedSNMP"); self.generate()
+        manifest=json.loads(self.manifest.read_text())
+        header=next(item for item in manifest["files"] if item["path"]=="header.h")
+        self.assertEqual("TwistedSNMP",header["license"])
+        sbom=json.loads(self.sbom.read_text())
+        item=next(item for item in sbom["files"] if item["fileName"]=="nuttx/header.h")
+        self.assertEqual(["TwistedSNMP"],item["licenseInfoInFiles"])
+
     def test_exact_mnemofs_spdx_anomaly_is_reviewed_and_drift_fails(self):
         source = self.root / "fs/mnemofs/Make.defs"; source.parent.mkdir(parents=True)
         canonical = Path(__file__).resolve().parents[1] / "nuttx/fs/mnemofs/Make.defs"
