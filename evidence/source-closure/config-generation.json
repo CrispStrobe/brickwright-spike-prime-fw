@@ -25,9 +25,13 @@
     {"path": "nuttx/tools/incdir", "sha256": "67fb05e4c3ce557b27ad66313c8f47e59977be53a745ab24469fa188dd79c350"}
   ],
   "symlinks": [
+    {"path":"nuttx-apps/platform/board","target":"nuttx-apps/platform/dummy","target_type":"directory"},
     {"path":"nuttx/Make.defs","target":"boards/spike-prime-hub/scripts/Make.defs","target_type":"file"},
     {"path":"nuttx/arch/arm/include/board","target":"boards/spike-prime-hub/include","target_type":"directory"},
-    {"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory"}
+    {"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory"},
+    {"path":"nuttx/arch/arm/src/chip","target":"nuttx/arch/arm/src/stm32","target_type":"directory"},
+    {"path":"nuttx/include/arch","target":"nuttx/arch/arm/include","target_type":"directory"},
+    {"path":"nuttx/include/newlib","target":"nuttx/libs/libm/newlib/include","target_type":"directory"}
   ],
   "source_identities": [
     {"commit": "553a3161116db2c49033b3e7f948563bd9824e94", "path": "apps", "root": ".", "tree": "87478a45a4db3cdb21374f18d86a78d32e435491"},
