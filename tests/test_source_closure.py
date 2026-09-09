@@ -442,6 +442,11 @@ class ClosureTest(unittest.TestCase):
         source.write_bytes(source.read_bytes()+b"drift\n"); self.assertIn("file drift",self.generate(ok=False).stderr)
         other=self.root/"other.c"; other.write_text("/* SPDX-License-Identifier: ISC */\n"); self.dep.write_text(f"x: {other}\n"); self.assertIn("unknown",self.generate(ok=False).stderr)
 
+    def test_second_exact_uc_bsd_override_is_hash_pinned(self):
+        source=self.root/"libs/libc/stdlib/lib_wctomb.c"; source.parent.mkdir(parents=True); source.write_bytes((Path(__file__).resolve().parents[1]/"nuttx/libs/libc/stdlib/lib_wctomb.c").read_bytes())
+        subprocess.run(["git","-C",self.root,"add","."],check=True); subprocess.run(["git","-C",self.root,"commit","-qm","wctomb"],check=True); commit=subprocess.check_output(["git","-C",self.root,"rev-parse","HEAD"],text=True).strip()
+        d=json.loads(self.roots.read_text()); d["roots"][0]["commit"]=commit; d["roots"][0]["license_overrides"]=[{"path":"libs/libc/stdlib/lib_wctomb.c","license":"BSD-3-Clause-UC","require_spdx":True}]; self.roots.write_text(json.dumps(d)); self.dep.write_text(f"x: {source}\n"); self.generate(); source.write_bytes(source.read_bytes()+b"drift\n"); self.assertIn("file drift",self.generate(ok=False).stderr)
+
     def test_missing_escape_and_escaping_symlink_rejected(self):
         self.dep.write_text(f"x: {self.root}/missing.h\n")
         self.assertIn("missing", self.generate(ok=False).stderr)
