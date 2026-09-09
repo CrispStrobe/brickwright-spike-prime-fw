@@ -21,6 +21,7 @@ ALLOWED_LICENSES = {
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
+    ("nuttx-apps", "graphics/twm4nx/Make.defs"): "Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): "BSD-3-Clause-UC",
     ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): "ISC",
 }
@@ -35,6 +36,7 @@ REVIEWED_LICENSE_NOTICES = {
         b"Written by J.T. Conklin <jtc@netbsd.org>\n * Public domain."
     ),
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
+    ("nuttx-apps", "graphics/twm4nx/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): b"Neither the name of the University nor the names of its contributors",
     ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): b"Permission to use, copy, modify, and distribute this software for any",
 }
@@ -48,6 +50,12 @@ REVIEWED_NESTED_BOUNDARIES = {
         "boundary_sha256": "894d7166375b77cfd3d052d44ca90ebb7d0f3c5a4f7c57363af9d842bbaaad81",
         "markers": [b"Portions of this package derive from Woopsi", b"Copyright (c) 2007-2011, Antony Dzeryn", b"Neither the names \"Woopsi\", \"Simian Zombie\""],
         "future_consumed_files_require": "Apache-2.0 AND BSD-3-Clause",
+    },
+    ("nuttx-apps", "graphics/twm4nx/Make.defs"): {
+        "boundary_path": "graphics/twm4nx/COPYING",
+        "boundary_sha256": "f1f9cb0ed8a020522b4de0a5b84a2745d4de9609cf58f3b892abb689f6c8cb45",
+        "markers": [b"Copyright 1989, 1994, 1998  The Open Group", b"Copyright 1988 by Evans & Sutherland Computer Corporation", b"Permission to use, copy, modify, distribute, and sell this software"],
+        "future_consumed_files_require": "separate Twm4Nx source license review",
     },
 }
 REVIEWED_SPDX_ANOMALIES = {

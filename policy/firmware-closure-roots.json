@@ -48,6 +48,11 @@
           "license": "Apache-2.0",
           "path": "graphics/nxwidgets/Make.defs",
           "require_spdx": true
+        },
+        {
+          "license": "Apache-2.0",
+          "path": "graphics/twm4nx/Make.defs",
+          "require_spdx": true
         }
       ],
       "name": "nuttx-apps",
