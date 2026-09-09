@@ -4887,11 +4887,8 @@
   ],
   "schema": "brickwright/generated-build-inputs/v1",
   "symlinks": [
+    {"path":"nuttx/Make.defs","target":"boards/spike-prime-hub/scripts/Make.defs","target_type":"file","evidence":"evidence/source-closure/config-generation.json"},
     {"path":"nuttx/arch/arm/include/board","target":"boards/spike-prime-hub/include","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"},
-    {"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"},
-    {"path":"nuttx/arch/arm/src/chip","target":"nuttx/arch/arm/src/stm32","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"},
-    {"path":"nuttx/include/arch","target":"nuttx/arch/arm/include","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"},
-    {"path":"nuttx/include/newlib","target":"nuttx/libs/libm/newlib/include","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"},
-    {"path":"nuttx-apps/platform/board","target":"nuttx-apps/platform/dummy","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"}
+    {"path":"nuttx/arch/arm/include/chip","target":"nuttx/arch/arm/include/stm32","target_type":"directory","evidence":"evidence/source-closure/config-generation.json"}
   ]
 }

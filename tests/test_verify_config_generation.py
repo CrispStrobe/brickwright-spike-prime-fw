@@ -20,7 +20,10 @@ class ConfigProofTest(unittest.TestCase):
   apps=git_root(self.repo/"nuttx-apps",{"Kconfig":b"apps upstream\n"})
   links=json.loads(PROOF.read_text())["symlinks"]
   for item in links:
-   target=self.repo/item["target"]; target.mkdir(parents=True,exist_ok=True); link=self.repo/item["path"]; link.parent.mkdir(parents=True,exist_ok=True); link.symlink_to(target)
+   target=self.repo/item["target"]
+   if item["target_type"]=="directory": target.mkdir(parents=True,exist_ok=True)
+   else: target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(b"make defs\n")
+   link=self.repo/item["path"]; link.parent.mkdir(parents=True,exist_ok=True); link.symlink_to(target)
   (self.repo/"nuttx/.config").write_bytes(b"config\n"); (self.repo/"nuttx/.version").write_bytes(b"version output\n"); (self.repo/"nuttx/tools/incdir").write_bytes(b"incdir output\n")
   self.roots=Path(self.tmp.name)/"roots.json"; self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"project","path":".","commit":project},{"name":"nuttx","path":"nuttx","commit":nuttx},{"name":"nuttx-apps","path":"nuttx-apps","commit":apps}]}))
   d=json.loads(PROOF.read_text()); sha=lambda b:hashlib.sha256(b).hexdigest()
