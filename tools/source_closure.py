@@ -508,7 +508,7 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     if {item["path"] for item in generated_rows} & {item["path"] for item in symlink_rows}:
         die("generated file and symlink paths collide")
     observed_symlinks={path for path in lexical if path.is_symlink()}
-    if not symlinks.issubset(observed_symlinks):
+    if symlinks != observed_symlinks:
         die("consumed and declared generated symlink sets differ")
     lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink() and path.name != ".git")}
     normalized = {path.resolve() for path in lexical}

@@ -311,8 +311,8 @@ class ClosureTest(unittest.TestCase):
     def test_root_git_file_excluded_but_git_symlinks_are_not(self):
         root=self.base/"patched"; root.mkdir(); source=root/"source.c"; source.write_text("/* SPDX-License-Identifier: MIT */\n"); admin=root/".git"; admin.write_text("gitdir: /secret/host/path\n")
         roots=self.base/"patched-roots.json"; roots.write_text(json.dumps({"schema":1,"roots":[{"name":"patched","path":str(root),"repository":"x","commit":"tree-id","license":"MIT","role":"fixture","provenance":"patched-tree","patch_policy":"fixture"}]})); dep=self.base/"patched.d"; dep.write_text(f"x: {source}\n"); trace=self.base/"patched.trace"; trace.write_text(f'1 openat(AT_FDCWD, "{admin}", O_RDONLY) = 3\n'); self.invoke("generate","--roots",roots,"--cwd",self.base,"--strace",trace,"--depfile",dep,"--output",self.manifest,"--sbom",self.sbom); data=json.loads(self.manifest.read_text()); self.assertEqual("file",data["vcs_administration"][0]["kind"]); self.assertNotIn("secret",json.dumps(data)); self.assertNotIn(str(self.base),json.dumps(data))
-        outside=self.base/"outside-dot"; outside.write_text("/* SPDX-License-Identifier: MIT */\n"); admin.unlink(); admin.symlink_to(outside); trace.write_text(f'1 readlink("{admin}", "x", 1023) = 1\n'); self.assertIn("escapes",self.invoke("generate","--roots",roots,"--cwd",self.base,"--strace",trace,"--depfile",dep,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
-        admin.unlink(); gitfoo=root/".gitfoo"; gitfoo.symlink_to(outside); trace.write_text(f'1 readlink("{gitfoo}", "x", 1023) = 1\n'); self.assertIn("escapes",self.invoke("generate","--roots",roots,"--cwd",self.base,"--strace",trace,"--depfile",dep,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+        outside=self.base/"outside-dot"; outside.write_text("/* SPDX-License-Identifier: MIT */\n"); admin.unlink(); admin.symlink_to(outside); trace.write_text(f'1 readlink("{admin}", "x", 1023) = 1\n'); self.assertIn("generated symlink sets differ",self.invoke("generate","--roots",roots,"--cwd",self.base,"--strace",trace,"--depfile",dep,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+        admin.unlink(); gitfoo=root/".gitfoo"; gitfoo.symlink_to(outside); trace.write_text(f'1 readlink("{gitfoo}", "x", 1023) = 1\n'); self.assertIn("generated symlink sets differ",self.invoke("generate","--roots",roots,"--cwd",self.base,"--strace",trace,"--depfile",dep,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
 
     def test_capture_relocation_does_not_rewrite_external_boundary(self):
         old=self.base.parent/"old-repo"; external=self.base/"toolchain-fixture"; external.mkdir(); header=external/"h"; header.write_bytes(b"external"); lock=self.base/"lock"; lock.write_bytes(b"lock"); declaration=self.base/"external.json"; declaration.write_text(json.dumps({"schema":"brickwright/external-build-inputs/v1","boundary":"host-tool","lock":{"path":"lock","sha256":hashlib.sha256(b"lock").hexdigest()},"files":[{"path":"h","sha256":hashlib.sha256(b"external").hexdigest()}]})); trace=self.base/"external.trace"; trace.write_text(f'1 openat(AT_FDCWD, "{header}", O_RDONLY) = 3\n'); dep=self.base/"external.d"; dep.write_text(f'x: {old}/upstream/main.c\n'); self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--captured-repository-root",old,"--strace",trace,"--depfile",dep,"--external",declaration.name,"--external-root",f"host-tool={external}","--output",self.manifest,"--sbom",self.sbom); data=json.loads(self.manifest.read_text()); self.assertEqual("h",data["external_inputs"][0]["path"]); self.assertNotIn(str(external),json.dumps(data))
@@ -351,6 +351,9 @@ class ClosureTest(unittest.TestCase):
         declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
         self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom)
         self.assertEqual([item],json.loads(self.manifest.read_text())["generated_symlinks"])
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[]}))
+        self.assertIn("sets differ",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
         extra=self.base/"extra"; extra.symlink_to(self.root,target_is_directory=True)
         declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item,{"path":"extra","target":"upstream","target_type":"directory"}]}))
         self.assertIn("sets differ",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
@@ -484,7 +487,7 @@ class ClosureTest(unittest.TestCase):
         self.assertIn("escapes declared", self.generate(ok=False).stderr)
         link = self.root / "link.c"; link.symlink_to(outside)
         self.dep.write_text(f"x: {link}\n")
-        self.assertIn("escapes declared source roots", self.generate(ok=False).stderr)
+        self.assertIn("generated symlink sets differ", self.generate(ok=False).stderr)
 
     def test_hash_mismatch_and_unmanifested_file_rejected(self):
         self.generate(); (self.root / "main.c").write_text("changed\n")
@@ -567,7 +570,7 @@ class ClosureTest(unittest.TestCase):
             "--depfile", self.dep, "--output", self.manifest,
             "--sbom", self.sbom, ok=False,
         )
-        self.assertIn("consumed path is not a file", result.stderr)
+        self.assertIn("generated symlink sets differ", result.stderr)
 
     def test_fcntl_directory_descriptor_duplication(self):
         self.trace.write_text(
