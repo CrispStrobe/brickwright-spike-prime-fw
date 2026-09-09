@@ -5,6 +5,9 @@ and CI; pending work belongs in `PLAN.md`.
 
 ## Public permissive baseline
 
+- Added path-free VCS-administration audit records so source closures never
+  serialize worktree metadata or host paths.
+
 - Created a parentless public snapshot from
   `owhinata/spike-nx@00524ea5464bddb46c852967e382f8f6b073abe6`.
 - Removed BTstack, firmware dumps, build products, and obsolete adapters from
