@@ -100,6 +100,14 @@ fresh materializations. It requires an immutable container image ID, records
 that networking was disabled, hashes the accepted source manifest, emits no run
 paths, and fails if any artifact differs.
 
+The only consumed NxWidgets path is the Apache-2.0 SPDX-tagged
+`graphics/nxwidgets/Make.defs`, used for build discovery and absent from
+depfiles and final maps. Its exact-file override pins the adjacent `COPYING`
+hash and records that the directory also contains Woopsi-derived BSD-3-Clause
+material. No NxWidgets source is admitted. Consuming any additional file fails
+closed and requires review as `Apache-2.0 AND BSD-3-Clause`, including notice
+materialization.
+
 ## Toolchain and linked-runtime boundary
 
 Project and vendored source admission remains permissive-only. Compiler

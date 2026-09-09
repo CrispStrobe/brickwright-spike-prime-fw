@@ -587,6 +587,28 @@ class ClosureTest(unittest.TestCase):
         self.dep.write_text(f"x: {source}\n")
         self.assertIn("nested license boundary lacks an override", self.generate(ok=False).stderr)
 
+    def test_exact_nxwidgets_discovery_override_pins_dual_boundary(self):
+        source = self.root / "graphics/nxwidgets/Make.defs"; source.parent.mkdir(parents=True)
+        repository = Path(__file__).resolve().parents[1]
+        source.write_bytes((repository / "nuttx-apps/graphics/nxwidgets/Make.defs").read_bytes())
+        copying = source.parent / "COPYING"
+        copying.write_bytes((repository / "nuttx-apps/graphics/nxwidgets/COPYING").read_bytes())
+        subprocess.run(["git", "-C", self.root, "add", "."], check=True)
+        subprocess.run(["git", "-C", self.root, "commit", "-qm", "nxwidgets"], check=True)
+        self.commit = subprocess.check_output(["git", "-C", self.root, "rev-parse", "HEAD"], text=True).strip()
+        document={"schema":1,"roots":[{"name":"nuttx-apps","path":str(self.root),"repository":"https://example.invalid/apps","commit":self.commit,"license":"Apache-2.0","role":"application","license_overrides":[{"path":"graphics/nxwidgets/Make.defs","license":"Apache-2.0","require_spdx":True}]}]}
+        self.roots.write_text(json.dumps(document)); self.dep.write_text(f"x: {source}\n"); self.generate()
+        entry=next(item for item in json.loads(self.manifest.read_text())["files"] if item["path"]=="graphics/nxwidgets/Make.defs")
+        self.assertEqual("reviewed-build-discovery-boundary",entry["license_audit"]["kind"])
+        sbom=json.loads(self.sbom.read_text()); item=next(item for item in sbom["files"] if item["fileName"].endswith("Make.defs"))
+        self.assertIn("COPYING",item["comment"])
+        copying.write_bytes(copying.read_bytes()+b"drift\n")
+        self.assertIn("nested license boundary drift",self.generate(ok=False).stderr)
+        copying.write_bytes((repository / "nuttx-apps/graphics/nxwidgets/COPYING").read_bytes())
+        future=source.parent/"future.c"; future.write_text("/* SPDX-License-Identifier: Apache-2.0 */\n")
+        self.dep.write_text(f"x: {future}\n")
+        self.assertIn("nested license boundary lacks an override",self.generate(ok=False).stderr)
+
     def test_required_spdx_accepts_block_comment_interior(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("Apache License, Version 2.0\n")
