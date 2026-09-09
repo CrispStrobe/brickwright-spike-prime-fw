@@ -322,6 +322,9 @@ class ClosureTest(unittest.TestCase):
         declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
         self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom)
         self.assertEqual([item],json.loads(self.manifest.read_text())["generated_symlinks"])
+        extra=self.base/"extra"; extra.symlink_to(self.root,target_is_directory=True)
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item,{"path":"extra","target":"upstream","target_type":"directory"}]}))
+        self.assertIn("sets differ",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
         item["target"]="../escape"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
         self.assertIn("escapes",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
 

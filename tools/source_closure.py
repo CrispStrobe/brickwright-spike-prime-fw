@@ -435,6 +435,9 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         for path in paths
     }
     symlinks, _ = declared_symlinks(arguments)
+    observed_symlinks={path for path in lexical if path.is_symlink()}
+    if observed_symlinks != symlinks:
+        die("consumed and declared generated symlink sets differ")
     lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink())}
     normalized = {path.resolve() for path in lexical}
     declared, _ = declared_generated(arguments)
@@ -489,7 +492,10 @@ def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[d
 def declared_symlinks(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
     repository = Path(arguments.repository).resolve(); paths=set(); rows=[]
     for declaration in getattr(arguments, "generated", []):
-        document=json.loads((repository/Path(declaration)).read_text())
+        declaration_path=Path(declaration)
+        if declaration_path.is_absolute() or ".." in declaration_path.parts:
+            die("generated-input declaration must be repository-relative")
+        document=json.loads((repository/declaration_path).read_text())
         items=document.get("symlinks", [])
         if not isinstance(items,list): die("invalid generated symlink declaration")
         for item in items:
