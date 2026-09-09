@@ -404,6 +404,7 @@ class ClosureTest(unittest.TestCase):
         self.assertIn("generated/"+relative,[x["fileName"] for x in json.loads(self.sbom.read_text())["files"]])
         generated.write_text("drift\n")
         self.assertIn("hash mismatch", self.generate("--repository",self.base,"--generated", declaration.name, ok=False).stderr)
+        generated.write_text("generated\n"); document=json.loads(declaration.read_text()); document["files"][0]["materialize"]="unknown"; declaration.write_text(json.dumps(document)); self.assertIn("materialize must be boolean",self.generate("--repository",self.base,"--generated",declaration.name,ok=False).stderr)
 
     def test_unconsumed_generated_diagnostic_is_logical_and_bounded(self):
         first=self.base/"first.generated"; second=self.base/"second.generated"; first.write_bytes(b"first"); second.write_bytes(b"second")

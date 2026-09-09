@@ -26,6 +26,7 @@
         "./nuttx/../boards/spike-prime-hub/scripts/kernel-space.ld.tmp"
       ],
       "path": "boards/spike-prime-hub/scripts/kernel-space.ld.tmp",
+      "materialize": false,
       "sha256": "71e0d23fb84be730c68adef2d0e74215b312282894ae3d00dbe0c815eb3bd960"
     },
     {
@@ -54,6 +55,7 @@
         "./nuttx/../boards/spike-prime-hub/scripts/memory.ld.tmp"
       ],
       "path": "boards/spike-prime-hub/scripts/memory.ld.tmp",
+      "materialize": false,
       "sha256": "715aa128be5ff8ac2d2c3052af24447854ce12488ef6351e001c4977f8868e58"
     },
     {

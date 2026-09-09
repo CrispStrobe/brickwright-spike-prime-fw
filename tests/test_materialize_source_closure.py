@@ -96,6 +96,11 @@ class MaterializeSourceClosureTest(unittest.TestCase):
         document=json.loads(self.manifest.read_text()); document["files"].append({"source_root":"upstream","path":"COPYING","sha256":sha256(b"notice\n"),"license":"Apache-2.0 AND BSD-3-Clause","license_audit":{"kind":"required-license-notice"}}); self.manifest.write_text(json.dumps(document))
         result=self.invoke(); self.assertEqual(0,result.returncode,result.stderr); self.assertEqual(b"notice\n",(self.destination/"upstream/COPYING").read_bytes())
 
+    def test_ephemeral_generated_input_is_validated_but_not_required_or_copied(self) -> None:
+        document=json.loads(self.manifest.read_text()); document["generated_inputs"][0]["materialize"]=False; self.manifest.write_text(json.dumps(document)); (self.repository/"generated.h").unlink()
+        result=self.invoke(); self.assertEqual(0,result.returncode,result.stderr); self.assertFalse((self.destination/"generated.h").exists()); self.assertIn("copied 1 files",result.stdout)
+        shutil.rmtree(self.destination); document["generated_inputs"][0]["materialize"]="unknown"; self.manifest.write_text(json.dumps(document)); result=self.invoke(); self.assertNotEqual(0,result.returncode); self.assertIn("must be boolean",result.stderr); self.assertFalse(self.destination.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
