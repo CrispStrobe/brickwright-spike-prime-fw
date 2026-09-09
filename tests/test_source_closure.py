@@ -651,6 +651,15 @@ class ClosureTest(unittest.TestCase):
         self.dep.write_text(f"x: {future}\n")
         self.assertIn("nested license boundary lacks an override",self.generate(ok=False).stderr)
 
+    def test_exact_twm4nx_discovery_override_pins_boundary(self):
+        source=self.root/"graphics/twm4nx/Make.defs"; source.parent.mkdir(parents=True); repository=Path(__file__).resolve().parents[1]
+        source.write_bytes((repository/"nuttx-apps/graphics/twm4nx/Make.defs").read_bytes()); copying=source.parent/"COPYING"; copying.write_bytes((repository/"nuttx-apps/graphics/twm4nx/COPYING").read_bytes())
+        subprocess.run(["git","-C",self.root,"add","."],check=True); subprocess.run(["git","-C",self.root,"commit","-qm","twm"],check=True); commit=subprocess.check_output(["git","-C",self.root,"rev-parse","HEAD"],text=True).strip()
+        self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"nuttx-apps","path":str(self.root),"repository":"https://example.invalid/apps","commit":commit,"license":"Apache-2.0","role":"application","license_overrides":[{"path":"graphics/twm4nx/Make.defs","license":"Apache-2.0","require_spdx":True}]}]})); self.dep.write_text(f"x: {source}\n"); self.generate()
+        copying.write_bytes(copying.read_bytes()+b"drift\n"); self.assertIn("boundary drift",self.generate(ok=False).stderr)
+        outside=self.base/"copy"; outside.write_bytes((repository/"nuttx-apps/graphics/twm4nx/COPYING").read_bytes()); copying.unlink(); copying.symlink_to(outside); self.assertIn("boundary drift",self.generate(ok=False).stderr)
+        copying.unlink(); copying.write_bytes(outside.read_bytes()); future=source.parent/"future.c"; future.write_text("/* SPDX-License-Identifier: Apache-2.0 */\n"); self.dep.write_text(f"x: {future}\n"); self.assertIn("boundary lacks an override",self.generate(ok=False).stderr)
+
     def test_required_spdx_accepts_block_comment_interior(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("Apache License, Version 2.0\n")
