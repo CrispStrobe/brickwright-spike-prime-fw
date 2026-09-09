@@ -373,7 +373,7 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
                 # stat/access checks: this trace did not capture read(2), so
                 # only an open content candidate, exec, or successful readlink
                 # can prove content use outside compiler/linker evidence.
-                if "st_mode=S_IFDIR" in argument_text or "st_mode=S_IFLNK" in argument_text:
+                if "st_mode=S_IFDIR" in argument_text:
                     directories.add(resolved)
                 elif syscall in {"execve", "readlink", "readlinkat"}:
                     found.add(resolved)
