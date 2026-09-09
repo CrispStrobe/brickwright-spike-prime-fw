@@ -6,7 +6,6 @@ from pathlib import Path, PurePosixPath
 HEX=re.compile(r"[0-9a-f]{64}"); IMAGE="sha256:8d304601acccf0fd2d6bcbf4e1ec1377b5e89cbdd669a60c1cf5c0e581b3c3fa"
 OUTPUTS={"nuttx/.config","nuttx/.version"}
 COMMANDS=[["ln","-s","$TREE/apps","$TREE/nuttx-apps/external"],["nuttx/tools/configure.sh","-l","-a","../nuttx-apps","../boards/spike-prime-hub/configs/usbnsh"],["make","-C","nuttx","olddefconfig"],["nuttx/tools/version.sh","-v","12.12.0","-b","a67efb31cf","nuttx/.version"]]
-IDENTITIES=[{"commit":"999e2d86f9b692abaf63b22dad77d22aeb03029c","path":"apps","root":".","tree":"87478a45a4db3cdb21374f18d86a78d32e435491"},{"commit":"a67efb31cf4f236e456882589b91862f04594528","path":".","root":"nuttx","tree":"f828c9b54198a9adcc01c5042b6d1cc64472e385"},{"commit":"55f0bc216565ccab8dee600a88f4485c7693bf8b","path":".","root":"nuttx-apps","tree":"2dca909c592142cc9c496165ef46de3a7496eca7"}]
 def fail(s): raise SystemExit("config-proof: ERROR: "+s)
 def rel(s,label):
  p=PurePosixPath(s) if isinstance(s,str) else PurePosixPath()
@@ -21,7 +20,7 @@ def regular(repo,name,label):
  if not current.resolve().is_relative_to(repo) or not current.is_file(): fail(label+" missing or escaping: "+name)
  return current
 def main():
- ap=argparse.ArgumentParser(); ap.add_argument("--proof",required=True); ap.add_argument("--repository",required=True); ap.add_argument("--declaration",required=True); a=ap.parse_args()
+ ap=argparse.ArgumentParser(); ap.add_argument("--proof",required=True); ap.add_argument("--repository",required=True); ap.add_argument("--declaration",required=True); ap.add_argument("--roots",required=True); a=ap.parse_args()
  repo=Path(a.repository).resolve(); d=json.loads(Path(a.proof).read_text())
  if d.get("schema")!="brickwright/config-generation-proof/v1" or d.get("status")!="exact-output-match": fail("invalid proof header")
  if d.get("container_image")!=IMAGE or d.get("isolation")!={"network_namespace":"none","successful_connects":0}: fail("invalid isolation identity")
@@ -48,11 +47,29 @@ def main():
   outputs[name]=item["sha256"]
  if set(outputs)!=OUTPUTS: fail("output set mismatch")
  identities=d.get("source_identities")
- if identities!=IDENTITIES: fail("source identities differ")
- for item in identities:
-  root=(repo/item["root"]).resolve(); spec=item["commit"]+('^{tree}' if item["path"]=='.' else ':'+item["path"])
+ roots=json.loads(Path(a.roots).read_text()).get("roots",[])
+ if not isinstance(roots,list) or any(not isinstance(item,dict) for item in roots): fail("invalid roots declaration")
+ names=[item.get("name") for item in roots]
+ if None in names or len(names)!=len(set(names)): fail("duplicate or missing source root name")
+ by_name={item["name"]:item for item in roots}
+ expected=[]
+ for name,subpath,logical in (("project","apps","."),("nuttx",".","nuttx"),("nuttx-apps",".","nuttx-apps")):
+  source=by_name.get(name)
+  if not source or not source.get("commit") or not source.get("path"): fail("roots lack config source identity")
+  root_label=source["path"]
+  if root_label==".": root=repo
+  else:
+   root_relative=rel(root_label,"source root"); current=repo
+   for component in root_relative.parts:
+    current/=component
+    if current.is_symlink(): fail("source root contains symlink")
+   root=current.resolve()
+   if not root.is_relative_to(repo): fail("source root escapes repository")
+  spec=source["commit"]+('^{tree}' if subpath=='.' else ':'+subpath)
   result=subprocess.run(["git","-C",str(root),"rev-parse",spec],text=True,capture_output=True)
-  if result.returncode or result.stdout.strip()!=item["tree"]: fail("source identity object mismatch")
+  if result.returncode: fail("source identity object is missing")
+  expected.append({"commit":source["commit"],"path":subpath,"root":logical,"tree":result.stdout.strip()})
+ if identities!=expected: fail("source identities differ")
  declaration=json.loads(Path(a.declaration).read_text())
  if declaration.get("schema")!="brickwright/generated-build-inputs/v1" or not isinstance(declaration.get("files"),list): fail("invalid generated declaration")
  declared={}
