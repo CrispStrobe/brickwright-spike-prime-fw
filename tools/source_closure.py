@@ -263,6 +263,12 @@ def trace_descriptor(value: str, pid: str, syscall: str) -> int:
     return int(match.group(1))
 
 
+def trace_lines(path: Path):
+    """Yield trace lines while guaranteeing closure on parser failure."""
+    with path.open("r", encoding="utf-8", errors="replace") as stream:
+        yield from stream
+
+
 def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
     found: set[Path] = set()
     strong_content: set[Path] = set()
@@ -292,7 +298,7 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
         parent = parents[0]
         state[pid] = {"cwd": [state[parent]["cwd"][0]], "fds": dict(state[parent]["fds"])}
 
-    for raw_line in path.open("r", encoding="utf-8", errors="replace"):
+    for raw_line in trace_lines(path):
         raw_line = raw_line.rstrip("\n")
         prefix = PID_PREFIX.match(raw_line)
         if not prefix:
