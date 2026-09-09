@@ -22,6 +22,7 @@ REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
     ("nuttx-apps", "graphics/twm4nx/Make.defs"): "Apache-2.0",
+    ("nuttx-apps", "graphics/nxwm/Make.defs"): "Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): "BSD-3-Clause-UC",
     ("nuttx", "libs/libc/stdlib/lib_wctomb.c"): "BSD-3-Clause-UC",
     ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): "ISC",
@@ -38,6 +39,7 @@ REVIEWED_LICENSE_NOTICES = {
     ),
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
     ("nuttx-apps", "graphics/twm4nx/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
+    ("nuttx-apps", "graphics/nxwm/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): b"Neither the name of the University nor the names of its contributors",
     ("nuttx", "libs/libc/stdlib/lib_wctomb.c"): b"Neither the name of the University nor the names of its contributors",
     ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): b"Permission to use, copy, modify, and distribute this software for any",
@@ -59,6 +61,12 @@ REVIEWED_NESTED_BOUNDARIES = {
         "boundary_sha256": "f1f9cb0ed8a020522b4de0a5b84a2745d4de9609cf58f3b892abb689f6c8cb45",
         "markers": [b"Copyright 1989, 1994, 1998  The Open Group", b"Copyright 1988 by Evans & Sutherland Computer Corporation", b"Permission to use, copy, modify, distribute, and sell this software"],
         "future_consumed_files_require": "separate Twm4Nx source license review",
+    },
+    ("nuttx-apps", "graphics/nxwm/Make.defs"): {
+        "boundary_path":"graphics/nxwm/COPYING", "boundary_sha256":"56180fed6813b73bb0728c24e7763a20c13234dceff4def8a823a4b6951bbc22",
+        "markers":[b"copy of the BSD-style licensing",b"Licensed to the Apache Software Foundation (ASF)",b"Apache License, Version 2.0"],
+        "future_consumed_files_require":"separate NxWM source license review",
+        "note":"COPYING calls its terms BSD-style, but the included operative grant is Apache-2.0; no BSD license is inferred.",
     },
 }
 REVIEWED_BOUNDARY_LICENSE_SELECTIONS = {
@@ -818,12 +826,14 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict
                     or sha256(boundary_path) != boundary["boundary_sha256"]
                     or any(marker not in boundary_path.read_bytes() for marker in boundary["markers"])):
                 die(f"reviewed nested license boundary drift: {root['name']}/{relative}")
-            return expression, expression, {
+            audit = {
                 "kind": "reviewed-build-discovery-boundary",
                 "boundary_path": boundary["boundary_path"],
                 "boundary_sha256": boundary["boundary_sha256"],
                 "future_consumed_files_require": boundary["future_consumed_files_require"],
             }
+            if "note" in boundary: audit["note"]=boundary["note"]
+            return expression, expression, audit
         return expression, expression, None
     if expression in ALLOWED_LICENSES:
         return expression, expression, None
