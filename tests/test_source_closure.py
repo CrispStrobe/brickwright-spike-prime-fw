@@ -673,6 +673,11 @@ class ClosureTest(unittest.TestCase):
         source.write_bytes(b"drift"); self.assertRaises(SystemExit,module["file_license"],source,root,Path("framework/CMakeLists.txt")); source.write_bytes(b"# blank\n"); boundary.write_bytes(b"wrong expression"); self.assertRaises(SystemExit,module["file_license"],source,root,Path("framework/CMakeLists.txt")); boundary.write_bytes(b"choose Apache OR GPL; warranty\n"); outside=self.base/"outside"; outside.write_bytes(boundary.read_bytes()); boundary.unlink(); boundary.symlink_to(outside); self.assertRaises(SystemExit,module["file_license"],source,root,Path("framework/CMakeLists.txt"))
         self.assertEqual({"source_sha256":"bdcf4a6aa867ba4855d26043ec869961fa5ac8a6b2fa6856689d0ae4d6aac5b6","boundary_path":"framework/LICENSE","boundary_sha256":"11402351e38392230bb8934ba1095c0c0049a296c0f8821f76e4672dff54b490","declared":"Apache-2.0 OR GPL-2.0-or-later","concluded":"Apache-2.0","markers":[b"dual [Apache-2.0]",b"OR [GPL-2.0-or-later]",b"users may choose which of these licenses"]},production)
 
+    def test_future_mbedtls_framework_source_fails_generator_boundary(self):
+        framework=self.root/"framework"; framework.mkdir(); (framework/"LICENSE").write_text("dual terms\n"); future=framework/"future.c"; future.write_text("/* SPDX-License-Identifier: Apache-2.0 */\n")
+        self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"mbedtls","path":str(self.root),"repository":"x","commit":self.commit,"license":"Apache-2.0","role":"crypto","license_overrides":[{"path":"framework/CMakeLists.txt","license":"Apache-2.0","require_spdx":False}]}]})); self.dep.write_text(f"x: {future}\n")
+        self.assertIn("nested license boundary lacks an override",self.generate(ok=False).stderr)
+
     def test_required_spdx_accepts_block_comment_interior(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("Apache License, Version 2.0\n")
