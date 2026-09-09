@@ -33,7 +33,9 @@ content-consumption evidence selects them.
 startup scripts against their pinned, networkless compiler proof. Both outputs
 are materialized; no other staging-tree file is admitted.
 
-Only MIT, Apache-2.0, BSD-2-Clause, and BSD-3-Clause are generally accepted.
+Only MIT, Apache-2.0, BSD-2-Clause, BSD-2-Clause-FreeBSD, and BSD-3-Clause are
+generally accepted. The deprecated `BSD-2-Clause-FreeBSD` SPDX identifier is
+preserved as declared rather than silently rewritten.
 The NuttX public-domain dedication is reviewed only for the exact
 `nuttx/include/search.h` override: its SPDX identifier and J.T. Conklin notice
 must match, and both are preserved in the SPDX output. An SPDX identifier on a

@@ -321,6 +321,17 @@ class ClosureTest(unittest.TestCase):
         header = next(item for item in manifest["files"] if item["path"] == "header.h")
         self.assertEqual("BSD-2-Clause", header["license"])
 
+    def test_deprecated_freebsd_identifier_is_allowed_and_preserved(self):
+        self.write_roots("BSD-2-Clause-FreeBSD")
+        self.generate()
+        manifest = json.loads(self.manifest.read_text())
+        header = next(item for item in manifest["files"] if item["path"] == "header.h")
+        self.assertEqual("BSD-2-Clause-FreeBSD", header["license"])
+        sbom = json.loads(self.sbom.read_text())
+        sbom_header = next(item for item in sbom["files"]
+                           if item["fileName"] == "nuttx/header.h")
+        self.assertEqual(["BSD-2-Clause-FreeBSD"], sbom_header["licenseInfoInFiles"])
+
     def test_missing_escape_and_escaping_symlink_rejected(self):
         self.dep.write_text(f"x: {self.root}/missing.h\n")
         self.assertIn("missing", self.generate(ok=False).stderr)
