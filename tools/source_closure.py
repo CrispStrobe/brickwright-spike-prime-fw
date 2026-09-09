@@ -726,7 +726,9 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict
         boundary = REVIEWED_NESTED_BOUNDARIES.get((root["name"], relative.as_posix()))
         if boundary is not None:
             boundary_path = Path(root["path"]) / boundary["boundary_path"]
-            if (not boundary_path.is_file() or sha256(boundary_path) != boundary["boundary_sha256"]
+            if (boundary_path.is_symlink() or not boundary_path.is_file()
+                    or not boundary_path.resolve().is_relative_to(Path(root["path"]).resolve())
+                    or sha256(boundary_path) != boundary["boundary_sha256"]
                     or any(marker not in boundary_path.read_bytes() for marker in boundary["markers"])):
                 die(f"reviewed nested license boundary drift: {root['name']}/{relative}")
             return expression, expression, {
