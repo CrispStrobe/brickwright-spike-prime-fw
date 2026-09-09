@@ -1,0 +1,25 @@
+{
+  "container_image": "sha256:8d304601acccf0fd2d6bcbf4e1ec1377b5e89cbdd669a60c1cf5c0e581b3c3fa",
+  "generator_commands": [
+    ["ln", "-s", "$TREE/apps", "$TREE/nuttx-apps/external"],
+    ["nuttx/tools/configure.sh", "-l", "-a", "../nuttx-apps", "../boards/spike-prime-hub/configs/usbnsh"],
+    ["make", "-C", "nuttx", "olddefconfig"],
+    ["nuttx/tools/version.sh", "-v", "12.12.0", "-b", "a67efb31cf", "nuttx/.version"]
+  ],
+  "generator_inputs": [
+    {"path": "boards/spike-prime-hub/configs/usbnsh/defconfig", "sha256": "870ef610586721e976cf317bf3d712507ae916d4a393b5e95f67adeb25b561be"},
+    {"path": "nuttx/tools/version.sh", "sha256": "15e12188273d3be9e106bdf89b62e44999893a5daa53aceaa2411ddd9af0dd71"}
+  ],
+  "isolation": {"network_namespace": "none", "successful_connects": 0},
+  "outputs": [
+    {"path": "nuttx/.config", "sha256": "9dea71c7b139b8c19c154051186f3ada6626dda66a8ed6bbea5557ca7b850b64"},
+    {"path": "nuttx/.version", "sha256": "1db101750b130862c43a0f14616990693cb373d33a2a361a0a0a4e73e913531d"}
+  ],
+  "source_identities": [
+    {"commit": "999e2d86f9b692abaf63b22dad77d22aeb03029c", "path": "apps", "root": ".", "tree": "87478a45a4db3cdb21374f18d86a78d32e435491"},
+    {"commit": "a67efb31cf4f236e456882589b91862f04594528", "path": ".", "root": "nuttx", "tree": "f828c9b54198a9adcc01c5042b6d1cc64472e385"},
+    {"commit": "55f0bc216565ccab8dee600a88f4485c7693bf8b", "path": ".", "root": "nuttx-apps", "tree": "2dca909c592142cc9c496165ef46de3a7496eca7"}
+  ],
+  "schema": "brickwright/config-generation-proof/v1",
+  "status": "exact-output-match"
+}
