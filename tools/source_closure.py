@@ -434,7 +434,8 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         Path(os.path.abspath(path if path.is_absolute() else cwd / path))
         for path in paths
     }
-    lexical = {path for path in lexical if not (path.is_dir() and not path.is_symlink())}
+    symlinks, _ = declared_symlinks(arguments)
+    lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink())}
     normalized = {path.resolve() for path in lexical}
     declared, _ = declared_generated(arguments)
     return (normalized - generated) | (normalized & declared)
@@ -483,6 +484,41 @@ def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[d
                          "generator_argv":item["generator_argv"], "evidence":item.get("evidence"),
                          **({"license_boundary":item["license_boundary"]} if "license_boundary" in item else {})})
     return result, sorted(rows, key=lambda x:x["path"])
+
+
+def declared_symlinks(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
+    repository = Path(arguments.repository).resolve(); paths=set(); rows=[]
+    for declaration in getattr(arguments, "generated", []):
+        document=json.loads((repository/Path(declaration)).read_text())
+        items=document.get("symlinks", [])
+        if not isinstance(items,list): die("invalid generated symlink declaration")
+        for item in items:
+            if not isinstance(item,dict): die("invalid generated symlink")
+            logical=PurePosixPath(item.get("path","")); target=PurePosixPath(item.get("target",""))
+            if any(p.is_absolute() or not p.parts or ".." in p.parts for p in (logical,target)):
+                die("generated symlink path or target escapes repository")
+            link=repository/logical.as_posix(); target_path=repository/target.as_posix()
+            current=repository
+            for part in logical.parts[:-1]:
+                current/=part
+                if current.is_symlink(): die("generated symlink parent contains symlink")
+            current=repository
+            for part in target.parts:
+                current/=part
+                if current.is_symlink(): die("generated symlink target contains symlink")
+            expected=target_path.resolve()
+            if not link.is_symlink(): die(f"declared generated symlink is missing: {logical}")
+            try: expected.relative_to(repository)
+            except ValueError: die("generated symlink target escapes repository")
+            try: actual=link.resolve(strict=True)
+            except (OSError, RuntimeError): die("generated symlink is dangling or loops")
+            if actual!=expected: die("generated symlink target differs")
+            kind=item.get("target_type")
+            if kind not in {"file","directory"} or (kind=="file")!=actual.is_file() or (kind=="directory")!=actual.is_dir():
+                die("generated symlink target type differs")
+            if link in paths: die("duplicate generated symlink")
+            paths.add(link); rows.append({"path":logical.as_posix(),"target":target.as_posix(),"target_type":kind,"evidence":item.get("evidence")})
+    return paths, sorted(rows,key=lambda x:x["path"])
 
 
 def declared_external(arguments: argparse.Namespace) -> tuple[set[Path], list[dict]]:
@@ -972,6 +1008,7 @@ def generate(arguments: argparse.Namespace) -> None:
         "files": closure_entries(arguments, roots),
         "external_inputs": declared_external(arguments)[1],
         "generated_inputs": declared_generated(arguments)[1],
+        "generated_symlinks": declared_symlinks(arguments)[1],
     }
     link_evidence = None
     if arguments.evidence:
@@ -996,7 +1033,9 @@ def verify(arguments: argparse.Namespace) -> None:
     consumed_keys = set()
     external, external_rows = declared_external(arguments)
     generated, generated_rows = declared_generated(arguments)
-    if manifest.get("external_inputs") != external_rows or manifest.get("generated_inputs") != generated_rows:
+    if (manifest.get("external_inputs") != external_rows
+            or manifest.get("generated_inputs") != generated_rows
+            or manifest.get("generated_symlinks") != declared_symlinks(arguments)[1]):
         die("declared generated/external inputs differ from manifest")
     for path in consumed_paths(arguments) - external - generated:
         root, relative, _ = locate(path, roots)

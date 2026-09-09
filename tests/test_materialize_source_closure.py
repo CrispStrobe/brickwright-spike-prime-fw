@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -62,6 +63,17 @@ class MaterializeSourceClosureTest(unittest.TestCase):
         self.destination.mkdir(exist_ok=True)
         (self.destination / "foreign").write_text("x")
         self.assertIn("not empty", self.invoke().stderr)
+
+    def test_materializes_relative_symlink_and_rejects_escape(self) -> None:
+        document=json.loads(self.manifest.read_text())
+        document["generated_symlinks"]=[{"path":"alias","target":"upstream","target_type":"directory"}]
+        self.manifest.write_text(json.dumps(document)); result=self.invoke()
+        self.assertEqual(0,result.returncode,result.stderr)
+        link=self.destination/"alias"; self.assertTrue(link.is_symlink())
+        self.assertFalse(Path(link.readlink()).is_absolute()); self.assertEqual((self.destination/"upstream").resolve(),link.resolve())
+        shutil.rmtree(self.destination)
+        document["generated_symlinks"][0]["target"]="../outside"; self.manifest.write_text(json.dumps(document))
+        self.assertIn("safe relative",self.invoke().stderr)
 
 
 if __name__ == "__main__":
