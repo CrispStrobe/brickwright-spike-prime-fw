@@ -119,6 +119,12 @@ def check_license(expression: str, context: str | None = None) -> None:
         suffix = f" at {context}" if context else ""
         die(f"unknown, compound, or forbidden license expression: {expression}{suffix}")
 
+def validate_boundary_selection(path: Path, root_path: Path, selection: dict, label: str) -> tuple[str,str,dict]:
+    boundary=root_path/selection["boundary_path"]
+    if sha256(path)!=selection["source_sha256"]: die(f"reviewed boundary-selected source drift: {label}")
+    if boundary.is_symlink() or not boundary.is_file() or not boundary.resolve().is_relative_to(root_path.resolve()) or sha256(boundary)!=selection["boundary_sha256"] or any(x not in boundary.read_bytes() for x in selection["markers"]): die(f"reviewed boundary license drift: {label}")
+    return selection["concluded"],selection["declared"],{"kind":"reviewed-boundary-license-selection","license_source":selection["boundary_path"],"license_sha256":selection["boundary_sha256"],"selected":selection["concluded"]}
+
 
 def load_roots(path: Path) -> list[dict]:
     document = json.loads(path.read_text(encoding="utf-8"))
@@ -778,18 +784,9 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict
     key=(root["name"], relative.as_posix())
     selection=REVIEWED_BOUNDARY_LICENSE_SELECTIONS.get(key)
     if selection is not None:
-        boundary=Path(root["path"])/selection["boundary_path"]
         if expressions or sha256(path)!=selection["source_sha256"]:
             die(f"reviewed boundary-selected source drift: {root['name']}/{relative}")
-        if (boundary.is_symlink() or not boundary.is_file()
-                or not boundary.resolve().is_relative_to(Path(root["path"]).resolve())
-                or sha256(boundary)!=selection["boundary_sha256"]
-                or any(marker not in boundary.read_bytes() for marker in selection["markers"])):
-            die(f"reviewed boundary license drift: {root['name']}/{relative}")
-        return selection["concluded"], selection["declared"], {
-            "kind":"reviewed-boundary-license-selection", "license_source":selection["boundary_path"],
-            "license_sha256":selection["boundary_sha256"], "selected":selection["concluded"],
-        }
+        return validate_boundary_selection(path,Path(root["path"]),selection,f"{root['name']}/{relative}")
     anomaly = REVIEWED_SPDX_ANOMALIES.get(key)
     if anomaly is not None:
         raw = path.read_bytes()
