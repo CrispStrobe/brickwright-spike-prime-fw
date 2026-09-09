@@ -478,6 +478,31 @@
       "sha256": "5fb6f914b8b538b711a14fb15f0d391cbf46d31fbee0ddbf3f0373fb2c16efa5"
     },
     {
+      "evidence": "evidence/source-closure/config-generation.json",
+      "generator_argv": [
+        "nuttx/tools/configure.sh",
+        "-l",
+        "-a",
+        "../nuttx-apps",
+        "../boards/spike-prime-hub/configs/usbnsh"
+      ],
+      "path": "nuttx/.config",
+      "sha256": "9dea71c7b139b8c19c154051186f3ada6626dda66a8ed6bbea5557ca7b850b64"
+    },
+    {
+      "evidence": "evidence/source-closure/config-generation.json",
+      "generator_argv": [
+        "nuttx/tools/version.sh",
+        "-v",
+        "12.12.0",
+        "-b",
+        "a67efb31cf",
+        "nuttx/.version"
+      ],
+      "path": "nuttx/.version",
+      "sha256": "1db101750b130862c43a0f14616990693cb373d33a2a361a0a0a4e73e913531d"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",
