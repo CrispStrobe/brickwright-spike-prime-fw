@@ -110,17 +110,20 @@ def main() -> None:
         fail("generated inputs must be a list")
     for item in generated_items:
         if not isinstance(item, dict): fail("invalid generated input")
+        materialize=item.get("materialize",True)
+        if not isinstance(materialize,bool): fail("generated input materialize must be boolean")
         relative = safe_relative(item.get("path", ""), "generated input path")
         expected = item.get("sha256")
         if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
             fail("generated input lacks SHA-256")
         if relative in copied or any(path in relative.parents or relative in path.parents for path in copied):
             fail("generated input collides at destination")
-        source = repository / relative
-        if not source.is_file() or source.is_symlink() or digest(source) != expected:
-            fail("source input is missing or changed")
         copied[relative] = expected
-        copy_plan[relative] = (source, expected)
+        if materialize:
+            source = repository / relative
+            if not source.is_file() or source.is_symlink() or digest(source) != expected:
+                fail("source input is missing or changed")
+            copy_plan[relative] = (source, expected)
 
     symlinked=set(); symlink_plan=[]; symlink_items=manifest.get("generated_symlinks", [])
     if not isinstance(symlink_items,list): fail("generated symlinks must be a list")
@@ -150,7 +153,7 @@ def main() -> None:
         link.symlink_to(Path(os.path.relpath(resolved,link.parent)))
         if not link.resolve().is_relative_to(destination) or link.resolve()!=resolved.resolve(): fail("materialized symlink escapes or differs")
 
-    print(f"materialize-source-closure: copied {len(copied)} files and {len(symlinked)} symlinks")
+    print(f"materialize-source-closure: copied {len(copy_plan)} files and {len(symlinked)} symlinks")
 
 
 if __name__ == "__main__":

@@ -676,7 +676,13 @@ def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[d
         document = json.loads((repository / declaration_path).read_text(encoding="utf-8"))
         if document.get("schema") != "brickwright/generated-build-inputs/v1":
             die("invalid generated-input declaration")
-        for item in document.get("files", []):
+        items=document.get("files", [])
+        if not isinstance(items,list): die("generated-input files must be a list")
+        for item in items:
+            if not isinstance(item,dict): die("invalid generated-input item")
+            materialize = item.get("materialize", True)
+            if not isinstance(materialize, bool):
+                die("generated-input materialize must be boolean")
             relative = PurePosixPath(item.get("path", ""))
             if relative.is_absolute() or ".." in relative.parts or not relative.parts:
                 die("generated-input path escapes repository")
@@ -692,6 +698,7 @@ def declared_generated(arguments: argparse.Namespace) -> tuple[set[Path], list[d
             result.add(path.resolve())
             rows.append({"path":relative.as_posix(), "sha256":item["sha256"],
                          "generator_argv":item["generator_argv"], "evidence":item.get("evidence"),
+                         **({"materialize":False} if not materialize else {}),
                          **({"license_boundary":item["license_boundary"]} if "license_boundary" in item else {})})
     return result, sorted(rows, key=lambda x:x["path"])
 
@@ -1147,7 +1154,7 @@ def make_sbom(manifest: dict) -> dict:
             "SPDXID": f"SPDXRef-File-{index}", "fileName": "generated/" + entry["path"],
             "checksums": [{"algorithm":"SHA256", "checksumValue":entry["sha256"]}],
             "licenseConcluded":"NOASSERTION", "licenseInfoInFiles":["NOASSERTION"],
-            "copyrightText":"NOASSERTION", "comment":json.dumps(entry.get("license_boundary", {"generated_by":entry["generator_argv"]}), sort_keys=True),
+            "copyrightText":"NOASSERTION", "comment":json.dumps({**entry.get("license_boundary", {"generated_by":entry["generator_argv"]}), "materialize":entry.get("materialize",True)}, sort_keys=True),
         })
     document = {
         "spdxVersion": "SPDX-2.3",
