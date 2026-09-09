@@ -434,13 +434,15 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         Path(os.path.abspath(path if path.is_absolute() else cwd / path))
         for path in paths
     }
-    symlinks, _ = declared_symlinks(arguments)
+    declared, generated_rows = declared_generated(arguments)
+    symlinks, symlink_rows = declared_symlinks(arguments)
+    if {item["path"] for item in generated_rows} & {item["path"] for item in symlink_rows}:
+        die("generated file and symlink paths collide")
     observed_symlinks={path for path in lexical if path.is_symlink()}
-    if observed_symlinks != symlinks:
+    if not symlinks.issubset(observed_symlinks):
         die("consumed and declared generated symlink sets differ")
     lexical = {path for path in lexical if path not in symlinks and not (path.is_dir() and not path.is_symlink())}
     normalized = {path.resolve() for path in lexical}
-    declared, _ = declared_generated(arguments)
     return (normalized - generated) | (normalized & declared)
 
 

@@ -328,6 +328,14 @@ class ClosureTest(unittest.TestCase):
         item["target"]="../escape"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[],"symlinks":[item]}))
         self.assertIn("escapes",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
 
+    def test_generated_file_and_symlink_collision_fails_at_generation(self):
+        target=self.base/"target"; target.write_bytes(b"target")
+        link=self.base/"same"; link.symlink_to(target)
+        declaration=self.base/"generated.json"; digest=hashlib.sha256(target.read_bytes()).hexdigest()
+        declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":"same","sha256":digest,"generator_argv":["fixture"]}],"symlinks":[{"path":"same","target":"target","target_type":"file"}]}))
+        trace=self.base/"collision.trace"; trace.write_text(f'1 readlink("{link}", "target", 1023) = 6\n')
+        self.assertIn("collide",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--depfile",self.dep,"--repository",self.base,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+
     def test_external_boundary_is_exact_and_not_vendored(self):
         external = self.base / "toolchain"; external.mkdir(); header=external / "stdint.h"; header.write_text("tool\n")
         import hashlib
