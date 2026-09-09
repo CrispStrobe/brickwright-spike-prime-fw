@@ -454,21 +454,40 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
     return (consumed, generated) if with_generated else consumed
 
 
+def cached_trace_paths(arguments: argparse.Namespace, path: Path, initial_cwd: Path):
+    """Parse one immutable trace once per command invocation."""
+    resolved = path.resolve()
+    status = resolved.stat()
+    key = (
+        resolved, initial_cwd.resolve(), status.st_dev, status.st_ino,
+        status.st_size, status.st_mtime_ns, status.st_ctime_ns,
+    )
+    cache = getattr(arguments, "_trace_paths_cache", None)
+    if cache is None:
+        cache = {}
+        setattr(arguments, "_trace_paths_cache", cache)
+    if key not in cache:
+        consumed, generated = trace_paths(resolved, initial_cwd, True)
+        cache[key] = (frozenset(consumed), frozenset(generated))
+    consumed, generated = cache[key]
+    return set(consumed), set(generated)
+
+
 def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
     paths: set[Path] = set()
     generated: set[Path] = set()
     for trace in arguments.strace:
-        consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        consumed, trace_generated = cached_trace_paths(arguments, Path(trace), Path(arguments.cwd))
         consumed={replay_path(path,arguments) for path in consumed}; trace_generated={replay_path(path,arguments) for path in trace_generated}
         paths.update(consumed); generated.update(trace_generated)
     repository = Path(arguments.repository).resolve()
     for trace in getattr(arguments, "repository_trace", []):
-        consumed, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        consumed, trace_generated = cached_trace_paths(arguments, Path(trace), Path(arguments.cwd))
         consumed={replay_path(path,arguments) for path in consumed}; trace_generated={replay_path(path,arguments) for path in trace_generated}
         paths.update(path for path in consumed if path.is_relative_to(repository))
         generated.update(trace_generated)
     for trace in getattr(arguments, "flow_trace", []):
-        _, trace_generated = trace_paths(Path(trace), Path(arguments.cwd), True)
+        _, trace_generated = cached_trace_paths(arguments, Path(trace), Path(arguments.cwd))
         trace_generated={replay_path(path,arguments) for path in trace_generated}
         generated.update(trace_generated)
     for depfile in arguments.depfile:
