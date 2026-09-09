@@ -22,6 +22,8 @@ REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
     ("nuttx-apps", "graphics/nxwidgets/Kconfig"): "Apache-2.0 AND BSD-3-Clause",
+    ("nuttx-apps", "graphics/twm4nx/Kconfig"): "Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
+    ("nuttx-apps", "graphics/nxwm/Kconfig"): "Apache-2.0",
     ("nuttx-apps", "graphics/twm4nx/Make.defs"): "Apache-2.0",
     ("nuttx-apps", "graphics/nxwm/Make.defs"): "Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): "BSD-3-Clause-UC",
@@ -32,6 +34,10 @@ EXTRACTED_LICENSES = {
     "LicenseRef-NuttX-PublicDomain": {
         "name": "NuttX search.h public-domain dedication",
         "extractedText": "Written by J.T. Conklin <jtc@netbsd.org>\nPublic domain.",
+    },
+    "LicenseRef-Twm4Nx-TWM-X": {
+        "name": "Twm4Nx TWM/X permissive notice bundle",
+        "extractedText": (Path(__file__).resolve().parents[1] / "nuttx-apps/graphics/twm4nx/COPYING").read_text(encoding="utf-8"),
     },
 }
 REVIEWED_LICENSE_NOTICES = {
@@ -77,6 +83,21 @@ REVIEWED_BOUNDARY_LICENSE_SELECTIONS = {
         "declared":"Apache-2.0 AND BSD-3-Clause", "concluded":"Apache-2.0 AND BSD-3-Clause",
         "required_notice":"graphics/nxwidgets/COPYING",
         "markers":[b"Licensed to the Apache Software Foundation (ASF)",b"Portions of this package derive from Woopsi",b"Redistribution and use in source and binary forms",b"Neither the names \"Woopsi\", \"Simian Zombie\""],
+    },
+    ("nuttx-apps", "graphics/twm4nx/Kconfig"): {
+        "source_sha256":"967046555f90d88eccc87c75b2857341ec4f1dfdf78fb9a9d237fb4fd63cd2ab",
+        "boundary_path":"graphics/twm4nx/COPYING", "boundary_sha256":"f1f9cb0ed8a020522b4de0a5b84a2745d4de9609cf58f3b892abb689f6c8cb45",
+        "declared":"Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X", "concluded":"Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",
+        "required_notice":"graphics/twm4nx/COPYING",
+        "markers":[b"Copyright 1989, 1994, 1998  The Open Group",b"Copyright 1988 by Evans & Sutherland Computer Corporation",b"Copyright (C) 1998 The XFree86 Project, Inc.",b"Permission to use, copy, modify, distribute, and sell this software"],
+    },
+    ("nuttx-apps", "graphics/nxwm/Kconfig"): {
+        "source_sha256":"fa76f4f5a47f7a1312c956d0df213c70c7d841d42571361c1b1b7b777b494638",
+        "boundary_path":"graphics/nxwm/COPYING", "boundary_sha256":"56180fed6813b73bb0728c24e7763a20c13234dceff4def8a823a4b6951bbc22",
+        "declared":"Apache-2.0", "concluded":"Apache-2.0",
+        "required_notice":"graphics/nxwm/COPYING",
+        "note":"COPYING calls its terms BSD-style, but its only operative grant is Apache-2.0; no BSD license is inferred.",
+        "markers":[b"copy of the BSD-style licensing",b"Licensed to the Apache Software Foundation (ASF)",b"Apache License, Version 2.0"],
     },
     ("mbedtls", "framework/CMakeLists.txt"): {
         "source_sha256":"bdcf4a6aa867ba4855d26043ec869961fa5ac8a6b2fa6856689d0ae4d6aac5b6",
@@ -163,6 +184,8 @@ def validate_boundary_selection(path: Path, root_path: Path, selection: dict, la
     audit={"kind":"reviewed-boundary-license-selection","license_source":selection["boundary_path"],"license_sha256":selection["boundary_sha256"],"selected":selection["concluded"]}
     if selection.get("required_notice"):
         audit["required_notice"] = selection["required_notice"]
+    if selection.get("note"):
+        audit["note"] = selection["note"]
     return selection["concluded"],selection["declared"],audit
 
 
@@ -1130,8 +1153,9 @@ def make_sbom(manifest: dict) -> dict:
         "creationInfo": {"created": "1970-01-01T00:00:00Z", "creators": ["Tool: source_closure.py"]},
         "files": files,
     }
-    used_refs = sorted({entry["license"] for entry in manifest["files"]
-                        if entry["license"] in EXTRACTED_LICENSES})
+    used_refs = sorted({license_id for entry in manifest["files"]
+                        for license_id in EXTRACTED_LICENSES
+                        if re.search(rf"(?<![A-Za-z0-9.-]){re.escape(license_id)}(?![A-Za-z0-9.-])",entry["license"])})
     if used_refs:
         document["hasExtractedLicensingInfos"] = [
             {"licenseId": license_id, **EXTRACTED_LICENSES[license_id]}

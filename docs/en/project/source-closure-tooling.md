@@ -125,6 +125,14 @@ and grant markers; it conservatively concludes `Apache-2.0 AND BSD-3-Clause`.
 That `COPYING` is an explicit required-notice payload in the manifest and
 materialized closure. No other NxWidgets file is admitted without review.
 
+The exact Twm4Nx and NxWM `Kconfig` files are also configuration inputs.
+Twm4Nx concludes as `Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X`; the LicenseRef
+preserves the distinct Open Group, Evans & Sutherland, and XFree86 permissive
+grants without mislabelling them as MIT. NxWM concludes as Apache-2.0 because
+its `COPYING` contains only the operative ASF grant despite calling it
+“BSD-style.” Both exact file and boundary hashes are pinned, and both COPYING
+files are required-notice payloads. Other files remain closed to admission.
+
 ## Toolchain and linked-runtime boundary
 
 Project and vendored source admission remains permissive-only. Compiler

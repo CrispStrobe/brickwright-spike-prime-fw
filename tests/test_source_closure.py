@@ -785,6 +785,22 @@ class ClosureTest(unittest.TestCase):
         source.write_bytes((repository/"nuttx-apps/graphics/nxwidgets/Kconfig").read_bytes()); copying.write_bytes(copying.read_bytes()+b"drift\n"); self.assertIn("boundary license drift",self.generate(ok=False).stderr)
         copying.write_bytes((repository/"nuttx-apps/graphics/nxwidgets/COPYING").read_bytes()); outside=self.base/"nxwidgets-copying"; outside.write_bytes(copying.read_bytes()); copying.unlink(); copying.symlink_to(outside); self.assertIn("boundary license drift",self.generate(ok=False).stderr)
 
+    def test_exact_twm4nx_and_nxwm_kconfigs_require_reviewed_notices(self):
+        repository=Path(__file__).resolve().parents[1]; overrides=[]; sources=[]
+        for name,license_expression in (("twm4nx","Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X"),("nxwm","Apache-2.0")):
+            directory=self.root/f"graphics/{name}"; directory.mkdir(parents=True)
+            source=directory/"Kconfig"; source.write_bytes((repository/f"nuttx-apps/graphics/{name}/Kconfig").read_bytes()); sources.append(source)
+            (directory/"COPYING").write_bytes((repository/f"nuttx-apps/graphics/{name}/COPYING").read_bytes())
+            overrides.append({"path":f"graphics/{name}/Kconfig","license":license_expression,"require_spdx":False})
+        subprocess.run(["git","-C",self.root,"add","."],check=True); subprocess.run(["git","-C",self.root,"commit","-qm","window manager kconfigs"],check=True); self.commit=subprocess.check_output(["git","-C",self.root,"rev-parse","HEAD"],text=True).strip()
+        self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"nuttx-apps","path":str(self.root),"repository":"https://example.invalid/apps","commit":self.commit,"license":"Apache-2.0","role":"application","license_overrides":overrides}]})); self.dep.write_text("x: "+" ".join(map(str,sources))+"\n"); self.generate()
+        manifest=json.loads(self.manifest.read_text()); entries={item["path"]:item for item in manifest["files"]}
+        self.assertEqual("Apache-2.0 AND LicenseRef-Twm4Nx-TWM-X",entries["graphics/twm4nx/Kconfig"]["license"]); self.assertEqual("Apache-2.0",entries["graphics/nxwm/Kconfig"]["license"]); self.assertIn("no BSD license is inferred",entries["graphics/nxwm/Kconfig"]["license_audit"]["note"])
+        self.assertEqual("required-license-notice",entries["graphics/twm4nx/COPYING"]["license_audit"]["kind"]); self.assertEqual("required-license-notice",entries["graphics/nxwm/COPYING"]["license_audit"]["kind"])
+        extracted={item["licenseId"]:item for item in json.loads(self.sbom.read_text())["hasExtractedLicensingInfos"]}; self.assertIn("LicenseRef-Twm4Nx-TWM-X",extracted); self.assertIn("Evans & Sutherland",extracted["LicenseRef-Twm4Nx-TWM-X"]["extractedText"])
+        (self.root/"graphics/twm4nx/COPYING").write_bytes(b"drift"); self.assertIn("boundary license drift",self.generate(ok=False).stderr)
+        (self.root/"graphics/twm4nx/COPYING").write_bytes((repository/"nuttx-apps/graphics/twm4nx/COPYING").read_bytes()); sources[1].write_bytes(sources[1].read_bytes()+b"drift\n"); self.assertIn("boundary-selected source drift",self.generate(ok=False).stderr)
+
     def test_exact_twm4nx_discovery_override_pins_boundary(self):
         source=self.root/"graphics/twm4nx/Make.defs"; source.parent.mkdir(parents=True); repository=Path(__file__).resolve().parents[1]
         source.write_bytes((repository/"nuttx-apps/graphics/twm4nx/Make.defs").read_bytes()); copying=source.parent/"COPYING"; copying.write_bytes((repository/"nuttx-apps/graphics/twm4nx/COPYING").read_bytes())
