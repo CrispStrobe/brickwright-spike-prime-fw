@@ -332,6 +332,34 @@ class ClosureTest(unittest.TestCase):
                            if item["fileName"] == "nuttx/header.h")
         self.assertEqual(["BSD-2-Clause-FreeBSD"], sbom_header["licenseInfoInFiles"])
 
+    def test_exact_mnemofs_spdx_anomaly_is_reviewed_and_drift_fails(self):
+        source = self.root / "fs/mnemofs/Make.defs"; source.parent.mkdir(parents=True)
+        canonical = Path(__file__).resolve().parents[1] / "nuttx/fs/mnemofs/Make.defs"
+        source.write_bytes(canonical.read_bytes())
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "mnemofs"], check=True)
+        document=json.loads(self.roots.read_text()); document["roots"][0]["commit"]=subprocess.check_output(
+            ["git","-C",str(self.root),"rev-parse","HEAD"],text=True).strip(); self.roots.write_text(json.dumps(document))
+        self.dep.write_text(f"x: {source}\n"); self.generate()
+        entry=next(item for item in json.loads(self.manifest.read_text())["files"] if item["path"]=="fs/mnemofs/Make.defs")
+        self.assertEqual("BSD-3-Clause",entry["license"]); self.assertEqual(2,len(entry["license_audit"]["raw_tags"]))
+        self.invoke("verify", "--roots", self.roots, "--cwd", self.base,
+                    "--strace", self.trace, "--depfile", self.dep,
+                    "--manifest", self.manifest)
+        manifest=json.loads(self.manifest.read_text())
+        next(item for item in manifest["files"] if item["path"]=="fs/mnemofs/Make.defs")["license_audit"]["raw_tags"]=[]
+        self.manifest.write_text(json.dumps(manifest))
+        self.assertIn("license_audit mismatch", self.invoke("verify", "--roots", self.roots,
+            "--cwd", self.base, "--strace", self.trace, "--depfile", self.dep,
+            "--manifest", self.manifest, ok=False).stderr)
+        source.write_bytes(source.read_bytes()+b"# drift\n")
+        self.assertIn("reviewed SPDX anomaly drift",self.generate(ok=False).stderr)
+
+    def test_multiple_spdx_outside_reviewed_anomaly_fails(self):
+        source=self.root/"multiple.c"; source.write_text("/* SPDX-License-Identifier: MIT */\n/* SPDX-License-Identifier: BSD-3-Clause */\n")
+        self.dep.write_text(f"x: {source}\n")
+        self.assertIn("multiple SPDX expressions",self.generate(ok=False).stderr)
+
     def test_missing_escape_and_escaping_symlink_rejected(self):
         self.dep.write_text(f"x: {self.root}/missing.h\n")
         self.assertIn("missing", self.generate(ok=False).stderr)

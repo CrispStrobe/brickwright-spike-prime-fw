@@ -39,8 +39,11 @@ preserved as declared rather than silently rewritten.
 The NuttX public-domain dedication is reviewed only for the exact
 `nuttx/include/search.h` override: its SPDX identifier and J.T. Conklin notice
 must match, and both are preserved in the SPDX output. An SPDX identifier on a
-file overrides its root declaration and is checked independently. Missing
-files, paths outside a declared root, escaping symlinks, and unknown or
+file overrides its root declaration and is checked independently.
+The upstream `nuttx/fs/mnemofs/Make.defs` dual-tag anomaly is separately pinned
+by exact hash, tags, and BSD grant markers; it concludes as `BSD-3-Clause`,
+while both raw tags remain in the manifest/SBOM audit comment.
+Missing files, paths outside a declared root, escaping symlinks, and unknown or
 GPL/AGPL/LGPL/non-commercial expressions fail closed. Failed system calls in a
 trace are not evidence that a source was consumed. PID-prefixed `strace -f`
 output and unfinished/resumed calls are supported. `--cwd` supplies the first
