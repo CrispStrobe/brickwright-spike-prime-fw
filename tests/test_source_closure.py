@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Black-box tests for tools/source_closure.py."""
 from __future__ import annotations
-import hashlib, json, subprocess, sys, tempfile, unittest
+import argparse, hashlib, json, runpy, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parents[1] / "tools/source_closure.py"
@@ -52,6 +52,13 @@ class ClosureTest(unittest.TestCase):
         return self.invoke("generate", "--roots", self.roots, "--cwd", self.base,
                         "--strace", self.trace, "--depfile", self.dep,
                         "--output", self.manifest, "--sbom", self.sbom, *extra, ok=ok)
+
+    def test_trace_cache_returns_defensive_copies_and_observes_replacement(self):
+        module=runpy.run_path(str(TOOL)); cached=module["cached_trace_paths"]
+        arguments=argparse.Namespace(); first,_=cached(arguments,self.trace,self.base); expected=set(first); first.clear()
+        second,_=cached(arguments,self.trace,self.base); self.assertEqual(expected,second)
+        self.trace.write_text(f'1 openat(AT_FDCWD, "{self.root / "build.mk"}", O_RDONLY) = 3\n')
+        third,_=cached(arguments,self.trace,self.base); self.assertEqual({self.root/"build.mk"},third)
 
     def test_deterministic_manifest_sbom_and_link_evidence(self):
         obj = self.base / "main.o"; obj.write_bytes(b"object")
