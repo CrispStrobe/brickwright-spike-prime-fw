@@ -33,7 +33,13 @@
     {
       "commit": "55f0bc216565ccab8dee600a88f4485c7693bf8b",
       "license": "Apache-2.0",
-      "license_overrides": [],
+      "license_overrides": [
+        {
+          "license": "Apache-2.0",
+          "path": "graphics/nxwidgets/Make.defs",
+          "require_spdx": true
+        }
+      ],
       "name": "nuttx-apps",
       "path": "nuttx-apps",
       "repository": "https://github.com/apache/nuttx-apps.git",

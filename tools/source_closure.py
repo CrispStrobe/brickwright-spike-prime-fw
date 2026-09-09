@@ -20,6 +20,7 @@ ALLOWED_LICENSES = {
 }
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
+    ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
 }
 EXTRACTED_LICENSES = {
     "LicenseRef-NuttX-PublicDomain": {
@@ -31,6 +32,15 @@ REVIEWED_LICENSE_NOTICES = {
     ("nuttx", "include/search.h"): (
         b"Written by J.T. Conklin <jtc@netbsd.org>\n * Public domain."
     ),
+    ("nuttx-apps", "graphics/nxwidgets/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
+}
+REVIEWED_NESTED_BOUNDARIES = {
+    ("nuttx-apps", "graphics/nxwidgets/Make.defs"): {
+        "boundary_path": "graphics/nxwidgets/COPYING",
+        "boundary_sha256": "894d7166375b77cfd3d052d44ca90ebb7d0f3c5a4f7c57363af9d842bbaaad81",
+        "markers": [b"Portions of this package derive from Woopsi", b"Copyright (c) 2007-2011, Antony Dzeryn", b"Neither the names \"Woopsi\", \"Simian Zombie\""],
+        "future_consumed_files_require": "Apache-2.0 AND BSD-3-Clause",
+    },
 }
 REVIEWED_SPDX_ANOMALIES = {
     ("nuttx", "fs/mnemofs/Make.defs"): {
@@ -713,6 +723,18 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict
         notice = REVIEWED_LICENSE_NOTICES[(root["name"], relative.as_posix())]
         if notice not in path.read_bytes():
             die(f"reviewed license notice mismatch: {root['name']}/{relative}")
+        boundary = REVIEWED_NESTED_BOUNDARIES.get((root["name"], relative.as_posix()))
+        if boundary is not None:
+            boundary_path = Path(root["path"]) / boundary["boundary_path"]
+            if (not boundary_path.is_file() or sha256(boundary_path) != boundary["boundary_sha256"]
+                    or any(marker not in boundary_path.read_bytes() for marker in boundary["markers"])):
+                die(f"reviewed nested license boundary drift: {root['name']}/{relative}")
+            return expression, expression, {
+                "kind": "reviewed-build-discovery-boundary",
+                "boundary_path": boundary["boundary_path"],
+                "boundary_sha256": boundary["boundary_sha256"],
+                "future_consumed_files_require": boundary["future_consumed_files_require"],
+            }
         return expression, expression, None
     if expression in ALLOWED_LICENSES:
         return expression, expression, None
