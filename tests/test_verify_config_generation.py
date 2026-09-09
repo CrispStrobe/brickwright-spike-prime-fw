@@ -27,4 +27,7 @@ class ConfigProofTest(unittest.TestCase):
  def test_parent_symlink_is_rejected_before_identity_check(self):
   fake=Path(self.tmp.name)/"fake"; fake.mkdir(); (fake/"boards").symlink_to(self.repo/"boards",target_is_directory=True); (fake/"nuttx").symlink_to(self.repo/"nuttx",target_is_directory=True)
   old=self.repo; self.repo=fake; self.assertIn("symlink",self.invoke(False).stderr); self.repo=old
+ def test_malformed_input_and_output_fail_cleanly(self):
+  d=json.loads(self.proof.read_text()); d["generator_inputs"]=[None]; self.proof.write_text(json.dumps(d)); self.assertIn("invalid generator input",self.invoke(False).stderr)
+  d=json.loads(PROOF.read_text()); d["outputs"]=[None]; self.proof.write_text(json.dumps(d)); self.assertIn("invalid output",self.invoke(False).stderr)
 if __name__=="__main__": unittest.main()
