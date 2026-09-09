@@ -95,8 +95,9 @@ repository. It verifies every hash, rejects path escapes and collisions, and
 does not copy external toolchain inputs. The resulting tree is the only source
 mount accepted by offline fixed-point builds.
 
-Exact source-root `.git` administrative files or directories are excluded and
-recorded only by root, kind, and reason; their contents and host paths are
+Exact source-root `.git` administrative files, or descendants beneath a real
+root `.git` directory, are excluded and recorded only by root, kind, count,
+and reason; their contents and host paths are
 never serialized. `.github`, `.gitignore`, nested `.git`, and other `.git*`
 paths remain ordinary fail-closed inputs. Offline builds use pinned `.version`
 and source identities and must not require Git metadata.
