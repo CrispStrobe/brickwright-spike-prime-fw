@@ -28,6 +28,11 @@
           "license": "BSD-3-Clause-UC",
           "path": "libs/libc/search/hash_func.c",
           "require_spdx": true
+        },
+        {
+          "license": "ISC",
+          "path": "libs/libc/string/lib_timingsafe_bcmp.c",
+          "require_spdx": true
         }
       ],
       "name": "nuttx",
