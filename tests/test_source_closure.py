@@ -665,6 +665,11 @@ class ClosureTest(unittest.TestCase):
         outside=self.base/"copy"; outside.write_bytes((repository/"nuttx-apps/graphics/twm4nx/COPYING").read_bytes()); copying.unlink(); copying.symlink_to(outside); self.assertIn("boundary drift",self.generate(ok=False).stderr)
         copying.unlink(); copying.write_bytes(outside.read_bytes()); future=source.parent/"future.c"; future.write_text("/* SPDX-License-Identifier: Apache-2.0 */\n"); self.dep.write_text(f"x: {future}\n"); self.assertIn("boundary lacks an override",self.generate(ok=False).stderr)
 
+    def test_mbedtls_blank_cmake_selects_apache_from_pinned_license(self):
+        source=self.root/"framework/CMakeLists.txt"; source.parent.mkdir(); repo=Path(__file__).resolve().parents[1]; source.write_bytes((repo/".local/mbedtls-3.6.2/framework/CMakeLists.txt").read_bytes()); license=source.parent/"LICENSE"; license.write_bytes((repo/".local/mbedtls-3.6.2/framework/LICENSE").read_bytes())
+        subprocess.run(["git","-C",self.root,"add","."],check=True); subprocess.run(["git","-C",self.root,"commit","-qm","framework"],check=True); commit=subprocess.check_output(["git","-C",self.root,"rev-parse","HEAD"],text=True).strip(); self.roots.write_text(json.dumps({"schema":1,"roots":[{"name":"mbedtls","path":str(self.root),"repository":"x","commit":commit,"license":"Apache-2.0","role":"crypto","license_overrides":[{"path":"framework/CMakeLists.txt","license":"Apache-2.0","require_spdx":False}]}]})); self.dep.write_text(f"x: {source}\n"); self.generate(); entry=next(x for x in json.loads(self.manifest.read_text())["files"] if x["path"]=="framework/CMakeLists.txt"); self.assertEqual("Apache-2.0",entry["license"]); self.assertEqual("Apache-2.0 OR GPL-2.0-or-later",entry["declared_license"])
+        license.write_bytes(license.read_bytes()+b"drift\n"); self.assertIn("license drift",self.generate(ok=False).stderr); outside=self.base/"license"; outside.write_bytes((repo/".local/mbedtls-3.6.2/framework/LICENSE").read_bytes()); license.unlink(); license.symlink_to(outside); self.assertIn("license drift",self.generate(ok=False).stderr)
+
     def test_required_spdx_accepts_block_comment_interior(self):
         nested = self.root / "vendor"; nested.mkdir()
         (nested / "LICENSE").write_text("Apache License, Version 2.0\n")
