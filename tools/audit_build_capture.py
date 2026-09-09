@@ -90,6 +90,7 @@ def main() -> None:
     unclassified_non_file: list[str] = []
     consumed_count = 0
     missing_count = 0
+    missing_paths: list[str] = []
     non_file_count = 0
     external_count = 0
     connect_attempt_count, successful_connect_count = successful_connects(trace)
@@ -101,7 +102,8 @@ def main() -> None:
     try:
         consumed = closure.trace_paths(trace, cwd)
         consumed_count = len(consumed)
-        missing_count = sum(not path.exists() for path in consumed)
+        missing_paths = sorted(public_path(path, tree) for path in consumed if not path.exists())
+        missing_count = len(missing_paths)
         # A path that exists but is not a regular file cannot be hashed or
         # licensed, so it is neither a generated product nor a required input.
         # Directories are traversal metadata and character devices are kernel
@@ -166,6 +168,7 @@ def main() -> None:
         "trace": {"sha256": digest(trace), "lines": sum(1 for _ in trace.open("rb"))},
         "consumed_path_count": consumed_count,
         "missing_path_count": missing_count,
+        "missing_paths": missing_paths,
         "non_file_path_count": non_file_count,
         "non_file_paths": non_file_entries,
         "external_existing_path_count": external_count,

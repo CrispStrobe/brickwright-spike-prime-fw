@@ -76,6 +76,35 @@ class CaptureAuditTest(unittest.TestCase):
             self.assertEqual("trace-path-and-network-coverage-only", report["scope"])
             self.assertEqual("invalid", report["link_provenance"]["status"])
 
+    def test_missing_paths_are_stable_and_host_path_free(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            tree = base / "tree"; tree.mkdir()
+            for name in ("one.d", "two.d"): (tree / name).write_text("x: y\n")
+            (tree / "firmware.map").write_text("map\n")
+            internal = tree / "generated/missing.o"
+            external = base / "host-secret/missing.o"
+            trace = tree / "trace"
+            trace.write_text(
+                f'1 openat(AT_FDCWD, "{internal}", O_RDONLY) = 3\n'
+                f'1 openat(AT_FDCWD, "{external}", O_RDONLY) = 4\n'
+            )
+            result = subprocess.run(
+                [sys.executable, TOOL, "--trace", trace, "--cwd", tree, "--tree", tree],
+                text=True, capture_output=True,
+            )
+            self.assertNotEqual(0, result.returncode)
+            report = json.loads(result.stdout)
+            self.assertEqual(2, report["missing_path_count"])
+            self.assertEqual("$TREE/generated/missing.o", report["missing_paths"][1])
+            self.assertTrue(report["missing_paths"][0].startswith("$EXTERNAL/path-"))
+            self.assertNotIn(str(base), result.stdout)
+            second = subprocess.run(
+                [sys.executable, TOOL, "--trace", trace, "--cwd", tree, "--tree", tree],
+                text=True, capture_output=True,
+            )
+            self.assertEqual(report["missing_paths"], json.loads(second.stdout)["missing_paths"])
+
 
 if __name__ == "__main__":
     unittest.main()
