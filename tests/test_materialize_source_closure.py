@@ -59,7 +59,10 @@ class MaterializeSourceClosureTest(unittest.TestCase):
 
     def test_rejects_hash_drift_and_nonempty_destination(self) -> None:
         (self.repository / "upstream/source.c").write_bytes(b"changed\n")
-        self.assertNotEqual(0, self.invoke().returncode)
+        result = self.invoke()
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("upstream/source.c", result.stderr)
+        self.assertNotIn(str(self.repository), result.stderr)
         self.assertFalse(self.destination.exists())
         self.destination.mkdir(exist_ok=True)
         (self.destination / "foreign").write_text("x")

@@ -102,7 +102,7 @@ def main() -> None:
             fail("manifest inputs collide at destination")
         source = source_root / relative
         if not source.is_file() or source.is_symlink() or digest(source) != expected:
-            fail("source input is missing or changed")
+            fail(f"source input is missing or changed: {root_name}/{relative.as_posix()}")
         copied[target] = expected
         copied_parents.update(target.parents)
         copy_plan[target] = (source, expected)
@@ -120,7 +120,7 @@ def main() -> None:
             fail("generated input collides at destination")
         source = repository / relative
         if not source.is_file() or source.is_symlink() or digest(source) != expected:
-            fail("source input is missing or changed")
+            fail(f"generated input is missing or changed: {relative.as_posix()}")
         copied[relative] = expected
         copied_parents.update(relative.parents)
         copy_plan[relative] = (source, expected)
