@@ -516,6 +516,13 @@
       "sha256": "67fb05e4c3ce557b27ad66313c8f47e59977be53a745ab24469fa188dd79c350"
     },
     {
+      "evidence": "evidence/source-closure/ti-payload-generation.json",
+      "generator_argv": ["python3", "tools/import_ti_service_pack.py", "third_party/ti-cc2564c/TIInit_6.12.26.bts", "--license", "third_party/ti-cc2564c/LICENSE.ti", "--output-dir", "$OUTPUT"],
+      "license_boundary": {"concluded":"NOASSERTION","scope":"TI-licensed CC2564C controller firmware; not project-licensed","license_path":"third_party/ti-cc2564c/LICENSE.ti","device_restriction":"TI CC2564C"},
+      "path": ".local/ti/cc2564c/ti_bts_local_payload.h",
+      "sha256": "d302eaa5147c9b55efa2af4f6c7ccedaed987043ec81886c4ba16df9d08ad476"
+    },
+    {
       "evidence": "trace-sha256:0a90a2ded454e7f3de1868a8e6d9f0e1fa454123a089ef0e25e3db88da1da91c",
       "generator_argv": [
         "make",

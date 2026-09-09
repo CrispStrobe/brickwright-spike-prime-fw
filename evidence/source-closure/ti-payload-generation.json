@@ -1,0 +1,20 @@
+{
+  "container_image": "sha256:8d304601acccf0fd2d6bcbf4e1ec1377b5e89cbdd669a60c1cf5c0e581b3c3fa",
+  "generator_argv": ["python3", "tools/import_ti_service_pack.py", "third_party/ti-cc2564c/TIInit_6.12.26.bts", "--license", "third_party/ti-cc2564c/LICENSE.ti", "--output-dir", "$OUTPUT"],
+  "inputs": [
+    {"path":"tools/import_ti_service_pack.py","sha256":"d451252e0be3f8538a91a042ea725a74173d93c8b9c90e6c1046e000a33ce5ea"},
+    {"path":"policy/ti-service-packs.json","sha256":"25df150d70417d1c028af980eff738526ae8c920c7d889b20ec8cfcb38b69b81"},
+    {"path":"third_party/ti-cc2564c/TIInit_6.12.26.bts","sha256":"646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e"},
+    {"path":"third_party/ti-cc2564c/LICENSE.ti","sha256":"21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37"}
+  ],
+  "isolation":{"network_namespace":"none","successful_connects":0},
+  "license_boundary":{"concluded":"NOASSERTION","scope":"TI-licensed CC2564C controller firmware; not project-licensed","license_path":"third_party/ti-cc2564c/LICENSE.ti","device_restriction":"TI CC2564C"},
+  "outputs":[
+    {"path":"TIInit_6.12.26.bts","size":10211,"sha256":"646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e"},
+    {"path":"LICENSE.ti","size":3838,"sha256":"21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37"},
+    {"path":"import-manifest.json","size":859,"sha256":"263bc44d10d7bc0d82fd1ac8d805e79a69e29e834d6b1b100d0f641769746c8a"},
+    {"path":"ti_bts_local_payload.h","size":63530,"sha256":"d302eaa5147c9b55efa2af4f6c7ccedaed987043ec81886c4ba16df9d08ad476"}
+  ],
+  "schema":"brickwright/ti-payload-generation-proof/v1",
+  "status":"exact-output-match"
+}
