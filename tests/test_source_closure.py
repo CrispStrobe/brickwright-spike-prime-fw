@@ -373,6 +373,19 @@ class ClosureTest(unittest.TestCase):
         generated.write_text("drift\n")
         self.assertIn("hash mismatch", self.generate("--repository",self.base,"--generated", declaration.name, ok=False).stderr)
 
+    def test_unconsumed_generated_diagnostic_is_logical_and_bounded(self):
+        first=self.base/"first.generated"; second=self.base/"second.generated"; first.write_bytes(b"first"); second.write_bytes(b"second")
+        declaration=self.base/"generated.json"; declaration.write_text(json.dumps({"schema":"brickwright/generated-build-inputs/v1","files":[{"path":first.name,"sha256":hashlib.sha256(first.read_bytes()).hexdigest(),"generator_argv":["fixture"]},{"path":second.name,"sha256":hashlib.sha256(second.read_bytes()).hexdigest(),"generator_argv":["fixture"]}]}))
+        trace=self.base/"generated-read.trace"; trace.write_text(f'1 openat(AT_FDCWD, "{first}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 3\n1 openat(AT_FDCWD, "{first}", O_RDONLY) = 4\n')
+        result=self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--strace",trace,"--depfile",self.dep,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False)
+        self.assertIn('count=1, paths=["second.generated"]',result.stderr); self.assertNotIn(str(self.base),result.stderr)
+        document=json.loads(declaration.read_text())
+        for index in range(34):
+            path=self.base/f"extra-{index:02}.generated"; path.write_bytes(b"extra")
+            document["files"].append({"path":path.name,"sha256":hashlib.sha256(b"extra").hexdigest(),"generator_argv":["fixture"]})
+        declaration.write_text(json.dumps(document)); result=self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--repository",self.base,"--strace",trace,"--depfile",self.dep,"--generated",declaration.name,"--output",self.manifest,"--sbom",self.sbom,ok=False)
+        self.assertIn("count=35",result.stderr); self.assertIn("omitted=3",result.stderr); self.assertNotIn("extra-33.generated",result.stderr)
+
     def test_generated_symlink_is_structured_and_escape_fails(self):
         link=self.base/"configured"; link.symlink_to(self.root,target_is_directory=True)
         trace=self.base/"symlink.trace"; trace.write_text(f'1 newfstatat(AT_FDCWD, "{link}", {{st_mode=S_IFLNK|0777}}, AT_SYMLINK_NOFOLLOW) = 0\n1 readlink("{link}", "upstream", 1023) = 8\n1 newfstatat(AT_FDCWD, "{link}", {{st_mode=S_IFDIR|0755}}, 0) = 0\n')

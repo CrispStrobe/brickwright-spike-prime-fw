@@ -468,8 +468,12 @@ def trace_paths(path: Path, initial_cwd: Path, with_generated: bool = False):
     # A configure/build traversal may first read a symlink and later stat the
     # same lexical name after following it to a directory.  The successful
     # readlink is content evidence and must dominate that directory metadata.
-    consumed = (found - generated - aliases) - (directories - strong_content)
-    return (consumed, generated) if with_generated else consumed
+    observed = (found - aliases) - (directories - strong_content)
+    consumed = observed - generated
+    # The combined caller needs observed content separately from generation:
+    # undeclared products are subtracted there, while an exact declared
+    # generated input that was subsequently read remains closure membership.
+    return (observed, generated) if with_generated else consumed
 
 
 def cached_trace_paths(arguments: argparse.Namespace, path: Path, initial_cwd: Path):
@@ -944,11 +948,22 @@ def origin_for(root: dict, relative: Path, resolved: Path) -> dict:
 def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[dict]:
     entries = {}
     external, _ = declared_external(arguments)
-    generated, _ = declared_generated(arguments)
+    generated, generated_rows = declared_generated(arguments)
     consumed = consumed_paths(arguments)
     consumed -= vcs_administration(consumed, roots)[0]
     unmatched_generated = generated - consumed
-    if unmatched_generated: die("generated declaration contains unconsumed files")
+    if unmatched_generated:
+        repository = Path(arguments.repository).resolve()
+        identities = sorted({
+            item["path"] for item in generated_rows
+            if (repository / item["path"]).resolve() in unmatched_generated
+        })
+        shown = identities[:32]
+        suffix = f", omitted={len(identities)-len(shown)}" if len(identities) > len(shown) else ""
+        die(
+            "generated declaration contains unconsumed files: "
+            f"count={len(unmatched_generated)}, paths={json.dumps(shown, separators=(',', ':'))}{suffix}"
+        )
     for path in consumed - external - generated:
         root, relative, resolved = locate(path, roots)
         key = (root["name"], relative.as_posix())
