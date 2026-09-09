@@ -22,6 +22,7 @@ REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): "BSD-3-Clause-UC",
+    ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): "ISC",
 }
 EXTRACTED_LICENSES = {
     "LicenseRef-NuttX-PublicDomain": {
@@ -35,8 +36,12 @@ REVIEWED_LICENSE_NOTICES = {
     ),
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): b"SPDX-License-Identifier: Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): b"Neither the name of the University nor the names of its contributors",
+    ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): b"Permission to use, copy, modify, and distribute this software for any",
 }
-REVIEWED_LICENSE_HASHES = {("nuttx", "libs/libc/search/hash_func.c"): "6826243ed593eabc859b30aecdd7ed737efddf89ea192a7a66c30daddbb2fc40"}
+REVIEWED_LICENSE_HASHES = {
+    ("nuttx", "libs/libc/search/hash_func.c"): "6826243ed593eabc859b30aecdd7ed737efddf89ea192a7a66c30daddbb2fc40",
+    ("nuttx", "libs/libc/string/lib_timingsafe_bcmp.c"): "2bec5a443025b82ac87150ab7de6ba545ec4fda398c7857d61e2fe64c50877a9",
+}
 REVIEWED_NESTED_BOUNDARIES = {
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): {
         "boundary_path": "graphics/nxwidgets/COPYING",
