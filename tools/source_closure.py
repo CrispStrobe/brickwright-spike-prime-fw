@@ -21,6 +21,7 @@ ALLOWED_LICENSES = {
 REVIEWED_LICENSE_OVERRIDES = {
     ("nuttx", "include/search.h"): "LicenseRef-NuttX-PublicDomain",
     ("nuttx-apps", "graphics/nxwidgets/Make.defs"): "Apache-2.0",
+    ("nuttx-apps", "graphics/nxwidgets/Kconfig"): "Apache-2.0 AND BSD-3-Clause",
     ("nuttx-apps", "graphics/twm4nx/Make.defs"): "Apache-2.0",
     ("nuttx-apps", "graphics/nxwm/Make.defs"): "Apache-2.0",
     ("nuttx", "libs/libc/search/hash_func.c"): "BSD-3-Clause-UC",
@@ -70,6 +71,13 @@ REVIEWED_NESTED_BOUNDARIES = {
     },
 }
 REVIEWED_BOUNDARY_LICENSE_SELECTIONS = {
+    ("nuttx-apps", "graphics/nxwidgets/Kconfig"): {
+        "source_sha256":"d61dd3645ba739570ce7cd1326905221a43930b8e96045dea6ec70acdf10894d",
+        "boundary_path":"graphics/nxwidgets/COPYING", "boundary_sha256":"894d7166375b77cfd3d052d44ca90ebb7d0f3c5a4f7c57363af9d842bbaaad81",
+        "declared":"Apache-2.0 AND BSD-3-Clause", "concluded":"Apache-2.0 AND BSD-3-Clause",
+        "required_notice":"graphics/nxwidgets/COPYING",
+        "markers":[b"Licensed to the Apache Software Foundation (ASF)",b"Portions of this package derive from Woopsi",b"Redistribution and use in source and binary forms",b"Neither the names \"Woopsi\", \"Simian Zombie\""],
+    },
     ("mbedtls", "framework/CMakeLists.txt"): {
         "source_sha256":"bdcf4a6aa867ba4855d26043ec869961fa5ac8a6b2fa6856689d0ae4d6aac5b6",
         "boundary_path":"framework/LICENSE", "boundary_sha256":"11402351e38392230bb8934ba1095c0c0049a296c0f8821f76e4672dff54b490",
@@ -152,7 +160,10 @@ def validate_boundary_selection(path: Path, root_path: Path, selection: dict, la
     boundary=root_path/selection["boundary_path"]
     if sha256(path)!=selection["source_sha256"]: die(f"reviewed boundary-selected source drift: {label}")
     if boundary.is_symlink() or not boundary.is_file() or not boundary.resolve().is_relative_to(root_path.resolve()) or sha256(boundary)!=selection["boundary_sha256"] or any(x not in boundary.read_bytes() for x in selection["markers"]): die(f"reviewed boundary license drift: {label}")
-    return selection["concluded"],selection["declared"],{"kind":"reviewed-boundary-license-selection","license_source":selection["boundary_path"],"license_sha256":selection["boundary_sha256"],"selected":selection["concluded"]}
+    audit={"kind":"reviewed-boundary-license-selection","license_source":selection["boundary_path"],"license_sha256":selection["boundary_sha256"],"selected":selection["concluded"]}
+    if selection.get("required_notice"):
+        audit["required_notice"] = selection["required_notice"]
+    return selection["concluded"],selection["declared"],audit
 
 
 def load_roots(path: Path) -> list[dict]:
@@ -1001,6 +1012,7 @@ def origin_for(root: dict, relative: Path, resolved: Path) -> dict:
 
 def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[dict]:
     entries = {}
+    required_notices = {}
     external, _ = declared_external(arguments)
     generated, generated_rows = declared_generated(arguments)
     consumed = consumed_paths(arguments)
@@ -1033,6 +1045,29 @@ def closure_entries(arguments: argparse.Namespace, roots: list[dict]) -> list[di
         }
         if license_audit is not None:
             entries[key]["license_audit"] = license_audit
+            notice = license_audit.get("required_notice")
+            if notice:
+                notice_relative = Path(notice)
+                notice_path = (Path(root["path"]) / notice_relative).resolve()
+                key_notice=(root["name"],notice); required_by=f"{root['name']}/{relative.as_posix()}"
+                if key_notice in required_notices:
+                    item=required_notices[key_notice]
+                    if item["license"] != concluded_license: die(f"conflicting required notice license: {key_notice[0]}/{key_notice[1]}")
+                    item["required_by"].add(required_by)
+                else:
+                    required_notices[key_notice]={"root":root,"relative":notice_relative,"path":notice_path,"license":concluded_license,"required_by":{required_by}}
+    for key,item in sorted(required_notices.items()):
+        root=item["root"]; relative=item["relative"]; path=item["path"]; license_expression=item["license"]
+        if key in entries:
+            continue
+        if not path.is_file() or path.is_symlink() or not path.is_relative_to(Path(root["path"]).resolve()):
+            die(f"required license notice is missing or escaping: {key[0]}/{key[1]}")
+        entries[key] = {
+            "source_root":root["name"], "path":relative.as_posix(), "sha256":sha256(path),
+            "license":license_expression, "declared_license":license_expression,
+            "role":root["role"], "origin":origin_for(root,relative,path),
+            "license_audit":{"kind":"required-license-notice","required_by":sorted(item["required_by"])},
+        }
     return [entries[key] for key in sorted(entries)]
 
 def vcs_administration(consumed: set[Path], roots: list[dict]) -> tuple[set[Path],list[dict]]:
@@ -1285,16 +1320,19 @@ def verify(arguments: argparse.Namespace) -> None:
     if manifest.get("vcs_administration")!=vcs_rows: die("VCS administration audit differs")
     actual_files = manifest.get("files", [])
     actual_keys = {(item.get("source_root"), item.get("path")) for item in actual_files}
-    consumed_keys = set()
     external, external_rows = declared_external(arguments)
     generated, generated_rows = declared_generated(arguments)
     if (manifest.get("external_inputs") != external_rows
             or manifest.get("generated_inputs") != generated_rows
             or manifest.get("generated_symlinks") != declared_symlinks(arguments)[1]):
         die("declared generated/external inputs differ from manifest")
+    consumed_keys = set()
     for path in consumed_all - vcs_excluded - external - generated:
         root, relative, _ = locate(path, roots)
         consumed_keys.add((root["name"], relative.as_posix()))
+        selection=REVIEWED_BOUNDARY_LICENSE_SELECTIONS.get((root["name"],relative.as_posix()))
+        if selection and selection.get("required_notice"):
+            consumed_keys.add((root["name"],selection["required_notice"]))
     if consumed_keys != actual_keys:
         die(
             "evidence and manifest differ; "
