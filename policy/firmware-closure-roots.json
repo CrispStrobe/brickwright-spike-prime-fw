@@ -90,7 +90,7 @@
     {
       "commit": "mbedtls-3.6.2+framework.df3307f2b4fe512def60886024f7be8fd1523ccd",
       "license": "Apache-2.0",
-      "license_overrides": [],
+      "license_overrides": [{"license":"Apache-2.0","path":"framework/CMakeLists.txt","require_spdx":false}],
       "name": "mbedtls",
       "patch_policy": "composed archives locked by policy/firmware-build-inputs.lock.json",
       "path": ".local/mbedtls-3.6.2",

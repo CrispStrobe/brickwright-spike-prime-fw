@@ -61,6 +61,14 @@ REVIEWED_NESTED_BOUNDARIES = {
         "future_consumed_files_require": "separate Twm4Nx source license review",
     },
 }
+REVIEWED_BOUNDARY_LICENSE_SELECTIONS = {
+    ("mbedtls", "framework/CMakeLists.txt"): {
+        "source_sha256":"bdcf4a6aa867ba4855d26043ec869961fa5ac8a6b2fa6856689d0ae4d6aac5b6",
+        "boundary_path":"framework/LICENSE", "boundary_sha256":"11402351e38392230bb8934ba1095c0c0049a296c0f8821f76e4672dff54b490",
+        "declared":"Apache-2.0 OR GPL-2.0-or-later", "concluded":"Apache-2.0",
+        "markers":[b"dual [Apache-2.0]",b"OR [GPL-2.0-or-later]",b"users may choose which of these licenses"],
+    },
+}
 REVIEWED_SPDX_ANOMALIES = {
     ("nuttx", "fs/mnemofs/Make.defs"): {
         "sha256": "020f7d73c2e8647520012db2c76d9702657c0368f601cd7415207067bfd5c3d3",
@@ -139,7 +147,7 @@ def load_roots(path: Path) -> list[dict]:
             reviewed = REVIEWED_LICENSE_OVERRIDES.get((root["name"], override["path"]))
             if override["license"] != reviewed:
                 check_license(override["license"])
-            elif not override["require_spdx"]:
+            elif not override["require_spdx"] and (root["name"],override["path"]) not in REVIEWED_BOUNDARY_LICENSE_SELECTIONS:
                 die(f"reviewed license override requires SPDX: {root['name']}/{relative}")
         root["license_overrides"] = sorted(overrides, key=lambda item: item["path"])
         roots.append(root)
@@ -767,7 +775,22 @@ def file_license(path: Path, root: dict, relative: Path) -> tuple[str, str, dict
         match = SPDX_COMMENT.match(line)
         if match:
             expressions.add(match.group(1).decode("ascii", "replace").strip())
-    anomaly = REVIEWED_SPDX_ANOMALIES.get((root["name"], relative.as_posix()))
+    key=(root["name"], relative.as_posix())
+    selection=REVIEWED_BOUNDARY_LICENSE_SELECTIONS.get(key)
+    if selection is not None:
+        boundary=Path(root["path"])/selection["boundary_path"]
+        if expressions or sha256(path)!=selection["source_sha256"]:
+            die(f"reviewed boundary-selected source drift: {root['name']}/{relative}")
+        if (boundary.is_symlink() or not boundary.is_file()
+                or not boundary.resolve().is_relative_to(Path(root["path"]).resolve())
+                or sha256(boundary)!=selection["boundary_sha256"]
+                or any(marker not in boundary.read_bytes() for marker in selection["markers"])):
+            die(f"reviewed boundary license drift: {root['name']}/{relative}")
+        return selection["concluded"], selection["declared"], {
+            "kind":"reviewed-boundary-license-selection", "license_source":selection["boundary_path"],
+            "license_sha256":selection["boundary_sha256"], "selected":selection["concluded"],
+        }
+    anomaly = REVIEWED_SPDX_ANOMALIES.get(key)
     if anomaly is not None:
         raw = path.read_bytes()
         if (sha256(path) != anomaly["sha256"] or sorted(expressions) != sorted(anomaly["raw_tags"])
