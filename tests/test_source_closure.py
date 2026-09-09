@@ -208,15 +208,50 @@ class ClosureTest(unittest.TestCase):
         capture=self.base/"capture"; (capture/"compiles").mkdir(parents=True)
         dep=capture/"gone.d"; dep.write_text(f"gone.o: {self.root}/main.c\n")
         (capture/"compiles/gone.json").write_text(json.dumps({"cwd":str(self.base),"depfile":str(dep),"output":"gone.o"}))
-        trace=self.base/"empty.trace"; trace.write_text("")
         archive=self.base/"libfirmware.a"; archive.write_bytes(b"archive")
+        trace=self.base/"empty.trace"; trace.write_text(
+            f'1 openat(AT_FDCWD, "{archive}", O_RDONLY) = 3\n'
+        )
         import hashlib
         (capture/"archives").mkdir(); (capture/"archives/a.json").write_text(json.dumps({"cwd":str(self.base),
-            "argv":["rcs","libfirmware.a","gone.o"],"output_sha256":hashlib.sha256(b"archive").hexdigest()}))
+            "argv":["rcs","libfirmware.a","gone.o"],"output":"libfirmware.a","output_sha256":hashlib.sha256(b"archive").hexdigest()}))
         mapfile=self.base/"firmware.map"; mapfile.write_text(f"{archive}(gone.o)\n")
         self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,
                     "--capture",capture,"--map",mapfile,"--output",self.manifest,"--sbom",self.sbom)
         self.assertIn("main.c",[x["path"] for x in json.loads(self.manifest.read_text())["files"]])
+
+    def test_opened_archive_without_mapped_producer_is_not_excluded(self):
+        archive=self.base/"unproved.a"; archive.write_bytes(b"archive")
+        trace=self.base/"archive.trace"; trace.write_text(
+            f'1 openat(AT_FDCWD, "{archive}", O_RDONLY) = 3\n'
+        )
+        self.assertIn("escapes declared source roots", self.invoke(
+            "generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,
+            "--depfile",self.dep,"--output",self.manifest,"--sbom",self.sbom,
+            ok=False).stderr)
+
+    def test_stale_linked_archive_producer_is_rejected(self):
+        capture=self.base/"capture"; (capture/"compiles").mkdir(parents=True); (capture/"archives").mkdir()
+        obj=self.base/"one.o"; obj.write_bytes(b"object")
+        dep=capture/"one.d"; dep.write_text(f"one.o: {self.root}/main.c\n")
+        (capture/"compiles/one.json").write_text(json.dumps({"cwd":str(self.base),"depfile":str(dep),"output":"one.o","output_sha256":hashlib.sha256(b"object").hexdigest()}))
+        producer=self.base/"producer.a"; producer.write_bytes(b"stale")
+        mapped=self.base/"mapped.a"; mapped.write_bytes(b"final")
+        (capture/"archives/a.json").write_text(json.dumps({"cwd":str(self.base),"argv":["rcs","producer.a","one.o"],"output":"producer.a","output_sha256":hashlib.sha256(b"final").hexdigest()}))
+        mapfile=self.base/"map"; mapfile.write_text(f"{mapped}(one.o)\n")
+        trace=self.base/"empty"; trace.write_text("")
+        self.assertIn("missing or stale",self.invoke("generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,"--capture",capture,"--map",mapfile,"--output",self.manifest,"--sbom",self.sbom,ok=False).stderr)
+
+    def test_mapped_archive_without_captured_producer_is_rejected(self):
+        capture=self.base/"capture"; (capture/"compiles").mkdir(parents=True); (capture/"archives").mkdir()
+        archive=self.base/"mapped.a"; archive.write_bytes(b"archive")
+        mapfile=self.base/"map"; mapfile.write_text(f"{archive}(one.o)\n")
+        trace=self.base/"empty"; trace.write_text("")
+        self.assertIn("no unique recorded final producer",self.invoke(
+            "generate","--roots",self.roots,"--cwd",self.base,"--strace",trace,
+            "--capture",capture,"--map",mapfile,"--repository",self.base,
+            "--output",self.manifest,
+            "--sbom",self.sbom,ok=False).stderr)
 
     def test_incremental_archive_updates_retain_earlier_member_source(self):
         capture = self.base / "capture"

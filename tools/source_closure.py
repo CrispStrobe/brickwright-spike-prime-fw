@@ -393,7 +393,9 @@ def consumed_paths(arguments: argparse.Namespace) -> set[Path]:
         generated.update(trace_generated)
     for depfile in arguments.depfile:
         paths.update(dep_record(Path(depfile))[1])
-    for record_path in reachable_capture_records(arguments):
+    reachable_records = reachable_capture_records(arguments)
+    generated.update(linked_archive_producer_outputs(arguments))
+    for record_path in reachable_records:
         record = json.loads(record_path.read_text(encoding="utf-8"))
         depfile = record.get("depfile")
         if not depfile:
@@ -605,6 +607,39 @@ def reachable_capture_records(arguments: argparse.Namespace) -> list[Path]:
             if len(candidates)!=1: die(f"archive input has no unique compiler producer: {exact}")
             selected.add(candidates[0])
     return sorted(selected)
+
+
+def linked_archive_producer_outputs(arguments: argparse.Namespace) -> set[Path]:
+    """Return current captured archive outputs whose bytes feed a mapped archive."""
+    cwd = Path(arguments.cwd).resolve()
+    mapped = {
+        value.rsplit("(", 1)[0] for value in map_identities(getattr(arguments, "map", []), cwd)
+        if "(" in value
+    }
+    records = []
+    for directory in getattr(arguments, "capture", []):
+        for record_path in Path(directory).glob("archives/*.json"):
+            record = json.loads(record_path.read_text())
+            output = record.get("output")
+            if output and record.get("output_sha256"):
+                item = Path(output)
+                records.append((record, (item if item.is_absolute() else Path(record["cwd"]) / item).resolve()))
+    result = set()
+    for identity in mapped:
+        mapped_path = (cwd / identity).resolve()
+        if not mapped_path.is_file():
+            continue
+        mapped_digest = sha256(mapped_path)
+        candidates = [(record, output) for record, output in records
+                      if record["output_sha256"] == mapped_digest]
+        groups = {output for _, output in candidates}
+        if len(groups) != 1:
+            continue  # reachable_capture_records reports the authoritative error
+        output = next(iter(groups))
+        if not output.is_file() or sha256(output) != mapped_digest:
+            die(f"captured linked archive producer is missing or stale: {identity}")
+        result.add(output)
+    return result
 
 
 def locate(path: Path, roots: list[dict]) -> tuple[dict, Path, Path]:
