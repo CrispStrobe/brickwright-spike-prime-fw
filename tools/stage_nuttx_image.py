@@ -25,7 +25,8 @@ def digest(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", choices=("spike-nx", "brickwright"))
+    parser.add_argument("name", choices=("spike-nx", "brickwright",
+                                         "brickwright-simulation"))
     parser.add_argument("build_directory", type=Path)
     parser.add_argument("--output", type=Path,
                         default=Path(".local/firmware-images"))

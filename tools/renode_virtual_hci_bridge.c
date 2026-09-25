@@ -131,17 +131,29 @@ static int connect_retry(const char *host, const char *service)
 
 static void usage(const char *program)
 {
-  fprintf(stderr, "Usage: %s [--trace] HOST PORT\n", program);
+  fprintf(stderr, "Usage: %s [--trace] [--reject-vendor] HOST PORT\n",
+          program);
 }
 
 int main(int argc, char **argv)
 {
   bool trace = false;
+  /* The simulation profile carries no service pack, so no vendor bootstrap
+   * stream should arrive. Rejecting vendor commands makes any that do arrive
+   * visible as failures instead of silently acknowledging them. */
+  bool reject_vendor = false;
   int arg = 1;
-  if (arg < argc && strcmp(argv[arg], "--trace") == 0)
+  for (; arg < argc && strncmp(argv[arg], "--", 2) == 0; ++arg)
     {
-      trace = true;
-      ++arg;
+      if (strcmp(argv[arg], "--trace") == 0)
+        trace = true;
+      else if (strcmp(argv[arg], "--reject-vendor") == 0)
+        reject_vendor = true;
+      else
+        {
+          usage(argv[0]);
+          return 2;
+        }
     }
   if (argc - arg != 2)
     {
@@ -161,7 +173,8 @@ int main(int argc, char **argv)
   struct brickwright_virtual_hci controller;
   const uint8_t address[6] = {0x06, 0x05, 0x04, 0x03, 0x02, 0x01};
   brickwright_virtual_hci_init(&controller, address, write_all, &bridge);
-  brickwright_virtual_hci_acknowledge_vendor_commands(&controller, true);
+  brickwright_virtual_hci_acknowledge_vendor_commands(&controller,
+                                                     !reject_vendor);
 
   uint8_t buffer[1024];
   for (;;)

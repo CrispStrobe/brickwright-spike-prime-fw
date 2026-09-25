@@ -25,6 +25,7 @@ if [[ "${BRICKWRIGHT_RENODE_FIRMWARE_TEST:-0}" == 1 ]]; then
   timeout 300s "$renode_test" --variable "HCI_BRIDGE:$work/renode-virtual-hci" \
     --variable "HCI_PORT:34561" \
     --variable "PLATFORM:@$root/simulation/renode/spike-prime-custom-dma.repl" \
-    --include brickwright-hci \
+    --include "${BRICKWRIGHT_RENODE_TAG:-brickwright-simulation-hci}" \
+    --results-dir "$root/.local/renode-results" \
     "$root/simulation/renode/protected-images.robot"
 fi
