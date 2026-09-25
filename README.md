@@ -8,6 +8,17 @@
 > Use it only in the supported Renode simulation. Do not flash any image built
 > from this repository to real silicon. See [SAFETY.md](SAFETY.md).
 
+## Build profiles
+
+- `make nuttx BOARD_CONFIG=simulation` builds the Renode simulation image. It
+  contains no TI service pack and never references one;
+  `tools/check_ti_free_image.py` proves both. This is the only profile CI
+  builds and runs.
+- `make nuttx` (`BOARD_CONFIG=usbnsh`) is the hardware profile. It fetches TI's
+  CC2564C service pack at build time, pinned by commit and SHA-256, and the
+  image it produces may be used only with a TI device. See
+  [the service-pack page](docs/project/ti-service-pack.md).
+
 ## Benchmark Results
 
 ### CoreMark

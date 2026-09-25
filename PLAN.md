@@ -4,12 +4,14 @@ This is a fresh, parentless public source snapshot derived from
 `owhinata/spike-nx`; private and upstream history is not reachable from it.
 Project-owned and vendored source must use MIT, Apache-2.0, BSD-3-Clause, or an
 explicitly approved comparable permissive licence, with no GPL-family, AGPL,
-noncommercial, or source-incompatible terms. The exact unmodified CC2564C
-service pack is the sole separately licensed binary exception and remains
-governed by its adjacent TI-device-only licence.
+noncommercial, or source-incompatible terms. The repository contains no TI
+service pack: the simulation profile builds and runs without one, and only the
+hardware profile fetches TI's unmodified, TI-device-only file at build time
+(`docs/project/ti-service-pack.md`). Simulation never uses chip-restricted
+vendor code; CI builds and runs only the clean simulation profile.
 
-The matching simulator accepts and acknowledges the opaque TI command stream;
-it does not execute TI controller firmware or validate RF/electrical behaviour.
+The simulator does not execute TI controller firmware or validate
+RF/electrical behaviour.
 
 ## Status legend
 
@@ -26,8 +28,10 @@ result and commit reference (added by the following checkpoint when necessary).
 
 - Project source: approved permissive licences only; no GPL/AGPL/NC code.
 - No BTstack in the target build or public source release.
-- The sole restricted exception is the byte-exact TI service pack beside its
-  licence; it must never be modified or presented as project-licensed code.
+- No TI service pack in Git or in any simulation image. The hardware profile
+  fetches the byte-exact file, pinned by commit and SHA-256; it must never be
+  modified or presented as project-licensed code.
+  `tools/check_ti_free_image.py` gates every simulation image.
 - Never reverse engineer, disassemble, or decompile the TI payload.
 - Hardware loading accepts only known, unmodified TI payloads after hash and
   structural verification. Host code must handle eHCILL instead of patching a

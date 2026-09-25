@@ -10,8 +10,10 @@ component.
 | NuttX Apps | `owhinata/nuttx-apps@55f0bc216565ccab8dee600a88f4485c7693bf8b` | Primarily Apache-2.0; optional files vary | External gitlink. Only the configured application closure is linked. Its own licence/NOTICE controls. |
 | Zephyr Bluetooth host selection | Zephyr `v4.4.1`, exact commit in `third_party/zephyr-host/manifest.json` | Apache-2.0 | Vendored, hash-pinned selection; upstream licence retained and local patch recorded. |
 | Pybricks-derived algorithms | Pybricks provenance recorded in affected files and project provenance | MIT | Adapted source/algorithms only; no Pybricks gitlink remains. |
-| TI CC2564C service pack 1.5 | TI commit `3aa1d75f3c2ae77f6e4d36194e3d281b899ab149`; SHA-256 `646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e` | TI Text File License | Exact unmodified binary plus adjacent `LICENSE.ti`; TI-device-only and no reverse engineering. Not permissively licensed source. |
+| TI CC2564C service pack 1.5 | TI commit `3aa1d75f3c2ae77f6e4d36194e3d281b899ab149`; SHA-256 `646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e` | TI Text File License | **Not distributed.** The hardware profile fetches it from TI's git at build time into ignored `.local/ti/`, verified by SHA-256; a mismatch is refused. The simulation profile never references it, and `tools/check_ti_free_image.py` proves its images contain none of its bytes. |
 
-No LEGO firmware dump, official SPIKE firmware image, BTstack source, or
-BTstack binary is included. Simulator inputs for official firmware remain
+No TI service pack, LEGO firmware dump, official SPIKE firmware image, BTstack
+source, or BTstack binary is included. `policy/ti-service-pack-fingerprint.json`
+holds only digests of the service pack's 256-byte chunks, used by the
+simulation gate; it contains no service-pack bytes. Simulator inputs for official firmware remain
 user-supplied local files and are never CI artifacts.

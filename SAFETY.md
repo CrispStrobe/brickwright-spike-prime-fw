@@ -18,8 +18,8 @@ of the following in `PLAN.md`:
 - verified safe states for every motor and external port across boot, reset,
   crash, disconnect, watchdog, and brownout;
 - battery/charger, USB, storage, update, rollback, and recovery testing;
-- CC2564C initialization and repeated power-cycle tests using the exact
-  redistributed TI service pack;
+- CC2564C initialization and repeated power-cycle tests using the exact TI
+  service pack fetched by the hardware profile;
 - Classic and BLE interoperability tests on supported host platforms;
 - fault injection and long-duration soak testing;
 - a reviewed release decision that removes the simulation-only restriction.
