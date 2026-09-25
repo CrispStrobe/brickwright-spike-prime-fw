@@ -22,6 +22,16 @@ config APP_BTSENSOR_SIM_NO_SERVICE_PACK
 		CC2564C needs its service pack; never use this option for
 		hardware.
 
+config APP_BTSENSOR_START_VISIBLE
+	bool "Become visible (advertise, page and inquiry scan) at boot"
+	default n
+	---help---
+		The daemon makes the hub visible as soon as the Bluetooth host
+		is up, with the same effect as `btsensor bt on` at the console.
+		The simulation profile enables this because Renode does not
+		model the USB console, so a simulated peer can find the hub
+		without console input.
+
 config APP_BTSENSOR_PROGNAME
 	string "Program name"
 	default "btsensor"

@@ -72,6 +72,15 @@ static int daemon_main(int argc, char **argv)
       transport_started = ret == 0;
     }
 
+#ifdef CONFIG_APP_BTSENSOR_START_VISIBLE
+  /* Same effect as `btsensor bt on`, issued once the host is up so it cannot
+   * race bt_enable(). A failure leaves the daemon running but invisible. */
+  if (ret == 0)
+    {
+      (void)btsensor_transport_set_visible(true);
+    }
+#endif
+
   if (ret == 0)
     {
       daemon_wait_for_stop();
