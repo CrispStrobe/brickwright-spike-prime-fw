@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <assert.h>
 #include <string.h>
+#include <unistd.h>
 #include <zephyr/kernel.h>
 #include "long_wq.h"
 
@@ -128,5 +129,25 @@ int main(void)
   nanosleep(&release_wait, 0);
   assert(k_work_schedule(&timers[0], K_MSEC(20)) == 1);
   assert(k_work_cancel_delayable(&timers[0]) == 1);
+
+  /* Zephyr cancels and queries never-initialized (zero-filled) items, such
+   * as the limited-advertising timeout on every peripheral connection. Their
+   * mutex was never created; on NuttX a zero-filled one is locked. Model that
+   * with a held mutex: the idle answer must not touch it. SIGALRM turns a
+   * regression (a hang) into a failure. */
+  struct k_work_delayable never_initialized;
+  memset(&never_initialized, 0, sizeof(never_initialized));
+  pthread_mutex_init(&never_initialized.work.mutex, 0);
+  pthread_mutex_lock(&never_initialized.work.mutex);
+  alarm(5);
+  assert(k_work_cancel_delayable(&never_initialized) == 0);
+  assert(k_work_cancel_delayable_sync(&never_initialized, &sync) == 0);
+  assert(k_work_cancel(&never_initialized.work) == 0);
+  assert(k_work_cancel_sync(&never_initialized.work, &sync) == 0);
+  assert(!k_work_flush(&never_initialized.work, &sync));
+  assert(!k_work_is_pending(&never_initialized.work));
+  assert(k_work_delayable_busy_get(&never_initialized) == 0);
+  alarm(0);
+  pthread_mutex_unlock(&never_initialized.work.mutex);
   return 0;
 }

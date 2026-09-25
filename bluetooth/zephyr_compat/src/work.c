@@ -243,8 +243,21 @@ int k_work_reschedule_for_queue(struct k_work_q *queue, struct k_work_delayable 
 int k_work_reschedule(struct k_work_delayable *work, k_timeout_t delay)
 { return k_work_reschedule_for_queue(&k_sys_work_q, work, delay); }
 
+/* Zephyr treats a zero-filled k_work or k_work_delayable as idle: the host
+ * cancels, flushes, and queries work items (for example the limited
+ * advertising timeout) that were never initialized. Here each item owns a
+ * pthread mutex that k_work_init creates; a zero-filled pthread mutex is not
+ * a valid unlocked mutex on NuttX, where locking it blocks forever. An item
+ * with no handler was never initialized and cannot have been submitted, so
+ * the query and cancel paths answer "idle" without touching its mutex. */
+static bool work_uninitialized(const struct k_work *work)
+{
+  return work->handler == NULL;
+}
+
 int k_work_cancel(struct k_work *work)
 {
+  if (work_uninitialized(work)) return 0;
   pthread_mutex_lock(&work->mutex);
   ++work->generation;
   bool busy = work->pending || work->running;
@@ -256,6 +269,7 @@ int k_work_cancel(struct k_work *work)
 int k_work_cancel_sync(struct k_work *work, struct k_work_sync *sync)
 {
   (void)sync;
+  if (work_uninitialized(work)) return 0;
   (void)k_work_cancel(work);
   pthread_mutex_lock(&work->mutex);
   while (work->pending || work->running)
@@ -267,6 +281,7 @@ int k_work_cancel_sync(struct k_work *work, struct k_work_sync *sync)
 bool k_work_flush(struct k_work *work, struct k_work_sync *sync)
 {
   (void)sync;
+  if (work_uninitialized(work)) return false;
   pthread_mutex_lock(&work->mutex);
   bool busy = work->pending || work->running;
   while (work->pending || work->running)
@@ -277,6 +292,7 @@ bool k_work_flush(struct k_work *work, struct k_work_sync *sync)
 
 int k_work_cancel_delayable(struct k_work_delayable *work)
 {
+  if (work_uninitialized(&work->work)) return 0;
   pthread_mutex_lock(&work->work.mutex);
   bool delayed = work->deadline != 0;
   work->deadline = 0;
@@ -288,6 +304,7 @@ int k_work_cancel_delayable(struct k_work_delayable *work)
 
 int k_work_cancel_delayable_sync(struct k_work_delayable *work, struct k_work_sync *sync)
 {
+  if (work_uninitialized(&work->work)) return 0;
   (void)k_work_cancel_delayable(work);
   delayed_request_cancel(work, true);
   return k_work_cancel_sync(&work->work, sync);
@@ -296,6 +313,7 @@ int k_work_cancel_delayable_sync(struct k_work_delayable *work, struct k_work_sy
 bool k_work_is_pending(const struct k_work *work)
 {
   struct k_work *mutable_work = (struct k_work *)work;
+  if (work_uninitialized(mutable_work)) return false;
   pthread_mutex_lock(&mutable_work->mutex);
   bool pending = mutable_work->pending || mutable_work->running;
   pthread_mutex_unlock(&mutable_work->mutex);
@@ -304,6 +322,7 @@ bool k_work_is_pending(const struct k_work *work)
 unsigned int k_work_delayable_busy_get(const struct k_work_delayable *work)
 {
   struct k_work *mutable_work = (struct k_work *)&work->work;
+  if (work_uninitialized(mutable_work)) return 0;
   pthread_mutex_lock(&mutable_work->mutex);
   unsigned int busy = (work->deadline ? K_WORK_DELAYED : 0) |
                       (mutable_work->pending || mutable_work->running ? K_WORK_QUEUED : 0);
