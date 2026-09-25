@@ -15,7 +15,11 @@ CSRCS += btsensor_tx.c btsensor_cmd_neutral.c btsensor_classic.c
 CSRCS += btsensor_modern.c btsensor_modern_backend.c btsensor_modern_notify.c
 CSRCS += btsensor_scheduler.c btsensor_sound.c
 CSRCS += hub_protocol.c spike_codec.c
+# The simulation profile carries no TI service pack: the provider shim, its
+# include path, and the import rule are all absent from its build graph.
+ifneq ($(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK),y)
 CSRCS += btsensor_ti_payload.c
+endif
 
 ifeq ($(CONFIG_APP_BTSENSOR_NUTTX_PERIPHERALS),y)
 CSRCS += bundle_emitter.c
@@ -33,7 +37,6 @@ CFLAGS += -I$(APPDIR)/../third_party/zephyr-host/upstream/subsys/bluetooth
 CFLAGS += -I$(APPDIR)/../bluetooth/daemon
 CFLAGS += -I$(APPDIR)/../protocol/c
 CFLAGS += -I$(APPDIR)/../bluetooth/ti_service_pack
-CFLAGS += -I$(APPDIR)/../.local/ti/cc2564c
 VPATH += :$(APPDIR)/../bluetooth/daemon
 VPATH += :$(APPDIR)/../protocol/c
 VPATH += :$(APPDIR)/../bluetooth/ti_service_pack
@@ -41,12 +44,8 @@ VPATH += :$(APPDIR)/../bluetooth/ti_service_pack
 BRICKWRIGHT_ROOT := $(abspath $(APPDIR)/..)
 BRICKWRIGHT_BT_LIBDIR := $(BRICKWRIGHT_ROOT)/build/nuttx-bluetooth
 BRICKWRIGHT_BT_LIB := $(BRICKWRIGHT_BT_LIBDIR)/libbrickwright_zephyr_host.a
-BRICKWRIGHT_TI_PAYLOAD := \
-  $(BRICKWRIGHT_ROOT)/.local/ti/cc2564c/ti_bts_local_payload.h
-BRICKWRIGHT_TI_VENDOR_DIR := $(BRICKWRIGHT_ROOT)/third_party/ti-cc2564c
-BRICKWRIGHT_TI_VENDOR_BTS := \
-  $(BRICKWRIGHT_TI_VENDOR_DIR)/TIInit_6.12.26.bts
 BRICKWRIGHT_BT_INPUTS := \
+  $(TOPDIR)/include/nuttx/config.h \
   $(BRICKWRIGHT_ROOT)/tools/build_zephyr_nuttx_archive.sh \
   $(BRICKWRIGHT_ROOT)/tools/zephyr_nuttx_sources.sh \
   $(shell find $(BRICKWRIGHT_ROOT)/bluetooth/zephyr_compat \
@@ -59,21 +58,31 @@ $(BRICKWRIGHT_BT_LIB): $(BRICKWRIGHT_BT_INPUTS)
 
 all:: $(BRICKWRIGHT_BT_LIB)
 
-$(BRICKWRIGHT_TI_PAYLOAD): $(BRICKWRIGHT_TI_VENDOR_BTS) \
-    $(BRICKWRIGHT_TI_VENDOR_DIR)/LICENSE.ti \
-    $(BRICKWRIGHT_ROOT)/tools/import_ti_service_pack.py \
+ifneq ($(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK),y)
+# Hardware profile only. The TI service pack is not part of this repository.
+# The importer fetches it from TI's git at the commit pinned in
+# policy/ti-service-packs.json, or takes a local copy named by
+# BRICKWRIGHT_TI_SERVICE_PACK (a file, directory, or ZIP with TI's LICENSE),
+# and refuses anything whose SHA-256 is not allowlisted.
+BRICKWRIGHT_TI_LOCAL_DIR := $(BRICKWRIGHT_ROOT)/.local/ti/cc2564c
+BRICKWRIGHT_TI_PAYLOAD := $(BRICKWRIGHT_TI_LOCAL_DIR)/ti_bts_local_payload.h
+CFLAGS += -I$(BRICKWRIGHT_TI_LOCAL_DIR)
+
+$(BRICKWRIGHT_TI_PAYLOAD): $(BRICKWRIGHT_ROOT)/tools/import_ti_service_pack.py \
     $(BRICKWRIGHT_ROOT)/policy/ti-service-packs.json
 	$(Q)python3 $(BRICKWRIGHT_ROOT)/tools/import_ti_service_pack.py \
-	  $(BRICKWRIGHT_TI_VENDOR_BTS) \
-	  --license $(BRICKWRIGHT_TI_VENDOR_DIR)/LICENSE.ti
+	  $(if $(BRICKWRIGHT_TI_SERVICE_PACK),$(BRICKWRIGHT_TI_SERVICE_PACK),--from-ti)
 
 all:: $(BRICKWRIGHT_TI_PAYLOAD)
+endif
 
 include $(APPDIR)/Application.mk
 
+ifneq ($(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK),y)
 # If an import appears after a previous payload-free build, its newer
 # timestamp must force the permissive provider shim to be recompiled.
 $(filter %btsensor_ti_payload%,$(COBJS)): $(BRICKWRIGHT_TI_PAYLOAD)
+endif
 
 # Application.mk first places libapps and libgcc in LDLIBS. The Bluetooth
 # archive follows them inside the same start-group, so circular references
