@@ -29,14 +29,31 @@ import json
 import logging
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from bw_air import Air  # noqa: E402
 from spike_codec import cobs_decode, cobs_encode  # noqa: E402
+
+
+def air_tools(argv) -> Path:
+    """The one bw-air/1 implementation lives in renode-spike-prime/tools/bw-air."""
+    for index, value in enumerate(argv):
+        if value == "--air-tools" and index + 1 < len(argv):
+            return Path(argv[index + 1]).resolve()
+        if value == "--renode" and index + 1 < len(argv):
+            candidate = Path(argv[index + 1]).resolve() / "tools" / "bw-air"
+            if candidate.is_dir():
+                return candidate
+    return Path(os.environ.get("BW_AIR_TOOLS", "")).resolve()
+
+
+AIR_TOOLS = air_tools(sys.argv)
+sys.path.insert(0, str(AIR_TOOLS))
+from hci_node import Air  # noqa: E402
 
 from bumble import hci  # noqa: E402
 from bumble.core import UUID, PhysicalTransport  # noqa: E402
@@ -50,6 +67,8 @@ CENTRAL_ADDRESS = "02:B1:0E:5A:17:C0"
 FD02_SERVICE = UUID("0000fd02-0000-1000-8000-00805f9b34fb")
 FD02_RX = UUID("0000fd02-0001-1000-8000-00805f9b34fb")
 FD02_TX = UUID("0000fd02-0002-1000-8000-00805f9b34fb")
+MICROBIT_ADDRESS = "C0:EE:AA:BB:CC:01"
+UART_SERVICE = UUID("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
 DISPLAY_STUBS = ("tlc5955_initialize", "tlc5955_update_sync", "tlc5955_set_duty")
 
 MILESTONES = ("__start", "bt_enable", "physical_start_host", "settings_load",
@@ -59,7 +78,8 @@ MILESTONES = ("__start", "bt_enable", "physical_start_host", "settings_load",
 log = logging.getLogger("spike-air-test")
 
 
-def renode_script(images: Path, port: int, trace=()) -> str:
+def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
+                  dumps=()) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
     lines = [
@@ -82,14 +102,42 @@ def renode_script(images: Path, port: int, trace=()) -> str:
     for symbol in (*MILESTONES, *trace):
         lines.append(f"cpu AddHook `sysbus GetSymbolAddress \"{symbol}\"` "
                      f"\"monitor.Parse('log \\\"MILESTONE {symbol}\\\"')\"")
+    for symbol in callers:
+        if "=" in symbol:  # NAME=ADDRESS, for symbols defined in both images
+            name, address = symbol.split("=", 1)
+            lines.append(f"cpu AddHook {address} "
+                         f"\"monitor.Parse('log \\\"CALLER {name} lr=' + "
+                         f"hex(self.GetRegisterUnsafe(14).RawValue) + ' r0=' + "
+                         f"hex(self.GetRegisterUnsafe(0).RawValue) + ' r1=' + "
+                         f"hex(self.GetRegisterUnsafe(1).RawValue) + ' r2=' + "
+                         f"hex(self.GetRegisterUnsafe(2).RawValue) + ' sp=' + hex(self.GetRegisterUnsafe(13).RawValue) + '\\\"')\"")
+            continue
+        lines.append(f"cpu AddHook `sysbus GetSymbolAddress \"{symbol}\"` "
+                     f"\"monitor.Parse('log \\\"CALLER {symbol} ' + "
+                     f"hex(self.GetRegisterUnsafe(14).RawValue) + '\\\"')\"")
+    for spec in dumps:  # HOOK=ADDRESS:WORDS logs WORDS words at ADDRESS on HOOK
+        hook, rest = spec.split("=", 1)
+        address, words = rest.split(":", 1)
+        base = int(address, 16)
+        reads = " + ' ' + ".join(
+            f"hex(machine.SystemBus.ReadDoubleWord({base + 4 * i}))"
+            for i in range(int(words)))
+        lines.append(f"cpu AddHook {hook} \"monitor.Parse('log \\\"DUMP {address} ' + "
+                     f"{reads} + '\\\"')\"")
+    for address in watches:
+        lines.append(f"sysbus AddWatchpointHook {address} DoubleWord Write "
+                     f"\"monitor.Parse('log \\\"WATCH {address} pc=' + "
+                     f"hex(cpu.PC.RawValue) + ' lr=' + "
+                     f"hex(cpu.GetRegisterUnsafe(14).RawValue) + ' value=' + "
+                     f"hex(value) + '\\\"')\"")
     lines.append("start")
     return "\n".join(lines) + "\n"
 
 
 async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
-                       trace=()):
+                       trace=(), callers=(), watches=(), dumps=()):
     script = workdir / "spike-air.resc"
-    script.write_text(renode_script(images, port, trace))
+    script.write_text(renode_script(images, port, trace, callers, watches, dumps))
     logfile = open(workdir / "renode.log", "wb")
     process = await asyncio.create_subprocess_exec(
         str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -151,6 +199,37 @@ async def le_round_trip(central, advertisement, results: dict) -> None:
     await connection.disconnect()
 
 
+async def microbit_check(air, results: dict, timeout: float) -> None:
+    """The SPIKE hub and an emulated micro:bit on one air: a central sees both
+    advertisers, then connects to the micro:bit and finds its UART service."""
+    central = (await air.add_peer("microbit-central", "02:B1:0E:5A:17:C2")).device
+    loop = asyncio.get_running_loop()
+    seen = {HUB_ADDRESS: loop.create_future(), MICROBIT_ADDRESS: loop.create_future()}
+
+    def on_advertisement(advertisement):
+        key = str(advertisement.address).split("/")[0].upper()
+        if key in seen and not seen[key].done():
+            seen[key].set_result(advertisement)
+
+    central.on("advertisement", on_advertisement)
+    await central.start_scanning(filter_duplicates=True)
+    started = time.monotonic()
+    hub_adv, microbit_adv = await asyncio.wait_for(
+        asyncio.gather(seen[HUB_ADDRESS], seen[MICROBIT_ADDRESS]), timeout)
+    await central.stop_scanning()
+    results["one_air_saw"] = {"spike_hub": str(hub_adv.address),
+                              "microbit": str(microbit_adv.address),
+                              "after_s": round(time.monotonic() - started, 1)}
+    connection = await central.connect(microbit_adv.address,
+                                       transport=PhysicalTransport.LE, timeout=60)
+    peer = Peer(connection)
+    await asyncio.wait_for(peer.discover_services(), 60)
+    results["microbit_services"] = [str(s.uuid) for s in peer.services]
+    assert peer.get_services_by_uuid(UART_SERVICE), "micro:bit UART service not found"
+    await connection.disconnect()
+    await air.remove("microbit-central")
+
+
 async def classic_round_trip(central, results: dict) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
@@ -182,9 +261,9 @@ async def scratch_link_round_trip(air, port: int, results: dict) -> None:
     """The same InfoRequest, sent the way a browser would via Scratch Link."""
     import base64
     import websockets
-    import scratch_link_gateway
+    import scratch_link_node
 
-    server = await scratch_link_gateway.serve(air, port=port)
+    server = await scratch_link_node.serve(air, port=port)
     try:
         async with websockets.connect(f"ws://127.0.0.1:{port}/scratch/ble") as ws:
             ids = iter(range(1, 100))
@@ -236,9 +315,20 @@ async def scratch_link_round_trip(air, port: int, results: dict) -> None:
 async def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--renode", type=Path, required=True)
+    parser.add_argument("--air-tools", type=Path,
+                        help="renode-spike-prime tools/bw-air (default: under --renode, "
+                             "or $BW_AIR_TOOLS)")
+    parser.add_argument("--hub-port", type=int, default=7481,
+                        help="TCP port of the bw-air/1 hub this test starts")
+    parser.add_argument("--microbit", action="store_true",
+                        help="also put an emulated micro:bit (SoftDevice HLE, "
+                             "tools/nrf-softdevice-hle/fake_app.py) on the same air "
+                             "and require the central to see and connect to it")
     parser.add_argument("--images", type=Path, required=True)
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
+    parser.add_argument("--reconnect", action="store_true",
+                        help="after the first LE round trip, require a second one")
     parser.add_argument("--skip-le", action="store_true",
                         help="make no LE connection (Classic only)")
     parser.add_argument("--scratch-link", type=int, metavar="PORT",
@@ -247,6 +337,12 @@ async def main() -> int:
     parser.add_argument("--workdir", type=Path)
     parser.add_argument("--trace-symbol", action="append", default=[],
                         help="log each entry to this firmware symbol (diagnosis)")
+    parser.add_argument("--dump", action="append", default=[],
+                        help="HOOK=ADDRESS:WORDS: log memory when HOOK runs (diagnosis)")
+    parser.add_argument("--watch", action="append", default=[],
+                        help="log every 32-bit write to this address (diagnosis)")
+    parser.add_argument("--trace-caller", action="append", default=[],
+                        help="log each entry to this symbol with its caller (LR)")
     arguments = parser.parse_args()
     logging.basicConfig(level=os.environ.get("BW_AIR_LOG", "INFO"),
                         format="%(asctime)s %(name)s %(message)s")
@@ -254,17 +350,34 @@ async def main() -> int:
     workdir = arguments.workdir or Path(tempfile.mkdtemp(prefix="spike-air-"))
     workdir.mkdir(parents=True, exist_ok=True)
 
-    results: dict = {"images": str(arguments.images)}
-    air = Air()
+    results: dict = {"images": str(arguments.images), "air_tools": str(AIR_TOOLS)}
+    air_hub = subprocess.Popen(
+        [sys.executable, str(AIR_TOOLS / "airhub.py"), "--tcp",
+         f"127.0.0.1:{arguments.hub_port}", "--ws", "", "--log",
+         str(workdir / "air.jsonl")],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    microbit = None
+    await asyncio.sleep(1)
+    if arguments.microbit:
+        microbit = subprocess.Popen(
+            [sys.executable, str(AIR_TOOLS.parent / "nrf-softdevice-hle" / "fake_app.py"),
+             "--air", f"127.0.0.1:{arguments.hub_port}", "--addr", MICROBIT_ADDRESS,
+             "--secs", str(int(arguments.timeout) + 120)],
+            stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT)
+    air = Air(f"127.0.0.1:{arguments.hub_port}")
     hub = None
     renode = await start_renode(arguments.renode, arguments.images,
-                                arguments.port, workdir, arguments.trace_symbol)
+                                arguments.port, workdir, arguments.trace_symbol,
+                                arguments.trace_caller, arguments.watch,
+                                arguments.dump)
     try:
         hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                           arguments.port, HUB_ADDRESS)
         # One LE connection per run, directly or through the Scratch Link
         # gateway: after the first LE link ends the firmware stops processing
         # HCI events (open; see docs/project/simulated-bluetooth-air.md).
+        if arguments.microbit:
+            await microbit_check(air, results, arguments.timeout)
         if arguments.scratch_link:
             await scratch_link_round_trip(air, arguments.scratch_link, results)
         elif arguments.skip_le:
@@ -275,6 +388,17 @@ async def main() -> int:
             advertisement = await find_hub(central, arguments.timeout)
             results["advertisement_after_s"] = round(time.monotonic() - started, 1)
             await le_round_trip(central, advertisement, results)
+            if arguments.reconnect:
+                # A second central after the first link ended: the hub must
+                # advertise again and answer again.
+                await air.remove("central")
+                again = (await air.add_peer("central-2", "02:B1:0E:5A:17:C3")).device
+                started = time.monotonic()
+                advertisement = await find_hub(again, arguments.timeout)
+                results["readvertised_after_s"] = round(time.monotonic() - started, 1)
+                second: dict = {}
+                await le_round_trip(again, advertisement, second)
+                results["second_info_response_payload"] = second["info_response_payload"]
         if arguments.classic:
             # Page only once the hub has enabled page scan, as a real
             # central would only find it then.
@@ -297,6 +421,9 @@ async def main() -> int:
             results["hub_vendor_commands"] = hub.controller.vendor_commands
             results["hub_unknown_commands"] = [f"0x{op:04x}" for op in
                                                hub.controller.unknown_commands]
+        for process in (microbit, air_hub):
+            if process is not None:
+                process.terminate()
         try:
             os.killpg(renode.pid, signal.SIGKILL)
         except ProcessLookupError:

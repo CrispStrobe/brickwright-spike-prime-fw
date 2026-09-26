@@ -1,102 +1,52 @@
 # Simulated Bluetooth air
 
-The simulated air lets emulated hubs, emulated boards, and host software reach
-each other over Bluetooth with no radio hardware and no vendor controller
-firmware. It is one process, `simulation/bluetooth-air/bw_air_server.py`,
-built on [bumble](https://github.com/google/bumble) (Apache-2.0).
+The emulated SPIKE Prime hub joins the project's one simulated Bluetooth air,
+**bw-air/1**. The air, its contract and its tools live in one place:
+[renode-spike-prime `tools/bw-air/`](https://github.com/CrispStrobe/renode-spike-prime/tree/feat/nrf-softdevice-hle/tools/bw-air)
+(`AIR.md`, `airhub.py`, `bumble_air.py`, `hci_node.py`,
+`scratch_link_node.py`). This repository does not carry its own air. The same
+air carries emulated micro:bit / Calliope boards (a clean-room SoftDevice API
+emulation in Renode or labwired), bumble peers, and Scratch Link clients such
+as Brickwright lite, so a SPIKE hub and a micro:bit see each other.
 
-## Model
+## How the hub joins
 
-The air is a single bumble `LocalLink`. Every station attaches a bumble
-`Controller` to it. Advertising PDUs, LE connections (LL control PDUs and ACL),
-and Classic connections (LMP and ACL) travel between controllers through the
-link, so every station on one air can see and connect to every other. There is
-one air per test or session; two airs never share traffic.
+Renode exports USART2, the CC2564C HCI UART, as a TCP socket
+(`emulation CreateServerSocketTerminal`, `connector Connect sysbus.usart2`).
+`hci_node.py --renode-hci spike=127.0.0.1:PORT@02:B1:0E:5A:17:01` puts a
+bumble controller on that byte stream and on the air. The firmware's own
+Zephyr host then advertises, accepts LE and BR/EDR connections, and serves the
+FD02 GATT service and SPP. Only the TI-free simulation profile
+(`BOARD_CONFIG=simulation`) runs here; it sends no vendor commands and the
+controller refuses any that arrive. The profile also enables
+`CONFIG_APP_BTSENSOR_START_VISIBLE`, the equivalent of `btsensor bt on`,
+because Renode has no USB console.
 
-Controllers answer every HCI command. Unknown commands get Command Complete
-with `UNKNOWN_HCI_COMMAND`. A short list of configuration writes with no effect
-on the simulated link (page timeout, inquiry mode, link policy, and similar)
-succeed so an unmodified host stack completes bring-up. Vendor commands
-(OGF 0x3F) are always refused and counted: nothing on the air executes vendor
-firmware.
+## End-to-end test
 
-## Attachment points
-
-A station joins the air at one of three levels. Pick the lowest one the
-emulated device already has.
-
-| level | interface | who uses it |
-|---|---|---|
-| UART | Air dials a TCP socket that carries the device's HCI UART (H4). One controller per socket. `--renode-hci NAME=HOST:PORT@BDADDR` | Renode machines whose firmware contains a Bluetooth host: the SPIKE Prime hub exports USART2 with `emulation CreateServerSocketTerminal`. |
-| HCI | Air listens on a TCP port; each connection is an HCI host speaking H4 and gets its own controller and address. `--hci-listen PORT` | Emulators that have or build an HCI host: a micro:bit SoftDevice emulation that translates `sd_ble_*` calls into HCI, BlueZ through `btproxy`, a second Renode machine, test harnesses. |
-| Peer | In-process bumble `Device` (host plus controller) created with `Air.add_peer`. | Scripted tests, and the Scratch Link gateway that serves browsers. |
-
-Addresses: the air assigns public addresses. The UART level takes the address
-on the command line; the HCI level derives `02:B1:0E:PP:PP:NN` from the port
-and the connection number. A dial-in host may set a random static address for
-LE as usual.
-
-### Contract for a micro:bit (or any other) emulator
-
-To share an air with the SPIKE hub, an emulator connects to the air's HCI port
-and behaves as a Bluetooth host:
-
-1. Open TCP to `127.0.0.1:PORT`; bytes are H4 (`0x01` command, `0x02` ACL,
-   `0x04` event).
-2. Send `HCI_Reset`, read the controller's features and buffer sizes, and set
-   the event masks as any host does.
-3. To be found, send the LE advertising parameter, data, and enable commands.
-   To find others, scan. Connections, ATT, and L2CAP are ordinary HCI and ACL.
-
-A SoftDevice emulation that implements the `sd_ble_*` API above a real host
-stack (bumble's, run inside the emulator's process, or Zephyr's) meets this
-contract directly. `test_air_selfcheck.py` is a working example: two bumble
-hosts dial in, advertise a Nordic UART service, and a third station finds both,
-connects to one, writes, and receives a notification.
-
-## Scratch Link gateway for Brickwright lite
-
-Brickwright lite reaches hardware through Scratch Link: JSON-RPC 2.0 over
-WebSocket at `ws://127.0.0.1:20111/scratch/ble` and `/scratch/bt`. Its JS
-virtual hub (`spike-prime-peripheral.js`, `spike-classic-scratch-link.js`)
-replaces that socket with an in-page simulation.
-
-`scratch_link_gateway.py` (prototype, `--scratch-link 20111`) serves the same
-protocol, but each browser session becomes a bumble central on the air:
-
-- BLE: `discover` scans the air and reports `didDiscoverPeripheral`;
-  `connect` opens an LE connection and discovers GATT; `write`, `read`,
-  `startNotifications`, and `stopNotifications` map to ATT, and notifications
-  return as `characteristicDidChange`.
-- BT: `discover` lists the air's Classic stations (bumble's link has no
-  inquiry procedure); `connect` opens BR/EDR, finds the SPP record over SDP,
-  and opens RFCOMM; `send` and `didReceiveMessage` carry the byte stream.
-
-Lite's Classic extension opens `ws://127.0.0.1:20111/scratch/bt`; that is the
-URL its virtual socket intercepts (`isClassicScratchLink`). With the virtual
-hub not selected, the same socket reaches the gateway, so the Classic path to
-the Renode hub needs no change in lite. The Web Bluetooth path used by the modern SPIKE extension would
-need a small shim that forwards `navigator.bluetooth` GATT calls to the
-gateway's BLE session; that shim belongs in lite and is not part of this
-repository.
-
-The gateway binds to loopback only. Run it instead of a real Scratch Link, not
-beside one: both use port 20111.
-
-## Running
+`simulation/bluetooth-air/test_spike_air.py` starts the hub, Renode with the
+simulation image, and the hub's HCI node, then drives peers on the air:
 
 ```sh
-python3 -m venv .local/tools/bumble-venv
-.local/tools/bumble-venv/bin/pip install bumble
-# End to end against the Renode-emulated SPIKE firmware (simulation profile):
-.local/tools/bumble-venv/bin/python simulation/bluetooth-air/test_spike_air.py \
+python3 simulation/bluetooth-air/test_spike_air.py \
   --renode /path/to/renode-spike-prime \
-  --images .local/firmware-images/brickwright-simulation
-# The air alone, with dial-in HCI hosts:
-.local/tools/bumble-venv/bin/python simulation/bluetooth-air/test_air_selfcheck.py
+  --images .local/firmware-images/brickwright-simulation \
+  [--microbit] [--scratch-link 20131] [--classic --skip-le]
 ```
 
-The simulated air proves protocol behavior only. It says nothing about RF,
+- default: a central finds the hub, connects, discovers FD02, writes an
+  InfoRequest and decodes the InfoResponse notification;
+- `--scratch-link PORT`: the same round trip through the Scratch Link node, as
+  lite would make it;
+- `--microbit`: an emulated micro:bit (`tools/nrf-softdevice-hle/fake_app.py`,
+  the SoftDevice HLE library) joins the same air; the central must see both
+  advertisers and find the micro:bit's UART service;
+- `--classic`: page, SDP, pairing, encryption and RFCOMM to the hub's SPP.
+
+`--air-tools` (or `$BW_AIR_TOOLS`) names `tools/bw-air`; by default it is taken
+from `--renode`.
+
+The simulated air proves protocol behaviour only. It says nothing about RF,
 timing, coexistence, or qualification, and it never involves TI or Nordic
 controller firmware.
 
