@@ -163,6 +163,13 @@ async def classic_round_trip(central, results: dict) -> None:
         connection, "00001101-0000-1000-8000-00805F9B34FB")
     results["spp_channel"] = channel
     assert channel, "SPP record not found"
+    # The hub's RFCOMM server requires an authenticated, encrypted link, as
+    # SPP on the physical hub does: pair (Secure Simple Pairing, just works),
+    # then encrypt.
+    await connection.authenticate()
+    results["classic_authenticated"] = True
+    await connection.encrypt()
+    results["classic_encrypted"] = True
     multiplexer = await Client(connection).start()
     dlc = await multiplexer.open_dlc(channel)
     received: asyncio.Queue = asyncio.Queue()
@@ -255,10 +262,9 @@ async def main() -> int:
     try:
         hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                           arguments.port, HUB_ADDRESS)
-        # The hub advertises once: after a peripheral connection Zephyr stops
-        # legacy advertising and the firmware does not restart it, so each run
-        # makes exactly one LE connection, either directly or through the
-        # Scratch Link gateway.
+        # One LE connection per run, directly or through the Scratch Link
+        # gateway: after the first LE link ends the firmware stops processing
+        # HCI events (open; see docs/project/simulated-bluetooth-air.md).
         if arguments.scratch_link:
             await scratch_link_round_trip(air, arguments.scratch_link, results)
         elif arguments.skip_le:
@@ -270,8 +276,16 @@ async def main() -> int:
             results["advertisement_after_s"] = round(time.monotonic() - started, 1)
             await le_round_trip(central, advertisement, results)
         if arguments.classic:
+            # Page only once the hub has enabled page scan, as a real
+            # central would only find it then.
+            deadline = time.monotonic() + arguments.timeout
+            while 0x0C1A not in hub.controller.commands:
+                if time.monotonic() > deadline:
+                    raise TimeoutError("hub never enabled page scan")
+                await asyncio.sleep(0.5)
+            await asyncio.sleep(2)
             peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
-            await classic_round_trip(peer, results)
+            await asyncio.wait_for(classic_round_trip(peer, results), 120)
         results["status"] = "PASS"
         return_code = 0
     except Exception as error:  # report, then fail

@@ -110,5 +110,8 @@ Measured with the unchanged simulation-profile image in Renode:
 | LE advertising seen by a central on the air | works (about 5 s after boot) |
 | LE connect, GATT discovery of FD02, subscribe, InfoRequest write, InfoResponse notification | works |
 | The same round trip through the Scratch Link gateway (`/scratch/ble`) | works |
-| Second LE connection after the first disconnects | does not work: the firmware does not restart advertising after a peripheral connection ends |
-| Classic: page, SDP, RFCOMM/SPP | does not work yet: the firmware does not answer the Connection Request event |
+| After the first LE link ends | does not work yet: the firmware stops processing HCI events once the disconnection is handled (no further receive work runs), so it neither re-advertises nor answers later requests; root cause open |
+| Classic page and connect, SDP (SPP record on RFCOMM channel 5) | works |
+| Classic Secure Simple Pairing (link key on both sides) | works |
+| Classic encryption | simulated: the air reports AES-CCM on to both hosts; no cipher runs |
+| RFCOMM/SPP channel open | does not work yet: after the encryption change the firmware does not answer the L2CAP connection request for RFCOMM |

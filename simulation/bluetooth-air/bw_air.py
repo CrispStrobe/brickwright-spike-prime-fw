@@ -105,8 +105,55 @@ class AirController(Controller):
         self.vendor_commands: list[int] = []
         self.commands: list[int] = []
 
+    # ---- Classic link encryption (bumble's controller has no handler) ----
+    def _raw_event(self, code: int, parameters: bytes) -> None:
+        if self.host:
+            event = bytes([hci.HCI_EVENT_PACKET, code, len(parameters)]) + parameters
+            asyncio.get_running_loop().call_soon(self.host.on_packet, event)
+
+    def _classic_encryption(self, command: hci.HCI_Command) -> None:
+        """Set_Connection_Encryption: after SSP both ends hold the link key, so
+        the simulated link reports encryption on to both hosts. No cipher runs
+        on the simulated air."""
+        handle = int.from_bytes(command.parameters[0:2], "little")
+        enable = command.parameters[2]
+        local = self.find_classic_connection_by_handle(handle)
+        status = 0 if local is not None else 0x02  # unknown connection id
+        self._raw_event(0x0F, bytes([status, 1]) +
+                        command.op_code.to_bytes(2, "little"))
+        if local is None:
+            return
+        # Secure Simple Pairing on this air always yields a P-256 (Secure
+        # Connections) key, which a host requires to be used with AES-CCM.
+        state = 0x02 if enable else 0x00
+        self._raw_event(0x08, bytes([0]) + handle.to_bytes(2, "little") +
+                        bytes([state]))
+        peer = self.link.find_classic_controller(local.peer_address)
+        if peer is not None:
+            mine = str(self.public_address).split("/")[0]
+            remote = next((c for c in peer.classic_connections.values()
+                           if str(c.peer_address).split("/")[0] == mine), None)
+            logger.info("%s: encryption %s on handle 0x%04x; peer %s handle %s",
+                        self.name, "on" if enable else "off", handle, peer.name,
+                        None if remote is None else f"0x{remote.handle:04x}")
+            if remote is not None:
+                peer._raw_event(0x08, bytes([0]) +
+                                remote.handle.to_bytes(2, "little") + bytes([state]))
+
+    def _read_encryption_key_size(self, command: hci.HCI_Command) -> None:
+        handle = command.parameters[0:2]
+        parameters = bytes([1]) + command.op_code.to_bytes(2, "little") + \
+            bytes([0]) + handle + bytes([16])
+        self._raw_event(0x0E, parameters)
+
     def on_hci_command_packet(self, command: hci.HCI_Command) -> None:
         self.commands.append(command.op_code)
+        if command.op_code == 0x0413:
+            self._classic_encryption(command)
+            return
+        if command.op_code == 0x1408:
+            self._read_encryption_key_size(command)
+            return
         logger.debug("%s: command 0x%04x %s", self.name, command.op_code, command.name)
         handler = getattr(self, f"on_{command.name.lower()}", None)
         if handler is not None and (command.op_code >> 10) != 0x3F:
