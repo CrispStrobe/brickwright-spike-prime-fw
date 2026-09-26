@@ -99,3 +99,16 @@ python3 -m venv .local/tools/bumble-venv
 The simulated air proves protocol behavior only. It says nothing about RF,
 timing, coexistence, or qualification, and it never involves TI or Nordic
 controller firmware.
+
+## Current reach with the SPIKE firmware
+
+Measured with the unchanged simulation-profile image in Renode:
+
+| path | status |
+|---|---|
+| Firmware host bring-up against the air's controller (31 standard HCI commands, 0 vendor, 0 unknown) | works |
+| LE advertising seen by a central on the air | works (about 5 s after boot) |
+| LE connect, GATT discovery of FD02, subscribe, InfoRequest write, InfoResponse notification | works |
+| The same round trip through the Scratch Link gateway (`/scratch/ble`) | works |
+| Second LE connection after the first disconnects | does not work: the firmware does not restart advertising after a peripheral connection ends |
+| Classic: page, SDP, RFCOMM/SPP | does not work yet: the firmware does not answer the Connection Request event |

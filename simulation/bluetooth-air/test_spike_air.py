@@ -232,6 +232,8 @@ async def main() -> int:
     parser.add_argument("--images", type=Path, required=True)
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
+    parser.add_argument("--skip-le", action="store_true",
+                        help="make no LE connection (Classic only)")
     parser.add_argument("--scratch-link", type=int, metavar="PORT",
                         help="make the LE round trip through the Scratch Link gateway")
     parser.add_argument("--timeout", type=float, default=240)
@@ -259,6 +261,8 @@ async def main() -> int:
         # Scratch Link gateway.
         if arguments.scratch_link:
             await scratch_link_round_trip(air, arguments.scratch_link, results)
+        elif arguments.skip_le:
+            pass
         else:
             central = (await air.add_peer("central", CENTRAL_ADDRESS)).device
             started = time.monotonic()
