@@ -5,12 +5,26 @@
 #include <brickwright/fd02_service.h>
 #include <brickwright/hub_transport.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/kernel.h>
 
 static brickwright_hub_receive_cb receive_callback;
 static void *receive_context;
 static brickwright_hub_link_state_cb state_callback;
 static struct bt_conn *le_connection;
 static uint32_t generations[2];
+static void (*advertising_stopped_hook)(void);
+static void (*advertising_restart_hook)(void);
+
+static void advertising_restart(struct k_work *work)
+{
+  (void)work;
+  if (advertising_restart_hook)
+    {
+      advertising_restart_hook();
+    }
+}
+
+static K_WORK_DEFINE(advertising_restart_work, advertising_restart);
 
 static void receive_classic(const uint8_t *data, size_t length, void *context)
 {
@@ -47,6 +61,10 @@ static void transport_connected(struct bt_conn *connection, uint8_t error)
   if (!error && bt_conn_get_info(connection, &info) == 0 &&
       info.type == BT_CONN_TYPE_LE && !le_connection)
     {
+      if (info.role == BT_CONN_ROLE_PERIPHERAL && advertising_stopped_hook)
+        {
+          advertising_stopped_hook();
+        }
       le_connection = bt_conn_ref(connection);
       generations[BRICKWRIGHT_HUB_LINK_BLE]++;
       if (state_callback)
@@ -68,10 +86,26 @@ static void transport_disconnected(struct bt_conn *connection, uint8_t reason)
     }
 }
 
+static void transport_recycled(void)
+{
+  if (advertising_restart_hook)
+    {
+      (void)k_work_submit(&advertising_restart_work);
+    }
+}
+
 BT_CONN_CB_DEFINE(brickwright_transport_connection_callbacks) = {
   .connected = transport_connected,
   .disconnected = transport_disconnected,
+  .recycled = transport_recycled,
 };
+
+void brickwright_hub_transport_set_advertising_hooks(
+  void (*advertising_stopped)(void), void (*advertising_restart)(void))
+{
+  advertising_stopped_hook = advertising_stopped;
+  advertising_restart_hook = advertising_restart;
+}
 
 int brickwright_hub_transport_register(brickwright_hub_receive_cb receive,
                                        brickwright_hub_link_state_cb state,
