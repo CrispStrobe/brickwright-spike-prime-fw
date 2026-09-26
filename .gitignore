@@ -47,3 +47,6 @@ tools/__pycache__/
 build/
 nuttx/nuttx-export
 nuttx/nuttx-export-*.tar.gz
+
+# Python bytecode
+__pycache__/
