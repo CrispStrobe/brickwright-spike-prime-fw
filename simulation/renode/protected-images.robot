@@ -168,3 +168,62 @@ Brickwright crosses the protected UART HCI bootstrap boundary
     Wait For Log Entry    MILESTONE transport_register    timeout=15
     Start Emulation
     Wait For Log Entry    MILESTONE daemon_ready    timeout=15
+
+Brickwright simulation profile boots without a TI service pack
+    [Tags]    brickwright-simulation-hci
+    [Timeout]    240 seconds
+    Skip If    '${HCI_BRIDGE}' == ''    HCI bridge executable was not supplied
+    Boot Protected Pair And Prove Progress    brickwright-simulation
+    ${bridge_log}=    Set Variable    ${CURDIR}/../../.local/renode-hci-bridge-simulation.log
+    Execute Command    emulation CreateServerSocketTerminal ${HCI_PORT} "hci" false
+    Execute Command    connector Connect sysbus.usart2 hci
+    # The simulated controller refuses vendor commands: this image has no
+    # service pack, so none may arrive and none is silently acknowledged.
+    Start Process    ${HCI_BRIDGE}    --trace    --reject-vendor    127.0.0.1    ${HCI_PORT}    alias=hci    stdout=${bridge_log}    stderr=STDOUT
+    ${imu_init}=    Execute Command    sysbus GetSymbolAddress "stm32_lsm6dsl_initialize"
+    ${flash_init}=    Execute Command    sysbus GetSymbolAddress "stm32_w25q256_initialize"
+    ${display_init}=    Execute Command    sysbus GetSymbolAddress "tlc5955_initialize"
+    ${display_update}=    Execute Command    sysbus GetSymbolAddress "tlc5955_update_sync"
+    ${display_set}=    Execute Command    sysbus GetSymbolAddress "tlc5955_set_duty"
+    ${physical_open}=    Execute Command    sysbus GetSymbolAddress "physical_open"
+    ${load_firmware}=    Execute Command    sysbus GetSymbolAddress "physical_load_firmware"
+    ${physical_start}=    Execute Command    sysbus GetSymbolAddress "physical_start_host"
+    ${bt_enable}=    Execute Command    sysbus GetSymbolAddress "bt_enable"
+    ${settings_load}=    Execute Command    sysbus GetSymbolAddress "settings_load"
+    ${transport_register}=    Execute Command    sysbus GetSymbolAddress "brickwright_hub_transport_register"
+    ${daemon_ready}=    Execute Command    sysbus GetSymbolAddress "daemon_wait_for_stop"
+    # The IMU and flash initializers run against the bus models; only the
+    # TLC5955 display functions are isolated, as in the existing HCI gate.
+    Execute Command    cpu AddHook ${imu_init.strip()} "monitor.Parse('log \\"MILESTONE imu bus-model\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${flash_init.strip()} "monitor.Parse('log \\"MILESTONE flash bus-model\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
+    Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
+    Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
+    Execute Command    cpu AddHook ${physical_open.strip()} "monitor.Parse('log \\"MILESTONE physical_open\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${load_firmware.strip()} "monitor.Parse('log \\"MILESTONE physical_load_firmware\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${physical_start.strip()} "monitor.Parse('log \\"MILESTONE physical_start_host\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${bt_enable.strip()} "monitor.Parse('log \\"MILESTONE bt_enable\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${settings_load.strip()} "monitor.Parse('log \\"MILESTONE settings_load\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${transport_register.strip()} "monitor.Parse('log \\"MILESTONE transport_register\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${daemon_ready.strip()} "monitor.Parse('log \\"MILESTONE daemon_ready\\"'); machine.PauseAndRequestEmulationPause()"
+    Start Emulation
+    Wait For Log Entry    MILESTONE imu bus-model    timeout=15
+    Start Emulation
+    Wait For Log Entry    MILESTONE flash bus-model    timeout=15
+    Start Emulation
+    Wait For Log Entry    MILESTONE bt_enable    timeout=30
+    Start Emulation
+    Wait For Log Entry    MILESTONE physical_open    timeout=15
+    Start Emulation
+    Wait For Log Entry    MILESTONE physical_load_firmware    timeout=15
+    Start Emulation
+    Wait For Log Entry    MILESTONE physical_start_host    timeout=15
+    Start Emulation
+    Wait For Log Entry    MILESTONE settings_load    timeout=45
+    Start Emulation
+    Wait For Log Entry    MILESTONE transport_register    timeout=15
+    Start Emulation
+    Wait For Log Entry    MILESTONE daemon_ready    timeout=15
+    ${trace}=    Get File    ${bridge_log}
+    Should Contain    ${trace}    command=0x0c03
+    Should Not Match Regexp    ${trace}    command=0xf[c-f]

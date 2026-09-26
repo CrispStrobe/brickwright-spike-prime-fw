@@ -1,4 +1,3 @@
-# Preserve TI's official licence file byte-for-byte. Treating it as binary
-# prevents whitespace normalization and avoids altering its allowlisted hash.
-third_party/ti-cc2564c/LICENSE.ti binary
+# Preserve upstream licence files byte-for-byte. Treating them as binary
+# prevents whitespace normalization and avoids altering their hashes.
 third_party/zephyr-host/upstream/LICENSE binary

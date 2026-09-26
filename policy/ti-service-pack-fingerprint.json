@@ -1,0 +1,173 @@
+{
+  "schema": 1,
+  "description": "Rolling hash and SHA-256 of each 256-byte chunk of the TI CC2564C service pack; derived data used only to detect embedded copies. Contains no service-pack bytes.",
+  "service_pack_sha256": "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e",
+  "service_pack_size": 10211,
+  "chunk_size": 256,
+  "rolling_hash": {
+    "base": 257,
+    "modulus": 2305843009213693951
+  },
+  "chunks": [
+    {
+      "rolling": 135777490477805193,
+      "sha256": "e42ec0c285846a7a1be913aefc496c08fd224ace653e99644a81b5970a56e8a7"
+    },
+    {
+      "rolling": 693420114166457595,
+      "sha256": "0f7a8ab7700277b5678e5398121d4f076a085b20e7dc519357049ea8e8939c08"
+    },
+    {
+      "rolling": 1830483458420987354,
+      "sha256": "966b84d013bb3967e779bf6c65e33b2248257015a7bc34bf4d1452fbdea348bd"
+    },
+    {
+      "rolling": 1772707561896355032,
+      "sha256": "b3ce9a75a894cb707e9cefe90b7bf20127064812f303dec4b5e97674c5dc668e"
+    },
+    {
+      "rolling": 310764191240586061,
+      "sha256": "b59ae59cd1c588dcacade3e99ea678ab3b11258938bd05be1088ecb9a497819a"
+    },
+    {
+      "rolling": 1719787899156479832,
+      "sha256": "f12e2f71702d3545868798250810f75b7c21eb355b7b2c9fc6db9c53c27e766d"
+    },
+    {
+      "rolling": 2187061983043700264,
+      "sha256": "c72b30e5ad80211f4e971179d398623827a85e5fa5840336a268e44c9ee1f328"
+    },
+    {
+      "rolling": 2066230461804203140,
+      "sha256": "6013d9de6c2ab8793e29ac20efaa4418c0f02fbc99be632b080d88234b0205e8"
+    },
+    {
+      "rolling": 695445256719646123,
+      "sha256": "83af94632f35ca779675d3def9f256d204d440f3b16d9d83910ab93eff034946"
+    },
+    {
+      "rolling": 1578461583735633191,
+      "sha256": "38607ed2e8db6c2cb1987f5c1ff423fa9dac1649f6aadc9e0af39cfc70df7888"
+    },
+    {
+      "rolling": 1550969459029667147,
+      "sha256": "b4e64c15df3cc048ed77fa8f33b17242cc555afb7ad57d8b6bf73cbd8b3f8159"
+    },
+    {
+      "rolling": 1546223142781208968,
+      "sha256": "9a80d253aaba412279b3310f39785e93f226c764fa7827b64b234328fa2e4d99"
+    },
+    {
+      "rolling": 1182403931813735766,
+      "sha256": "27dab269542d882f9002109918b9fa9580fe544e75f20889c75aeb67dacb83a6"
+    },
+    {
+      "rolling": 816039965778029248,
+      "sha256": "daa5a14df2509a8701a3aaef12b38e0e2189b24bd85e6f39c2f4b92e1dce801e"
+    },
+    {
+      "rolling": 1098825422292720888,
+      "sha256": "f518a8a703f9d6119bc06dcb7855d95913cc528de78c59c65089111f3394d1e8"
+    },
+    {
+      "rolling": 820300210046109566,
+      "sha256": "05d8e8ed1b2ce589ce413f93cf271a205700d51a3550066b26ed97119280bf5e"
+    },
+    {
+      "rolling": 1542072170415725269,
+      "sha256": "7c966566058e34b3c4b5a4f0611f25457c06fc18b60b3120101462f77e7552f0"
+    },
+    {
+      "rolling": 609895442700705160,
+      "sha256": "144d737cd30ce698a188de26e0e64fc0db994bfc9dcac7e1690702c863865998"
+    },
+    {
+      "rolling": 362945083896580393,
+      "sha256": "1a1b63a25c4a798393b37fc7b685b8abfde9b28bbefb88d2d7c5f26ad585aab7"
+    },
+    {
+      "rolling": 482100132141948480,
+      "sha256": "a3389ceb9dfbaa0e843d2b1209ab424c068e86b6df81cafff64a8e460c1ce480"
+    },
+    {
+      "rolling": 726590566889054106,
+      "sha256": "e0721550b1398a9a0dfb5f248618cf3ed209596366e9e84e22d926f9a751a176"
+    },
+    {
+      "rolling": 1209871270279295902,
+      "sha256": "df6f4d1b0069d8387d9eb9493f829e275112d37e11aa3af0f2280e91bb6d4a81"
+    },
+    {
+      "rolling": 2259176332685445387,
+      "sha256": "0013aa7d33c4f9b43ae6d41f678993747c58e9aaf3378124f055ac89920bf209"
+    },
+    {
+      "rolling": 2277256746912131472,
+      "sha256": "95a590d91aea4faf01bce84fa8141d749b950828966cc00ec30793ab06ba6d1e"
+    },
+    {
+      "rolling": 1369790390342270521,
+      "sha256": "13a67f5d9c878780ea5dc772cf2b5e63f871cf63b6604d64467d4a4b34dd09cb"
+    },
+    {
+      "rolling": 973120663692338375,
+      "sha256": "e265ee448f01d2dad3f60f5703aa702896e293ee4b561b892ed51df5ab442e5d"
+    },
+    {
+      "rolling": 605191054114251364,
+      "sha256": "bd826052f3201b0538b82fa7b92da37e61e0a64940b71f1c208ff268ea6870fa"
+    },
+    {
+      "rolling": 2224394261852921351,
+      "sha256": "e5484cc5c09483d774688d7668ede5a65610761f45dab080ec98534f2f1e498c"
+    },
+    {
+      "rolling": 1914629311894476951,
+      "sha256": "d3c2f46a5167f7be6a167588d306f5d8e586060041af47329fa923e821cb8fcf"
+    },
+    {
+      "rolling": 1331993043042472755,
+      "sha256": "fbd6a66d19ed3418b374d2304c6e16e7c0de28762538b12de46b205b76615524"
+    },
+    {
+      "rolling": 721090771552005113,
+      "sha256": "4aceade55b6f9010226d4f94c483835164893daf5e29b514f01d32ce10a3aa20"
+    },
+    {
+      "rolling": 1490748182805024340,
+      "sha256": "fd30ea1174aba1ae0173f7ea4f8b66767883cf581e3d4dc0c0e532610b032042"
+    },
+    {
+      "rolling": 1230105717700231786,
+      "sha256": "d5f49569088057b6d2d20bd5144c03a6dc45893e75ab19eb82fbee548d6a88cd"
+    },
+    {
+      "rolling": 616376008086448479,
+      "sha256": "57ebe3bd1b88f4f9d0de5487b3bc4e72b7992c4748ce0e7d486d3138bd23243e"
+    },
+    {
+      "rolling": 605140473086628124,
+      "sha256": "cf20a27f0c1d5e0d59cd5b30ca51961b8a339ec3b7c60321ccd4069c4e1b8ad8"
+    },
+    {
+      "rolling": 420451293350552827,
+      "sha256": "e4da41fa80035a13b3e7cea43c524ba26f611e65ade816ed6879c17c061f2ac3"
+    },
+    {
+      "rolling": 2225836559892402899,
+      "sha256": "7e5cb411c5953c509d25946aa2be9b90fdf0125ce3b7c8b4884652ddfedc3d3c"
+    },
+    {
+      "rolling": 1566320534897555148,
+      "sha256": "d99a06be3d1969e0812ab7e0947e0dcc5080344495e545c517d8efb05c49d266"
+    },
+    {
+      "rolling": 1827564390558883732,
+      "sha256": "b975ba3cd43b670304dcd4686af1a97cb67de415e3a6a42e36cadda8b4b1805f"
+    },
+    {
+      "rolling": 650751312757994162,
+      "sha256": "6dbb52dd26abad1c66ffffab1ea6a014616899fef8e8093d5599c0e7b50109a8"
+    }
+  ]
+}

@@ -17,7 +17,26 @@ table at `0x08008000`.
 | `lego-v3` | user-supplied official modern image | raw at `0x08008000` | valid vectors and PC leaves reset handler |
 | `spike-nx` | rebuilt from upstream commit `00524ea5464bddb46c852967e382f8f6b073abe6` | protected kernel and user images | symbol milestones |
 | `brickwright` | rebuilt from this branch | protected kernel and user images | symbol milestones through daemon start |
+| `brickwright-simulation` | rebuilt with `BOARD_CONFIG=simulation` | protected kernel and user images | daemon ready with no service pack |
 | `pybricks` | user-supplied Pybricks release package | `firmware-base.bin` at `0x08008000` | valid vectors and PC leaves reset handler |
+
+## Image classes
+
+| image | class | restricted component | who runs it |
+|---|---|---|---|
+| `brickwright-simulation` (`BOARD_CONFIG=simulation`) | clean | none; `tools/check_ti_free_image.py` reports 0/40 service-pack chunks | CI and local gates |
+| `brickwright` built with `BOARD_CONFIG=usbnsh` | chip-restricted | TI CC2564C service pack 1.5 (`TIInit_6.12.26.bts`), 40/40 chunks, TI-device-only licence | never CI; a local run is the user's own action |
+| `lego-v2`, `lego-v3` | user-supplied proprietary | the whole image is LEGO's; not inspected here, so treat any CC2564C initialization it carries as unknown and restricted | never CI; user-staged under `.local/` |
+| `pybricks` | user-supplied proprietary, chip-restricted | Pybricks v4.0.1 links `lib/pbio/drv/bluetooth/firmware/bluetooth_init_cc2564C_1.4.c`, TI's service pack 1.4 converted to a C array (`PBDRV_CONFIG_BLUETOOTH_BTSTACK_CC2564C=1` for `prime_hub`), and BTstack | never CI; user-staged under `.local/` |
+| `spike-nx` (rebuilt upstream) | chip-restricted | `apps/btsensor/chipset/cc256x_init_script.c`, copied from Pybricks (TI service pack 1.4), plus BTstack | never CI; local only |
+
+CI stages only the simulation profile, under both `brickwright` and
+`brickwright-simulation`. The `brickwright-simulation-hci` gate runs that image
+against the virtual controller with `--reject-vendor`: no vendor command may
+arrive, and the image still reaches `physical_load_firmware` (a no-op in this
+profile), `physical_start_host`, `bt_enable`, `settings_load`, transport
+registration, and the daemon-ready boundary, with the IMU and flash
+initializers running against their bus models.
 
 Official LEGO and packaged Pybricks binaries are separately licensed inputs and
 remain under ignored `.local/firmware-images/`. They are neither copied into

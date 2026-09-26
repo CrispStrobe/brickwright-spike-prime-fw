@@ -5,7 +5,6 @@ site/
 # User-supplied restricted controller firmware and generated local manifests.
 # Nothing below this directory may be committed or uploaded by CI.
 .local/
-third_party/ti-cc2564c/ti_bts_local_payload.h
 
 # NuttX build artifacts
 nuttx/.config

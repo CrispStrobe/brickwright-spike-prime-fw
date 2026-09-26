@@ -11,10 +11,13 @@ The selected Bluetooth host source under third_party/zephyr-host/upstream is
 derived from Zephyr Project sources under Apache License 2.0. The local source
 selection and modification are recorded by its manifest and patch directory.
 
-The CC2564C service-pack binary under third_party/ti-cc2564c is not covered by
-the project MIT or Apache licences. It is an unmodified Texas Instruments
-binary distributed under the adjacent LICENSE.ti, including its TI-device-only
-use and no-reverse-engineering conditions.
+This distribution contains no Texas Instruments CC2564C service pack. The
+simulation profile (BOARD_CONFIG=simulation) builds and runs without it. The
+hardware profile fetches the unmodified service pack and its licence from TI's
+git repository at build time, pinned by commit and SHA-256, into the ignored
+.local/ directory. That file and any image built from it are governed by TI's
+licence, which limits use to TI devices and forbids reverse engineering; they
+are not covered by the project MIT or Apache licences.
 
 The NuttX and NuttX Apps gitlinks are external build dependencies. Their own
 licence and NOTICE files govern them. The configured firmware disables optional

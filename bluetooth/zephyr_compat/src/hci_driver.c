@@ -147,6 +147,8 @@ static int collect_init_event(uint8_t type, const uint8_t *packet,
   return 0;
 }
 
+#ifndef CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK
+/* Service-pack transport; absent from the simulation profile. */
 static int init_send(void *context, const uint8_t *command, size_t length)
 {
   struct driver_state *driver = context;
@@ -190,6 +192,7 @@ static int init_delay(void *context, uint32_t duration_ms)
   (void)context;
   return brickwright_hci_platform_delay_ms(duration_ms);
 }
+#endif
 
 static int physical_power_cycle(void *context)
 {
@@ -212,6 +215,13 @@ static int physical_open(void *context, uint32_t baud)
 
 static int physical_load_firmware(void *context)
 {
+#ifdef CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK
+  /* Simulation profile: the image carries no TI service pack. The controller
+   * is left in its ROM state at the boot baud; every other step of the
+   * physical bring-up (reset, UART open, H4, host start) is unchanged. */
+  (void)context;
+  return 0;
+#else
   struct driver_state *driver = context;
   const uint8_t *image = NULL;
   size_t length = 0;
@@ -229,6 +239,7 @@ static int physical_load_firmware(void *context)
   };
   result = ti_bts_execute(image, length, &transport, NULL);
   return result == TI_BTS_OK ? 0 : -EIO;
+#endif
 }
 
 static int physical_unused_baud(void *context, uint32_t baud)

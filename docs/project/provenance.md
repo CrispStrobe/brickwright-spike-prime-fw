@@ -13,8 +13,9 @@ configuration.
 
 The stock CC2564C service pack is an explicitly separated, TI-supplied binary.
 TI permits redistribution without modification when its licence is reproduced
-and use remains limited to TI devices. The exact allowlisted binary and licence
-are therefore carried together, but neither is covered by the project licence.
+and use remains limited to TI devices. A simulation-only repository has no TI
+device to serve, so it does not redistribute the service pack: hardware builds
+fetch it from TI, and the simulation profile runs without it.
 CI does not publish flashable firmware while the hardware-safety gate is open.
 
 ## Baseline components
@@ -26,8 +27,8 @@ CI does not publish flashable firmware while the hardware-safety gate is open.
 | NuttX Apps fork | `owhinata/nuttx-apps@55f0bc21` | Apache-2.0 top level, with optional components | Retain only required build graph; audit selected applications. |
 | Pybricks | `pybricks/pybricks-micropython@101c6bab` | MIT only for files carrying its stated MIT SPDX header; dependencies vary | Reference/provenance input only until each reused file is enumerated. Remove submodule when extraction/audit finishes. |
 | BTstack | `bluekitchen/btstack@5bc5cbdb` | BSD-like terms plus non-commercial restriction | Forbidden in target; remove in C1.1. |
-| CC2564C service pack | `ti-bt/service-packs@3aa1d75f`, byte-exact `TIInit_6.12.26.bts` | TI Text File License; TI-device-only and binary modification/reverse-engineering restrictions | Retain unmodified beside its licence, with exact hash enforced by source policy. Generated C containers remain ignored build products. |
-| TI licence text | Same TI commit, byte-exact `LICENSE` | TI restricted licence | Retain as `third_party/ti-cc2564c/LICENSE.ti`; exact hash enforced. |
+| CC2564C service pack | `ti-bt/service-packs@3aa1d75f`, byte-exact `TIInit_6.12.26.bts` | TI Text File License; TI-device-only and binary modification/reverse-engineering restrictions | Not distributed. Fetched by the hardware build from TI at the pinned commit with its SHA-256 enforced; source policy forbids it in Git. Generated C containers remain ignored build products. |
+| TI licence text | Same TI commit, byte-exact `LICENSE` | TI restricted licence | Fetched with the service pack; source policy forbids it in Git. |
 | Project planning work | Brickwright commits after upstream baseline | MIT unless a file says otherwise | Retain. |
 
 ## Immediate findings

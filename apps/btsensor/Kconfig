@@ -9,6 +9,19 @@ config APP_BTSENSOR
 
 if APP_BTSENSOR
 
+config APP_BTSENSOR_SIM_NO_SERVICE_PACK
+	bool "Simulation profile: boot the CC2564C path without a service pack"
+	default n
+	---help---
+		Build a simulation-only image that contains no TI service-pack
+		bytes and never references the service-pack file.  The complete
+		physical controller path is kept: chip reset, /dev/ttyBT, H4 over
+		USART2, and the Zephyr host.  Only the service-pack upload step
+		is skipped, so the controller stays at its ROM state and boot
+		baud.  The simulated controller answers standard HCI.  A physical
+		CC2564C needs its service pack; never use this option for
+		hardware.
+
 config APP_BTSENSOR_PROGNAME
 	string "Program name"
 	default "btsensor"
