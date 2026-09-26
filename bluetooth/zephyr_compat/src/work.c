@@ -2,15 +2,61 @@
 #include <errno.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/irq.h>
+
+static pthread_mutex_t irq_lock_mutex;
+static pthread_once_t irq_lock_once = PTHREAD_ONCE_INIT;
+
+static void irq_lock_init(void)
+{
+  pthread_mutexattr_t attributes;
+  pthread_mutexattr_init(&attributes);
+  pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&irq_lock_mutex, &attributes);
+  pthread_mutexattr_destroy(&attributes);
+}
+
+unsigned int brickwright_irq_lock(void)
+{
+  pthread_once(&irq_lock_once, irq_lock_init);
+  pthread_mutex_lock(&irq_lock_mutex);
+  return 0;
+}
+
+void brickwright_irq_unlock(unsigned int key)
+{
+  (void)key;
+  pthread_mutex_unlock(&irq_lock_mutex);
+}
 
 struct k_work_q k_sys_work_q;
 static pthread_once_t system_queue_once = PTHREAD_ONCE_INIT;
 static struct k_work_q *thread_registry;
 static pthread_mutex_t thread_registry_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/* Which work queue, if any, the calling thread runs. Zephyr asks this through
+ * k_current_get() (conn.c asserts tx notifications run on their queue).
+ * pthread_self() cannot answer it on NuttX: it returns the TLS copy of the
+ * thread ID, which is 0 on threads whose TLS carries none, so a worker and
+ * another thread compare equal. Thread-specific keys are compiled out
+ * (CONFIG_TLS_NELEM=0). Each worker therefore records where its stack is;
+ * a caller whose own stack lies in that range is that worker. */
+static size_t worker_stack_size(void)
+{
+  pthread_attr_t attributes;
+  size_t size = 0;
+  pthread_attr_init(&attributes);
+  (void)pthread_attr_getstacksize(&attributes, &size);
+  pthread_attr_destroy(&attributes);
+  return size;
+}
+
 static void *worker_main(void *opaque)
 {
   struct k_work_q *queue = opaque;
+  volatile char anchor = 0;
+  queue->stack_anchor = (uintptr_t)&anchor;
+  queue->stack_size = worker_stack_size();
   for (;;) {
     struct k_work *work = k_fifo_get(&queue->fifo, K_FOREVER);
     pthread_mutex_lock(&work->mutex);
@@ -77,20 +123,23 @@ void k_work_init_delayable(struct k_work_delayable *work,
 k_tid_t k_work_queue_thread_get(struct k_work_q *queue) { return &queue->thread; }
 k_tid_t k_current_get(void)
 {
-  pthread_t native = pthread_self();
+  volatile char probe = 0;
+  uintptr_t here = (uintptr_t)&probe;
   pthread_mutex_lock(&thread_registry_mutex);
   for (struct k_work_q *queue = thread_registry; queue;
        queue = queue->thread_registry_next)
     {
-      if (pthread_equal(native, queue->thread))
+      if (queue->stack_anchor && here <= queue->stack_anchor &&
+          queue->stack_anchor - here < queue->stack_size)
         {
           pthread_mutex_unlock(&thread_registry_mutex);
           return &queue->thread;
         }
     }
   pthread_mutex_unlock(&thread_registry_mutex);
-  /* Non-worker callers only need a stable identity unequal to work queues. */
-  return (k_tid_t)(uintptr_t)native;
+  /* Non-worker callers only need an identity unequal to every work queue. */
+  static pthread_t other_thread;
+  return &other_thread;
 }
 
 int k_work_submit_to_queue(struct k_work_q *queue, struct k_work *work)

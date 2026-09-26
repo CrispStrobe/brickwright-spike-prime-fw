@@ -48,8 +48,29 @@ static void run_and_resubmit(struct k_work *work)
   k_sem_give(&context->completed);
 }
 
+static k_tid_t seen_thread;
+static struct k_sem seen_done;
+
+static void record_current(struct k_work *work)
+{
+  (void)work;
+  seen_thread = k_current_get();
+  k_sem_give(&seen_done);
+}
+
 int main(void)
 {
+  /* k_current_get() identifies the work queue a handler runs on, and no
+   * other thread matches it (conn.c asserts tx notifications run on their
+   * queue). */
+  struct k_work identify;
+  k_sem_init(&seen_done, 0, 1);
+  k_work_init(&identify, record_current);
+  assert(k_work_submit(&identify) == 1);
+  assert(k_sem_take(&seen_done, 1000) == 0);
+  assert(seen_thread == k_work_queue_thread_get(&k_sys_work_q));
+  assert(k_current_get() != k_work_queue_thread_get(&k_sys_work_q));
+
   struct context context = {0};
   assert(k_sem_init(&context.completed, 0, 4) == 0);
   assert(k_sem_init(&context.started, 0, 1) == 0);
