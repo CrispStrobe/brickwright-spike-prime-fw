@@ -268,7 +268,7 @@ int main(void)
   assert(k_sem_init(&security_changed, 0, 1) == 0);
   assert(brickwright_hub_transport_register(on_hub_receive, on_link_state,
                                              &connected) == 0);
-  assert(brickwright_classic_spp_channel() == BT_RFCOMM_CHAN_SPP);
+  assert(brickwright_classic_spp_channel() == 1);
   const struct bt_le_adv_param *advertising = BT_LE_ADV_PARAM(
     BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_IDENTITY,
     BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL);
@@ -425,7 +425,8 @@ int main(void)
   peer_l2cap_send(host_cid, sabm_mux, sizeof(sabm_mux));
   host_acl_length = peer_take_acl(host_acl, sizeof(host_acl));
   assert(host_acl_length >= 12 && (host_acl[9] & 0xef) == 0x63);
-  uint8_t sabm_dlc[] = {0x2f, 0x3f, 0x01, 0};
+  /* DLCI 3: server channel 1 (BRICKWRIGHT_SPP_RFCOMM_CHANNEL), initiator. */
+  uint8_t sabm_dlc[] = {0x0f, 0x3f, 0x01, 0};
   sabm_dlc[3] = rfcomm_fcs(sabm_dlc, 3);
   peer_l2cap_send(host_cid, sabm_dlc, sizeof(sabm_dlc));
   host_acl_length = peer_take_acl(host_acl, sizeof(host_acl));
@@ -433,7 +434,7 @@ int main(void)
   assert(brickwright_classic_spp_is_connected());
   assert(brickwright_hub_transport_connected(BRICKWRIGHT_HUB_LINK_CLASSIC));
   assert(link_state_events == 3 && classic_generation == 1);
-  uint8_t spp_frame[] = {0x2f, 0xef, 0x07, 'O', 'K', '\r', 0};
+  uint8_t spp_frame[] = {0x0f, 0xef, 0x07, 'O', 'K', '\r', 0};
   spp_frame[6] = rfcomm_fcs(spp_frame, 2);
   peer_l2cap_send(host_cid, spp_frame, sizeof(spp_frame));
   assert(k_sem_take(&spp_received, K_SECONDS(1)) == 0);

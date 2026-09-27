@@ -4,6 +4,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+/* RFCOMM server channel of the SPP record. Channel 1 matches the LEGO hub:
+ * tools written against official SPIKE/Robot Inventor firmware open channel
+ * 1 directly (BlueZ `rfcomm connect` default; SPIKE-RI-Rfcomm), as do
+ * Scratch Link's macOS and Linux backends, and the BTstack-based spike-nx
+ * baseline served SPP on channel 1 on real hubs. Zephyr's pre-allocated
+ * BT_RFCOMM_CHAN_SPP (5) would only be found by SDP-aware clients. */
+#define BRICKWRIGHT_SPP_RFCOMM_CHANNEL 1
+
 typedef void (*brickwright_classic_spp_receive_cb)(const uint8_t *data,
                                                     size_t length,
                                                     void *context);
