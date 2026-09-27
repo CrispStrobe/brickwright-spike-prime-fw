@@ -338,6 +338,9 @@ async def main() -> int:
                         help="also put an emulated micro:bit (SoftDevice HLE, "
                              "tools/nrf-softdevice-hle/fake_app.py) on the same air "
                              "and require the central to see and connect to it")
+    parser.add_argument("--sdhle-lib", type=Path,
+                        help="libnrf_softdevice_hle.so built from labwired-core "
+                             "(crates/nrf-softdevice-hle) for --microbit")
     parser.add_argument("--images", type=Path, required=True)
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
@@ -376,7 +379,8 @@ async def main() -> int:
         microbit = subprocess.Popen(
             [sys.executable, str(AIR_TOOLS.parent / "nrf-softdevice-hle" / "fake_app.py"),
              "--air", f"127.0.0.1:{arguments.hub_port}", "--addr", MICROBIT_ADDRESS,
-             "--secs", str(int(arguments.timeout) + 120)],
+             "--secs", str(int(arguments.timeout) + 120)]
+            + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
             stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT)
     air = Air(f"127.0.0.1:{arguments.hub_port}")
     hub = None

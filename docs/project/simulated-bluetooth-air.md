@@ -52,16 +52,22 @@ controller firmware.
 
 ## Current reach with the SPIKE firmware
 
-Measured with the unchanged simulation-profile image in Renode:
+Measured with the unchanged simulation-profile image in Renode, every station
+a separate node on one bw-air/1 hub:
 
 | path | status |
 |---|---|
-| Firmware host bring-up against the air's controller (31 standard HCI commands, 0 vendor, 0 unknown) | works |
-| LE advertising seen by a central on the air | works (about 5 s after boot) |
-| LE connect, GATT discovery of FD02, subscribe, InfoRequest write, InfoResponse notification | works |
-| The same round trip through the Scratch Link gateway (`/scratch/ble`) | works |
-| After the first LE link ends | does not work yet: the firmware stops processing HCI events once the disconnection is handled (no further receive work runs), so it neither re-advertises nor answers later requests; root cause open |
-| Classic page and connect, SDP (SPP record on RFCOMM channel 5) | works |
-| Classic Secure Simple Pairing (link key on both sides) | works |
+| Host bring-up against the air's controller (0 vendor, 0 unknown commands) | works |
+| LE advertising, connect, FD02 discovery, InfoRequest write, InfoResponse notification | works |
+| The same round trip through `scratch_link_node.py` (`/scratch/ble`), as lite would make it | works |
+| A second central after the first LE link ends (advertising resumes in 0.1 s) | works |
+| An emulated micro:bit (SoftDevice HLE) on the same air: a central sees both boards and discovers the micro:bit's UART service | works |
+| Classic page, SDP (SPP record on RFCOMM channel 5), Secure Simple Pairing | works |
 | Classic encryption | simulated: the air reports AES-CCM on to both hosts; no cipher runs |
-| RFCOMM/SPP channel open | does not work yet: after the encryption change the firmware does not answer the L2CAP connection request for RFCOMM |
+| RFCOMM/SPP: open the channel, `PING` → `OK PONG` | works |
+
+Open: the SPP record advertises RFCOMM channel 5, while the legacy SPIKE
+Classic extension's Linux and macOS Scratch Link backends open channel 1
+directly (`classic-protocol.md`). The SPP line protocol is btsensor's; the
+legacy JSON RPC adapter (`btsensor_classic.c`) is reached only for lines it
+recognises.
