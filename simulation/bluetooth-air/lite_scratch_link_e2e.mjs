@@ -23,7 +23,16 @@ const playwrightModule = process.argv[3] ||
 const { chromium } = await import(pathToFileURL(playwrightModule).href);
 
 const log = (...args) => console.log('[lite-e2e]', ...args);
-const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=768'] });
+// A page served over https that dials ws://127.0.0.1 is a public-to-loopback
+// request. Chromium's Local Network Access check asks the user first; a
+// headless run has nobody to ask, so the check is turned off here, which is
+// what a user granting the prompt achieves.
+const browser = await chromium.launch({
+  args: [
+    '--js-flags=--max-old-space-size=768',
+    '--disable-features=LocalNetworkAccessChecks,BlockInsecurePrivateNetworkRequests,PrivateNetworkAccessRespectPreflightResults'
+  ]
+});
 let failed = false;
 try {
   const page = await browser.newPage();

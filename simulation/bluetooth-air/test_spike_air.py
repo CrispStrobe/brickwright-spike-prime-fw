@@ -294,6 +294,7 @@ async def classic_round_trip(central, results: dict,
     assert b"OK PONG" in buffer, "no PONG over SPP"
     if legacy_extension is not None:
         await legacy_round_trips(dlc, received, legacy_extension, results)
+    await connection.disconnect()
 
 
 async def legacy_round_trips(dlc, received, extension: Path, results: dict) -> None:
@@ -339,7 +340,6 @@ async def legacy_round_trips(dlc, received, extension: Path, results: dict) -> N
             assert {m["m"] for m in entry["state"]} == {0, 2}, lines
         replies[method] = entry
     results["legacy_replies"] = replies
-    await connection.disconnect()
 
 
 async def scratch_link_round_trip(air, port: int, results: dict) -> None:
