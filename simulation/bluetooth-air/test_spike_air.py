@@ -199,6 +199,29 @@ async def le_round_trip(central, advertisement, results: dict) -> None:
     await connection.disconnect()
 
 
+async def serve_and_run(air, arguments, results: dict) -> None:
+    """Serve Scratch Link on the air and run an outside client against it.
+
+    Used to put a real browser (Brickwright lite under Playwright) on the air:
+    the command is started once the hub advertises, and its exit status
+    decides the run. Its stdout is kept in the results."""
+    import scratch_link_node
+
+    server = await scratch_link_node.serve(air, port=arguments.serve_scratch_link)
+    try:
+        process = await asyncio.create_subprocess_shell(
+            arguments.then, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT)
+        output, _ = await asyncio.wait_for(process.communicate(),
+                                           arguments.timeout + 600)
+        text = output.decode(errors="replace")
+        results["then_exit"] = process.returncode
+        results["then_output"] = text[-4000:]
+        assert process.returncode == 0, f"client failed ({process.returncode})"
+    finally:
+        server.close()
+
+
 async def microbit_check(air, results: dict, timeout: float) -> None:
     """The SPIKE hub and an emulated micro:bit on one air: a central sees both
     advertisers, then connects to the micro:bit and finds its UART service."""
@@ -230,7 +253,8 @@ async def microbit_check(air, results: dict, timeout: float) -> None:
     await air.remove("microbit-central")
 
 
-async def classic_round_trip(central, results: dict) -> None:
+async def classic_round_trip(central, results: dict,
+                             legacy_extension: Path | None = None) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -268,6 +292,53 @@ async def classic_round_trip(central, results: dict) -> None:
     results["spp_request"] = request.decode().strip()
     results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
     assert b"OK PONG" in buffer, "no PONG over SPP"
+    if legacy_extension is not None:
+        await legacy_round_trips(dlc, received, legacy_extension, results)
+
+
+async def legacy_round_trips(dlc, received, extension: Path, results: dict) -> None:
+    """Every legacy JSON request lite's extension sends, one at a time."""
+    import lite_legacy_messages as legacy
+
+    emitted = legacy.methods_in_extension(extension)
+    covered = set(legacy.REQUESTS)
+    results["legacy_methods_in_lite"] = sorted(emitted)
+    assert emitted == covered, (
+        f"lite emits {sorted(emitted - covered)} not covered; "
+        f"covered but not emitted {sorted(covered - emitted)}")
+    replies = {}
+    pending = b""
+    for index, method in enumerate(sorted(emitted)):
+        request_id = f"l{index:03d}"
+        dlc.write(legacy.request_line(method, request_id))
+        lines = []
+        deadline = time.monotonic() + 20
+        reply = None
+        while reply is None and time.monotonic() < deadline:
+            try:
+                pending += await asyncio.wait_for(received.get(), 2)
+            except asyncio.TimeoutError:
+                continue
+            while b"\n" in pending:
+                line, pending = pending.split(b"\n", 1)
+                line = line.strip()
+                if not line:
+                    continue
+                lines.append(line.decode(errors="replace"))
+                try:
+                    message = json.loads(line)
+                except ValueError:
+                    continue
+                if message.get("i") == request_id:
+                    reply = message
+        assert reply is not None, f"{method}: no reply carrying {request_id}"
+        entry = {"reply": reply}
+        if method == "trigger_current_state":
+            unsolicited = [json.loads(l) for l in lines if l.startswith("{\"m\"")]
+            entry["state"] = [m for m in unsolicited if m.get("m") in (0, 2)]
+            assert {m["m"] for m in entry["state"]} == {0, 2}, lines
+        replies[method] = entry
+    results["legacy_replies"] = replies
     await connection.disconnect()
 
 
@@ -344,6 +415,14 @@ async def main() -> int:
     parser.add_argument("--images", type=Path, required=True)
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
+    parser.add_argument("--serve-scratch-link", type=int, default=20111,
+                        metavar="PORT", help="Scratch Link port for --then")
+    parser.add_argument("--then", metavar="COMMAND",
+                        help="serve Scratch Link on the air and run COMMAND "
+                             "(e.g. a browser test of lite); its exit decides")
+    parser.add_argument("--lite-extension", type=Path,
+                        help="lite's spikeprime extension index.js: with --classic, "
+                             "send every legacy JSON request it emits over SPP")
     parser.add_argument("--reconnect", action="store_true",
                         help="after the first LE round trip, require a second one")
     parser.add_argument("--skip-le", action="store_true",
@@ -394,6 +473,8 @@ async def main() -> int:
         # One LE connection per run, directly or through the Scratch Link
         # gateway: after the first LE link ends the firmware stops processing
         # HCI events (open; see docs/project/simulated-bluetooth-air.md).
+        if arguments.then:
+            await serve_and_run(air, arguments, results)
         if arguments.microbit:
             await microbit_check(air, results, arguments.timeout)
         if arguments.scratch_link:
@@ -427,7 +508,8 @@ async def main() -> int:
                 await asyncio.sleep(0.5)
             await asyncio.sleep(2)
             peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
-            await asyncio.wait_for(classic_round_trip(peer, results), 120)
+            await asyncio.wait_for(
+                classic_round_trip(peer, results, arguments.lite_extension), 240)
         results["status"] = "PASS"
         return_code = 0
     except Exception as error:  # report, then fail
