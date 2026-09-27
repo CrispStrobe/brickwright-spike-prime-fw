@@ -56,7 +56,6 @@ static void *worker_main(void *opaque)
   struct k_work_q *queue = opaque;
   volatile char anchor = 0;
   queue->stack_anchor = (uintptr_t)&anchor;
-  queue->stack_size = worker_stack_size();
   for (;;) {
     struct k_work *work = k_fifo_get(&queue->fifo, K_FOREVER);
     pthread_mutex_lock(&work->mutex);
@@ -88,15 +87,30 @@ void k_work_queue_start(struct k_work_q *queue, k_thread_stack_t *stack,
                         size_t stack_size, int priority,
                         const struct k_work_queue_config *config)
 {
-  (void)stack; (void)stack_size; (void)priority; (void)config;
+  (void)stack; (void)priority; (void)config;
+  /* Zephyr hands each queue a statically sized stack; here the thread gets
+   * its own, at least the requested size. The system queue carries the
+   * application's receive path (btsensor's transmit pump keeps a full frame
+   * on the stack), which overflowed the 2 KiB pthread default. */
+  size_t size = stack_size;
+  if (queue == &k_sys_work_q && size < CONFIG_BRICKWRIGHT_SYSTEM_WORKQUEUE_STACK_SIZE)
+    size = CONFIG_BRICKWRIGHT_SYSTEM_WORKQUEUE_STACK_SIZE;
+  if (size < worker_stack_size())
+    size = worker_stack_size();
+  pthread_attr_t attributes;
+  pthread_attr_init(&attributes);
+  (void)pthread_attr_setstacksize(&attributes, size);
+  queue->stack_size = size;
   pthread_mutex_lock(&thread_registry_mutex);
-  if (!queue->started && pthread_create(&queue->thread, 0, worker_main, queue) == 0)
+  if (!queue->started &&
+      pthread_create(&queue->thread, &attributes, worker_main, queue) == 0)
     {
       queue->started = true;
       queue->thread_registry_next = thread_registry;
       thread_registry = queue;
     }
   pthread_mutex_unlock(&thread_registry_mutex);
+  pthread_attr_destroy(&attributes);
 }
 
 static void start_system_queue(void)
