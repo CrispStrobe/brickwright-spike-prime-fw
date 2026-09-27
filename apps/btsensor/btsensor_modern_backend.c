@@ -211,6 +211,50 @@ void btsensor_modern_backend_reset_with_io(
   if (io && g_port_io_valid && same_io(&g_port_io, io)) close_all_ports();
 }
 
+/* LEGO hub colour indices (the 2.x "light up" palette) as 8-bit RGB. */
+static const uint8_t g_status_colors[11][3] =
+{
+  { 0, 0, 0 },       /* 0 off */
+  { 255, 64, 160 },  /* 1 pink */
+  { 150, 0, 255 },   /* 2 violet */
+  { 0, 0, 255 },     /* 3 blue */
+  { 0, 200, 255 },   /* 4 turquoise */
+  { 64, 255, 128 },  /* 5 light green */
+  { 0, 255, 0 },     /* 6 green */
+  { 255, 220, 0 },   /* 7 yellow */
+  { 255, 120, 0 },   /* 8 orange */
+  { 255, 0, 0 },     /* 9 red */
+  { 255, 255, 255 }, /* 10 white */
+};
+
+static int status_light_operation(
+    const struct btsensor_modern_operation *operation,
+    const struct btsensor_modern_backend_io *io)
+{
+  static const uint8_t channels[2][3] =
+  {
+    { TLC5955_CH_STATUS_TOP_R, TLC5955_CH_STATUS_TOP_G,
+      TLC5955_CH_STATUS_TOP_B },
+    { TLC5955_CH_STATUS_BTM_R, TLC5955_CH_STATUS_BTM_G,
+      TLC5955_CH_STATUS_BTM_B },
+  };
+  struct rgbled_duty_s duty;
+  int rc = 0;
+  if (operation->color > 10) return -ERANGE;
+  int fd = io->open(RGBLED_DEVPATH, O_RDWR, io->context);
+  if (fd < 0) return fd;
+  for (unsigned led = 0; led < 2 && rc == 0; led++)
+    for (unsigned c = 0; c < 3 && rc == 0; c++)
+      {
+        duty.channel = channels[led][c];
+        duty.value = (uint16_t)(g_status_colors[operation->color][c] * 257u);
+        rc = io->ioctl(fd, RGBLEDIOC_SETDUTY, (unsigned long)&duty,
+                       io->context);
+      }
+  int close_rc = io->close(fd, io->context);
+  return rc < 0 ? rc : close_rc;
+}
+
 static int matrix5_operation(const struct btsensor_modern_operation *operation,
                              const struct btsensor_modern_backend_io *io)
 {
@@ -235,11 +279,16 @@ static int matrix5_operation(const struct btsensor_modern_operation *operation,
     }
   else
     {
+      bool frame = operation->kind == BTSENSOR_MODERN_OP_MATRIX5_FRAME;
+      for (unsigned i = 0; frame && i < 25; i++)
+        if (operation->frame[i] > 100) rc = -ERANGE;
       for (unsigned y = 0; y < 5 && rc == 0; y++)
         for (unsigned x = 0; x < 5 && rc == 0; x++)
           {
             duty.channel = g_matrix5_channels[y][x];
-            duty.value = 0;
+            duty.value = frame ?
+              (uint16_t)(((uint32_t)operation->frame[y * 5 + x] * 65535u) /
+                         100u) : 0;
             rc = io->ioctl(fd, RGBLEDIOC_SETDUTY, (unsigned long)&duty,
                            io->context);
           }
@@ -262,7 +311,10 @@ int btsensor_modern_backend_operation_with_io(
         return matrix_operation(operation, io);
       case BTSENSOR_MODERN_OP_MATRIX5_PIXEL:
       case BTSENSOR_MODERN_OP_MATRIX5_CLEAR:
+      case BTSENSOR_MODERN_OP_MATRIX5_FRAME:
         return matrix5_operation(operation, io);
+      case BTSENSOR_MODERN_OP_STATUS_LIGHT:
+        return status_light_operation(operation, io);
       case BTSENSOR_MODERN_OP_TUNNEL_OPAQUE:
       default:
         /* Opaque tunnel bytes, including Python source, are data only. */

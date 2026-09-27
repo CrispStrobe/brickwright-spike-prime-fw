@@ -234,12 +234,51 @@ static void test_exact_rejection(void) {
 }
 static void test_unsupported_request_replies_for_fallback(void) {
   struct fixture f; configure(&f);
-  assert(receive("{\"i\":\"a123\",\"m\":\"scratch.display_text\",\"p\":{\"text\":\"x\"}}"));
+  /* A method the 2.x path of lite's extension never emits. */
+  assert(receive("{\"i\":\"a123\",\"m\":\"scratch.motor_set_speed\",\"p\":{\"port\":\"A\",\"speed\":5}}"));
   assert(f.operations == 0 && f.sends == 1);
   assert(!strcmp(f.sent[0], "{\"i\":\"a123\",\"e\":{\"code\":-95}}\r\n"));
 }
+static void test_display_text(void) {
+  struct fixture f; configure(&f);
+  assert(receive("{\"i\":\"txt1\",\"m\":\"scratch.display_text\",\"p\":{\"text\":\"Hi\"}}"));
+  assert(f.operations == 1 && f.operation.kind == BTSENSOR_MODERN_OP_MATRIX5_FRAME);
+  /* H: columns 0 and 4 lit on every row, row 2 fully lit. */
+  for (unsigned y = 0; y < 5; y++) {
+    assert(f.operation.frame[y * 5] == 100 && f.operation.frame[y * 5 + 4] == 100);
+    assert(f.operation.frame[y * 5 + 2] == (y == 2 ? 100 : 0));
+  }
+  assert(!strcmp(f.sent[0], "{\"i\":\"txt1\",\"r\":null}\r\n"));
+  assert(receive("{\"m\":\"scratch.display_text\",\"p\":{\"text\":\"\"}}"));
+  assert(f.operations == 2);
+  for (unsigned i = 0; i < 25; i++) assert(f.operation.frame[i] == 0);
+  assert(receive("{\"m\":\"scratch.display_text\",\"p\":{\"text\":\"\\\"q\"}}"));
+  assert(f.operations == 3 && f.operation.frame[1] == 100 && f.operation.frame[0] == 0);
+  assert(receive("{\"i\":\"txt2\",\"m\":\"scratch.display_text\",\"p\":{\"text\":1}}"));
+  assert(f.operations == 3);
+  assert(!strcmp(f.sent[1], "{\"i\":\"txt2\",\"e\":{\"code\":-22}}\r\n"));
+}
+static void test_center_button_lights(void) {
+  struct fixture f; configure(&f);
+  assert(receive("{\"i\":\"led1\",\"m\":\"scratch.center_button_lights\",\"p\":{\"color\":9}}"));
+  assert(f.operations == 1 && f.operation.kind == BTSENSOR_MODERN_OP_STATUS_LIGHT);
+  assert(f.operation.color == 9);
+  assert(!strcmp(f.sent[0], "{\"i\":\"led1\",\"r\":null}\r\n"));
+  assert(receive("{\"i\":\"led2\",\"m\":\"scratch.center_button_lights\",\"p\":{\"color\":11}}"));
+  assert(f.operations == 1);
+  assert(!strcmp(f.sent[1], "{\"i\":\"led2\",\"e\":{\"code\":-22}}\r\n"));
+}
+static void test_motor_run_for_degrees(void) {
+  struct fixture f; configure(&f);
+  assert(receive("{\"i\":\"deg1\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":50,\"degrees\":360,\"stop\":1,\"stall\":true}}"));
+  assert(f.operations == 0);
+  assert(!strcmp(f.sent[0], "{\"i\":\"deg1\",\"e\":{\"code\":-95}}\r\n"));
+  assert(receive("{\"i\":\"deg2\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"Z\",\"speed\":50,\"degrees\":360,\"stop\":1,\"stall\":true}}"));
+  assert(!strcmp(f.sent[1], "{\"i\":\"deg2\",\"e\":{\"code\":-22}}\r\n"));
+}
 int main(void) {
   test_current_state(); test_motors(); test_sound(); test_display();
+  test_display_text(); test_center_button_lights(); test_motor_run_for_degrees();
   test_exact_rejection();
   test_timed_motor(); test_timed_adversarial(); test_disconnect_cancels_timed();
   test_explicit_stop_cancels_timed();

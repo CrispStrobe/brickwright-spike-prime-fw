@@ -21,6 +21,7 @@ portable=(
   apps/btsensor/btsensor_main.c
   apps/btsensor/btsensor_cmd_neutral.c
   apps/btsensor/btsensor_classic.c
+  apps/btsensor/btsensor_font5.c
   apps/btsensor/btsensor_modern.c
   apps/btsensor/btsensor_modern_backend.c
   apps/btsensor/btsensor_tx.c

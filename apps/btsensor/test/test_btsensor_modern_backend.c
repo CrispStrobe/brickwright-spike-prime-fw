@@ -227,6 +227,26 @@ int main(void) {
   assert(f.led_writes == 26 && f.led.channel == 9 && f.led.value == 0);
   assert(f.rgb_opens == 2 && f.rgb_closes == 2);
 
+  /* A full frame writes every matrix channel; the last is (4,4) = 9. */
+  memset(&op, 0, sizeof(op));
+  op.kind = BTSENSOR_MODERN_OP_MATRIX5_FRAME;
+  op.frame[24] = 50;
+  assert(btsensor_modern_backend_operation_with_io(&op, &io) == 0);
+  assert(f.led_writes == 51 && f.led.channel == 9 && f.led.value == 32767);
+  op.frame[0] = 101;
+  assert(btsensor_modern_backend_operation_with_io(&op, &io) == -ERANGE);
+
+  /* Status light: six channels, the last is the bottom LED's blue. */
+  memset(&op, 0, sizeof(op));
+  op.kind = BTSENSOR_MODERN_OP_STATUS_LIGHT;
+  op.color = 3; /* blue */
+  unsigned before = f.led_writes;
+  assert(btsensor_modern_backend_operation_with_io(&op, &io) == 0);
+  assert(f.led_writes == before + 6 && f.led.channel == 6 &&
+         f.led.value == 65535);
+  op.color = 11;
+  assert(btsensor_modern_backend_operation_with_io(&op, &io) == -ERANGE);
+
   memset(&op, 0, sizeof(op));
   op.kind = BTSENSOR_MODERN_OP_TUNNEL_OPAQUE;
   op.opaque = (const uint8_t *)"import os";

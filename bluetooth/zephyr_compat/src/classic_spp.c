@@ -14,6 +14,7 @@ static void *receive_context;
 static brickwright_classic_spp_state_cb state_callback;
 static bool registered;
 static bool connected;
+static void (*sent_hook)(void);
 
 static void dlc_connected(struct bt_rfcomm_dlc *dlc)
 {
@@ -38,11 +39,24 @@ static void dlc_receive(struct bt_rfcomm_dlc *dlc, struct net_buf *buffer)
     }
 }
 
+static void dlc_sent(struct bt_rfcomm_dlc *dlc, int err)
+{
+  (void)dlc;
+  (void)err;
+  if (sent_hook) sent_hook();
+}
+
 static struct bt_rfcomm_dlc_ops dlc_ops = {
   .connected = dlc_connected,
   .disconnected = dlc_disconnected,
   .recv = dlc_receive,
+  .sent = dlc_sent,
 };
+
+void brickwright_classic_spp_set_sent_hook(void (*sent)(void))
+{
+  sent_hook = sent;
+}
 
 static struct bt_rfcomm_dlc spp_dlc = {
   .ops = &dlc_ops,
@@ -64,7 +78,7 @@ static int server_accept(struct bt_conn *connection,
 }
 
 static struct bt_rfcomm_server spp_server = {
-  .channel = BT_RFCOMM_CHAN_SPP,
+  .channel = BRICKWRIGHT_SPP_RFCOMM_CHANNEL,
   .accept = server_accept,
 };
 
@@ -89,7 +103,7 @@ static struct bt_sdp_attribute spp_attributes[] = {
           { BT_SDP_TYPE_SIZE(BT_SDP_UUID16),
             BT_SDP_ARRAY_16(BT_SDP_PROTO_RFCOMM) },
           { BT_SDP_TYPE_SIZE(BT_SDP_UINT8),
-            BT_SDP_ARRAY_8(BT_RFCOMM_CHAN_SPP) },
+            BT_SDP_ARRAY_8(BRICKWRIGHT_SPP_RFCOMM_CHANNEL) },
         ) },
     )),
   BT_SDP_LIST(BT_SDP_ATTR_PROFILE_DESC_LIST,
@@ -145,12 +159,16 @@ int brickwright_classic_spp_send(const void *data, size_t length)
       return -ENOMEM;
     }
   net_buf_add_mem(buffer, data, length);
+  /* bt_rfcomm_dlc_send() returns the bytes sent on success; the hub
+   * transport contract is 0 on success. Passing the count through made the
+   * transmit pump treat every sent line as failed and send it again. */
   int result = bt_rfcomm_dlc_send(&spp_dlc, buffer);
   if (result < 0)
     {
       net_buf_unref(buffer);
+      return result;
     }
-  return result;
+  return 0;
 }
 
 bool brickwright_classic_spp_is_connected(void)

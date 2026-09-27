@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "btsensor_classic.h"
+#include "btsensor_font5.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -253,6 +254,92 @@ static bool parse_display_set_pixel(
    * scale.  Convert that level to the backend's 0..100 duty scale, with
    * nearest-integer rounding and exact endpoints. */
   operation->brightness = (uint8_t)((brightness * 100 + 4) / 9);
+  return true;
+}
+
+/* {"text":"..."}: JSON string with the escapes JSON.stringify emits for
+ * printable text (\" \\ \/ and \uXXXX). The first character is shown on
+ * the 5x5 matrix; the 2.x hub scrolls longer text, which is not modelled. */
+static bool parse_display_text(const struct request *request,
+                               struct btsensor_modern_operation *operation)
+{
+  const char *p = request->params;
+  const char *end = p + request->params_length;
+  char first = 0;
+  bool have_first = false;
+  uint8_t rows[5];
+  if (!take(&p, end, "{\"text\":\"")) return false;
+  while (p < end && *p != '"')
+    {
+      char c = *p++;
+      if (c == '\\')
+        {
+          if (p == end) return false;
+          c = *p++;
+          if (c == 'u')
+            {
+              if (end - p < 4) return false;
+              p += 4;
+              c = '?';
+            }
+          else if (c != '"' && c != '\\' && c != '/') return false;
+        }
+      if (!have_first) { first = c; have_first = true; }
+    }
+  if (!take(&p, end, "\"}") || p != end) return false;
+  memset(operation->frame, 0, sizeof(operation->frame));
+  if (have_first)
+    {
+      if (!btsensor_font5_glyph(first, rows)) (void)btsensor_font5_glyph('?', rows);
+      for (unsigned y = 0; y < 5; y++)
+        for (unsigned x = 0; x < 5; x++)
+          operation->frame[y * 5 + x] = (rows[y] >> (4 - x)) & 1 ? 100 : 0;
+    }
+  operation->kind = BTSENSOR_MODERN_OP_MATRIX5_FRAME;
+  return true;
+}
+
+/* {"color":N}, N a LEGO colour index 0-10. */
+static bool parse_center_button_lights(
+    const struct request *request,
+    struct btsensor_modern_operation *operation)
+{
+  const char *p = request->params;
+  const char *end = p + request->params_length;
+  int color;
+  if (!take(&p, end, "{\"color\":") ||
+      !parse_integer(&p, end, 0, 10, &color) ||
+      !take(&p, end, "}") || p != end)
+    return false;
+  operation->kind = BTSENSOR_MODERN_OP_STATUS_LIGHT;
+  operation->color = (uint8_t)color;
+  return true;
+}
+
+/* {"port":"A","speed":N,"degrees":N,"stop":N,"stall":bool} */
+static bool parse_motor_degrees(const struct request *request,
+                                struct btsensor_modern_operation *operation)
+{
+  const char *p = request->params;
+  const char *end = p + request->params_length;
+  int speed;
+  int degrees;
+  int stop;
+  if (!take(&p, end, "{\"port\":\"") || p == end || *p < 'A' || *p > 'F')
+    return false;
+  operation->port = (uint8_t)(*p++ - 'A');
+  if (!take(&p, end, "\",\"speed\":") ||
+      !parse_integer(&p, end, -100, 100, &speed) ||
+      !take(&p, end, ",\"degrees\":") ||
+      !parse_integer(&p, end, -1000000, 1000000, &degrees) ||
+      !take(&p, end, ",\"stop\":") ||
+      !parse_integer(&p, end, 0, 2, &stop) ||
+      !take(&p, end, ",\"stall\":"))
+    return false;
+  if (!take(&p, end, "true}") && !take(&p, end, "false}")) return false;
+  if (p != end) return false;
+  operation->kind = BTSENSOR_MODERN_OP_MOTOR;
+  operation->speed = (int8_t)speed;
   return true;
 }
 
@@ -553,6 +640,29 @@ bool btsensor_classic_receive(enum brickwright_hub_link link,
       if (!parse_display_set_pixel(&request, &operation)) rc = -EINVAL;
       else if (!g_config.operation) rc = -ENOTSUP;
       else rc = g_config.operation(link, &operation, g_config.context);
+    }
+  else if (exact(request.method, request.method_length,
+                 "scratch.display_text"))
+    {
+      if (!parse_display_text(&request, &operation)) rc = -EINVAL;
+      else if (!g_config.operation) rc = -ENOTSUP;
+      else rc = g_config.operation(link, &operation, g_config.context);
+    }
+  else if (exact(request.method, request.method_length,
+                 "scratch.center_button_lights"))
+    {
+      if (!parse_center_button_lights(&request, &operation)) rc = -EINVAL;
+      else if (!g_config.operation) rc = -ENOTSUP;
+      else rc = g_config.operation(link, &operation, g_config.context);
+    }
+  else if (exact(request.method, request.method_length,
+                 "scratch.motor_run_for_degrees"))
+    {
+      /* Well-formed requests are answered, not executed: the neutral
+       * operation API drives motors by speed and has no encoder-position
+       * target yet, and a speed-only approximation would not stop at the
+       * requested angle. */
+      rc = parse_motor_degrees(&request, &operation) ? -ENOTSUP : -EINVAL;
     }
   else
     {
