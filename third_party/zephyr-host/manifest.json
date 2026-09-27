@@ -13,6 +13,11 @@
       "path": "patches/0001-classic-signaling-native-pointer-size.patch",
       "license": "Apache-2.0",
       "reason": "Size two-pointer Classic signaling closures on 64-bit simulation hosts."
+    },
+    {
+      "path": "patches/0002-gatt-skip-bond-storage-for-br-edr-pairing.patch",
+      "license": "Apache-2.0",
+      "reason": "Do not store LE-keyed GATT bond data when a BR/EDR link pairs."
     }
   ],
   "crypto_provider": {

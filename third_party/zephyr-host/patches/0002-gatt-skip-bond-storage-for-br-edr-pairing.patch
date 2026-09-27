@@ -1,0 +1,23 @@
+SPDX-License-Identifier: Apache-2.0
+
+Skip GATT bond storage for BR/EDR pairing. The pairing-complete callback runs
+for Secure Simple Pairing too; it stored CCC and client-feature data under
+conn->le.dst, which a BR/EDR connection does not hold, and the settings key
+encoder asserted on the garbage address type.
+
+--- a/subsys/bluetooth/host/gatt.c
++++ b/subsys/bluetooth/host/gatt.c
+@@ -1035,6 +1035,13 @@
+ 
+ static void bt_gatt_pairing_complete(struct bt_conn *conn, bool bonded)
+ {
++	/* BR/EDR pairing reports here too; GATT bonding data is keyed by the
++	 * LE address, which a BR/EDR connection does not have.
++	 */
++	if (!bt_conn_is_le(conn)) {
++		return;
++	}
++
+ 	if (bonded) {
+ 		/* Store the ccc and cf data */
+ 		gatt_store_ccc(conn->id, &(conn->le.dst));
