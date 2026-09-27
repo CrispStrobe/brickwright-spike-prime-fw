@@ -254,6 +254,20 @@ async def classic_round_trip(central, results: dict) -> None:
     received: asyncio.Queue = asyncio.Queue()
     dlc.sink = received.put_nowait
     results["rfcomm_open"] = True
+    # The hub's SPP speaks the btsensor line protocol (see
+    # apps/btsensor/btsensor_cmd_neutral.c): PING answers OK PONG.
+    request = b"PING\n"
+    dlc.write(request)
+    buffer = b""
+    deadline = time.monotonic() + 30
+    while b"PONG" not in buffer and time.monotonic() < deadline:
+        try:
+            buffer += await asyncio.wait_for(received.get(), 5)
+        except asyncio.TimeoutError:
+            continue
+    results["spp_request"] = request.decode().strip()
+    results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
+    assert b"OK PONG" in buffer, "no PONG over SPP"
     await connection.disconnect()
 
 
