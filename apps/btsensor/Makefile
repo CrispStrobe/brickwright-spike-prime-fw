@@ -14,7 +14,7 @@ CSRCS += btsensor_lifecycle.c btsensor_transport.c
 CSRCS += btsensor_tx.c btsensor_cmd_neutral.c btsensor_classic.c
 CSRCS += btsensor_modern.c btsensor_modern_backend.c btsensor_modern_notify.c
 CSRCS += btsensor_scheduler.c btsensor_sound.c
-CSRCS += hub_protocol.c spike_codec.c
+CSRCS += hub_protocol.c spike_codec.c btsensor_font5.c
 # The simulation profile carries no TI service pack: the provider shim, its
 # include path, and the import rule are all absent from its build graph.
 ifneq ($(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK),y)

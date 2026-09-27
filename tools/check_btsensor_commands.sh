@@ -7,6 +7,7 @@ trap 'rm -rf "$work"' EXIT
 cc -std=gnu11 -Wall -Wextra -Werror -I"$root/apps/btsensor" \
   -I"$root/bluetooth/zephyr_compat/include" \
   "$root/apps/btsensor/btsensor_classic.c" \
+  "$root/apps/btsensor/btsensor_font5.c" \
   "$root/apps/btsensor/btsensor_cmd_neutral.c" \
   "$root/apps/btsensor/test/test_btsensor_cmd_neutral.c" \
   -o "$work/test-btsensor-command"

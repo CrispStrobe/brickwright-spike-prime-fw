@@ -22,6 +22,8 @@ enum btsensor_modern_operation_kind
   BTSENSOR_MODERN_OP_SOUND_BEEP,
   BTSENSOR_MODERN_OP_SOUND_STOP,
   BTSENSOR_MODERN_OP_TUNNEL_OPAQUE,
+  BTSENSOR_MODERN_OP_STATUS_LIGHT,   /* centre button light, LEGO colour */
+  BTSENSOR_MODERN_OP_MATRIX5_FRAME,  /* all 25 pixels of the 5x5 matrix */
 };
 
 struct btsensor_modern_operation
@@ -37,6 +39,8 @@ struct btsensor_modern_operation
   uint8_t x;
   uint8_t y;
   uint8_t brightness;
+  uint8_t color;          /* STATUS_LIGHT: LEGO colour index 0-10 */
+  uint8_t frame[25];      /* MATRIX5_FRAME: row-major brightness 0-100 */
   uint16_t frequency_hz;
   uint16_t duration_ms;
 };
