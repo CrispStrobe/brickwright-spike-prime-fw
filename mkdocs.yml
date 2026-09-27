@@ -54,6 +54,7 @@ nav:
   - Project:
       - project/provenance.md
       - project/ti-service-pack.md
+      - project/simulated-bluetooth-air.md
       - project/classic-protocol.md
       - project/ble-protocol.md
       - project/hub-contract.md

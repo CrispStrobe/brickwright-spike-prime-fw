@@ -1035,6 +1035,13 @@ static void bt_gatt_identity_resolved(struct bt_conn *conn, const bt_addr_le_t *
 
 static void bt_gatt_pairing_complete(struct bt_conn *conn, bool bonded)
 {
+	/* BR/EDR pairing reports here too; GATT bonding data is keyed by the
+	 * LE address, which a BR/EDR connection does not have.
+	 */
+	if (!bt_conn_is_le(conn)) {
+		return;
+	}
+
 	if (bonded) {
 		/* Store the ccc and cf data */
 		gatt_store_ccc(conn->id, &(conn->le.dst));

@@ -58,6 +58,9 @@ struct k_work_q {
   pthread_t thread;
   bool started;
   struct k_work_q *thread_registry_next;
+  /* Set by the worker thread itself; see k_current_get() in work.c. */
+  uintptr_t stack_anchor;
+  size_t stack_size;
 };
 struct k_work_queue_config { const char *name; bool no_yield; bool essential; };
 typedef uint8_t k_thread_stack_t;

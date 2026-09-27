@@ -28,4 +28,12 @@ int brickwright_hub_transport_send(enum brickwright_hub_link link,
                                    const void *data, size_t length);
 bool brickwright_hub_transport_connected(enum brickwright_hub_link link);
 
+/* A controller stops legacy advertising when a central connects, and the
+ * host does not resume it. The transport reports both moments so the owner
+ * of advertising can track it and restart it: advertising_stopped runs when
+ * an LE peripheral link is established, advertising_restart runs on the
+ * system work queue once a finished connection's object is recycled. */
+void brickwright_hub_transport_set_advertising_hooks(
+  void (*advertising_stopped)(void), void (*advertising_restart)(void));
+
 #endif

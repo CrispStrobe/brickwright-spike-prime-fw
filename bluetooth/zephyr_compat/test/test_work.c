@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <assert.h>
 #include <string.h>
+#include <unistd.h>
 #include <zephyr/kernel.h>
 #include "long_wq.h"
 
@@ -47,8 +48,29 @@ static void run_and_resubmit(struct k_work *work)
   k_sem_give(&context->completed);
 }
 
+static k_tid_t seen_thread;
+static struct k_sem seen_done;
+
+static void record_current(struct k_work *work)
+{
+  (void)work;
+  seen_thread = k_current_get();
+  k_sem_give(&seen_done);
+}
+
 int main(void)
 {
+  /* k_current_get() identifies the work queue a handler runs on, and no
+   * other thread matches it (conn.c asserts tx notifications run on their
+   * queue). */
+  struct k_work identify;
+  k_sem_init(&seen_done, 0, 1);
+  k_work_init(&identify, record_current);
+  assert(k_work_submit(&identify) == 1);
+  assert(k_sem_take(&seen_done, 1000) == 0);
+  assert(seen_thread == k_work_queue_thread_get(&k_sys_work_q));
+  assert(k_current_get() != k_work_queue_thread_get(&k_sys_work_q));
+
   struct context context = {0};
   assert(k_sem_init(&context.completed, 0, 4) == 0);
   assert(k_sem_init(&context.started, 0, 1) == 0);
@@ -128,5 +150,25 @@ int main(void)
   nanosleep(&release_wait, 0);
   assert(k_work_schedule(&timers[0], K_MSEC(20)) == 1);
   assert(k_work_cancel_delayable(&timers[0]) == 1);
+
+  /* Zephyr cancels and queries never-initialized (zero-filled) items, such
+   * as the limited-advertising timeout on every peripheral connection. Their
+   * mutex was never created; on NuttX a zero-filled one is locked. Model that
+   * with a held mutex: the idle answer must not touch it. SIGALRM turns a
+   * regression (a hang) into a failure. */
+  struct k_work_delayable never_initialized;
+  memset(&never_initialized, 0, sizeof(never_initialized));
+  pthread_mutex_init(&never_initialized.work.mutex, 0);
+  pthread_mutex_lock(&never_initialized.work.mutex);
+  alarm(5);
+  assert(k_work_cancel_delayable(&never_initialized) == 0);
+  assert(k_work_cancel_delayable_sync(&never_initialized, &sync) == 0);
+  assert(k_work_cancel(&never_initialized.work) == 0);
+  assert(k_work_cancel_sync(&never_initialized.work, &sync) == 0);
+  assert(!k_work_flush(&never_initialized.work, &sync));
+  assert(!k_work_is_pending(&never_initialized.work));
+  assert(k_work_delayable_busy_get(&never_initialized) == 0);
+  alarm(0);
+  pthread_mutex_unlock(&never_initialized.work.mutex);
   return 0;
 }

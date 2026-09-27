@@ -17,11 +17,31 @@
 
 static bool g_started;
 static bool g_le_advertising;
+static bool g_visible;
 
 static const struct bt_le_adv_param *const g_le_params =
   BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_IDENTITY,
                   BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2,
                   NULL);
+
+/* Advertising stops when a central connects and the host does not resume
+ * it; the hub transport reports both moments (its callbacks are compiled
+ * with the Bluetooth host's configuration). While the hub is meant to be
+ * visible, advertising restarts once the finished link is recycled. Without
+ * this the hub could be found only once per boot. */
+static void le_advertising_stopped(void)
+{
+  g_le_advertising = false;
+}
+
+static void le_advertising_restart(void)
+{
+  if (g_started && g_visible && !g_le_advertising &&
+      bt_le_adv_start(g_le_params, NULL, 0, NULL, 0) == 0)
+    {
+      g_le_advertising = true;
+    }
+}
 
 int btsensor_transport_start(btsensor_transport_receive_cb receive,
                              btsensor_transport_state_cb state,
@@ -61,8 +81,11 @@ int btsensor_transport_start(btsensor_transport_receive_cb receive,
       return ret;
     }
 
+  brickwright_hub_transport_set_advertising_hooks(le_advertising_stopped,
+                                                  le_advertising_restart);
   g_started = true;
   g_le_advertising = false;
+  g_visible = false;
   return 0;
 }
 
@@ -75,6 +98,7 @@ int btsensor_transport_set_visible(bool visible)
       return -ENODEV;
     }
 
+  g_visible = visible;
   if (visible)
     {
       ret = bt_br_set_connectable(true, NULL);
