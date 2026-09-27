@@ -46,6 +46,7 @@ jobs:
           python3 tests/test_import_ti_service_pack.py -v
           python3 tests/test_ti_free_image.py -v
           tools/check_ti_bts_loader.sh
+          tools/check_zephyr_work_nuttx_identity.sh
           tools/check_controller_lifecycle.sh
           tools/check_btsensor_nuttx_snapshot.sh
 
