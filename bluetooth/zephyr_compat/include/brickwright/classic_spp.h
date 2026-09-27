@@ -23,4 +23,7 @@ int brickwright_classic_spp_register(brickwright_classic_spp_receive_cb receive,
 int brickwright_classic_spp_send(const void *data, size_t length);
 bool brickwright_classic_spp_is_connected(void);
 uint8_t brickwright_classic_spp_channel(void);
+/* Called whenever a sent SPP frame completes, so a sender that stopped on a
+ * busy link (-ENOMEM: the transmit pool is empty) can resume. */
+void brickwright_classic_spp_set_sent_hook(void (*sent)(void));
 #endif

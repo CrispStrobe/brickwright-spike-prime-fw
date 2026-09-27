@@ -12,6 +12,7 @@ static void *receive_context;
 static brickwright_hub_link_state_cb state_callback;
 static struct bt_conn *le_connection;
 static uint32_t generations[2];
+static void (*writable_hook)(enum brickwright_hub_link link);
 static void (*advertising_stopped_hook)(void);
 static void (*advertising_restart_hook)(void);
 
@@ -99,6 +100,18 @@ BT_CONN_CB_DEFINE(brickwright_transport_connection_callbacks) = {
   .disconnected = transport_disconnected,
   .recycled = transport_recycled,
 };
+
+static void classic_sent(void)
+{
+  if (writable_hook) writable_hook(BRICKWRIGHT_HUB_LINK_CLASSIC);
+}
+
+void brickwright_hub_transport_set_writable_hook(
+  void (*writable)(enum brickwright_hub_link link))
+{
+  writable_hook = writable;
+  brickwright_classic_spp_set_sent_hook(writable ? classic_sent : NULL);
+}
 
 void brickwright_hub_transport_set_advertising_hooks(
   void (*advertising_stopped)(void), void (*advertising_restart)(void))

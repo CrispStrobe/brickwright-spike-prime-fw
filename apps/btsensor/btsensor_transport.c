@@ -14,6 +14,7 @@
 #include <zephyr/settings/settings.h>
 
 #include "btsensor_transport.h"
+#include "btsensor_tx.h"
 
 static bool g_started;
 static bool g_le_advertising;
@@ -41,6 +42,14 @@ static void le_advertising_restart(void)
     {
       g_le_advertising = true;
     }
+}
+
+/* A send refused for lack of transmit buffers leaves the pump stopped with
+ * data queued; a completed frame is the moment to resume it. */
+static void link_writable(enum brickwright_hub_link link)
+{
+  (void)link;
+  btsensor_tx_on_can_send_now();
 }
 
 int btsensor_transport_start(btsensor_transport_receive_cb receive,
@@ -83,6 +92,7 @@ int btsensor_transport_start(btsensor_transport_receive_cb receive,
 
   brickwright_hub_transport_set_advertising_hooks(le_advertising_stopped,
                                                   le_advertising_restart);
+  brickwright_hub_transport_set_writable_hook(link_writable);
   g_started = true;
   g_le_advertising = false;
   g_visible = false;

@@ -14,6 +14,7 @@ static void *receive_context;
 static brickwright_classic_spp_state_cb state_callback;
 static bool registered;
 static bool connected;
+static void (*sent_hook)(void);
 
 static void dlc_connected(struct bt_rfcomm_dlc *dlc)
 {
@@ -38,11 +39,24 @@ static void dlc_receive(struct bt_rfcomm_dlc *dlc, struct net_buf *buffer)
     }
 }
 
+static void dlc_sent(struct bt_rfcomm_dlc *dlc, int err)
+{
+  (void)dlc;
+  (void)err;
+  if (sent_hook) sent_hook();
+}
+
 static struct bt_rfcomm_dlc_ops dlc_ops = {
   .connected = dlc_connected,
   .disconnected = dlc_disconnected,
   .recv = dlc_receive,
+  .sent = dlc_sent,
 };
+
+void brickwright_classic_spp_set_sent_hook(void (*sent)(void))
+{
+  sent_hook = sent;
+}
 
 static struct bt_rfcomm_dlc spp_dlc = {
   .ops = &dlc_ops,
