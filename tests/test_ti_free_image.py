@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -105,6 +106,25 @@ class TiFreeImageGate(unittest.TestCase):
             document["service_pack_sha256"],
             "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e")
         self.assertEqual(len(document["chunks"]), 40)
+
+    def test_elf_check_falls_back_to_host_nm(self) -> None:
+        elf = self.root / "image.elf"
+        elf.write_bytes(b"synthetic")
+        with mock.patch.object(gate.shutil, "which",
+                               side_effect=lambda name: None if name != "nm" else "/usr/bin/nm"), \
+             mock.patch.object(gate.subprocess, "run") as run:
+            run.return_value.stdout = "08000000 T clean_symbol\n"
+            self.assertFalse(gate.elf_defines(elf, gate.PAYLOAD_SYMBOL))
+            run.assert_called_once_with(
+                ["/usr/bin/nm", str(elf)], check=True, text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+    def test_elf_check_fails_closed_without_nm(self) -> None:
+        elf = self.root / "image.elf"
+        elf.write_bytes(b"synthetic")
+        with mock.patch.object(gate.shutil, "which", return_value=None):
+            with self.assertRaisesRegex(SystemExit, "no nm implementation found"):
+                gate.elf_defines(elf, gate.PAYLOAD_SYMBOL)
 
 
 if __name__ == "__main__":

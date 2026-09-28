@@ -28,6 +28,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -145,15 +146,22 @@ def dependency_files(build_root: Path) -> list[Path]:
 
 
 def elf_defines(elf: Path, symbol: str) -> bool:
-    nm = "arm-none-eabi-nm"
-    try:
-        output = subprocess.run([nm, str(elf)], check=True, text=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.DEVNULL).stdout
-    except (OSError, subprocess.CalledProcessError):
-        raise SystemExit(f"cannot read symbols from {elf} with {nm}")
-    return any(line.split()[-1] == symbol for line in output.splitlines()
-               if line.strip())
+    attempted = []
+    for name in ("arm-none-eabi-nm", "llvm-nm", "nm"):
+        nm = shutil.which(name)
+        if nm is None:
+            continue
+        attempted.append(name)
+        try:
+            output = subprocess.run([nm, str(elf)], check=True, text=True,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL).stdout
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        return any(line.split()[-1] == symbol for line in output.splitlines()
+                   if line.strip())
+    detail = ", ".join(attempted) if attempted else "no nm implementation found"
+    raise SystemExit(f"cannot read symbols from {elf} ({detail})")
 
 
 def main() -> int:
