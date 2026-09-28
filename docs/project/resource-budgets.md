@@ -1,9 +1,9 @@
 # Protected firmware resource gates
 
 The protected build uses a 512 KiB user-flash region and 128 KiB of directly
-addressable user SRAM. CI reserves the complete 10,211-byte CC2564C service-pack
-footprint with synthetic, non-TI bytes before linking. No restricted controller
-firmware is stored or uploaded.
+addressable user SRAM. CI builds the clean simulation profile, whose linked TI
+payload size must be exactly zero. No restricted controller firmware is stored,
+downloaded into the build, or uploaded.
 
 `policy/resource-budgets.json` deliberately leaves these margins:
 
@@ -15,8 +15,9 @@ firmware is stored or uploaded.
 The RAM margin is reserved for the user heap and runtime stacks; it is not a
 claim that peak dynamic usage has been measured. CI also bounds the configured
 Bluetooth buffer counts, delayed-work slots, telemetry ring depth, daemon stack,
-and long-workqueue stack. The gate fails closed if a required setting, ELF, or
-linked synthetic payload symbol is missing.
+and long-workqueue stack. The gate fails closed if a required setting or ELF is
+missing, or if the forbidden TI payload symbol is present in the simulation
+image.
 
 Run the gate after a protected build inside the pinned build container:
 
