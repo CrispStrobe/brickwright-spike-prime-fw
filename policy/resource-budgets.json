@@ -4,7 +4,7 @@
     "flash_bytes_max": 523264,
     "static_ram_bytes_max": 98304,
     "ti_payload_symbol": "brickwright_local_ti_bts_image",
-    "ti_payload_bytes_exact": 10211
+    "ti_payload_bytes_exact": 0
   },
   "configuration": {
     "nuttx/.config": {

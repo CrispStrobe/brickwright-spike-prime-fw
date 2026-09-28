@@ -25,7 +25,7 @@ def parse_size(output: str) -> tuple[int, int]:
     raise BudgetError("could not parse text/data/bss from size output")
 
 
-def parse_nm_symbol_size(output: str, symbol: str) -> int:
+def nm_symbol_sizes(output: str, symbol: str) -> list[int]:
     # arm-none-eabi-nm -S emits: address size type name
     matches = []
     for line in output.splitlines():
@@ -35,6 +35,11 @@ def parse_nm_symbol_size(output: str, symbol: str) -> int:
                 matches.append(int(fields[-3], 16))
             except ValueError:
                 continue
+    return matches
+
+
+def parse_nm_symbol_size(output: str, symbol: str) -> int:
+    matches = nm_symbol_sizes(output, symbol)
     if len(matches) != 1:
         raise BudgetError(f"expected exactly one {symbol} symbol, found {len(matches)}")
     return matches[0]
@@ -114,11 +119,21 @@ def run(arguments: argparse.Namespace) -> list[str]:
         [arguments.nm_tool, "-S", str(elf)], check=True, text=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     ).stdout
-    payload_size = parse_nm_symbol_size(nm_output, target["ti_payload_symbol"])
-    if payload_size != target["ti_payload_bytes_exact"]:
+    expected_payload_size = target["ti_payload_bytes_exact"]
+    payload_sizes = nm_symbol_sizes(nm_output, target["ti_payload_symbol"])
+    if expected_payload_size == 0 and not payload_sizes:
+        payload_size = 0
+    elif len(payload_sizes) != 1:
+        raise BudgetError(
+            f"expected exactly one {target['ti_payload_symbol']} symbol, "
+            f"found {len(payload_sizes)}"
+        )
+    else:
+        payload_size = payload_sizes[0]
+    if payload_size != expected_payload_size:
         raise BudgetError(
             f"synthetic TI footprint is {payload_size}, expected "
-            f"{target['ti_payload_bytes_exact']}"
+            f"{expected_payload_size}"
         )
 
     data_start = parse_nm_symbol_value(nm_output, "_sdata")
@@ -135,7 +150,7 @@ def run(arguments: argparse.Namespace) -> list[str]:
     report = [
         f"userspace flash={flash}/{target['flash_bytes_max']} bytes",
         f"userspace static_ram={static_ram}/{target['static_ram_bytes_max']} bytes",
-        f"synthetic TI payload={payload_size} bytes (exact)",
+        f"TI payload={payload_size} bytes (exact)",
         f"net_buf_pool=0x{pools_start:x}..0x{pools_stop:x} inside initialized data",
     ]
     report.extend(check_configuration(root, policy["configuration"]))
