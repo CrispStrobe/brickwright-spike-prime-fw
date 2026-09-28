@@ -24,6 +24,7 @@
 
 #define PHYSICAL_BOOT_BAUD 115200u
 #define PHYSICAL_RECOVERIES 3u
+#define VIRTUAL_HOST_ACL_QUEUE_CAPACITY 8u
 
 __attribute__((weak)) int brickwright_hci_platform_power_cycle(const char *path)
 {
@@ -105,9 +106,9 @@ struct driver_state
   unsigned int host_acl_generation;
   unsigned int virtual_enqueued_generation;
   unsigned int virtual_received_generation;
-  uint8_t host_acl_queue[4][1025];
-  size_t host_acl_lengths[4];
-  unsigned int host_acl_completions[4];
+  uint8_t host_acl_queue[VIRTUAL_HOST_ACL_QUEUE_CAPACITY][1025];
+  size_t host_acl_lengths[VIRTUAL_HOST_ACL_QUEUE_CAPACITY];
+  unsigned int host_acl_completions[VIRTUAL_HOST_ACL_QUEUE_CAPACITY];
   unsigned int host_acl_head;
   unsigned int host_acl_count;
   uint8_t init_event[260];
@@ -441,6 +442,18 @@ static int driver_send(const struct device *device, struct net_buf *buffer)
     {
       return -EINVAL;
     }
+  const bool virtual_acl = state.backend == BRICKWRIGHT_HCI_BACKEND_VIRTUAL &&
+    buffer->len && buffer->data[0] == BT_HCI_H4_ACL;
+  if (virtual_acl)
+    {
+      pthread_mutex_lock(&state.virtual_mutex);
+      const bool full = state.host_acl_count == VIRTUAL_HOST_ACL_QUEUE_CAPACITY;
+      pthread_mutex_unlock(&state.virtual_mutex);
+      if (full)
+        {
+          return -ENOBUFS;
+        }
+    }
   int result = state.backend == BRICKWRIGHT_HCI_BACKEND_VIRTUAL ?
     brickwright_virtual_hci_feed(&state.virtual_controller, buffer->data,
                                  buffer->len) :
@@ -453,20 +466,12 @@ static int driver_send(const struct device *device, struct net_buf *buffer)
                                       buffer->len, 1000) : -ENETDOWN;
       pthread_mutex_unlock(&state.physical_mutex);
     }
-  if (result == 0 && state.backend == BRICKWRIGHT_HCI_BACKEND_VIRTUAL &&
-      buffer->len && buffer->data[0] == BT_HCI_H4_ACL)
+  if (result == 0 && virtual_acl)
     {
       pthread_mutex_lock(&state.virtual_mutex);
-      unsigned int tail = (state.host_acl_head + state.host_acl_count) % 4;
-      if (state.host_acl_count == 4)
-        {
-          state.host_acl_head = (state.host_acl_head + 1) % 4;
-          tail = (state.host_acl_head + state.host_acl_count - 1) % 4;
-        }
-      else
-        {
-          ++state.host_acl_count;
-        }
+      unsigned int tail = (state.host_acl_head + state.host_acl_count) %
+        VIRTUAL_HOST_ACL_QUEUE_CAPACITY;
+      ++state.host_acl_count;
       size_t acl_length = state.virtual_controller.host_acl_length;
       memcpy(state.host_acl_queue[tail], state.virtual_controller.host_acl,
              acl_length);
@@ -602,7 +607,7 @@ int brickwright_hci_virtual_take_host_acl(void *buffer, size_t capacity,
       return -EMSGSIZE;
     }
   memcpy(buffer, state.host_acl_queue[head], available);
-  state.host_acl_head = (head + 1) % 4;
+  state.host_acl_head = (head + 1) % VIRTUAL_HOST_ACL_QUEUE_CAPACITY;
   --state.host_acl_count;
   *length = available;
   unsigned int completion = state.host_acl_completions[head];

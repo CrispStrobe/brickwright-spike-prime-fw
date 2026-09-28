@@ -368,16 +368,27 @@ int main(void)
   assert(brickwright_hci_virtual_take_host_acl(host_acl, sizeof(host_acl),
                                                &host_acl_length, 5000) == 0);
   assert(host_acl_length >= 9 && host_acl[8] == 0x13);
-  const uint8_t notification[] = {0x01, 0x40, 0x00};
-  assert(brickwright_hub_transport_send(BRICKWRIGHT_HUB_LINK_BLE, notification,
-                                        sizeof(notification)) == 0);
-  assert(brickwright_hci_virtual_take_host_acl(host_acl, sizeof(host_acl),
-                                               &host_acl_length, 5000) == 0);
+  /* The controller advertises eight ACL transmit slots.  Exercise more than
+   * the old four-entry peer capture queue before consuming any packets: no
+   * successful host transmission may be silently overwritten. */
+  for (uint8_t sequence = 0; sequence < 6; ++sequence)
+    {
+      const uint8_t notification[] = {0x01, 0x40, sequence};
+      assert(brickwright_hub_transport_send(BRICKWRIGHT_HUB_LINK_BLE,
+                                            notification,
+                                            sizeof(notification)) == 0);
+    }
   const uint16_t tx_handle = brickwright_fd02_tx_handle();
-  assert(host_acl_length >= 14 && host_acl[8] == 0x1b);
-  assert(host_acl[9] == (uint8_t)tx_handle &&
-         host_acl[10] == (uint8_t)(tx_handle >> 8));
-  assert(!memcmp(host_acl + 11, notification, sizeof(notification)));
+  for (uint8_t sequence = 0; sequence < 6; ++sequence)
+    {
+      assert(brickwright_hci_virtual_take_host_acl(host_acl, sizeof(host_acl),
+                                                   &host_acl_length, 5000) == 0);
+      assert(host_acl_length >= 14 && host_acl[8] == 0x1b);
+      assert(host_acl[9] == (uint8_t)tx_handle &&
+             host_acl[10] == (uint8_t)(tx_handle >> 8));
+      const uint8_t notification[] = {0x01, 0x40, sequence};
+      assert(!memcmp(host_acl + 11, notification, sizeof(notification)));
+    }
   assert(brickwright_hci_virtual_disconnect(0x13) == 0);
   assert(k_sem_take(&disconnected, K_SECONDS(1)) == 0);
   assert(!brickwright_hub_transport_connected(BRICKWRIGHT_HUB_LINK_BLE));
