@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <brickwright/controller_lifecycle.h>
@@ -106,7 +107,7 @@ struct driver_state
   unsigned int host_acl_generation;
   unsigned int virtual_enqueued_generation;
   unsigned int virtual_received_generation;
-  uint8_t host_acl_queue[VIRTUAL_HOST_ACL_QUEUE_CAPACITY][1025];
+  uint8_t *host_acl_queue[VIRTUAL_HOST_ACL_QUEUE_CAPACITY];
   size_t host_acl_lengths[VIRTUAL_HOST_ACL_QUEUE_CAPACITY];
   unsigned int host_acl_completions[VIRTUAL_HOST_ACL_QUEUE_CAPACITY];
   unsigned int host_acl_head;
@@ -373,6 +374,11 @@ static int driver_open(const struct device *device, bt_hci_recv_t receive)
   state.transport.fd = -1;
   state.stopping = false;
   state.virtual_length = 0;
+  for (unsigned int i = 0; i < VIRTUAL_HOST_ACL_QUEUE_CAPACITY; ++i)
+    {
+      free(state.host_acl_queue[i]);
+      state.host_acl_queue[i] = NULL;
+    }
   state.host_acl_head = 0;
   state.host_acl_count = 0;
   if (state.backend == BRICKWRIGHT_HCI_BACKEND_VIRTUAL)
@@ -444,6 +450,7 @@ static int driver_send(const struct device *device, struct net_buf *buffer)
     }
   const bool virtual_acl = state.backend == BRICKWRIGHT_HCI_BACKEND_VIRTUAL &&
     buffer->len && buffer->data[0] == BT_HCI_H4_ACL;
+  uint8_t *captured_acl = NULL;
   if (virtual_acl)
     {
       pthread_mutex_lock(&state.virtual_mutex);
@@ -452,6 +459,11 @@ static int driver_send(const struct device *device, struct net_buf *buffer)
       if (full)
         {
           return -ENOBUFS;
+        }
+      captured_acl = malloc(buffer->len - 1);
+      if (!captured_acl)
+        {
+          return -ENOMEM;
         }
     }
   int result = state.backend == BRICKWRIGHT_HCI_BACKEND_VIRTUAL ?
@@ -473,13 +485,17 @@ static int driver_send(const struct device *device, struct net_buf *buffer)
         VIRTUAL_HOST_ACL_QUEUE_CAPACITY;
       ++state.host_acl_count;
       size_t acl_length = state.virtual_controller.host_acl_length;
-      memcpy(state.host_acl_queue[tail], state.virtual_controller.host_acl,
-             acl_length);
+      memcpy(captured_acl, state.virtual_controller.host_acl, acl_length);
+      state.host_acl_queue[tail] = captured_acl;
       state.host_acl_lengths[tail] = acl_length;
       state.host_acl_completions[tail] = state.virtual_enqueued_generation;
       ++state.host_acl_generation;
       pthread_cond_broadcast(&state.virtual_changed);
       pthread_mutex_unlock(&state.virtual_mutex);
+    }
+  else
+    {
+      free(captured_acl);
     }
   if (result == 0)
     {
@@ -607,6 +623,8 @@ int brickwright_hci_virtual_take_host_acl(void *buffer, size_t capacity,
       return -EMSGSIZE;
     }
   memcpy(buffer, state.host_acl_queue[head], available);
+  free(state.host_acl_queue[head]);
+  state.host_acl_queue[head] = NULL;
   state.host_acl_head = (head + 1) % VIRTUAL_HOST_ACL_QUEUE_CAPACITY;
   --state.host_acl_count;
   *length = available;
