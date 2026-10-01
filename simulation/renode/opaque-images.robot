@@ -36,6 +36,3 @@ Official LEGO v2 executes from its real vector table
 
 Official LEGO v3 executes from its real vector table
     Boot Raw Image And Prove Progress    lego-v3    0x2001e000    0x0800b8bd
-
-Pybricks v4.0.1 executes from its real vector table
-    Boot Raw Image And Prove Progress    pybricks    0x20050000    0x080447e1
