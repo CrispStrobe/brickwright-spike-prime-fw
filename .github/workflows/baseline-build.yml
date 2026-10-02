@@ -58,6 +58,7 @@ jobs:
       - name: Prepare an explicit existing-filesystem simulation fixture
         run: |
           python3 tools/test_littlefs_fixture.py --littlefs nuttx/fs/littlefs/littlefs
+          python3 tools/test_renode_load_littlefs_fixture.py --littlefs nuttx/fs/littlefs/littlefs
           python3 tools/make_littlefs_fixture.py \
             --littlefs nuttx/fs/littlefs/littlefs \
             --output .local/firmware-images/existing-filesystem
