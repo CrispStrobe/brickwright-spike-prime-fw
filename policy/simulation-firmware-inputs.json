@@ -2,7 +2,7 @@
   "schema": 1,
   "profile": "simulation",
   "scope": "Reviewed conservative compiler input closure plus the GNU linker-selected archive members for one ARM protected build. Includes extra unlinked interpreter/library inputs; not an exact linked-line count, hardware approval or history/clean-room claim.",
-  "source_reference_commit": "f5267f89b3bafb9b29d2794e4649a21c2d2a8e31",
+  "source_reference_commit": "679499987eed507d6bdb3934bd15e4444a3b3e01",
   "external_components": {
     "nuttx": "a67efb31cf4f236e456882589b91862f04594528",
     "nuttx_apps": "55f0bc216565ccab8dee600a88f4485c7693bf8b",
@@ -19,7 +19,7 @@
     "toolchain_headers": "libnewlib-dev 4.4.0.20231231-2",
     "mbedtls": "107ea89daaefb9867ea9121002fbbdf926780e98",
     "backports_manifest": "policy/nuttx-backports.json",
-    "backports_manifest_sha256": "4ca977dd7aef386e66b274c163dfcf131db30c23864886fbbab13f8784dfc7a3"
+    "backports_manifest_sha256": "dd96592711fa8011cc83c71057800481340d47437601ff30e11aa4efea6772dd"
   },
   "accepted_licences": [
     "Apache-2.0",
@@ -1941,7 +1941,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/etctmp.c",
-      "sha256": "63006773e78276b989010370c639d2ad85e93e4dba5d14d62b04c5b612850da1",
+      "sha256": "4ca1a0d6857dcdea015a25d2662605b85f75e937ee59b91f562e2f40cdd76490",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -33535,8 +33535,8 @@
   ],
   "images": {
     "kernel": {
-      "elf_sha256": "445efe63543ce6e69827976a228f4c5d44aaed361079eb0d498f6b27149ed18c",
-      "binary_sha256": "a43880d7abc847bdf417839557f8b7d296db0c828f9156089d530669951dbfb8",
+      "elf_sha256": "1724a434d934717fc7bb827458e00c06811ecadd3b98d64ebce81b4416210fbb",
+      "binary_sha256": "5bc9a056ac7eddd131e6bd72eda0444a0f9f0138608284f09a0a520f5995f394",
       "binary_bytes": 220248,
       "selected_archive_members": 668,
       "archive_counts": {
@@ -33555,8 +33555,8 @@
       }
     },
     "userspace": {
-      "elf_sha256": "a2fcbfaad427ccd85ee17319c59508692bda1e9f7a32bbaf88101226a40c579d",
-      "binary_sha256": "2dcfaa697a2126682c743182c3e1638fed82c88900948bef501063303f488771",
+      "elf_sha256": "e107e8ae1395f5669cf87a4779e579c29f0ffbc7d47c44d9b13488a0dd3ddd63",
+      "binary_sha256": "832a463e8ab039bde89d01296fa3397d500c36b4d1b94f2a017ea43b5c476768",
       "binary_bytes": 582668,
       "selected_archive_members": 580,
       "archive_counts": {
@@ -33634,9 +33634,9 @@
       }
     },
     "libboard.a": {
-      "sha256": "482fa25ae926d60a381fdd395bd37907294580be1585ed9c612137c751cdec96",
+      "sha256": "061377de86fd0d4335859af4316cd11a7145170cd7a86f080db8d5471e398ae3",
       "members": {
-        "etctmp.o": "6e0f908b762efd2b6d49f1083c59933184c62ce70d4638b8c5a43a2b114e4c5c",
+        "etctmp.o": "33745c6152b8898ad4f76d10b56c30057afee145ef3a01d5cc9a34c749cbafd0",
         "legosensor_uorb.o": "fbcd4b46513e532b49b4b9edf3dedbe3a173f8e88ab0e2c69daeab75f2b8c14f",
         "lsm6dsl_uorb.o": "0df1859c32ee219e4634e3861c573217b837256895512b2c0d96beeb64e04afd",
         "stm32_adc_dma.o": "227399581846944dfa14152e8e00563d101f002edc9fc4dd25cb9baefcec9c3f",
@@ -34072,7 +34072,7 @@
       }
     },
     "libkc.a": {
-      "sha256": "2e82a6742e6eceb5397529e1788a592f6367a92644ef445c1aaa306bf7bca573",
+      "sha256": "a636d8eb86c2c0eb70c568fd5017be7418c071621e948006ac5d654b661f7c70",
       "members": {
         "lib_abort.o": "95eb6f22ea64bde1afe38b94784078cbd8f845a5a37ea112a7b7decd68c95969",
         "lib_asprintf.o": "24186d7d314fb5c3878e404a608e3d33939416411c87e52ee511de41698933b4",
@@ -34137,7 +34137,7 @@
         "lib_time.o": "4c92390ef7dcf988798f104bcb9e2cfc7a4888b777f077947bfadaa4dc85fb4a",
         "lib_ultoa_invert.o": "c64865a41ae29df5190174bf90ddc97e1f05b9a0ca35b6271f02cc7bcaac9bdb",
         "lib_umask.o": "0a32e893d1574129e47c3805a65db0c369a35a2494a8ed0bbaf2416490897343",
-        "lib_utsname.o": "9d808f62b3fda6251a9bced83f95018093c77c9c7005537be987e1dcb889143e",
+        "lib_utsname.o": "ff0212bc29c4a22348a90aa9f5ac6eeff4841e43a3bb8c803d579945668d5b89",
         "lib_vasprintf.o": "bbcc5f8b0bb2f1c2f27288a0cc91d53d341f3465700f439549825cd3aa1715c7",
         "lib_vsnprintf.o": "86bb1d4d2f72b54d91f0600832c3ee318bf50adf6dcded33c85253388456ccf2",
         "pthread_exit.o": "a71a1f2c04398dd730e9c85dab847ad05c34e13f8f40097a2df9792e3ff9e428",
@@ -34306,7 +34306,7 @@
       }
     },
     "libc.a": {
-      "sha256": "cb46ef2b2f53e0bac6c5ed620043fc20882cf2f0b97e11ba4e93acccc0ebfc1d",
+      "sha256": "55af98cfb581aa8bb6cc79613ba5e1a1ab6c3de65a731c7ba75d38c7fa096c4d",
       "members": {
         "lib_abort.o": "95eb6f22ea64bde1afe38b94784078cbd8f845a5a37ea112a7b7decd68c95969",
         "lib_asprintf.o": "49280a1bb8dcfb4dd977f74d89cc3585e47cd2e98f2e7c3e4b3e2c62b7a52d4d",
@@ -34449,7 +34449,7 @@
         "lib_truncate.o": "0d739d7bb29d1b62322409196fa3207658d84f103141f58e2425c206c88c8950",
         "lib_ultoa_invert.o": "c64865a41ae29df5190174bf90ddc97e1f05b9a0ca35b6271f02cc7bcaac9bdb",
         "lib_usleep.o": "a98a5d5a854d4fa7a03480c6227a1cddcf71a287607fbec20c9bc1e1f4883d7c",
-        "lib_utsname.o": "dd84988aa197f1b855c5026e562bc4eec48b10b655859d238bca3b68b338168a",
+        "lib_utsname.o": "34c2a0fda7ffc1654161767e8d049f26a937855b09158e2e4649b8515c8cd09c",
         "lib_uuid_create_nil.o": "64e3d0c531163e58f3384b5f7e092107001a57c517e513474f596d6c4fbac3ff",
         "lib_uuid_from_string.o": "b700250e95f3d9cc1b459625fab329058b79989fc4bddd1e0572fc063a7d58ec",
         "lib_uuid_to_string.o": "2cf3d53f605ae36d147586540485c3c8bb8140e20a199894411c5d5d27b185ea",
@@ -34939,7 +34939,7 @@
     "build_references": 0,
     "payload_symbol_defined": false
   },
-  "link_evidence": "Kernel and userspace maps emitted by the actual build. Archive/member hashes recorded in archives; standalone board userspace startup object and original linker scripts covered by files. Selected member and direct-object sets unchanged from adfcf31.",
+  "link_evidence": "Actual native kernel/userspace maps; selected member/direct-object/archive-path sets unchanged from 90be1ee.",
   "notice_sha256": {
     "LICENSE": "4ea971a306a368b28a4216e7ef39def3efb2553b56b6c27b39916f6c3d6ef41e",
     "licenses/Pybricks-MIT.txt": "7122ec4cd04330043b642cbc6fda462d797cb2fad3dc73fd394d147d565df841",
@@ -35028,5 +35028,5 @@
   "version_metadata_note": "Only literal CONFIG_VERSION_STRING/MAJOR/MINOR/PATCH/BUILD values may vary with Git tag availability. Other version-header content remains hash-pinned.",
   "source_origin_review": "policy/source-origin-review.json",
   "source_origin_review_status": "reviewed-current-source-and-advertised-history",
-  "build_revision_note": "2026-10-02 clean native ARM rebuild after merging reviewed main adfcf31 NuttX backports, deterministic ROMFS and flash mount preservation with attached-motor A\u2013F support and the fixed-slot storage ABI marker. Configuration differs only by the explicit disabled simulation virtual-HCI opt-in and native make generated base-defconfig dirty metadata; the authored rcS no longer autostarts Bluetooth without that opt-in. Reviewed patched retained dependency inputs and selected link/archive/direct-object sets unchanged from adfcf31. Five reviewed API/device sources plus the authored rcS changed; compiler-input inventory adds only the formerly omitted BSD-3-Clause robot API wrapper (3244 to 3245). Generated config.h differs only in CONFIG_BASE_DEFCONFIG from ../boards/spike-prime-hub/configs/simulation to ../boards/spike-prime-hub/configs/simulation-dirty, matching the reviewed .config; normalized header hash equals main. Generated ROMFS and normalized VCS version metadata exceptions are recorded from measured outputs. ELF/archive hashes identify this compiled build; paired actual ARM/Renode validation is separate. Debug paths prevent a whole-build reproducibility claim."
+  "build_revision_note": "2026-10-02 incremental native ARM rebuild at b257ecc after authored ROMFS generator root sibling-chain correction. The source reference also records the subsequent generator integration fingerprint review without changing compiled sources. NuttX cache traversal now reaches init.d/rcS; the generator and functional startup-path/disconnected-root mutation tests are reviewed in source_reference_commit. Backport integration record changes only the exact authored make_romfs.py fingerprint; retained patch bytes, pins, source hashes and notices unchanged. Exact 3245 compiler input paths, configuration, retained sources, notices and selected archive/member/direct-object sets unchanged from 90be1ee. Input byte deltas restricted to regenerated ROMFS and normalized VCS version metadata; selected member byte changes restricted to etctmp.o and lib_utsname.o. Prior measured merged-main adfcf31 six-port/SIM Bluetooth opt-in source ancestry retained. Actual ELF/archive hashes identify this build; paired ARM/Renode startup and reset qualification is separate. Debug paths prevent a whole-build reproducibility claim."
 }
