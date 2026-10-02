@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-struct devices { int speed[2], moving[2], brakes[2], sensor, failure; };
+struct devices { int speed[6], moving[6], brakes[6], sensor, failure; };
 static int motor(void *ctx,unsigned port,int32_t speed) {
   struct devices *d=ctx; d->speed[port]=speed; return d->failure;
 }
@@ -132,8 +132,29 @@ static void python_upload(void) {
   header(data,5,0);assert(bw_program_request(&p,&u,1,9,data,21,reply)==-EINVAL);
   assert(bw_program_request(&p,&u,1,9,NULL,0,reply)==-EINVAL);
 }
+static void six_ports(void) {
+  struct bw_program p;struct devices d;
+  struct bw_instruction code[]={{1,2,300,0},{1,3,300,0},{1,4,300,0},{6,5,-90,500},{0,0,0,0}};
+  init(&p,&d);assert(!bw_program_load(&p,1,code,5));assert(!bw_program_start(&p,1,0));
+  bw_program_tick(&p,0);assert(p.owned==60 && d.moving[5]);
+  bw_program_tick(&p,10);assert(p.pc==4 && !p.ending);
+  d.moving[5]=0;bw_program_tick(&p,20);assert(p.ending);
+  d.moving[5]=1;bw_program_tick(&p,30);assert(p.state==BW_PROGRAM_RUNNING);
+  d.moving[5]=0;bw_program_tick(&p,40);assert(p.state==BW_PROGRAM_COMPLETE);
+  for(unsigned port=2;port<6;port++)assert(d.brakes[port]==1);
+  assert(!d.brakes[0] && !d.brakes[1]);
+  init(&p,&d);assert(!bw_program_load(&p,2,code,5));assert(!bw_program_start(&p,2,0));
+  bw_program_tick(&p,0);assert(!bw_program_stop(&p));
+  for(unsigned port=2;port<6;port++)assert(d.brakes[port]==1);
+  init(&p,&d);code[0].a=5;d.failure=-ENODEV;
+  assert(!bw_program_load(&p,3,code,5));assert(!bw_program_start(&p,3,0));bw_program_tick(&p,0);
+  assert(p.state==BW_PROGRAM_FAULT && p.error==-ENODEV && d.brakes[5]==1);
+  code[0].a=6;assert(bw_program_validate(code,5)==-EINVAL);
+  code[0].a=-1;assert(bw_program_validate(code,5)==-EINVAL);
+  code[0].a=0;code[3].a=6;assert(bw_program_validate(code,5)==-EINVAL);
+}
 int main(void) {
   assert(bw_program_crc32((const uint8_t *)"123456789",9)==0xcbf43926u);
-  lifecycle(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
+  six_ports();lifecycle(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
   puts("firmware program lifecycle, feedback, boundaries and transactional upload: PASS"); return 0;
 }

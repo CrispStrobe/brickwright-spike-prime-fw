@@ -69,6 +69,11 @@ def make_image(directory, volume='NSHInitVol'):
     if b'\0' in volume_name:
         raise ValueError('NUL in volume name')
     root = tree(directory, b'.')
+    # The root header is also its own '.' directory entry. NuttX begins
+    # root traversal at this header and follows siblings, while other readers
+    # begin at its special-info pointer. Both must reach the same child list.
+    root.children.pop(0)
+    root.following = root.children[0]
     nodes = list(flatten(root))
     prefix = b'-rom1fs-' + bytes(8) + padded(volume_name + b'\0')
     offset = len(prefix)
@@ -83,7 +88,7 @@ def make_image(directory, volume='NSHInitVol'):
     for node in nodes:
         next_and_mode = (node.following.offset if node.following else 0)
         next_and_mode |= node.kind | (8 if node.executable else 0)
-        special = node.children[0].offset if node.kind == 1 else 0
+        special = (node.offset if node is root else node.children[0].offset) if node.kind == 1 else 0
         if node.kind == 0:
             special = node.target.offset
         header = bytearray(struct.pack('>IIII', next_and_mode, special,

@@ -117,6 +117,9 @@ jobs:
             --include brickwright-board-models \
             --include brickwright-board-stubs
 
+      - name: Validate the source-generated empty LittleFS seed
+        run: python3 tools/test_simulation_littlefs_seed.py
+
       - name: Test the transport-neutral virtual HCI bridge
         run: tools/test_renode_virtual_hci_bridge.sh
 

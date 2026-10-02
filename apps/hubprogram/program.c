@@ -21,12 +21,12 @@ int bw_program_validate(const struct bw_instruction *code, uint32_t count)
     int valid = 0;
     switch (p->op) {
       case 0: valid = p->a == 0 && p->b == 0 && p->c == 0; break;
-      case 1: valid = between(p->a,0,1) && between(p->b,-1110,1110) && p->c == 0; break;
+      case 1: valid = between(p->a,0,BW_PROGRAM_PORT_COUNT-1) && between(p->b,-1110,1110) && p->c == 0; break;
       case 2: valid = between(p->a,0,120000) && p->b == 0 && p->c == 0; break;
       case 3: valid = predicate(p->a,p->b) && p->c == 0; break;
       case 4: valid = between(p->a,0,(int32_t)count-1) && p->b == 0 && p->c == 0; break;
       case 5: valid = predicate(p->a,p->b) && between(p->c,0,(int32_t)count-1); break;
-      case 6: valid = between(p->a,0,1) && between(p->b,-36000,36000) && between(p->c,1,1110); break;
+      case 6: valid = between(p->a,0,BW_PROGRAM_PORT_COUNT-1) && between(p->b,-36000,36000) && between(p->c,1,1110); break;
     }
     if (!valid) return -EINVAL;
   }
@@ -63,7 +63,7 @@ static int brake_owned(struct bw_program *p)
 {
   int result=0;
   unsigned port;
-  for (port=0;port<2;port++) if (p->owned & (1u<<port)) {
+  for (port=0;port<BW_PROGRAM_PORT_COUNT;port++) if (p->owned & (1u<<port)) {
     int rc=p->io.brake(p->io.context,port);
     if (rc<0 && result==0) result=rc;
   }
@@ -108,7 +108,7 @@ void bw_program_tick(struct bw_program *p, uint64_t now)
   }
   if (p->ending) {
     unsigned port;
-    for (port=0;port<2;port++) if (p->owned&(1u<<port)) {
+    for (port=0;port<BW_PROGRAM_PORT_COUNT;port++) if (p->owned&(1u<<port)) {
       rc=p->io.done(p->io.context,port);
       if (rc<0) { fault(p,rc); return; }
       if (!rc) return;

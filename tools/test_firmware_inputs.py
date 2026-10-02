@@ -18,6 +18,21 @@ with tempfile.TemporaryDirectory() as directory:
     result = collect(root, [root])
     if result['unresolved'] or len(result['files']) != 2:
         raise SystemExit('Dependency collection failed')
+    # Embed rules can omit .d files: the authored wrapper must be an explicit
+    # input, independent of retained interpreter source coverage.
+    wrapper = root/'wrapper.c'
+    wrapper.write_text('/* SPDX-License-Identifier: BSD-3-Clause */\nint wrapper;\n')
+    explicit_result = collect(root, [root], explicit=[wrapper])
+    explicit_files = {x['path']: x for x in explicit_result['files']}
+    if set(explicit_files) != {'fixture.c', 'fixture.h', 'wrapper.c'}:
+        raise SystemExit('Authored wrapper without dependencies omitted')
+    if explicit_files['wrapper.c']['sha256'] != hashlib.sha256(wrapper.read_bytes()).hexdigest():
+        raise SystemExit('Explicit wrapper fingerprint incorrect')
+    wrapper.write_text(wrapper.read_text() + 'int changed;\n')
+    changed_explicit = collect(root, [root], explicit=[wrapper])
+    changed_files = {x['path']: x for x in changed_explicit['files']}
+    if changed_files['wrapper.c']['sha256'] == explicit_files['wrapper.c']['sha256']:
+        raise SystemExit('Explicit wrapper change not detected')
     digest = hashlib.sha256(b'runtime').hexdigest()
     review = {'files': [{**x, 'selected_licences': ['MIT']} for x in result['files']],
               'accepted_licences': ['MIT'], 'compiler_runtime': {'archive_sha256': digest},
@@ -72,3 +87,22 @@ if version_metadata_digest(version) != version_metadata_digest(other):
     raise SystemExit('Checkout-dependent version facts rejected')
 if version_metadata_digest(version) == version_metadata_digest(version + '#include "blob.h"\n'):
     raise SystemExit('Version-header code change hidden')
+
+# Source-only CI deliberately leaves external NuttX dependencies uninitialized.
+# A tracked exact grant must stay mandatory without requiring the dependency.
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    grant = root / 'licenses/LittleFS-BSD-3-Clause.txt'
+    grant.parent.mkdir()
+    grant.write_bytes(b'synthetic retained BSD grant')
+    review = {'files': [], 'accepted_licences': ['BSD-3-Clause'],
+              'notice_sha256': {'licenses/LittleFS-BSD-3-Clause.txt':
+                               hashlib.sha256(grant.read_bytes()).hexdigest()}}
+    if (root/'nuttx').exists() or notices(root, review):
+        raise SystemExit('Tracked LittleFS grant failed without external dependency')
+    grant.unlink()
+    if not notices(root, review):
+        raise SystemExit('Missing tracked LittleFS grant accepted')
+    grant.write_bytes(b'changed grant')
+    if not notices(root, review):
+        raise SystemExit('Changed tracked LittleFS grant accepted')
