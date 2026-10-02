@@ -27,8 +27,8 @@ user-supplied local files and are never CI artifacts.
 `tools/check_reuse_licenses.py` verifies tracked reuse notices, allowed SPDX
 expressions and pinned embedded-interpreter inputs during CI and builds.
 The configured simulation build is separately recorded in
-`policy/simulation-firmware-inputs.json`: 3,242 conservative source/header/linker
-inputs, 1,248 archive-member selections and the direct startup object. The
+`policy/simulation-firmware-inputs.json`: 3,244 conservative source/header/linker
+inputs, 1,249 archive-member selections and the direct startup object. The
 superset includes compiled or inventoried inputs whose code may not survive
 linking. `licenses/Simulation-Firmware-NOTICES.txt` bundles their grants and
 attribution. `tools/check_simulation_firmware.sh` checks source/config/runtime

@@ -134,7 +134,7 @@ The default build profile is now `simulation`; `usbnsh` must be selected
 explicitly and retains the restricted TI dependency. Hardware approval and
 physical validation remain open.
 
-`policy/simulation-firmware-inputs.json` records 3,242 conservative compiler
+`policy/simulation-firmware-inputs.json` records 3,244 conservative compiler
 inputs including headers, generated NuttX interfaces, the complete inventoried
 embedded interpreter selection and original linker scripts. Explicit per-file
 grants control where available; unmarked project files use their recorded

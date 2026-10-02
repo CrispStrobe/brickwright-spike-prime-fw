@@ -69,7 +69,7 @@ Files: apps/drivebase/drivebase_observer.h
  */
 
 
-Files: apps/hubprogram/debug.h, apps/hubprogram/device.c, apps/hubprogram/device.h, apps/hubprogram/motor.c, apps/hubprogram/motor.h, apps/hubprogram/program.c, apps/hubprogram/program.h, apps/hubprogram/service.c, apps/hubprogram/service.h, apps/hubprogram/upload.c, apps/hubprogram/upload.h, third_party/micropython-embed/port/brickwright_integer_width.h
+Files: apps/hubprogram/debug.h, apps/hubprogram/device.c, apps/hubprogram/device.h, apps/hubprogram/motor.c, apps/hubprogram/motor.h, apps/hubprogram/program.c, apps/hubprogram/program.h, apps/hubprogram/service.c, apps/hubprogram/service.h, apps/hubprogram/storage.c, apps/hubprogram/storage.h, apps/hubprogram/upload.c, apps/hubprogram/upload.h, third_party/micropython-embed/port/brickwright_integer_width.h
 
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 Brickwright contributors

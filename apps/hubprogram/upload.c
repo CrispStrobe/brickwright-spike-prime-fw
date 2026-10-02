@@ -58,7 +58,7 @@ int bw_program_request(struct bw_program *p, struct bw_program_upload *u,
         if(memchr(u->buffer.bytes,0,u->size)) {rc=-EINVAL;u->active=0;break;}
         if(p->state==BW_PROGRAM_RUNNING) {rc=-EBUSY;break;}
         memcpy(p->source,u->buffer.bytes,u->size);p->source[u->size]=0;
-        p->language=1;p->count=u->size;p->id=id;p->pc=0;p->error=0;p->state=BW_PROGRAM_READY;
+        p->language=1;p->count=u->size;p->id=id;p->pc=0;p->error=0;p->owned=0;p->moving=-1;p->waiting=0;p->ending=0;p->state=BW_PROGRAM_READY;
         u->active=0;rc=0;break;
       }
       /* The union guarantees row alignment. Decode only after checksum;

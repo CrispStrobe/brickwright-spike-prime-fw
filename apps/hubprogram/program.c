@@ -47,7 +47,7 @@ int bw_program_load(struct bw_program *p, uint32_t id,
   rc = bw_program_validate(code,count);
   if (rc < 0) return rc;
   memmove(p->code,code,count*sizeof(*code));
-  p->language=0; p->source[0]=0; p->count=count; p->id=id; p->pc=0; p->error=0; p->state=BW_PROGRAM_READY;
+  p->language=0; p->source[0]=0; p->count=count; p->id=id; p->pc=0; p->error=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0; p->state=BW_PROGRAM_READY;
   return 0;
 }
 int bw_program_start(struct bw_program *p, uint32_t id, uint64_t now)
