@@ -1,3 +1,6 @@
 # Preserve upstream licence files byte-for-byte. Treating them as binary
 # prevents whitespace normalization and avoids altering their hashes.
 third_party/zephyr-host/upstream/LICENSE binary
+# Unified diffs prefix literal Makefile tabs and empty context lines with spaces.
+# Their exact bytes are hash-checked; whitespace checks apply to patched sources.
+patches/nuttx-hardening/*.patch -whitespace

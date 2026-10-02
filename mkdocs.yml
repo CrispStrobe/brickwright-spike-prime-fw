@@ -59,6 +59,8 @@ nav:
       - project/classic-protocol.md
       - project/ble-protocol.md
       - project/hub-contract.md
+      - project/nuttx-backports.md
+      - project/upstream-storage-hardening.md
   - ハードウェア:
       - hardware/hub-overview.md
       - hardware/pin-mapping.md

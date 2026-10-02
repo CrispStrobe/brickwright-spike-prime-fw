@@ -54,6 +54,11 @@ def check_configuration(config, review):
 
 def notices(root, review):
     errors = []
+    components = review.get("external_components", {})
+    if components.get("backports_manifest"):
+        manifest = root / components["backports_manifest"]
+        if not manifest.is_file() or hashlib.sha256(manifest.read_bytes()).hexdigest() != components.get("backports_manifest_sha256"):
+            errors.append("NuttX backport manifest changed since the configured-build review")
     for item in review['files']:
         if not item['selected_licences'] or not set(item['selected_licences']) <= set(review['accepted_licences']):
             errors.append(f'{item["path"]}: unapproved licence selection')

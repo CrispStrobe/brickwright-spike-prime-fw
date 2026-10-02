@@ -3,6 +3,7 @@
 # Copyright (c) 2026 Brickwright contributors
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+python3 "$root/tools/apply_nuttx_backports.py" --check
 compiler=${CROSS_COMPILE:-arm-none-eabi-}gcc
 runtime=$("$compiler" -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -print-libgcc-file-name)
 python3 "$root/tools/collect_build_inputs.py" --root "$root" \

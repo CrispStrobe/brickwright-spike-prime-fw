@@ -29,6 +29,9 @@ jobs:
 
       - name: Validate dependencies and restricted-file policy
         run: |
+          python3 tools/apply_nuttx_backports.py --record-only
+          python3 tools/test_nuttx_backports.py
+          python3 tools/test_make_romfs.py
           python3 tools/check_source_policy.py
           python3 tools/check_reuse_licenses.py
           python3 tools/test_reuse_licenses.py
