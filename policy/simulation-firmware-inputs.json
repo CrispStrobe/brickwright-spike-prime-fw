@@ -34927,7 +34927,7 @@
     "build_references": 0,
     "payload_symbol_defined": false
   },
-  "link_evidence": "Kernel and userspace maps emitted by the actual build. Archive/member hashes recorded in archives; standalone board userspace startup object and original linker scripts covered by files.",
+  "link_evidence": "Kernel and userspace maps emitted by the actual clean-branch build. Archive/member hashes recorded in archives; standalone board userspace startup object and original linker scripts covered by files.",
   "notice_sha256": {
     "LICENSE": "4ea971a306a368b28a4216e7ef39def3efb2553b56b6c27b39916f6c3d6ef41e",
     "licenses/Pybricks-MIT.txt": "7122ec4cd04330043b642cbc6fda462d797cb2fad3dc73fd394d147d565df841",
@@ -34942,10 +34942,11 @@
     "licenses/MbedTLS-3.6.2-LICENSE.txt": "9b405ef4c89342f5eae1dd828882f931747f71001cfba7d114801039b52ad09b",
     "licenses/GCC-GPL-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
     "licenses/GCC-Runtime-Exception-3.1.txt": "28e85c5aa4af9b4f1dfe6b4817aa3eefb3eaaee7fd735045016f29ccf50276a1",
-    "licenses/Simulation-Firmware-NOTICES.txt": "7935d4360a99bef2a2781e8a069b1187650bd4b57aa27e409cbb3911c41ee0d5",
+    "licenses/Simulation-Firmware-NOTICES.txt": "5b933599a74fcfd202f91ad838603e99d8448a0feb7f7ce7e971c44f83091c2b",
     "licenses/GCC-ARM-Runtime-NOTICES.txt": "975b22fed2a2eb275f072d80ab53fb0c70cbc2078320697d16d79a4bafedbe67",
     "licenses/LEGO-UART-MIT.txt": "06e9c467eba8633b8b677525e4ee51466b67cd2d651463eb4fa5d419ba45ca7d",
-    "licenses/Fusion-MIT.txt": "deea99a9e5920dc1cb5bfd7730fba6ca3fdab691bde7760aa1642e65c650ccca"
+    "licenses/Fusion-MIT.txt": "deea99a9e5920dc1cb5bfd7730fba6ca3fdab691bde7760aa1642e65c650ccca",
+    "apps/hubprogram/LICENSE": "e0be31379ef4d9655ffcc922df438bc0e8287d469a34b9d0bcf277c91399429b"
   },
   "direct_objects": [
     "relative:stm32_userspace.o"
@@ -35012,5 +35013,5 @@
   "version_metadata_note": "Only literal CONFIG_VERSION_STRING/MAJOR/MINOR/PATCH/BUILD values may vary with Git tag availability. Other version-header content remains hash-pinned.",
   "source_origin_review": "policy/source-origin-review.json",
   "source_origin_review_status": "reviewed-current-source-and-advertised-history",
-  "build_revision_note": "2026-10-02 full native ARM rebuild against cleaned main19673c5 with authored storage/service changes. Recorded configuration and retained dependency sources unchanged. Added only storage object; reviewed generated ROMFS and own service source deltas. ELF/archive hashes identify this tested build; debug paths prevent a whole-build reproducibility claim."
+  "build_revision_note": "2026-10-02 full native protected ARM rebuild against cleaned main19673c5 with authored storage/service changes, recorded in bd80bdb. All 3,244 conservative compiler inputs and the configuration were checked; the added linked member is the BSD-licensed storage object, for 1,249 total selections. Generated ROMFS and own service source changes were reviewed. Updated ELF/archive hashes identify this tested build; debug paths prevent a whole-build reproducibility claim. TI source/image exclusion passed. Physical persistence and power-loss durability remain outside this review."
 }
