@@ -9,6 +9,7 @@ used. Each case is driven so the gate's verdict depends on the property named.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import subprocess
 import sys
@@ -51,9 +52,26 @@ class TiFreeImageGate(unittest.TestCase):
         text = self.fingerprint.read_text()
         document = json.loads(text)
         self.assertEqual(len(document["chunks"]), 40)
-        # Only digests are stored: no 4-byte run of the pack appears in hex.
-        for offset in range(0, len(self.pack) - 4):
-            self.assertNotIn(self.pack[offset:offset + 4].hex(), text)
+        # A short random byte run can coincidentally occur inside a digest.
+        # Verify the complete closed metadata shape and each digest instead.
+        self.assertEqual(set(document), {"schema", "description",
+                         "service_pack_sha256", "service_pack_size",
+                         "chunk_size", "rolling_hash", "chunks"})
+        self.assertEqual(document["schema"], 1)
+        self.assertEqual(document["description"],
+                         "Rolling hash and SHA-256 of each 256-byte chunk of the TI CC2564C service pack; "
+                         "derived data used only to detect embedded copies. Contains no service-pack bytes.")
+        self.assertEqual(document["service_pack_size"], len(self.pack))
+        self.assertEqual(document["chunk_size"], 256)
+        self.assertEqual(document["service_pack_sha256"], hashlib.sha256(self.pack).hexdigest())
+        self.assertEqual(document["rolling_hash"], {"base": 257, "modulus": 2305843009213693951})
+        for index, chunk in enumerate(document["chunks"]):
+            self.assertEqual(set(chunk), {"rolling", "sha256"})
+            self.assertIs(type(chunk["rolling"]), int)
+            self.assertGreaterEqual(chunk["rolling"], 0)
+            self.assertLess(chunk["rolling"], document["rolling_hash"]["modulus"])
+            offset = min(index * 256, len(self.pack) - 256)
+            self.assertEqual(chunk["sha256"], hashlib.sha256(self.pack[offset:offset + 256]).hexdigest())
 
     def test_clean_image_passes(self) -> None:
         result = self.run_gate(os.urandom(200_000))
