@@ -35,7 +35,8 @@ def main():
         (pathlib.Path(temp) / 'nuttx/mm').mkdir(parents=True)
         (pathlib.Path(temp) / 'nuttx/mm/mm.h').write_text('/* Host allocator shim. */\n')
         (pathlib.Path(temp) / 'fs_heap.h').write_text('#include <stdlib.h>\n#define fs_heap_malloc malloc\n#define fs_heap_free free\n')
-        generated.write_text('\n'.join(function(board, signature) for signature in (
+        generated.write_text(board[:board.index('*/') + 2] + '\n' +
+                             '\n'.join(function(board, signature) for signature in (
             'static int w25q256_partition_erased(', 'static int w25q256_mount(')))
         binary = pathlib.Path(temp) / 'test'
         subprocess.run(['cc', '-std=c99', '-O1', '-Wall', '-Wextra', '-Werror',
