@@ -50,6 +50,9 @@ jobs:
           set -o pipefail
           make nuttx BOARD_CONFIG=simulation V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
 
+      - name: Test saved programs through real LittleFS interrupted writes
+        run: python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
+
       - name: Verify the TI-free fingerprint against TI's pinned service pack
         run: |
           python3 tools/import_ti_service_pack.py --from-ti \
