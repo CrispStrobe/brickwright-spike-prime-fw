@@ -49,6 +49,7 @@ python3 tools/test_nuttx_backports.py
 python3 tools/test_make_romfs.py
 python3 tools/test_upstream_hardening.py --nuttx nuttx
 python3 tools/test_upstream_arm_hardening.py --nuttx nuttx
+python3 tools/test_usb_wakeup.py --nuttx nuttx
 python3 tools/check_nuttx_apps_hardening.py --apps nuttx-apps --baseline 55f0bc216565ccab8dee600a88f4485c7693bf8b
 ```
 
@@ -59,6 +60,15 @@ packets test buffer bounds, not CRC correctness or a complete protocol session.
 Target compilation and the existing source/linker/licence/TI gates are separate
 checks. Physical USB suspend/resume, DMA operation and interrupted flash writes
 remain hardware qualification work; host tests do not establish those results.
+
+The USB harness compiles the actual interrupt initialization, dispatcher and
+suspend/resume functions against register and class-driver mocks. It checks
+masked wakeup deferral, one resume callback per event, write-one-to-clear
+acknowledgement, remote-wakeup signal clearing and an unbound class driver.
+It also rejects a mutation removing the wakeup mask. This covers the selected
+profile without `CONFIG_USBDEV_LOWPOWER`; other configurations are not qualified
+by this test. Saved-program durability is additionally checked through
+[real LittleFS crash/restart tests](upstream-storage-hardening.md).
 
 Use a clean build after configuration changes. The broad upstream stale-archive
 build-system migration remains separate; neither an incremental build nor this
