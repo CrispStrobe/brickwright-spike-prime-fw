@@ -57,6 +57,18 @@ Boot Protected Pair And Prove Progress
     ${after_value}=    Convert To Integer    ${after.strip()}
     Should Be True    0x08000000 <= ${after_value} < 0x08200000
 
+Complete Modeled Flash Initialization Successfully
+    # Called at the paused initializer entry: observe its actual return value
+    # without changing guest registers or skipping the mount and blank scan.
+    ${link_register}=    Execute Command    cpu GetRegister 14
+    ${return_site}=    Evaluate    int($link_register.strip(), 0) & ~1
+    Execute Command    cpu AddHook ${return_site} "monitor.Parse('log \\"MILESTONE flash initialized\\"'); machine.PauseAndRequestEmulationPause()"
+    Start Emulation
+    Wait For Log Entry    MILESTONE flash initialized    timeout=15
+    ${status}=    Execute Command    cpu GetRegister 0
+    Should Be True    int($status.strip(), 0) == 0
+    Execute Command    cpu RemoveHooksAt ${return_site}
+
 *** Test Cases ***
 Original spike-nx protected pair executes
     [Tags]    spike-nx
@@ -122,6 +134,7 @@ Brickwright reaches TLC5955 through modeled IMU and flash buses
     Wait For Log Entry    MILESTONE imu bus-model    timeout=10
     Start Emulation
     Wait For Log Entry    MILESTONE flash bus-model    timeout=10
+    Complete Modeled Flash Initialization Successfully
     Start Emulation
     Wait For Log Entry    MILESTONE display bus-model    timeout=15
 
@@ -240,6 +253,7 @@ Brickwright simulation profile boots without a TI service pack
     Wait For Log Entry    MILESTONE imu bus-model    timeout=15
     Start Emulation
     Wait For Log Entry    MILESTONE flash bus-model    timeout=15
+    Complete Modeled Flash Initialization Successfully
     Start Emulation
     Wait For Log Entry    MILESTONE bt_enable    timeout=30
     Start Emulation
