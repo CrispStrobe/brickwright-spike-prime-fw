@@ -103,6 +103,18 @@ independence, serialized checksums, directory link targets, exact file data,
 execute bits, symbolic links, empty files and rejected input types. The actual
 preprocessed board init tree was also compared semantically with system
 `genromfs` and the resulting image mounted read-only using the Linux kernel
-ROMFS driver; script bytes and execute modes matched. Exact input hashing
+ROMFS driver; script bytes and execute modes matched.
+
+Linux mounting alone did not catch a root-directory layout bug: NuttX starts
+its root traversal at the first header and follows sibling links, while Linux
+follows the root's directory pointer. An isolated root header made NuttX see
+an empty directory and prevented the startup scripts from running. The root
+now also links to its directory entries. `python3 tools/test_nuttx_romfs.py
+--nuttx nuttx` compiles the actual pinned NuttX parser with directory caching
+both enabled and disabled. It reads exact startup-script bytes and tests
+nested/sibling paths, long names, empty and missing files; the previous layout
+fails both parser configurations. Linux read-only mounting remains valid.
+
+Exact input hashing
 remains enabled and the ARM image must be rebuilt for the new deterministic
 filesystem layout.

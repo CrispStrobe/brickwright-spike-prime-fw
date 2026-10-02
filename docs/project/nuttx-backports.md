@@ -47,6 +47,7 @@ Run the focused tests after initializing and patching dependencies:
 python3 tools/apply_nuttx_backports.py
 python3 tools/test_nuttx_backports.py
 python3 tools/test_make_romfs.py
+python3 tools/test_nuttx_romfs.py --nuttx nuttx
 python3 tools/test_upstream_hardening.py --nuttx nuttx
 python3 tools/test_upstream_arm_hardening.py --nuttx nuttx
 python3 tools/test_usb_wakeup.py --nuttx nuttx
@@ -81,3 +82,19 @@ masked interrupts and rollover. Twelve register regressions passed on the
 combined model. Stock portable Renode 1.16.1 is unchanged; its timer does not
 model these compare-generation bits. Startup-only tests on that runtime do not
 qualify the new timer behavior.
+
+The firmware workflow builds our [pinned runtime fork](https://github.com/CrispStrobe/renode-spike-prime/pull/21)
+with `tools/install_renode_fork.sh`. Runtime, Infrastructure and support-library
+revisions are fixed; native translators and the headless managed runtime are
+built from source. Standard NuGet and pinned support-library binaries remain
+build dependencies. The build receipt records revisions, tool versions and
+output hashes under ignored `.local/tools` storage.
+
+The SPIKE platform sets TIM9's input to the board's 96 MHz APB2 timer clock;
+the generic platform's 10 MHz default made elapsed time 9.6 times too slow.
+The `brickwright-tickless` ARM fixture observes repeated timer-overflow and
+scheduler callbacks over two consecutive two-second windows. It isolates
+board initialization and leaves the actual timer and interrupt handlers
+running. Full board startup and the TI-free HCI bootstrap use separate
+fixtures; the firmware workflow enables the actual guest HCI test as well as
+the host bridge test. No firmware artifacts are uploaded.
