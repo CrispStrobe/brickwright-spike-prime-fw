@@ -1,6 +1,6 @@
-PROVENANCE REVIEW OPEN: inherited filter bodies have been replaced in the current
-source/build, but historical source and repository distribution findings remain.
-This bundle covers the recorded configured build; it does not clear Git history.
+REVIEW SCOPE: current configured simulation firmware inputs and their grants.
+The reviewed public history cleanup is recorded in policy/public-history-review.json.
+Retired revisions are private evidence, without a retroactive licence grant.
 
 SIMULATION FIRMWARE REDISTRIBUTION NOTICES
 

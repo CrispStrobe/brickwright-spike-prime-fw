@@ -77,12 +77,16 @@ def main():
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--policy', type=Path)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--require-clean', action='store_true',
+                        help='Fail if a reviewed forbidden blob/path is reachable')
     args = parser.parse_args()
     policy_path = args.policy or args.repo / 'policy/source-policy.json'
     report = audit(args.repo, json.loads(policy_path.read_text()))
     args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(f'history: {report["commit_count"]} commits, {report["blob_count"]} blobs, '
           f'{len(report["findings"])} findings; no history or refs changed')
+    if args.require_clean and report['findings']:
+        raise SystemExit('history: reviewed forbidden material remains reachable')
 
 
 if __name__ == '__main__':

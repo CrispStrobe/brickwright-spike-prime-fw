@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "scope": "Advertised firmware branch/tag refs fetched from origin after the approved cleanup. No assertion of GitHub cache, hidden PR ref, fork network or clone erasure.",
+  "applied_utc": "2026-10-02T16:49:35.209045+00:00",
+  "method": "Atomic push with explicit expected-tip lease for all 20 reviewed branch refs; new root uses the exact tested source tree.",
+  "new_root": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7",
+  "tested_source_commit": "5f2e9fc9572db7b28a05b9a1cd7766824d179c0c",
+  "tested_source_tree": "1d9543bc9677334692aec3dcca2636e783b6e082",
+  "retired_refs": [
+    {
+      "ref": "refs/heads/chore/retire-optional-image-target-20261001",
+      "expected_tip": "59e733b1556ea117d91a558340774cf83fe27e8f",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/arena-program-guest-20261002",
+      "expected_tip": "ec30d57e5a1c7c32bb28e7ba2975b6156a88c036",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/english-only-audit",
+      "expected_tip": "31f6bee3cc03a00f1278daf28dce28ee8bf033c8",
+      "commits_not_reachable_from_tested_main": 5,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/hermetic-toolchain-boundary",
+      "expected_tip": "4367fdc050b5a9e4d8d80b53710cc6a76daa8b04",
+      "commits_not_reachable_from_tested_main": 22,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/legacy-spike-classic",
+      "expected_tip": "e3111f6f83c4deb18c3eead57eff8b2fc53f316f",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/license-closure",
+      "expected_tip": "193b30838832870f66a2fe1421d6a24110acad4f",
+      "commits_not_reachable_from_tested_main": 122,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/license-closure-tooling",
+      "expected_tip": "b5f74ea028fcd3b395b4cc7a93aa1b8f77099c0e",
+      "commits_not_reachable_from_tested_main": 3,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/offline-source-closure",
+      "expected_tip": "4b7db5701062d8233b34a32c61bbc7a2e24fc608",
+      "commits_not_reachable_from_tested_main": 115,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/renode-virtual-controller",
+      "expected_tip": "522f981e18e8fa5b70d90d1d2936289a4a817711",
+      "commits_not_reachable_from_tested_main": 37,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/simulated-bluetooth-air",
+      "expected_tip": "6c029a7da2d133175e94077bee880da4803af281",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/source-closure-s1",
+      "expected_tip": "2a73f0231c39b30baf0301b1da1758eb0444c5ce",
+      "commits_not_reachable_from_tested_main": 12,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/source-closure-s1-r2",
+      "expected_tip": "fa40dffa9c4b2f31d78b1164805b4aa1c300cb9a",
+      "commits_not_reachable_from_tested_main": 18,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/source-closure-s2",
+      "expected_tip": "cf06f05fac91fc6c2a12d5aeb4bda5beb4e20f11",
+      "commits_not_reachable_from_tested_main": 33,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/spike-arena-firmware-bridge-20261001",
+      "expected_tip": "dff2a7a0a81a7c6b43ce0be24ed40979bec1db02",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/spike-nuttx-runner-20261002",
+      "expected_tip": "7e8edeb2698887c65329cebf63982b0bf03bb095",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/spike-program-storage-20261002",
+      "expected_tip": "3d648aad0d29f93f21a0df3524ae25f1b6904505",
+      "commits_not_reachable_from_tested_main": 2,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/steering-docs-cleanup",
+      "expected_tip": "af695fc234c29d1380f1cb0ada681dca58c9be68",
+      "commits_not_reachable_from_tested_main": 9,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/feat/ti-free-simulation",
+      "expected_tip": "d912b1ca90e445428fca27d7626e34be635e7994",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    },
+    {
+      "ref": "refs/heads/fix/licence-provenance-audit",
+      "expected_tip": "5f2e9fc9572db7b28a05b9a1cd7766824d179c0c",
+      "commits_not_reachable_from_tested_main": 0,
+      "proposed_action": "retire public ref; preserve complete old history in private local bundle"
+    }
+  ],
+  "private_archive": {
+    "sha256": "9594ab812c044c7cafcd23477bcdc2c1222fb58da7e8504549a4cebf373e5a31",
+    "verified": true,
+    "distribution": "Private local evidence only; contains uncleared historical material and must not be republished."
+  },
+  "post_publication_history_audit": {
+    "schema": 1,
+    "revision": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7",
+    "commit_count": 1,
+    "blob_count": 1042,
+    "refs": [
+      {
+        "ref": "refs/heads/main",
+        "commit": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7"
+      },
+      {
+        "ref": "refs/remotes/origin/main",
+        "commit": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7"
+      }
+    ],
+    "findings": []
+  },
+  "limits": [
+    "No promise to erase GitHub caches, hidden PR refs, fork-network objects or existing clones.",
+    "Private archive contains uncleared historical material; do not republish it.",
+    "Non-main branch features are preserved privately; no claim that every feature is merged into current main."
+  ],
+  "retired_orientation_blob_hashes": {
+    "062b61e17fa4ae7401157c2b7da18c48ab7cdbf55522e40c47adebcff35604be": {
+      "historical_git_blob": "d076534e61558092b67a07adfbe5f03913e358ac",
+      "path": "apps/drivebase/drivebase_imu.c"
+    },
+    "34f798899d93e74e68b7f2ab91d309b894d8783c48a9ddacdb6e8b47992760f4": {
+      "historical_git_blob": "8c33af27f1f29e2930c5a90d3baff1dba001f783",
+      "path": "host/ImuViewer/src/ImuViewer.Core/Filters/MadgwickFilter.cs"
+    },
+    "d608704bac6b1a42e171ab1b97399bb76f2119b80a1209b6107971e215e25744": {
+      "historical_git_blob": "6098521d0170641bc609200f61943c3dec61a426",
+      "path": "apps/drivebase/drivebase_imu.c"
+    }
+  }
+}

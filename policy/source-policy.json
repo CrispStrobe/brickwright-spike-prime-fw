@@ -22,8 +22,11 @@
   ],
   "forbidden_sha256": {
     "20c06ff3e9c07116eb62ba6ddc630d7f4055150693ea9838dbbbba948f513479": "TI CC2564C generated service-pack array",
-    "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e": "TI CC2564C service pack TIInit_6.12.26.bts (excluded from the current tree; older reachable commits still contain it)",
-    "21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37": "TI Text File Licence accompanying the service pack (fetched with it)"
+    "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e": "TI CC2564C service pack TIInit_6.12.26.bts (excluded from the current tree and advertised history; retired private revisions contain it)",
+    "21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37": "TI Text File Licence accompanying the service pack (fetched with it)",
+    "062b61e17fa4ae7401157c2b7da18c48ab7cdbf55522e40c47adebcff35604be": "Retired inherited orientation implementation with uncleared origin: apps/drivebase/drivebase_imu.c",
+    "34f798899d93e74e68b7f2ab91d309b894d8783c48a9ddacdb6e8b47992760f4": "Retired inherited orientation implementation with uncleared origin: host/ImuViewer/src/ImuViewer.Core/Filters/MadgwickFilter.cs",
+    "d608704bac6b1a42e171ab1b97399bb76f2119b80a1209b6107971e215e25744": "Retired inherited orientation implementation with uncleared origin: apps/drivebase/drivebase_imu.c"
   },
   "forbidden_tracked_suffixes": [
     ".bin",

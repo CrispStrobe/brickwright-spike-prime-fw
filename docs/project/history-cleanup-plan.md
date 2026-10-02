@@ -1,54 +1,42 @@
-# Proposed repository-history cleanup
+# Applied repository-history cleanup
 
-The current source and recorded simulation build use the credited MIT Fusion
-adapters. Public ancestry still exposes the inherited filter bodies, the old
-TI payload, and older branch tips without the corrected grant copies. A normal
-commit cannot remove material from reachable history.
+The owner approved replacing public `main` ancestry with the exact tested
+source snapshot and retiring the other 19 reviewed public branch refs. The
+atomic push used a separate explicit expected-tip lease for all 20 refs.
+Before publication, the current advertised set exactly matched the reviewed
+manifest, including the concurrent program-storage feature branch. No tags
+were advertised. The operation succeeded and a fresh clone was checked.
 
-The locally prepared option is to start `main` at a new root commit with
-**exactly the tested current source tree**, and retire the other advertised public branch refs listed in the preservation manifest.
-There are currently no advertised tags. A new program-storage feature branch
-appeared during this work, so the ref set must be refreshed before publication. This is a proposal;
-no ancestry replacement or branch deletion has been published.
+## Evidence and preservation
 
-## Preservation and consequences
+The new root is `7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7`; its tree is exactly
+that of tested commit `5f2e9fc9572db7b28a05b9a1cd7766824d179c0c`. All source
+files, modes, submodule pins and grants were preserved. The fresh published
+history had one commit and 1,042 blobs, with zero forbidden-history findings.
+The [public history review](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/public-history-review.json)
+records the exact retired refs, root/tree equality, archive digest and scan.
 
-All fetched history is preserved in a verified local Git bundle outside the
-repository. That private archive contains the uncleared historical material
-and must not be republished as a permissive distribution. A manifest records
-each advertised ref and its exact tip, the bundle hash, the proposed root
-commit and tree, and the draft history scan.
+All fetched original history is preserved in a verified private local Git
+bundle outside the repository. It contains the uncleared historical material
+and must not be republished as a permissive distribution. Eleven retired
+branches contain commits absent from current `main`; this can include rebased
+or squash-merged work. The archive preserves their contents, without merging
+their differences into `main`. Any feature brought back from those snapshots
+needs source/licence review before publication.
 
-Multiple non-main branches have commits that are not reachable from current
-`main`; the manifest records the exact counts, including new branches created
-while this audit is running.
-This may include rebased or squash-merged work; commit counts alone do not prove
-that their functionality is absent. Their contents are preserved in the local
-bundle. Retiring those refs would remove their branch names from GitHub, without
-merging their differences into `main`. Any features brought back from those
-snapshots need an explicit source/licence review before publication.
+The current source and configured simulation build already use credited MIT
+Fusion adapters. Retiring the old ancestry resolves the recorded TI payload,
+filter-origin and notice-gap findings for advertised branch/tag reachability.
+It does not retroactively license historical revisions.
 
-The new root preserves every file, mode, submodule pin and source notice in the
-tested current tree. It does not preserve public commit ancestry. Commit links,
-existing clones and open pull requests can be affected. The origin review
-continues to report the historical findings until the public refs are changed
-and checked again.
+## Scope and future work
 
-## Review before publication
+The ancestry change can affect old commit links, clones and pull requests.
+It cannot guarantee erasure of GitHub caches, hidden pull-request refs, the
+fork network or other people's clones. No global-erasure claim is made.
 
-Check the candidate tree equals the tested source tree, the local archive
-verifies, the draft reachable-history scan finds no forbidden payload, and the
-old filter bodies are absent from candidate source. Review the exact ref list
-and the unmerged-commit counts in the local manifest. Publication requires
-explicit approval of the ancestry replacement and branch retirement because
-those actions change published history and remove branch names.
-
-Use an atomic push with a separate explicit expected-tip lease for every ref;
-abort if any advertised ref has changed or appeared since preparation. Do not
-use an unconditional force-push or a mirror push. Preserve the private archive
-and the preparation manifest. After publication, fetch and recheck every
-advertised branch/tag and update the origin review with the resulting evidence.
-
-Changing advertised refs cannot guarantee deletion of old objects from GitHub
-caches, hidden pull-request refs, the fork network or other people's clones.
-Those limits must remain explicit; no claim of global erasure is justified.
+CI now fetches full history and refuses reviewed forbidden blobs and paths,
+including the known retired inherited-filter implementations. Restoring
+unreviewed old ancestry or publishing archival branches would reopen the
+history findings. Physical hardware remains experimental WIP and has its
+separate safety and TI licence requirements.

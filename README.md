@@ -56,11 +56,15 @@ embedded Python integration and associated checks.
 The root MIT licence from upstream spike-nx, and for our code, does not relicense third-party components or generated
 firmware images. Preserve each component's copyright and licence notices.
 
-**Provenance clearance remains open.** The [broader source/history review](docs/project/source-origin-review.md)
+The [broader source/history review](docs/project/source-origin-review.md)
 identified inherited filter provenance, historical TI payloads and older branch
-snapshots without the corrected grants. The current filter bodies have been
-replaced with credited MIT Fusion adapters and tested in a rebuilt firmware.
-Historical source and branch-distribution findings remain open.
+snapshots without corrected grants. Both current filters have been replaced
+with credited MIT Fusion adapters and tested in rebuilt firmware. The approved
+[public history cleanup](docs/project/history-cleanup-plan.md) starts `main`
+from that tested snapshot and retires the 19 reviewed non-main branches.
+The recorded findings are resolved for current source, the configured build
+and advertised history. Optional targets, GitHub caches and other clones are
+outside that review; this is no blanket guarantee about every possible origin.
 
 - [LICENSE](LICENSE): the inherited spike-nx MIT grant.
 - [NOTICE](NOTICE): project attribution and distribution notices.
@@ -85,7 +89,7 @@ records reviewed compiler inputs, selected linked archive members and image
 hashes. Its [redistribution notice bundle](licenses/Simulation-Firmware-NOTICES.txt)
 retains the inventoried grants and attribution, including the
 [Fusion MIT grant](licenses/Fusion-MIT.txt) for the replacement filters;
-it does not clear older Git revisions. The compiler runtime uses GPLv3
+it does not retroactively license retired revisions. The compiler runtime uses GPLv3
 with the [GCC Runtime Library Exception](licenses/GCC-Runtime-Exception-3.1.txt);
 it is recorded under that licence, not relabelled MIT/BSD. Builds check the
 reviewed source/configuration/runtime and linker input sets. Other configurations

@@ -7,7 +7,11 @@ The [broader source-origin review](source-origin-review.md) found unresolved
 inherited filter provenance, TI material in older reachable commits and missing
 corrected grants on older public branch tips. Both current filter bodies have
 now been replaced with credited MIT Fusion adapters and the configured firmware
-rebuilt; historical distribution findings remain open. Current input/hash checks are not complete redistribution clearance.
+rebuilt. The approved history cleanup now retires the old ancestry and 19
+non-main public branch refs. Those recorded findings are resolved for advertised
+branch/tag reachability; private archives, server caches and other clones are
+not retroactively licensed or erased. Current input/hash checks are scoped
+engineering evidence, without a blanket provenance guarantee.
 
 ## Policy
 
@@ -24,8 +28,8 @@ TI permits redistribution without modification when its licence is reproduced
 and use remains limited to TI devices. A simulation-only repository has no TI
 device to serve, so the current tree excludes the service pack: hardware builds
 fetch it from TI, and the simulation profile runs without it.
-The payload remains in older reachable Git commits; that history requires
-separate cleanup. CI does not publish flashable firmware while the
+The payload-bearing ancestry has been retired from advertised firmware refs;
+the private evidence archive still contains it. CI does not publish flashable firmware while the
 hardware-safety gate is open.
 
 ## Baseline components

@@ -2,8 +2,12 @@
 
 The broader review found no additional uncredited Pybricks implementation in
 the reviewed current firmware tree beyond the 46 inventoried source/reference
-files. It **did find unresolved provenance and historical-distribution issues**.
-The firmware and repository must not be described as completely cleared.
+files. It found provenance and historical-distribution issues. Both current
+filter bodies were replaced with credited MIT Fusion adapters, and the approved
+public history cleanup now retires the old ancestry and 19 other branch refs.
+The recorded blocking findings are resolved within the current-source,
+configured-build and advertised-history scope. This does not establish every
+possible origin or clear optional external targets and unavailable server objects.
 
 The evidence is recorded in [the review manifest](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/source-origin-review.json).
 This is an engineering review of identified sources, not a legal opinion or a
@@ -121,14 +125,14 @@ also copies the Fusion grant into build/publish output.
 
 The current-source finding is resolved within this reviewed build scope.
 Older revisions still contain both inherited bodies. A separate historical
-finding blocks whole-repository clearance until those revisions are retired
-from public refs or a compatible grant is established. Merely using the author's
+finding was resolved for advertised reachability by retiring those revisions
+from public refs. Their private archival copies remain uncleared. Merely using the author's
 current MIT library does not retroactively relicense the older implementation.
 
-### Restricted TI material remains in Git history
+### Historical TI material found in the initial audit
 
-The current tree excludes the service pack. The review of 270 reachable
-firmware commits and 1,695 blobs still finds the original TI payload and its
+The current tree excludes the service pack. The initial review of 270 reachable
+firmware commits and 1,695 blobs found the original TI payload and its
 licence, both reachable from all 19 fetched public branch heads, including
 main. The original snapshot `5b2bde5` included these files; deleting them in a
 later commit did not remove them from history.
@@ -138,19 +142,35 @@ It does not by itself establish a breach of TI's licence: the historical
 snapshot supplied TI's terms. Current image exclusion and historical source
 distribution are different questions.
 
-### Older public branch snapshots lack corrected notices
+### Historical notice gaps found in the initial audit
 
-17 public feature-branch tips do not contain the current Pybricks/LEGO grant
+At the initial audit, 17 public feature-branch tips did not contain the current Pybricks/LEGO grant
 copies. The corrected main and audit branch have them. Historical snapshots
 before the correction must also be considered when distributing Git history
 or exporting older branches. The affected refs and hashes are in the manifest.
 
-The history findings require coordinated ref/history cleanup, including either
-repairing or retiring old public snapshots. Changing published ancestry needs
-a reviewed force-push; no history was rewritten during this audit. Old clones
-and GitHub PR/cache refs cannot be erased by a local branch rewrite alone.
-The current GitHub API lists no firmware releases or Actions artifacts; that
-does not establish that expired or previously downloaded material never existed.
+### Applied public history cleanup
+
+The owner approved the reviewed cleanup. An atomic push with an explicit
+expected-tip lease for every ref replaced `main` with new root
+`7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7` and retired the 19 other advertised
+branch refs. No tags were advertised. The root's tree exactly equals tested
+snapshot `5f2e9fc9572db7b28a05b9a1cd7766824d179c0c`. A fresh clone from GitHub
+contained one reachable commit and 1,042 blobs, with zero forbidden-history
+findings. The source and configured-build content is preserved unchanged.
+
+All fetched original history is preserved in a verified private local bundle.
+Eleven retired branches have commits absent from current `main`; their contents
+are archived, without merging their differences or relicensing them. The exact
+retired refs, archive digest, root/tree equality and fresh-clone audit are in
+[the public history review](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/public-history-review.json).
+The archive itself is not part of this distribution.
+
+This resolves the three historical findings for advertised branch/tag
+reachability. It does not remove GitHub caches, hidden PR refs, fork-network
+objects or other clones, and does not retroactively clear retired source.
+The initial GitHub API check listed no firmware releases or Actions artifacts;
+that does not prove expired or downloaded material never existed.
 
 ### Optional external PHY62xx macros
 
@@ -173,10 +193,12 @@ source policy, including deleted files and aliases. Fetch the intended refs
 before running it; it does not inspect unavailable server-only objects.
 
 `tools/check_source_origin_review.py` verifies the review record and affected
-current-file hashes. Its `--require-clearance` mode refuses the unresolved
-findings. Normal source/build checks remain useful for experiments, but their
-success does not clear these findings or authorize binary publication.
+current-file hashes. Its `--require-clearance` mode passes for the recorded
+resolved findings and still refuses new blocking findings. CI fetches full
+history and runs `audit_repository_history.py --require-clean`, which refuses
+known forbidden payloads and the retired inherited-filter blob hashes even
+when subsequently deleted. These checks do not authorize binary publication
+or prove that no unknown copying exists.
 
-The proposed publication cleanup and its branch-preservation consequences are
-described in [the history cleanup plan](history-cleanup-plan.md). It is prepared
-locally; destructive public ref changes have not been applied.
+The applied cleanup and its branch-preservation consequences are described in
+[the history cleanup record](history-cleanup-plan.md).

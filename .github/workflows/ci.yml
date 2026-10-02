@@ -22,9 +22,8 @@ jobs:
       - name: Check out tracked files only
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          # Two commits are required so `git show --check` does not treat HEAD
-          # as a synthetic root commit and inspect every inherited baseline file.
-          fetch-depth: 2
+          # History checks must include deleted blobs and all fetched branch refs.
+          fetch-depth: 0
           submodules: false
           persist-credentials: false
 
@@ -35,7 +34,8 @@ jobs:
           python3 tools/test_reuse_licenses.py
           python3 tools/check_firmware_inputs.py --notices-only
           python3 tools/test_firmware_inputs.py
-          python3 tools/check_source_origin_review.py
+          python3 tools/check_source_origin_review.py --require-clearance
+          python3 tools/audit_repository_history.py --output /tmp/firmware-history-review.json --require-clean
           python3 tools/test_origin_audit.py
           python3 tools/test_orientation_filter.py
 

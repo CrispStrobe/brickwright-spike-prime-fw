@@ -21,7 +21,8 @@ in licenses/Fusion-MIT.txt and its pin in policy/orientation-filter.json.
 Both inherited gradient-descent bodies were replaced and the configured
 firmware rebuilt. Older Git revisions still contain those bodies with
 unresolved reference-implementation provenance; current input checks do
-not clear historical distribution findings.
+not retroactively license retired revisions. The advertised-history findings
+were resolved by the approved cleanup recorded in policy/public-history-review.json.
 
 The embedded MicroPython v1.26.1 core/embed selection is MIT licensed, with
 its upstream LICENSE and source notices retained. Its pinned inventory is
@@ -35,9 +36,10 @@ derived from Zephyr Project sources under Apache License 2.0. The local source
 selection and modification are recorded by its manifest and patch directory.
 
 The current source tree contains no Texas Instruments CC2564C service pack.
-Older reachable commits still contain the payload and its restrictive licence;
-17 older feature-branch tips lack the corrected Pybricks/LEGO grant copies.
-History/ref cleanup is open. The
+The approved public history cleanup retires the old payload-bearing ancestry
+and 19 non-main branch refs. Retired revisions are preserved privately without
+a retroactive permissive grant. GitHub caches and other clones are outside
+that reachability check. The
 simulation profile (BOARD_CONFIG=simulation) builds and runs without it. The
 hardware profile fetches the unmodified service pack and its licence from TI's
 git repository at build time, pinned by commit and SHA-256, into the ignored

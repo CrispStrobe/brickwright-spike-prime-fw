@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "review_date_utc": "2026-10-02",
-  "status": "open-findings",
+  "status": "reviewed-current-source-and-advertised-history",
   "scope": "Current tracked text of firmware, NuttX, NuttX Apps and Renode Infrastructure compared to the recorded Pybricks baseline; firmware also compared to fetched current Pybricks master. Reachable local firmware history and fetched public branch tips examined. Additional explicit source-origin references reviewed.",
   "baseline_firmware_revision": "8fa6b951980b92e0491a7994a007e35e3cdac617",
   "snapshot_note": "Firmware scans include the two newly staged audit tools in addition to the baseline revision. Reports freeze their individual input hashes; report/docs added afterward are not self-included. No implementation changes occurred during this review.",
@@ -10774,19 +10774,39 @@
     },
     {
       "id": "restricted-ti-in-git-history",
-      "status": "unresolved",
+      "status": "resolved",
       "blocks_redistribution_clearance": true,
       "summary": "Current tree and recorded simulation build exclude TI; reachable older firmware commits still distribute the TI payload and accompanying restrictive licence. This fails the exclusively permissive repository-history policy, not automatically the TI licence itself.",
       "affected_files": [],
-      "required_action": "Prepare and review history filtering across all public branches; publishing changed ancestry requires a coordinated force-push. Server PR/cache refs and existing clones need separate handling."
+      "required_action": "Prepare and review history filtering across all public branches; publishing changed ancestry requires a coordinated force-push. Server PR/cache refs and existing clones need separate handling.",
+      "resolution_evidence": {
+        "scope": "Reachability from the advertised firmware branches/tags only. Retired revisions remain uncleared private evidence; unavailable server-side objects and other clones are outside scope.",
+        "record": "policy/public-history-review.json",
+        "new_root": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7",
+        "published_branch_count": 1,
+        "published_tags": 0,
+        "fetched_history_commits": 1,
+        "forbidden_history_findings": 0,
+        "retired_branch_count": 19
+      }
     },
     {
       "id": "historical-source-notice-gaps",
-      "status": "unresolved",
+      "status": "resolved",
       "blocks_redistribution_clearance": true,
       "summary": "17 older public feature-branch tips lack the current Pybricks/LEGO grant copies. Current main attribution corrections do not make exports of those branch tips complete.",
       "affected_files": [],
-      "required_action": "Repair or retire older public snapshots as part of coordinated history/ref cleanup. Review historical notices, not only current main."
+      "required_action": "Repair or retire older public snapshots as part of coordinated history/ref cleanup. Review historical notices, not only current main.",
+      "resolution_evidence": {
+        "scope": "Reachability from the advertised firmware branches/tags only. Retired revisions remain uncleared private evidence; unavailable server-side objects and other clones are outside scope.",
+        "record": "policy/public-history-review.json",
+        "new_root": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7",
+        "published_branch_count": 1,
+        "published_tags": 0,
+        "fetched_history_commits": 1,
+        "forbidden_history_findings": 0,
+        "retired_branch_count": 19
+      }
     },
     {
       "id": "optional-phy62xx-hal-macros",
@@ -10806,12 +10826,23 @@
     },
     {
       "id": "historical-madgwick-reference-origin",
-      "status": "unresolved",
+      "status": "resolved",
       "blocks_redistribution_clearance": true,
       "affected_files": [],
       "evidence": "Earlier reachable commits contain the inherited host filter and firmware gradient-descent bodies. Replacing current files does not establish their historical grant.",
-      "required_action": "Remove those revisions from published refs or establish a compatible grant; preserve private archival evidence without republishing uncleared material."
+      "required_action": "Remove those revisions from published refs or establish a compatible grant; preserve private archival evidence without republishing uncleared material.",
+      "resolution_evidence": {
+        "scope": "Reachability from the advertised firmware branches/tags only. Retired revisions remain uncleared private evidence; unavailable server-side objects and other clones are outside scope.",
+        "record": "policy/public-history-review.json",
+        "new_root": "7c7c9bcdf3cab38b4d1794ba3756c97e1fa89da7",
+        "published_branch_count": 1,
+        "published_tags": 0,
+        "fetched_history_commits": 1,
+        "forbidden_history_findings": 0,
+        "retired_branch_count": 19
+      }
     }
   ],
-  "renode_snapshot_note": "Reviewed main advanced from 793123d8 to 3055d665 during the audit. The four-file DMA/SPI delta was inspected and the entire comparison rerun. The scan reads the pending THIRD_PARTY.md documentation addition as well as tracked code; the untracked review report is not self-included."
+  "renode_snapshot_note": "Reviewed main advanced from 793123d8 to 3055d665 during the audit. The four-file DMA/SPI delta was inspected and the entire comparison rerun. The scan reads the pending THIRD_PARTY.md documentation addition as well as tracked code; the untracked review report is not self-included.",
+  "public_history_cleanup": "policy/public-history-review.json"
 }
