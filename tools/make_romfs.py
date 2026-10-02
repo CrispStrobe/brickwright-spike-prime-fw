@@ -69,6 +69,10 @@ def make_image(directory, volume='NSHInitVol'):
     if b'\0' in volume_name:
         raise ValueError('NUL in volume name')
     root = tree(directory, b'.')
+    # NuttX begins root traversal at the root header, unlike Linux which
+    # follows its directory-info pointer. Connect both entry points to the
+    # same sibling chain; otherwise NuttX sees an empty root directory.
+    root.following = root.children[0]
     nodes = list(flatten(root))
     prefix = b'-rom1fs-' + bytes(8) + padded(volume_name + b'\0')
     offset = len(prefix)
