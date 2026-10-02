@@ -41,3 +41,10 @@ littlefs authors and 2017 Arm Limited. Preserve
 redistributed formatter binary; its exact hash is in the simulation notice
 inventory. The generated empty filesystem contains filesystem metadata,
 not an imported firmware image. This host tool adds no firmware dependencies.
+
+The exact retained LittleFS grant is also tracked at
+[`licenses/LittleFS-BSD-3-Clause.txt`](../licenses/LittleFS-BSD-3-Clause.txt).
+Source-only checks pin this copy so notice verification does not require an
+initialized NuttX dependency. It reproduces the original
+`nuttx/fs/littlefs/littlefs/LICENSE.md` bytes and copyright notices unchanged.
+Configured firmware source and image fingerprints remain unchanged.

@@ -87,3 +87,22 @@ if version_metadata_digest(version) != version_metadata_digest(other):
     raise SystemExit('Checkout-dependent version facts rejected')
 if version_metadata_digest(version) == version_metadata_digest(version + '#include "blob.h"\n'):
     raise SystemExit('Version-header code change hidden')
+
+# Source-only CI deliberately leaves external NuttX dependencies uninitialized.
+# A tracked exact grant must stay mandatory without requiring the dependency.
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    grant = root / 'licenses/LittleFS-BSD-3-Clause.txt'
+    grant.parent.mkdir()
+    grant.write_bytes(b'synthetic retained BSD grant')
+    review = {'files': [], 'accepted_licences': ['BSD-3-Clause'],
+              'notice_sha256': {'licenses/LittleFS-BSD-3-Clause.txt':
+                               hashlib.sha256(grant.read_bytes()).hexdigest()}}
+    if (root/'nuttx').exists() or notices(root, review):
+        raise SystemExit('Tracked LittleFS grant failed without external dependency')
+    grant.unlink()
+    if not notices(root, review):
+        raise SystemExit('Missing tracked LittleFS grant accepted')
+    grant.write_bytes(b'changed grant')
+    if not notices(root, review):
+        raise SystemExit('Changed tracked LittleFS grant accepted')

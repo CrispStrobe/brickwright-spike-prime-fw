@@ -34961,7 +34961,7 @@
     "apps/hubprogram/LICENSE": "e0be31379ef4d9655ffcc922df438bc0e8287d469a34b9d0bcf277c91399429b",
     "licenses/Apache-2.0.txt": "fea26e329e7dd773fbee25b903a6fcdd6a38d689f7983b62592cbd470a004450",
     "licenses/NuttX-Tickless-BSD-3-Clause.txt": "2da080f0a5d97cd2aadf0b0a7b574fda08294891771b94732dd355470d40abda",
-    "nuttx/fs/littlefs/littlefs/LICENSE.md": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d"
+    "licenses/LittleFS-BSD-3-Clause.txt": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d"
   },
   "direct_objects": [
     "relative:stm32_userspace.o"
