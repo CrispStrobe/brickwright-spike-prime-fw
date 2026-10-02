@@ -25,6 +25,9 @@ static uint64_t now_ms(void) {
 static int request_locked(uint32_t owner,uint64_t now,const uint8_t *data,size_t n,uint8_t reply[20]) {
   unsigned op=data && n>=3 ? data[2] : 255;
   int storage=op==8 || op==9;
+  int rc;
+  /* Release terminal programs before a request can replace their state. */
+  if(!g_python_active && (g_program.state==BW_PROGRAM_COMPLETE || g_program.state==BW_PROGRAM_STOPPED || g_program.state==BW_PROGRAM_FAULT))bw_device_release();
   if((g_python_active && (op==0 || op==2 || op==3 || op==7 || storage)) || storage) {
     uint8_t status[8]={BW_PROGRAM_REQUEST,1,5,0,0,0,0,0};
     uint32_t id=0;int rc=-EINVAL;unsigned i;
@@ -41,7 +44,9 @@ static int request_locked(uint32_t owner,uint64_t now,const uint8_t *data,size_t
     for(i=0;i<4;i++){reply[4+i]=(uint8_t)(id>>(8*i));reply[8+i]=(uint8_t)((uint32_t)rc>>(8*i));}
     return rc;
   }
-  return bw_program_request(&g_program,&g_upload,owner,now,data,n,reply);
+  rc=bw_program_request(&g_program,&g_upload,owner,now,data,n,reply);
+  if(!g_python_active && (g_program.state==BW_PROGRAM_COMPLETE || g_program.state==BW_PROGRAM_STOPPED || g_program.state==BW_PROGRAM_FAULT))bw_device_release();
+  return rc;
 }
 static void debug_locked(uint64_t now) {
   uint32_t seq=g_bw_program_debug.request_seq;

@@ -8,13 +8,13 @@
 #include <sys/types.h>
 static pid_t task_create(const char *,int,int,int (*)(int,char **),char **);
 #include "../service.c"
-static unsigned saves,loads;
+static unsigned saves,loads,releases;
 static pid_t task_create(const char *n,int p,int s,int (*f)(int,char **),char **a) {
   (void)n;(void)p;(void)s;(void)f;(void)a;return 1;
 }
 void bw_device_init(struct bw_program_io *io){memset(io,0,sizeof(*io));}
 int bw_device_tick(uint64_t now){(void)now;return 0;}
-void bw_device_release(void){}
+void bw_device_release(void){releases++;}
 void bw_device_snapshot(volatile struct bw_program_debug *d){(void)d;}
 int bw_python_execute(const char *source){(void)source;return 0;}
 int bw_program_save(const struct bw_program *p,uint32_t id,const char *path) {
@@ -54,6 +54,16 @@ int main(void) {
   /* Oversized mailbox packets cannot be accepted by truncating their prefix. */
   g_bw_program_debug.length=21;g_bw_program_debug.request_seq=4;
   debug_locked(now_ms());assert(loads==2 && g_bw_program_debug.reply_seq==4);
+  /* STOP must release ports without waiting for the next worker tick. */
+  packet[2]=4;g_program.state=BW_PROGRAM_RUNNING;
+  assert(bw_program_service_request(1,packet,8,reply)==0 && releases==1);
+  packet[2]=9;assert(bw_program_service_request(1,packet,8,reply)==0);
+  assert(g_program.state==BW_PROGRAM_READY && releases>=1);
+  /* A still-unwinding Python VM retains ports until its worker returns. */
+  g_python_active=1;g_program.state=BW_PROGRAM_RUNNING;i=releases;
+  packet[2]=4;assert(bw_program_service_request(1,packet,8,reply)==0 && releases==i);
+  packet[2]=9;assert(bw_program_service_request(1,packet,8,reply)==-EBUSY && releases==i);
+  g_python_active=0;assert(bw_program_service_request(1,packet,8,reply)==0 && releases>i);
   puts("service: fixed storage slot, transport guards and oversized mailbox rejection passed");
   return 0;
 }
