@@ -45,8 +45,37 @@ They compile the changed implementation paths with mocked boundary conditions
 and AddressSanitizer/UndefinedBehaviorSanitizer. They cover descriptor limits,
 static and dynamic task-group failure cleanup, task-name buffer guards, SPI
 wake ordering, blank and nonblank partitions, end-of-partition data, short or
-failed reads, and mount/format errors. Hardware reset during programming or
-metadata updates still requires physical or faithful simulator testing.
+failed reads, and mount/format errors.
+
+For crash/restart qualification using the actual build's patched LittleFS
+v2.5.1 sources, run:
+
+```sh
+python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
+```
+
+The test does not download or vendor LittleFS; its existing BSD-3-Clause
+copyright and licence remain in the supplied source directory. The runner
+prints hashes of the five source/licence inputs. It links the unchanged program
+save/restore code through a host POSIX-to-LittleFS shim, uses the simulation
+build's 31 MB partition, 256-byte NOR pages, 4096-byte erase blocks and configured
+LittleFS cache/transfer sizes, and terminates a separate process at each flash
+program, erase or sync operation. Cuts occur before, partway through and after
+the operation; partial programming stops midway through a physical page.
+Restart discards all process/file/cache state and remounts the persistent bytes.
+
+The qualified-source run passed 426 cuts: maximum-size native and Python
+replacement combinations, the same combinations after 64 prior replacements,
+and first saves without an existing program. A replacement recovers exactly
+the old or new program in READY state; a first save may also recover no file.
+Every recovered filesystem accepts another complete replacement. Extracted,
+unchanged board mount functions additionally preserve flash byte-for-byte
+when both superblock metadata blocks are destroyed or a dirty byte appears
+at either partition edge. A wholly erased partition is still formatted.
+
+This models interrupted writes and erase operations; it does not emulate
+brownout electrical behavior, arbitrary bit faults, timing, or the complete
+NuttX VFS/driver stack. Physical reset/power-loss qualification remains pending.
 
 Use a **clean NuttX build after changing Kconfig**. The broader upstream
 [archive rebuild correction](https://github.com/apache/nuttx/commit/c027e7c3e4c803a4bc59ae94eaebba4948ed2514)
