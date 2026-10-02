@@ -1,7 +1,9 @@
 # Storage recovery and NuttX hardening
 
 The SPIKE firmware is experimental. The following targeted fixes retain the
-Apache-2.0 notices in NuttX and the existing MIT notices in the board driver.
+Apache-2.0 and BSD-3-Clause notices in the affected NuttX files, including
+the original tickless-driver notices, and the existing MIT notices in the
+board driver.
 
 The NuttX descriptor limit correction comes from
 [20752312eaac24994487891207c81fa22c02f7b5](https://github.com/apache/nuttx/commit/20752312eaac24994487891207c81fa22c02f7b5)
@@ -24,6 +26,14 @@ formatted by this recovery path. A corrupt, nonblank partition is preserved;
 read failures and short reads do not authorize formatting. The partition
 remains registered even if its filesystem cannot be mounted.
 
+The scan reads 4096-byte blocks through one bounded kernel-heap allocation,
+so the boot task does not need a 4 KB stack buffer. It frees that allocation
+on every exit path. Allocation failure returns `-ENOMEM` and does not permit
+formatting. A full blank scan makes 7936 read calls instead of 126976; this
+reduces transfer setup overhead while still reading and checking every byte.
+The simulator's byte-level DMA pacing remains intact, so fewer calls do not
+imply the same factor of improvement in elapsed time.
+
 To recover existing data, inspect or back up `/dev/mtdblock0` first. An operator
 who chooses to discard the filesystem can explicitly run:
 
@@ -45,7 +55,8 @@ They compile the changed implementation paths with mocked boundary conditions
 and AddressSanitizer/UndefinedBehaviorSanitizer. They cover descriptor limits,
 static and dynamic task-group failure cleanup, task-name buffer guards, SPI
 wake ordering, blank and nonblank partitions, end-of-partition data, short or
-failed reads, and mount/format errors.
+failed reads, allocation failure and cleanup, dirty bytes throughout the
+first scan block and across 4 KB/64 KB boundaries, and mount/format errors.
 
 For crash/restart qualification using the actual build's patched LittleFS
 v2.5.1 sources, run:

@@ -130,7 +130,8 @@ static void setup(int error,off_t dirty) {
 int main(void) {
   struct fdlist list={1};struct tcb_s tcb={0};struct task_group_s dynamic={0};
   struct {char name[CONFIG_TASK_NAME_SIZE];unsigned char guard;} result;
-  struct mtd_dev_s part;struct w25q256_dev_s flash={0};
+  struct mtd_dev_s part;struct w25q256_dev_s flash={0};unsigned i;
+  const off_t boundaries[]={4095,4096,65535,65536};
   assert(fdlist_extend(&list,1)==0);assert(fdlist_extend(&list,2)==0);
   assert(fdlist_extend(&list,OPEN_MAX/8)==0);
   assert(fdlist_extend(&list,OPEN_MAX/8+1)==-EMFILE);assert(dumps==1);
@@ -154,6 +155,17 @@ int main(void) {
   setup(-EINVAL,W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES-1);
   assert(w25q256_mount(&part)==-EINVAL);assert(formats==0);
   assert(reads==(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_SECTOR_SIZE);assert(allocations==1&&scan_frees==1&&!scan_buffer);
+  /* Detect a dirty byte at every position in a scan block and on both
+   * sides of sector and 16-bit DMA-count boundaries. */
+  for(i=0;i<W25Q256_SECTOR_SIZE;i++) {
+    setup(-EFAULT,i);assert(w25q256_mount(&part)==-EFAULT);
+    assert(reads==1&&!formats&&scan_frees==1&&!scan_buffer);
+  }
+  for(i=0;i<sizeof(boundaries)/sizeof(boundaries[0]);i++) {
+    setup(-EINVAL,boundaries[i]);assert(w25q256_mount(&part)==-EINVAL);
+    assert(reads==(unsigned)(boundaries[i]/W25Q256_SECTOR_SIZE)+1);
+    assert(!formats&&scan_frees==1&&!scan_buffer);
+  }
   setup(-EINVAL,-1);read_error=-EIO;assert(w25q256_mount(&part)==-EIO);assert(formats==0&&scan_frees==1&&!scan_buffer);
   setup(-EFAULT,-1);short_read=1;assert(w25q256_mount(&part)==-EIO);assert(formats==0&&scan_frees==1&&!scan_buffer);
   setup(-EINVAL,-1);format_error=-ENOSPC;assert(w25q256_mount(&part)==-ENOSPC);assert(formats==1);
