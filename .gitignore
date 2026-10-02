@@ -51,3 +51,8 @@ nuttx/nuttx-export-*.tar.gz
 
 # Python bytecode
 __pycache__/
+
+# Private Git history archives and local publication receipts.
+*.bundle
+/publication-receipt.json
+/private-history-review/

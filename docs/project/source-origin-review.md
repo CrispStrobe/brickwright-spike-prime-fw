@@ -201,4 +201,4 @@ when subsequently deleted. These checks do not authorize binary publication
 or prove that no unknown copying exists.
 
 The applied cleanup and its branch-preservation consequences are described in
-[the history cleanup record](history-cleanup-plan.md).
+[the history cleanup record](history-cleanup.md).

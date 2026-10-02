@@ -60,7 +60,7 @@ The [broader source/history review](docs/project/source-origin-review.md)
 identified inherited filter provenance, historical TI payloads and older branch
 snapshots without corrected grants. Both current filters have been replaced
 with credited MIT Fusion adapters and tested in rebuilt firmware. The approved
-[public history cleanup](docs/project/history-cleanup-plan.md) starts `main`
+[public history cleanup](docs/project/history-cleanup.md) starts `main`
 from that tested snapshot and retires the 19 reviewed non-main branches.
 The recorded findings are resolved for current source, the configured build
 and advertised history. Optional targets, GitHub caches and other clones are
