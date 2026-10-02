@@ -12739,7 +12739,8 @@ Files: boards/spike-prime-hub/src/stm32_w25q256.c
 Copyright (c) 2026 Brickwright contributors
 MIT; original Pybricks notices and MIT grant above remain applicable.
 
-NuttX and NuttX Apps patches in patches/nuttx-hardening/: Apache-2.0.
+NuttX and NuttX Apps patches in patches/nuttx-hardening/: Apache-2.0 and BSD-3-Clause, per file.
+Tickless retains Gregory Nutt/Ansync Labs BSD-3-Clause grant, also in licenses/NuttX-Tickless-BSD-3-Clause.txt.
 Upstream authors, source commits and local changes: policy/nuttx-backports.json.
 Original ASF notices remain in patched files; full grant: licenses/Apache-2.0.txt.
 

@@ -17,7 +17,7 @@ def digest(path):
 
 def validate_record(root, record):
     for component in record["components"]:
-        if component["selected_licence"] != "Apache-2.0":
+        if component["selected_licence"] not in {"Apache-2.0", "Apache-2.0 AND BSD-3-Clause"}:
             raise ValueError("Unreviewed backport licence")
         if digest(root / component["patch"]) != component["patch_sha256"]:
             raise ValueError("Backport patch changed since review")

@@ -7,8 +7,11 @@ in `patches/nuttx-hardening/`; this is not a wholesale upgrade to NuttX 13.
 
 [The manifest](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/nuttx-backports.json) records upstream source
 commits, authors, adaptation scope, patch hashes and before/after file hashes.
-Original ASF headers and NOTICE files remain applicable. The patches use
-[Apache-2.0](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/licenses/Apache-2.0.txt); local board changes retain the
+Original ASF headers and NOTICE files remain applicable. The patches retain per-file
+[Apache-2.0](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/licenses/Apache-2.0.txt)
+and [BSD-3-Clause](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/licenses/NuttX-Tickless-BSD-3-Clause.txt)
+grants. The tickless source retains Gregory Nutt and Ansync Labs notices;
+local board changes retain the
 existing MIT grants and original Pybricks notices.
 
 The build runs `tools/apply_nuttx_backports.py` before configuration. It checks
