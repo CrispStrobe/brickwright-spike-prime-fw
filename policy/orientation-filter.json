@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "reference_repository": "https://github.com/xioTechnologies/Fusion",
+  "reference_commit": "a8d7224f36a0ec82345ef49a3db50e65f8d3bab8",
+  "reference_file": "Fusion/FusionAhrs.c",
+  "reference_sha256": "611678dbaa531db3b360cf3f3097a52cd60d7cf2f93be0753748d8674b9cb5fb",
+  "selected_licence": "MIT",
+  "required_notices": [
+    "licenses/Fusion-MIT.txt"
+  ],
+  "notice_sha256": {
+    "licenses/Fusion-MIT.txt": "deea99a9e5920dc1cb5bfd7730fba6ca3fdab691bde7760aa1642e65c650ccca"
+  },
+  "files": [
+    {
+      "path": "apps/drivebase/drivebase_orientation.h",
+      "sha256": "2fae7ec9a92976d7919f2cc5f80f128a359e7896be56a1af51835c6900664af4"
+    },
+    {
+      "path": "host/ImuViewer/src/ImuViewer.Core/Filters/MadgwickFilter.cs",
+      "sha256": "5fa43e1aed4187963072310a2d0472b839e4b2e636dd01dfab6a28c13ba73b36"
+    }
+  ],
+  "adaptation": "NWU inclination-only gravity/cross-product feedback from HalfGravity, Residual and FusionAhrsUpdate. Caller manages initial attitude and rejection. Exponential integration replaces Euler; gyro radians/second; proportional gain = 10 * legacy beta. No claim of identical Madgwick dynamics or clean-room independence.",
+  "tests": [
+    "tools/test_orientation_filter.py",
+    "host/ImuViewer/tests/ImuViewer.Core.Tests/Filters/MadgwickFilterTests.cs"
+  ],
+  "validation": {
+    "c_synthetic_tests": 5,
+    "dotnet_framework": "net10.0",
+    "dotnet_core_tests_passed": 86,
+    "mixed_sample_c_csharp_parity": {
+      "samples": 2000,
+      "maximum_quaternion_component_difference": 7.748604e-07,
+      "tolerance": 5e-05,
+      "method": "Replay identical varying gyro, two gravity inclinations, intermittent zero acceleration and zero gain through the compiled C header and the actual C# filter. Independent physical-motion tests are separate."
+    },
+    "arm_build": "Protected ARM simulation rebuild passed; reviewed source deltas and updated images/archive members in policy/simulation-firmware-inputs.json; TI exclusion gate passed."
+  }
+}

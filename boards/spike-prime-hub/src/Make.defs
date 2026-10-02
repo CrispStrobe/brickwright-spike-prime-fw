@@ -1,0 +1,88 @@
+############################################################################
+# boards/spike-prime-hub/src/Make.defs
+############################################################################
+
+CSRCS = stm32_boot.c stm32_bringup.c stm32_sound.c stm32_tone.c stm32_pcm.c
+
+ifeq ($(CONFIG_ARCH_BUTTONS),y)
+CSRCS += stm32_buttons.c
+endif
+
+ifeq ($(CONFIG_STM32_OTGFS),y)
+CSRCS += stm32_usbdev.c
+endif
+
+ifeq ($(CONFIG_SCHED_CPULOAD_EXTCLK),y)
+CSRCS += stm32_cpuload.c
+endif
+
+ifeq ($(CONFIG_BOARDCTL),y)
+CSRCS += stm32_appinit.c
+endif
+
+ifeq ($(CONFIG_BOARDCTL_RESET),y)
+CSRCS += stm32_reset.c
+endif
+
+ifeq ($(CONFIG_STM32_I2C2),y)
+CSRCS += lsm6dsl_uorb.c stm32_lsm6dsl.c
+endif
+
+ifeq ($(CONFIG_STM32_SPI1),y)
+CSRCS += stm32_tlc5955.c stm32_rgbled.c
+endif
+
+ifeq ($(CONFIG_STM32_SPI2),y)
+CSRCS += stm32_w25q256.c
+endif
+
+ifeq ($(CONFIG_STM32_ADC1),y)
+CSRCS += stm32_adc_dma.c stm32_power.c stm32_resistor_ladder.c stm32_btbutton.c
+endif
+
+ifeq ($(CONFIG_BATTERY_GAUGE),y)
+CSRCS += stm32_battery_gauge.c
+endif
+
+ifeq ($(CONFIG_BATTERY_CHARGER),y)
+CSRCS += stm32_battery_charger.c
+endif
+
+ifeq ($(CONFIG_STM32_TIM8),y)
+CSRCS += stm32_bt_slowclk.c
+endif
+
+ifeq ($(CONFIG_STM32_USART2),y)
+CSRCS += stm32_btuart.c stm32_btuart_chardev.c stm32_bluetooth.c
+endif
+
+ifeq ($(CONFIG_LEGO_PORT),y)
+CSRCS += stm32_legoport.c stm32_legoport_chardev.c stm32_legoport_pwm.c
+endif
+
+ifeq ($(CONFIG_LEGO_LUMP),y)
+CSRCS += stm32_legoport_lump.c stm32_legoport_lump_table.c \
+         stm32_legoport_uart_hw.c
+endif
+
+ifeq ($(CONFIG_LEGO_SENSOR),y)
+CSRCS += legosensor_uorb.c
+endif
+
+ifeq ($(CONFIG_BOARD_DRIVEBASE_CHARDEV),y)
+CSRCS += stm32_drivebase_chardev.c
+endif
+
+ifeq ($(CONFIG_BOARD_BTCAP_CHARDEV),y)
+CSRCS += stm32_btcap_chardev.c
+endif
+
+ifeq ($(CONFIG_SCHED_HPWORK),y)
+CSRCS += stm32_hpwork_softdog.c
+endif
+
+CSRCS += stm32_bcrumb.c
+
+ifeq ($(CONFIG_ETC_ROMFS),y)
+RCSRCS = etc/init.d/rc.sysinit etc/init.d/rcS
+endif

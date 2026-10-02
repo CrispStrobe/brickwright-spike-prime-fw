@@ -1,0 +1,29 @@
+# Full firmware component licences
+
+The simulator runner, upload protocol, motor controller and NuttX MicroPython
+port in `apps/hubprogram` are newly authored under BSD-3-Clause, with the full
+text in `apps/hubprogram/LICENSE`. Their copyright attribution is to
+Brickwright contributors.
+
+The embedded interpreter comes from MicroPython v1.26.1 at
+`647c8b96cae7e202c7a020395b7cfe65e5b8ce04`. Its core, embed port and GC helper
+retain MIT notices and `third_party/micropython-embed/LICENSE`. The generation
+recipe and configuration are recorded in that directory's `UPSTREAM.txt`.
+The default embed console implementation is retained in that source package;
+our application links its own bounded output adapter instead.
+
+The retained firmware repository has its MIT `LICENSE`. Individual retained
+source notices remain in place. NuttX and its applications retain their
+Apache-2.0 licence and NuttX `NOTICE`. The retained Zephyr Bluetooth host
+package has its Apache-2.0 `third_party/zephyr-host/upstream/LICENSE`, together
+with individual source notices. The simulation build does not import a local
+TI service-pack payload; its radio path is not a qualified BLE transport.
+
+Renode's retained models have MIT notices and `licenses/MIT.txt`; new
+Brickwright electrical-port and display-clock models have BSD-3-Clause
+headers. The model stager preserves these source notices and includes both
+licence texts. Firmware packaging must retain the dependency licence and
+notice files alongside the source-built kernel and userspace images.
+
+Original LEGO firmware is neither a dependency of this runner nor a packaged
+asset. Optional local-image testing is separate from this licence inventory.

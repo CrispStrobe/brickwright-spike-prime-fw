@@ -1,0 +1,7 @@
+MicroPython v1.26.1
+https://github.com/micropython/micropython
+Commit: 647c8b96cae7e202c7a020395b7cfe65e5b8ce04
+Core, embed port and generic GC helper: MIT; retain LICENSE and source notices.
+Generated with official ports/embed/embed.mk and our mpconfigport.h:
+make -f apps/hubprogram/micropython/embed.mk MICROPYTHON_TOP=/verified/local/checkout -j1
+Generated headers use this configuration and contain no firmware assets.

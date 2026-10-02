@@ -1,0 +1,191 @@
+#
+# Board-specific Kconfig for SPIKE Prime Hub
+#
+
+config BOARD_SPIKE_PRIME_HUB
+	bool
+	default y
+	---help---
+		Always-on identifier for the SPIKE Prime Hub board.  The
+		upstream NuttX layout uses CONFIG_ARCH_BOARD_CUSTOM=y +
+		CONFIG_ARCH_BOARD_CUSTOM_NAME="spike-prime-hub" for this
+		board, which leaves no preprocessor-checkable symbol that
+		identifies the hub.  This bool fills that gap so stm32
+		common files (e.g. stm32_allocateheap.c, stm32_mpuinit.c)
+		can carry a guarded SPIKE Prime Hub code path.
+
+config SPIKE_SOUND_PCM_BUFSAMPLES
+	int "PCM DMA buffer size (uint16_t samples)"
+	default 1024
+	range 256 8192
+	---help---
+		Size of the kernel-side DMA source buffer used by /dev/pcm0.
+		Default 1024 samples = 2 KB.  Playback is cyclic (one period
+		loops until stop), so this buffer holds one waveform period
+		rather than an entire track.
+
+config LEGO_PORT
+	bool "LEGO Powered Up I/O port (/dev/legoport[0-5])"
+	default n
+	depends on SCHED_HPWORK
+	depends on ARCH_CHIP_STM32F413VG || ARCH_CHIP_STM32F413ZH
+	depends on !STM32_USART6
+	select STM32_TIM1
+	select STM32_TIM3
+	select STM32_TIM4
+	---help---
+		Enable the LEGO Powered Up I/O port driver for the 6 external
+		ports (A-F) on the SPIKE Prime Hub.  Registers six char
+		devices /dev/legoport0../dev/legoport5 that expose:
+
+		 - Device connection manager (DCM, Issue #42): a 2 ms HPWORK
+		   state machine ported from pybricks that detects passive
+		   resistor-divider devices and latches UART devices at type
+		   UNKNOWN_UART (14) for the LUMP engine.
+		 - LUMP UART protocol engine (Issue #43, gated by
+		   CONFIG_LEGO_LUMP): per-port kernel thread that runs the
+		   SYNC / mode-info / DATA loop for active sensors and motors.
+		 - H-bridge PWM (Issue #80): direct duty-cycle control over
+		   TIM1 / TIM3 / TIM4, used to drive passive Powered Up
+		   motors and to hold the supply rail for sensors that
+		   announce NEEDS_SUPPLY_PIN1/PIN2 in their LUMP MODE flags.
+
+		Port E (PC6/PC7) shares its physical pins with USART6.  The
+		hub also has SWD repurposed for power control (PA13/PA14),
+		so disabling USART6 removes the only emergency / early-boot
+		debug path — see docs/development/debugging.md.  This
+		Kconfig hard-disables itself if STM32_USART6 is enabled —
+		pick one or the other.
+
+config LEGO_PORT_DCM_NOOP
+	bool "Diagnostic: skip DCM GPIO work (keep HPWORK monitor)"
+	default n
+	depends on LEGO_PORT
+	---help---
+		Diagnostic build flag.  When set, legoport_dcm_step() returns
+		immediately without performing any GPIO work, but the HPWORK
+		invocation timing is still measured by stm32_legoport_get_stats().
+		Used to rule the DCM in or out of HPWORK contention bugs.
+
+config LEGO_LUMP
+	bool "LEGO LUMP UART protocol engine (Issue #43)"
+	default n
+	depends on LEGO_PORT
+	depends on ARCH_CHIP_STM32F413VG || ARCH_CHIP_STM32F413ZH
+	---help---
+		Per-port LUMP protocol kthread for the 6 SPIKE Prime Hub I/O
+		ports (UART7/4/8/5/10/9 for A..F).  Required by the upcoming
+		motor (#44) and sensor (#45) drivers.
+
+		Owns UART4/5/7/8/9/10 directly without going through the
+		standard NuttX serial driver — CONFIG_STM32_UARTn is NOT set
+		(it would auto-select STM32_UARTn_SERIALDRIVER and register
+		/dev/ttyS*).  RCC clocks and pin AF are enabled by the board
+		code (`stm32_legoport_uart_hw.c`) on per-port handoff.
+
+config LEGO_LUMP_DIAG
+	bool "LUMP diagnostics: lump-hw dump CLI subcommand"
+	default n
+	depends on LEGO_LUMP
+	---help---
+		Builds the `port lump-hw dump` debug command that reads
+		RCC APB1ENR / APB2ENR, USART BRR / CR1, and NVIC priority and
+		enable bits for all six LUMP UARTs.  Useful for bring-up and
+		regression diagnosis; leave off for production builds.
+
+config LUMP_HIPRI_PROFILING
+	bool "LUMP HIPRI ISR cycle profiling (Issue #103)"
+	default n
+	depends on LEGO_LUMP
+	---help---
+		Bracket lump_uart_isr_core() with two DWT_CYCCNT reads so
+		`port lump status` / `sensor list` can show per-port HIPRI
+		ISR occupancy as IsrPct (0.1% units) and IsrAvgNs.  The HIPRI
+		direct vector (NVIC pri 0x00, Issue #100) bypasses arm_doirq()
+		so /proc/irqs and SCHED_IRQMONITOR can not see this cost
+		otherwise.
+
+		Off by default.  ISR cost on STM32F413 @ 96 MHz, derived
+		from arm-none-eabi-objdump of lump_uart_isr_core (build with
+		this Kconfig OFF):
+
+		  SW entry framing  (push + prologue, 1-time):  ~19 cycles
+		  Per-byte loop body (SR check + DR read + ring push):
+		                                                 ~23 cycles
+		  SW exit (pop + branch back to dispatch):       ~11 cycles
+		  ----------------------------------------------------------
+		  1-byte ISR call (static count):  ~53 cycles ≒ 552 ns
+		  Per extra byte drained per call: +23 cycles  ≒ +240 ns
+
+		Note: actual measured cycles are typically lower than the
+		static count because of pipelining and branch prediction —
+		empirical IsrAvgNs with profiling ON observed ~470-535 ns
+		per call at idle (i.e. the bare ISR plus ~27 cycles /
+		~280 ns of profiling overhead).
+
+		Turn this on for bring-up, root-cause work on Issue #100
+		(PendSV starvation), or any time you need to characterise the
+		HIPRI cost.  Leave it off in production — the IsrPct /
+		IsrAvgNs columns will display 0 / 0.0 (the fields stay in
+		lump_status_full_s so the ABI does not change with the
+		Kconfig).
+
+config LEGO_SENSOR
+	bool "LEGO sensor uORB driver (/dev/uorb/sensor_lego[0..5])"
+	default n
+	depends on LEGO_LUMP
+	depends on SENSORS
+	---help---
+		Per-port uORB sensor driver (Issue #45) that publishes
+		telemetry from any LUMP-capable Powered Up device — Color /
+		Ultrasonic / Force sensors and BOOST / Technic / SPIKE motor
+		encoders — to /dev/uorb/sensor_lego[0..5] as a fixed 56 byte
+		`struct lump_sample_s` envelope.
+
+		Mode switching and writable-mode TX (e.g. Color sensor LED
+		control, Ultrasonic LED control) are exposed through custom
+		ioctls (`LEGOSENSOR_SELECT` / `LEGOSENSOR_SEND`) gated by
+		per-port `LEGOSENSOR_CLAIM` arbitration.
+
+config BOARD_DRIVEBASE_CHARDEV
+	bool "/dev/drivebase kernel chardev for the userspace drivebase daemon"
+	default n
+	depends on LEGO_PORT
+	depends on SCHED_LPWORK
+	---help---
+		Kernel-side thin shim that exposes /dev/drivebase to userspace
+		(Issue #77).  It owns the cmd_ring (MPSC kernel-resident SPSC
+		view from the daemon side), the state double-buffer, the status
+		seqlock, and the LPWORK stale-daemon watchdog that triggers an
+		emergency motor coast if the daemon stops publishing for >50 ms.
+
+		Enable this for boards that run the apps/drivebase daemon.  The
+		device node exists from boot regardless of daemon state — user
+		tools can poll DRIVEBASE_GET_STATUS at any time, while the
+		motion ioctls return -ENOTCONN until the daemon attaches.
+
+config BOARD_BTCAP_CHARDEV
+	bool "/dev/btcap kernel chardev for the capture pipeline"
+	default n
+	---help---
+		Kernel-resident pipe-style chardev that bridges the apps/capture
+		writer (driven from apps/sensor `do_capture`) to the btsensor
+		MODE CAPTURE reader (Issue #122).  A single session is in flight
+		at a time, mediated by a small ring (BOARD_BTCAP_RING_BYTES) so
+		writer and reader run in lockstep without staging the whole
+		capture in kernel memory.
+
+		Enable this for boards that need lossless sensor capture export
+		over BT.  The chardev itself adds no peripheral or IRQ resource;
+		only RAM (default 1 KiB ring + a small handle).
+
+config BOARD_BTCAP_RING_BYTES
+	int "Internal pipe ring size for /dev/btcap (bytes)"
+	default 1024
+	depends on BOARD_BTCAP_CHARDEV
+	---help---
+		Size of the kernel-side ring that synchronises the /dev/btcap
+		writer and reader.  256 B (one BT chunk) × 4 ≈ 1024 B is enough
+		to keep the BT-side paced sender from stalling without burning
+		extra ksram; tune higher only if a specific capture profile
+		shows excessive sleep/wake churn.

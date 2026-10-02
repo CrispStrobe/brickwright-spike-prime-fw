@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brickwright.invalid/protocol/hub-contract-v1.schema.json",
+  "title": "Brickwright transport-neutral hub contract",
+  "description": "SPDX-License-Identifier: Apache-2.0",
+  "oneOf": [
+    {"$ref": "#/$defs/request"},
+    {"$ref": "#/$defs/result"},
+    {"$ref": "#/$defs/event"},
+    {"$ref": "#/$defs/snapshot"}
+  ],
+  "$defs": {
+    "base": {
+      "type": "object",
+      "required": ["version", "kind", "session"],
+      "properties": {
+        "version": {"const": 1},
+        "kind": {"type": "string"},
+        "session": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "request": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "kind", "session", "id", "operation", "arguments"],
+          "properties": {
+            "version": {"const": 1},
+            "kind": {"const": "request"},
+            "session": {"type": "string", "minLength": 1, "maxLength": 64},
+            "id": {"type": "string", "minLength": 1, "maxLength": 64},
+            "operation": {"enum": [
+              "hub.get_snapshot", "hub.subscribe", "hub.unsubscribe", "hub.stop_all",
+              "motor.run", "motor.run_for_time", "motor.run_for_degrees",
+              "motor.run_to_position", "motor.stop", "motor.reset_position",
+              "motor_pair.configure", "motor_pair.move", "motor_pair.stop",
+              "display.set_pixels", "display.set_pixel", "display.clear", "display.write",
+              "matrix3.set_pixels", "matrix3.set_pixel", "matrix3.clear",
+              "light.set_rgb", "sound.beep", "sound.stop", "sound.set_volume",
+              "imu.reset_yaw", "imu.preset_yaw", "sensor.configure",
+              "sensor.set_distance_lights", "storage.list", "storage.read",
+              "storage.append", "storage.delete"
+            ]},
+            "arguments": {"type": "object"},
+            "deadline_ms": {"type": "integer", "minimum": 1, "maximum": 600000}
+          }
+        }
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "session", "id", "ok"],
+      "properties": {
+        "version": {"const": 1},
+        "kind": {"const": "result"},
+        "session": {"type": "string", "minLength": 1, "maxLength": 64},
+        "id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "ok": {"type": "boolean"},
+        "value": {},
+        "error": {"$ref": "#/$defs/error"}
+      },
+      "allOf": [
+        {"if": {"properties": {"ok": {"const": true}}}, "then": {"not": {"required": ["error"]}}},
+        {"if": {"properties": {"ok": {"const": false}}}, "then": {"required": ["error"], "not": {"required": ["value"]}}}
+      ]
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {"enum": ["invalid_request", "unknown_operation", "invalid_argument", "unsupported", "not_connected", "device_absent", "stale_generation", "busy", "timeout", "cancelled", "io", "unsafe_state", "internal"]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 256},
+        "details": {"type": "object"}
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "session", "sequence", "event", "value", "timestamp_ms"],
+      "properties": {
+        "version": {"const": 1},
+        "kind": {"const": "event"},
+        "session": {"type": "string", "minLength": 1, "maxLength": 64},
+        "sequence": {"type": "integer", "minimum": 0},
+        "event": {"enum": ["hub.state", "port.changed", "button.changed", "gesture.detected", "battery.changed", "fault.raised", "operation.completed"]},
+        "value": {},
+        "timestamp_ms": {"type": "integer", "minimum": 0}
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "session", "sequence", "state"],
+      "properties": {
+        "version": {"const": 1},
+        "kind": {"const": "snapshot"},
+        "session": {"type": "string", "minLength": 1, "maxLength": 64},
+        "sequence": {"type": "integer", "minimum": 0},
+        "state": {"$ref": "#/$defs/hub_state"}
+      }
+    },
+    "hub_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestamp_ms", "ports", "buttons", "display", "imu", "sound", "safety"],
+      "properties": {
+        "timestamp_ms": {"type": "integer", "minimum": 0},
+        "ports": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["A", "B", "C", "D", "E", "F"],
+          "properties": {
+            "A": {"$ref": "#/$defs/port"}, "B": {"$ref": "#/$defs/port"},
+            "C": {"$ref": "#/$defs/port"}, "D": {"$ref": "#/$defs/port"},
+            "E": {"$ref": "#/$defs/port"}, "F": {"$ref": "#/$defs/port"}
+          }
+        },
+        "buttons": {
+          "type": "object", "additionalProperties": false,
+          "required": ["left", "center", "right"],
+          "properties": {"left": {"type": "boolean"}, "center": {"type": "boolean"}, "right": {"type": "boolean"}}
+        },
+        "display": {"type": "array", "minItems": 25, "maxItems": 25, "items": {"type": "integer", "minimum": 0, "maximum": 100}},
+        "center_light": {"$ref": "#/$defs/rgb"},
+        "imu": {"$ref": "#/$defs/imu"},
+        "sound": {
+          "type": "object", "additionalProperties": false, "required": ["volume", "active"],
+          "properties": {"volume": {"$ref": "#/$defs/percent"}, "active": {"type": "boolean"}, "frequency_hz": {"type": "integer", "minimum": 1, "maximum": 20000}}
+        },
+        "battery": {"$ref": "#/$defs/battery"},
+        "storage": {"$ref": "#/$defs/storage"},
+        "safety": {
+          "type": "object", "additionalProperties": false, "required": ["motors_stopped", "failsafe_active", "faults"],
+          "properties": {"motors_stopped": {"type": "boolean"}, "failsafe_active": {"type": "boolean"}, "faults": {"type": "array", "items": {"type": "string", "maxLength": 64}, "uniqueItems": true}}
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation", "kind"],
+      "properties": {
+        "generation": {"type": "integer", "minimum": 0},
+        "kind": {"enum": ["none", "unknown", "motor", "color", "distance", "force", "matrix3"]},
+        "device_id": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "value": {"type": "object"}
+      }
+    },
+    "imu": {
+      "type": "object", "additionalProperties": false,
+      "required": ["yaw_deg", "pitch_deg", "roll_deg", "acceleration_mg", "angular_velocity_dps", "face_up"],
+      "properties": {
+        "yaw_deg": {"type": "number"}, "pitch_deg": {"type": "number"}, "roll_deg": {"type": "number"},
+        "acceleration_mg": {"$ref": "#/$defs/xyz"}, "angular_velocity_dps": {"$ref": "#/$defs/xyz"},
+        "face_up": {"enum": ["top", "front", "right", "bottom", "back", "left", "unknown"]}
+      }
+    },
+    "xyz": {
+      "type": "object", "additionalProperties": false, "required": ["x", "y", "z"],
+      "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "z": {"type": "number"}}
+    },
+    "battery": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "percent": {"$ref": "#/$defs/percent"}, "voltage_mv": {"type": "integer", "minimum": 0},
+        "current_ma": {"type": "integer"}, "battery_temperature_c": {"type": "number"},
+        "hub_temperature_c": {"type": "number"}, "charging": {"type": "boolean"}, "low_power": {"type": "boolean"}
+      }
+    },
+    "storage": {
+      "type": "object", "additionalProperties": false, "required": ["available"],
+      "properties": {"available": {"type": "boolean"}, "capacity_bytes": {"type": "integer", "minimum": 0}, "free_bytes": {"type": "integer", "minimum": 0}, "files": {"type": "array", "items": {"$ref": "#/$defs/file"}}}
+    },
+    "file": {
+      "type": "object", "additionalProperties": false, "required": ["name", "size"],
+      "properties": {"name": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$"}, "size": {"type": "integer", "minimum": 0}}
+    },
+    "rgb": {
+      "type": "object", "additionalProperties": false, "required": ["r", "g", "b"],
+      "properties": {"r": {"type": "integer", "minimum": 0, "maximum": 255}, "g": {"type": "integer", "minimum": 0, "maximum": 255}, "b": {"type": "integer", "minimum": 0, "maximum": 255}}
+    },
+    "percent": {"type": "integer", "minimum": 0, "maximum": 100}
+  }
+}

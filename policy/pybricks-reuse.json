@@ -1,0 +1,1290 @@
+{
+  "schema": 1,
+  "reference_repository": "https://github.com/pybricks/pybricks-micropython",
+  "reference_commit": "101c6babb592148bda9a8fd912b7953c7d561c0a",
+  "scope": "All 46 local files existed in the recorded spike-nx baseline: 45 were byte-identical to the pre-correction local HEAD; legosensor_uorb.c has added sensor snapshot functionality. The baseline gitlink verifies the Pybricks reference pin. Source/reference relationships are conservatively inventoried; this is not a clean-room or whole-firmware clearance claim, and first-current-path commits with the unchanged Pybricks gitlink are recorded in policy/source-origin-review.json. This does not establish every external source developers may have consulted.",
+  "upstream_files": [
+    {
+      "path": "lib/pbio/src/drivebase.c",
+      "sha256": "b7fb45136316b75bf5f904bede7eb8abd0fcd32d01752974875c21d3017b984e",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/integrator.c",
+      "sha256": "14d1fd20d987dad222c7cb17adacddecd7ecb3a571d2c359cf6fc957c2436af0",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/control.c",
+      "sha256": "7c903d53f4455d07593f8f7bd366fdbe15bcf4178614d6f71e595fdc75af4891",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/angle.c",
+      "sha256": "9ba1bf682e15e44cc2c4d55204aee060b79a4ab48fe3ddf76686d65395bcf9d5",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2022-2023 LEGO System A/S",
+        "Copyright (c) 2022-2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/include/pbio/angle.h",
+      "sha256": "590a863955e71633c2a48f86f02aa876683d7daf788c42de250a6a429260e033",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2022-2023 LEGO System A/S",
+        "Copyright (c) 2022-2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/servo.c",
+      "sha256": "e119293c59c24d812d5cce835ca74806b4042f922fe4d311d4415c4af1acee6c",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/observer.c",
+      "sha256": "c3a8443541ed750a255a014e3b75b7a60ffaa29c5da7bcaeee3d7bca852d3bc8",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2019-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/imu.c",
+      "sha256": "51954258bb489092643f21b3cf8266727310e74e400ec3684ae97fcd361c4ac4",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2022-2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/control_settings.c",
+      "sha256": "57888720c81e968accc5c95eaecfb0e68878381179ec9ff23548d2ce83a72b9e",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/trajectory.c",
+      "sha256": "9fd0f3d64a1be99835dec8eed75b8b0079498b858a89eecadd4650dbd4eeed5c",
+      "offered_spdx": [
+        "MIT",
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2023 The Pybricks Authors",
+        "Copyright (c) 2020-2023 LEGO System A/S"
+      ]
+    },
+    {
+      "path": "lib/pbio/src/geometry.c",
+      "sha256": "5b10467f40267dc992cef17ffcce3186639982d830944f5ae64c55493ca2ad10",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/include/pbio/geometry.h",
+      "sha256": "c8c062a926c793310561bb7880d10893aa2923d740bc15a06b91e3ad762e2fce",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/imu/imu_lsm6ds3tr_c_stm32.c",
+      "sha256": "9c7391b69646acc22f4531f77a80f36a5f83ad280081ac16903ca662c8bcded3",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2020-2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/include/pbio/imu.h",
+      "sha256": "d23dc634efb4a4d0b1a8d10ddf0baa86998bd78cabadcb644a4adfd520d444b8",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/sound/sound_stm32_hal_dac.c",
+      "sha256": "700b117b27ac006dada30d9339d85978ec797f0127f21dd348d2be9b638fcb86",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2020 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/platform/prime_hub/platform.c",
+      "sha256": "8532fbe71b1603227230b043d6c8ce6d4da4035af8102b7ce8480cf3d1aa704d",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2019-2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/legodev/legodev_pup.c",
+      "sha256": "83591cea0bcd91b5e7c7c86b4c77c8d5860e247fea710beb0bff4e446dbc101c",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2019-2022 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/include/pbdrv/legodev.h",
+      "sha256": "d93ea3c322846dec50c17e54f41da632675d8bff835617e001005112bde9fe52",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/legodev/legodev_pup_uart.c",
+      "sha256": "3a460d2b47a3d589b146d32a8b609fa579acbffe8e28f857b6d9140222a22fce",
+      "offered_spdx": [
+        "MIT OR GPL-2.0-only"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "* Copyright (c) 2014-2016,2018-2019 David Lechner <david@lechnology.com>",
+        "Copyright (c) 2014-2016,2018-2019 David Lechner <david@lechnology.com>",
+        "Copyright (c) 2018-2023 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/charger/charger_mp2639a.c",
+      "sha256": "c672183f9fbf0f51a50352ba1b5e075efd925e5f4b34bbbe9cb2f50b7b9e6021",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2021-2022 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/usb/usb_stm32.c",
+      "sha256": "e8d214c667417e29d49f99dceea3f315b6d087949d18ff815d6051af9c94ff97",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2022 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/battery/battery_adc.c",
+      "sha256": "06e821ee47f05bb0582933864b19fcb636802ce7ba46a6d6a071bac6ce5404e7",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2018-2020 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/resistor_ladder/resistor_ladder.c",
+      "sha256": "489e5cae154f57848db8f98c050c6809963898c8911e76e39deee460a5ed3d74",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2021 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/bluetooth/bluetooth_btstack_uart_block_stm32_hal.c",
+      "sha256": "11c05e2c68da7978fd8e4e6fc23d120af0174907d90c47249079ae19da8b5cb2",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2020 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/lego/lego_uart.h",
+      "sha256": "9f8dcbcef8b315ccf4ad6e10d77b68ad6199ca8a2a9ac8fbe42508c4c677f9ef",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2019-2020 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/motor_driver/motor_driver_hbridge_pwm.c",
+      "sha256": "3f178b9e91377d85ce01c3626d30edb7f3366d538024d759fabf227352d426cb",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2019-2022 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/pwm/pwm_tlc5955_stm32.c",
+      "sha256": "448fd3f943e8f8a84672bf9ccc85e8fcda36510e866c9a38a8c214e6bbedb186",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2020 The Pybricks Authors"
+      ]
+    },
+    {
+      "path": "lib/pbio/drv/block_device/block_device_w25qxx_stm32.c",
+      "sha256": "0826099f18bc9304b0fcb4229cd8414517c94580d5d8bb5dd8bd0658a96f4f39",
+      "offered_spdx": [
+        "MIT"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "copyrights": [
+        "Copyright (c) 2022 The Pybricks Authors"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "apps/drivebase/drivebase_aggregate.c",
+      "reference_sources": [
+        "lib/pbio/src/drivebase.c",
+        "lib/pbio/src/integrator.c",
+        "lib/pbio/src/control.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "50a2a9504f7bf3ebcf22abe703aa99417c4b378afad14cf04c24b83b18ee18b7"
+    },
+    {
+      "path": "apps/drivebase/drivebase_aggregate.h",
+      "reference_sources": [
+        "lib/pbio/src/drivebase.c",
+        "lib/pbio/src/integrator.c",
+        "lib/pbio/src/control.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "a0c6f53e6dd5646d7ab6f08e6bd56c9ccc23b77194b0b36abbbc709cb93f1bf5"
+    },
+    {
+      "path": "apps/drivebase/drivebase_angle.h",
+      "reference_sources": [
+        "lib/pbio/src/angle.c",
+        "lib/pbio/include/pbio/angle.h"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "bbaea23cb04f8003f081bcf53cb1a6fdbf63bef44df194b8c190068019a319a5"
+    },
+    {
+      "path": "apps/drivebase/drivebase_control.c",
+      "reference_sources": [
+        "lib/pbio/src/control.c",
+        "lib/pbio/src/integrator.c",
+        "lib/pbio/src/servo.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "7527756c5c183802fd6141162a4c0cde8919db03999bf7cddb38508440187512"
+    },
+    {
+      "path": "apps/drivebase/drivebase_control.h",
+      "reference_sources": [
+        "lib/pbio/src/control.c",
+        "lib/pbio/src/integrator.c",
+        "lib/pbio/src/servo.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "9be84077a141e442af7c1149ba8a492974fc2fcc1f7faf63d24b7dea77d2d644"
+    },
+    {
+      "path": "apps/drivebase/drivebase_drivebase.c",
+      "reference_sources": [
+        "lib/pbio/src/drivebase.c",
+        "lib/pbio/src/observer.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "45518d1a500436a2977ca1136e7168828d4e8518ffd89653829dd27c4d9f7733"
+    },
+    {
+      "path": "apps/drivebase/drivebase_drivebase.h",
+      "reference_sources": [
+        "lib/pbio/src/drivebase.c",
+        "lib/pbio/src/observer.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "7da29b16e6b68a5a3610ce00c1865d1cc357adcf8dd7b2e96e3fe2f93363362d"
+    },
+    {
+      "path": "apps/drivebase/drivebase_imu.c",
+      "reference_sources": [
+        "lib/pbio/src/imu.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "6b7d157b12be8c920a00628547cfbf3a5ab4d3dc250c28ac226bcc1ecd81e26e"
+    },
+    {
+      "path": "apps/drivebase/drivebase_imu.h",
+      "reference_sources": [
+        "lib/pbio/src/imu.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "29d626854e5e446dfc20e115fc4c20b478176dba86205224a52a1c3c5655731f"
+    },
+    {
+      "path": "apps/drivebase/drivebase_motor.c",
+      "reference_sources": [
+        "lib/pbio/src/servo.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "497b20fa38e0ebf3434ddc0b4dbc551562973a4fe34bd96e4ac67ae763225237"
+    },
+    {
+      "path": "apps/drivebase/drivebase_observer.h",
+      "reference_sources": [
+        "lib/pbio/src/observer.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "7171f60660d90e42094384e6a343113b5813baa8644bdab419b84d136fd801e4"
+    },
+    {
+      "path": "apps/drivebase/drivebase_settings.c",
+      "reference_sources": [
+        "lib/pbio/src/control_settings.c",
+        "lib/pbio/src/integrator.c",
+        "lib/pbio/src/observer.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "e4f50b326342b2e1f265a23266d81939ffbaea6625076748606e0e57129c7c5c"
+    },
+    {
+      "path": "apps/drivebase/drivebase_settings.h",
+      "reference_sources": [
+        "lib/pbio/src/control_settings.c",
+        "lib/pbio/src/integrator.c",
+        "lib/pbio/src/observer.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "eeec0b1cf2d5fecca43f0465a1d1b607227888c8018fe2399fdfd9cf67a8ba73"
+    },
+    {
+      "path": "apps/drivebase/drivebase_trajectory.c",
+      "reference_sources": [
+        "lib/pbio/src/trajectory.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "e147b19aed7b99153982d127435ba9b268fd32fdc897cd4bae600ff31988cbf9"
+    },
+    {
+      "path": "apps/drivebase/drivebase_trajectory.h",
+      "reference_sources": [
+        "lib/pbio/src/trajectory.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "7492896176462138762da98cd7cc91e166e5834faea9e76949a41276f32ce057"
+    },
+    {
+      "path": "apps/imu/imu_calibration.c",
+      "reference_sources": [
+        "lib/pbio/src/imu.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "eac34bf7c25ac6e2f3b873609ecb194bdcb937070dfbbcb24ad92c32d8d65ccb"
+    },
+    {
+      "path": "apps/imu/imu_calibration.h",
+      "reference_sources": [
+        "lib/pbio/src/imu.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "e96e8df76ce4ceff8818e2aeace2fc19e910ea425713305df8f74879818958f9"
+    },
+    {
+      "path": "apps/imu/imu_fusion.c",
+      "reference_sources": [
+        "lib/pbio/src/imu.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "a34025ccc26f3bf98f2f6d8f6516ed63df0965b1cb75c652b78f8318d5d68af2"
+    },
+    {
+      "path": "apps/imu/imu_fusion.h",
+      "reference_sources": [
+        "lib/pbio/src/imu.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "2e997c1613e3c5d8340131ae4d683ed12a85911905d89b403efa5332d347ed7c"
+    },
+    {
+      "path": "apps/imu/imu_geometry.c",
+      "reference_sources": [
+        "lib/pbio/src/geometry.c",
+        "lib/pbio/include/pbio/geometry.h"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "a5d685f98e8062fe6f1ebfbab6558976616c448c942fb7ca0526cd9b61073b57"
+    },
+    {
+      "path": "apps/imu/imu_geometry.h",
+      "reference_sources": [
+        "lib/pbio/src/geometry.c",
+        "lib/pbio/include/pbio/geometry.h"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "fd475142ef5e23f444aea35450c46eb24daed46cf0adec7ea45648d96e369835"
+    },
+    {
+      "path": "apps/imu/imu_stationary.c",
+      "reference_sources": [
+        "lib/pbio/drv/imu/imu_lsm6ds3tr_c_stm32.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "f3be2bd57cd8630899c5a3452c58a2a0185e0ba87448ff32f2f4f0ecaa1db0bf"
+    },
+    {
+      "path": "apps/imu/imu_stationary.h",
+      "reference_sources": [
+        "lib/pbio/drv/imu/imu_lsm6ds3tr_c_stm32.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "6e6237e4388d787a0eebf4a2700c64b2bd6a815da6517bf609fbfdc071c507e9"
+    },
+    {
+      "path": "apps/imu/imu_types.h",
+      "reference_sources": [
+        "lib/pbio/include/pbio/geometry.h",
+        "lib/pbio/include/pbio/imu.h"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "b577f628928bb7ed14a314f535052e6efa49436fae6c951e4245a2df9cc896ce"
+    },
+    {
+      "path": "apps/sound/sound_main.c",
+      "reference_sources": [
+        "lib/pbio/drv/sound/sound_stm32_hal_dac.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "fec4d86aa03f9198177ffa324605a6771e4b532ea393527b085c0171f5122093"
+    },
+    {
+      "path": "boards/spike-prime-hub/include/board.h",
+      "reference_sources": [
+        "lib/pbio/platform/prime_hub/platform.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "e6c7815e1d5a95e4453255d282724c8135ba32e89aaa94469500071daf2c5ada"
+    },
+    {
+      "path": "boards/spike-prime-hub/include/board_drivebase.h",
+      "reference_sources": [
+        "lib/pbio/src/drivebase.c"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause",
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "b40bf166cdb1687d5577fa1a26d4145718fc756a7c0898cfdf7b2f8dd4a5e99e"
+    },
+    {
+      "path": "boards/spike-prime-hub/include/board_legoport.h",
+      "reference_sources": [
+        "lib/pbio/drv/legodev/legodev_pup.c",
+        "lib/pbio/include/pbdrv/legodev.h",
+        "lib/pbio/drv/legodev/legodev_pup_uart.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "5e09382ce0f50a0aebbcb90a1d6a944564d17f06fd2668f3da675506cf58655c"
+    },
+    {
+      "path": "boards/spike-prime-hub/include/board_lump.h",
+      "reference_sources": [
+        "lib/pbio/drv/legodev/legodev_pup_uart.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "fa816bc50726b6edf33ce8f84477f49d1cbf13b0a153f877b63647eb2732975d"
+    },
+    {
+      "path": "boards/spike-prime-hub/include/board_sound.h",
+      "reference_sources": [
+        "lib/pbio/drv/sound/sound_stm32_hal_dac.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "c868e0d9ee2c399118684f71ad39b3a74ba377fe69e0481a24eead11993fc5fa"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/legosensor_uorb.c",
+      "reference_sources": [
+        "lib/pbio/drv/legodev/legodev_pup_uart.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "b3849016f0bb0be41c4f021cd3baea2a8e587014cdb0c603dd93d792f596e582"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/lsm6dsl_uorb.c",
+      "reference_sources": [
+        "lib/pbio/drv/imu/imu_lsm6ds3tr_c_stm32.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "c8e3674adaded369b2a986ecc8f2b3613bbbe2b0d278905611b1b84fe048a998"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_adc_dma.c",
+      "reference_sources": [
+        "lib/pbio/platform/prime_hub/platform.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "9af4503e68541bba06f7e9a209ebafe4667f13d05c13aca27da87a3b60522513"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_battery_charger.c",
+      "reference_sources": [
+        "lib/pbio/drv/charger/charger_mp2639a.c",
+        "lib/pbio/drv/usb/usb_stm32.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "c6ab5d514e0f73e16ed7c81475132648d65a3ab767d39a970bc75c84e16b3f5c"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_battery_gauge.c",
+      "reference_sources": [
+        "lib/pbio/drv/battery/battery_adc.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "a74eca2e1f844c715f981cb895d339a66df3c36b75e32a77827f8aefce285ed4"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_bringup.c",
+      "reference_sources": [
+        "lib/pbio/platform/prime_hub/platform.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "367811521d14d28b1b255aacaf7da7234912df17d0b327df2c68d654a76f06ba"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_btbutton.c",
+      "reference_sources": [
+        "lib/pbio/drv/resistor_ladder/resistor_ladder.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "0c61848e230bed559281e97d891322dd01c923c1dd65cb7e62c8529df49bdf49"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_btuart.c",
+      "reference_sources": [
+        "lib/pbio/drv/bluetooth/bluetooth_btstack_uart_block_stm32_hal.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "1fc506ab4ef175215e7de9104a8e6e4506828b01a92712919ff03d5ec0d4457a"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_legoport.c",
+      "reference_sources": [
+        "lib/pbio/drv/legodev/legodev_pup.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "d34d85ded3be2faa247b95d8bf6552c307f10ce2a043a5517bdca36ccd3febbd"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_legoport_lump.c",
+      "reference_sources": [
+        "lib/pbio/drv/legodev/legodev_pup_uart.c",
+        "lib/lego/lego_uart.h"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "b4bad0073a8e7a2e4ee1b26faeffe8a2e4f67e2abfce28eed4e20bb897b534dc"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_legoport_pwm.c",
+      "reference_sources": [
+        "lib/pbio/drv/motor_driver/motor_driver_hbridge_pwm.c",
+        "lib/pbio/platform/prime_hub/platform.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "10575c93e7d710b0546f66ed8a9a72776d4a09a476753a1c8b849b5fc8f1c43d"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_pcm.c",
+      "reference_sources": [
+        "lib/pbio/drv/sound/sound_stm32_hal_dac.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "390040c0d617ead782784a73fbfce828b989131a5d07beefd3c23644d89cf52e"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_resistor_ladder.c",
+      "reference_sources": [
+        "lib/pbio/drv/resistor_ladder/resistor_ladder.c",
+        "lib/pbio/platform/prime_hub/platform.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "ae654ab13f28038971f533d27a2bff17d52859fd582f1a4047264668e9d1c0a0"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_tlc5955.c",
+      "reference_sources": [
+        "lib/pbio/drv/pwm/pwm_tlc5955_stm32.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "120df031a0fedc5e67ea3b0a0e0a9c9829ff4a67e609b21a021e7b322563e9c6"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_tone.c",
+      "reference_sources": [
+        "lib/pbio/drv/sound/sound_stm32_hal_dac.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "369e4fe3c550e9e6e38cf71df70c54fd6d082082f595df0755f453176465e263"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/stm32_w25q256.c",
+      "reference_sources": [
+        "lib/pbio/drv/block_device/block_device_w25qxx_stm32.c",
+        "lib/pbio/platform/prime_hub/platform.c"
+      ],
+      "selected_licences": [
+        "MIT"
+      ],
+      "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
+      "sha256": "41ae13dffb702f26fce096ec43b80624a4fa8070586a3a7ff4b6743497cab358"
+    }
+  ],
+  "required_notices": [
+    "licenses/Pybricks-MIT.txt",
+    "licenses/LEGO-BSD-3-Clause.txt",
+    "licenses/Brickwright-BSD-3-Clause.txt",
+    "licenses/LEGO-UART-MIT.txt"
+  ],
+  "inherited_from": {
+    "repository": "https://github.com/owhinata/spike-nx",
+    "commit": "00524ea5464bddb46c852967e382f8f6b073abe6",
+    "local_initial_snapshot": "5b2bde5a7eb11337f200799c53f4086496f0f4f4",
+    "comparison_target": "1715f777f7e5dcd9f780c46e474e4c25a77354fa",
+    "files": [
+      {
+        "path": "apps/drivebase/drivebase_aggregate.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "68a7f935a5414c99ac14dd7086852c5ab31584a98182ac37e49f11b780ece3ac"
+      },
+      {
+        "path": "apps/drivebase/drivebase_aggregate.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "1ab7d58ce4b9bd802d78993f6f2bc7a84251005b76157006971e1c9ebd4abc90"
+      },
+      {
+        "path": "apps/drivebase/drivebase_angle.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "06fa361b8653ad9a9c3dcabfd32ba21443747cc214ad980d75f2f032b94cf83d"
+      },
+      {
+        "path": "apps/drivebase/drivebase_control.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "aeef312d8eb24b970cf2945ca2993051ac3160513df533bf5b27f75f1d5c8f63"
+      },
+      {
+        "path": "apps/drivebase/drivebase_control.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "4dfa69a7b3d900521a020a087b6ba5c082f1fde2cc3781ffe64c54cc32031a19"
+      },
+      {
+        "path": "apps/drivebase/drivebase_drivebase.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "7270a26a0439743ef1e395c13e2a802aa9fe777001b40aca96ca65374e009890"
+      },
+      {
+        "path": "apps/drivebase/drivebase_drivebase.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "f191f31e45725b728cf2a308f5cab058f622e6e0dbb78dae0c475312efa2a38f"
+      },
+      {
+        "path": "apps/drivebase/drivebase_imu.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "d608704bac6b1a42e171ab1b97399bb76f2119b80a1209b6107971e215e25744"
+      },
+      {
+        "path": "apps/drivebase/drivebase_imu.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "fb92045171101af2f8896d002fd5a8e188bf34af7669caf8483f2bc3f1554c79"
+      },
+      {
+        "path": "apps/drivebase/drivebase_motor.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "8470bca2e813e978b53d25fae5d11ce8762e56121007cd14d135bdb739a9af3c"
+      },
+      {
+        "path": "apps/drivebase/drivebase_observer.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "711f54fe61382ccb757ce53739f2cbe3f6e35a268968d5e4512a47708e9f22a9"
+      },
+      {
+        "path": "apps/drivebase/drivebase_settings.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "0f7b5b702f8144bacf1254e646e8f642144c1ef4f5f748addc38f8a607f7debf"
+      },
+      {
+        "path": "apps/drivebase/drivebase_settings.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "8c696ae6e9f4f251c50142275f2f1ef0ab46725e643039ed52037c4106613fcb"
+      },
+      {
+        "path": "apps/drivebase/drivebase_trajectory.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "a36a4d79ae1ad900d4ec14383ff2e7c1ba77210b63975372fe38a7a81827d3e0"
+      },
+      {
+        "path": "apps/drivebase/drivebase_trajectory.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "a2a5890601deb5f97ddccc3150cdf18dac1618a928945753031048e2dbed4e88"
+      },
+      {
+        "path": "apps/imu/imu_calibration.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "e8bf10cf88548f6144600e5cae171f9fe1e7c40605f50e103f0666a4b8b40415"
+      },
+      {
+        "path": "apps/imu/imu_calibration.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "93c9380b6d7f0989bbd050f30dd515426000cf9ce59901a4983acdf060c20b3e"
+      },
+      {
+        "path": "apps/imu/imu_fusion.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "fc167a112f9faaeb57d902d7e4a91f0896a2b51f898555c6c395b24354f82f1d"
+      },
+      {
+        "path": "apps/imu/imu_fusion.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "8180d31cb9bd9c46087467057dd0d922d71b1ae96dd99f05a3ae31f6dda1f2ec"
+      },
+      {
+        "path": "apps/imu/imu_geometry.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "fe2e1ef7b54cfac523e8ca4032d3c901f98218000509c4b8149853976fd52f0c"
+      },
+      {
+        "path": "apps/imu/imu_geometry.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "c1148e02ba04eb9842e518764ebe302da5bdee009172a970070e6c6e99b69b77"
+      },
+      {
+        "path": "apps/imu/imu_stationary.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "b21ee1bf0a3bef076b0b9a52452fd5c2b31ac2949eeceb71992ab15ac97f5d7c"
+      },
+      {
+        "path": "apps/imu/imu_stationary.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "8e5c0a1fe809a00fd2066b2024afcbc3ddf81f90d9fc60813811a5d911b1c049"
+      },
+      {
+        "path": "apps/imu/imu_types.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "438617008a0ba258a32469405f16df3303be1e8d39cd56d4cf7c7a5c4a3314f3"
+      },
+      {
+        "path": "apps/sound/sound_main.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "70663e0a94013f5d8c1e578eb931779168ad2ef5e1ea1e3eae5775bf78d537f2"
+      },
+      {
+        "path": "boards/spike-prime-hub/include/board.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "3de5955e046667a81de9ecabb54b68b4afe79c3a26e0d67b066b556a266fc3ed"
+      },
+      {
+        "path": "boards/spike-prime-hub/include/board_drivebase.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "4cf41fce224aa43858764e038f59d07d1c743a61f5a82371ccb176506802f91d"
+      },
+      {
+        "path": "boards/spike-prime-hub/include/board_legoport.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "d2dee2f58861c83881647874fafe4e8d11f772f1205ee1e0498cd08f4a5af914"
+      },
+      {
+        "path": "boards/spike-prime-hub/include/board_lump.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "ec68307265c071bb45c69bec5793984127a7ce6d10db84bd88049bbe2d79c919"
+      },
+      {
+        "path": "boards/spike-prime-hub/include/board_sound.h",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "68f02246d43baa70599a2e16e3c25e17e40a13cd11e1a374bd52b0bcebcf6daa"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/legosensor_uorb.c",
+        "upstream_exists": true,
+        "snapshot_identical": false,
+        "current_identical": false,
+        "upstream_sha256": "6d07cc3b4d2bc4657bb588d549dd7613aa2a5a4d6e8a166f78ee1e442b2351bd"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/lsm6dsl_uorb.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "abc070c7b06a8e1bdae949f400fa7c43ad771c49d51a92d8c98dcb3434b4e2a2"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_adc_dma.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "bd97ce67e7d0bec335f11255c441fba027837a5587e6df1d2525908602f0c34d"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_battery_charger.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "2e8452c62adf1fc98dee776d7ea94d36af302b3477363dd96935e29144133ced"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_battery_gauge.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "705688141a5ddb5e67304856a6d3314262da8941b257b496707b56949652afe0"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_bringup.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "3bc6386d19b086466395d1df9edf9d8eef6f9f01a6d1b8feca617f87f23e560d"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_btbutton.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "d4abe354ad063767c5a3a73c9a6b2f8e0cf461ec0f391923ff6141871e44da5b"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_btuart.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "73a793b354bba07bd2740e2967e1dc0c1326d9554b00c4c34ec1005d3595f813"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_legoport.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "2359cb2b5bf06d3660002f46e6717dd91166a9cd5440bc342b52b20dca261449"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_legoport_lump.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "432a7645141b7769e3b11d7496f2810f6a3af4c2d0d6c483e4330a7a269bc008"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_legoport_pwm.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "53f3e47396922d2884066ff7dcfb2610e3059d202076ff719340a3a6c6a99d5d"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_pcm.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "473ec92e7980d98b121f0f083f55101285e187ffeb836a61cbd0df91ecf2a5ab"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_resistor_ladder.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "ebcc1ec195c4b9241844bb347a5ce056815787d2668815ca1b950a8e8a293e5f"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_tlc5955.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "38ea7a0905b16a7b532c56965a77c9f611432801116bc92ee67204cfe80b751e"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_tone.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "defa101e3824ad5eab1b34321836b43c958d757222eaebd9898c8706373c3694"
+      },
+      {
+        "path": "boards/spike-prime-hub/src/stm32_w25q256.c",
+        "upstream_exists": true,
+        "snapshot_identical": true,
+        "current_identical": true,
+        "upstream_sha256": "27deb38cb90e016a7131436a7999f58218bf8558d09b90eebba93afcd50f91e6"
+      }
+    ]
+  },
+  "notice_sha256": {
+    "licenses/Pybricks-MIT.txt": "7122ec4cd04330043b642cbc6fda462d797cb2fad3dc73fd394d147d565df841",
+    "licenses/LEGO-BSD-3-Clause.txt": "41e867a7d5d60746bf1b8c676505a59278532ca4f680d948a1a50d99afdb11e2",
+    "licenses/Brickwright-BSD-3-Clause.txt": "e0be31379ef4d9655ffcc922df438bc0e8287d469a34b9d0bcf277c91399429b",
+    "licenses/LEGO-UART-MIT.txt": "06e9c467eba8633b8b677525e4ee51466b67cd2d651463eb4fa5d419ba45ca7d"
+  }
+}

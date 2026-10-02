@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "source": {
+    "repository": "https://git.ti.com/git/ti-bt/service-packs.git",
+    "commit": "3aa1d75f3c2ae77f6e4d36194e3d281b899ab149",
+    "bts_path": "initscripts/TIInit_6.12.26.bts",
+    "license_path": "LICENSE",
+    "license_sha256": "21fd99ce784dc33b39ec0b4a383a9a9b8dafea261d73ad4548683c4eecd87f37"
+  },
+  "files": {
+    "646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e": {
+      "device": "CC2564C",
+      "rom": "6.12.26",
+      "service_pack": "1.5",
+      "kind": "combined-main-and-ble",
+      "filename": "TIInit_6.12.26.bts",
+      "size": 10211
+    }
+  }
+}

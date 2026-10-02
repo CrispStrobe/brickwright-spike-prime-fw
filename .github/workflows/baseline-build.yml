@@ -1,0 +1,118 @@
+name: Firmware build and simulation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firmware:
+    name: Build without publishing artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Initialize baseline build dependencies
+        run: git submodule update --init --depth 1 nuttx nuttx-apps
+
+      - name: Build the pinned tool container
+        run: docker build --pull -t nuttx-builder -f docker/Dockerfile.nuttx docker
+
+      - name: Record container and tool versions
+        run: |
+          docker image inspect nuttx-builder --format 'container={{.Id}}'
+          docker run --rm nuttx-builder arm-none-eabi-gcc --version | head -n 2
+          docker run --rm nuttx-builder python3 --version
+          docker run --rm nuttx-builder make --version | head -n 1
+
+      # CI builds and runs only the clean simulation profile. The hardware
+      # profile embeds TI's chip-restricted service pack and is never built,
+      # simulated, or published here.
+      - name: Build protected NuttX firmware (simulation profile)
+        run: |
+          set -o pipefail
+          make nuttx BOARD_CONFIG=simulation V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Verify the TI-free fingerprint against TI's pinned service pack
+        run: |
+          python3 tools/import_ti_service_pack.py --from-ti \
+            --output-dir "$RUNNER_TEMP/ti-reference"
+          python3 tools/check_ti_free_image.py --bts \
+            "$RUNNER_TEMP/ti-reference/TIInit_6.12.26.bts" \
+            nuttx/nuttx.bin nuttx/nuttx_user.bin nuttx/nuttx nuttx/nuttx_user.elf
+          rm -rf "$RUNNER_TEMP/ti-reference"
+
+      - name: Gate the simulation image and build as TI-free
+        run: |
+          python3 tools/check_ti_free_image.py \
+            nuttx/nuttx.bin nuttx/nuttx_user.bin nuttx/nuttx nuttx/nuttx_user.elf \
+            --build-log "$RUNNER_TEMP/build.log" \
+            --build-root nuttx --build-root nuttx-apps --build-root apps \
+            --config nuttx/.config --elf nuttx/nuttx_user.elf
+
+      - name: Enforce protected resource budgets
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" \
+            -w "$PWD" \
+            nuttx-builder \
+            python3 tools/check_resource_budgets.py
+
+      - name: Cross-compile Zephyr buffer boundary against pinned NuttX
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" \
+            -w "$PWD" \
+            nuttx-builder \
+            tools/check_zephyr_nuttx_compile.sh
+
+      - name: Cross-compile pinned PSA Bluetooth units
+        run: |
+          docker run --rm \
+            -v "$PWD:$PWD" \
+            -w "$PWD" \
+            nuttx-builder \
+            tools/check_zephyr_psa_compile.sh
+
+      - name: Link complete host-side Bluetooth harness
+        run: tools/check_zephyr_host_link.sh
+
+      - name: Record local-only outputs
+        run: |
+          test -s nuttx/nuttx.bin
+          test -s nuttx/nuttx_user.bin
+          wc -c nuttx/nuttx.bin nuttx/nuttx_user.bin
+          sha256sum nuttx/nuttx.bin nuttx/nuttx_user.bin
+
+      - name: Install pinned Renode
+        run: tools/install_renode.sh
+
+      - name: Stage the clean simulation pair
+        run: |
+          python3 tools/stage_nuttx_image.py brickwright nuttx
+          python3 tools/stage_nuttx_image.py brickwright-simulation nuttx
+
+      - name: Execute protected firmware in Renode
+        run: |
+          tools/test_renode_protected_images.sh \
+            --include brickwright \
+            --include brickwright-userspace \
+            --include brickwright-board-models \
+            --include brickwright-board-stubs
+
+      - name: Test the transport-neutral virtual HCI bridge
+        run: tools/test_renode_virtual_hci_bridge.sh
+
+      # Deliberately no artifact upload. The firmware is simulation-only until
+      # its real-hardware safety gate is complete. Renode results also remain
+      # inside the ephemeral runner.

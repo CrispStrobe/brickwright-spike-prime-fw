@@ -1,0 +1,533 @@
+using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
+
+using Avalonia.Threading;
+
+using CaptureViewer.App.Services;
+using CaptureViewer.Core.Capture;
+using CaptureViewer.Core.Live;
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+using ImuViewer.Core.Transport;
+using ImuViewer.Core.Transport.Linux;
+
+namespace CaptureViewer.App.ViewModels;
+
+/// <summary>How the time axis is laid out across multiple captures.</summary>
+public enum TimeAxisMode
+{
+    /// <summary>Each capture starts at t=0 (good for shape comparison).</summary>
+    Relative,
+
+    /// <summary>
+    /// All captures share a wall-clock-equivalent timeline: the
+    /// earliest <c>start_ts_us</c> among the visible captures becomes
+    /// t=0 and later captures' samples shift right by their
+    /// <c>start_ts_us</c> delta.  Useful for back-to-back run timelines.
+    /// </summary>
+    Sequence,
+}
+
+/// <summary>
+/// Top-level VM.  Holds the list of loaded captures, the selected
+/// channel/field name, and the BT connection state.  The view binds
+/// to <see cref="Loaded"/>, <see cref="LogLines"/>, and the various
+/// commands.  Plot redraw is driven by a <see cref="PlotInvalidated"/>
+/// event raised whenever Loaded / SelectedFieldName / per-row
+/// IsVisible changes.
+/// </summary>
+public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
+{
+    /// <summary>Color palette for newly loaded captures.</summary>
+    private static readonly uint[] Palette =
+    [
+        0xFF80B0FFu,    // soft blue
+        0xFFFFB070u,    // amber
+        0xFF80E090u,    // mint
+        0xFFFF8090u,    // rose
+        0xFFC080FFu,    // lavender
+        0xFFFFE060u,    // gold
+        0xFF60D0E0u,    // cyan
+        0xFFE090C0u,    // pink
+    ];
+
+    private BtConnection _btConnection;
+    private CaptureFileWriter _captureWriter;
+    private readonly IBluetoothPortEnumerator _portEnumerator;
+    private int _liveCounter;
+    private bool _bdAddrUpdating;  // re-entrancy guard for SelectedPort/BdAddr sync
+
+    public ObservableCollection<LoadedCaptureViewModel> Loaded { get; } = new();
+    public ObservableCollection<string> LogLines { get; } = new();
+    public ObservableCollection<BluetoothPort> Ports { get; } = new();
+
+    public IReadOnlyList<TimeAxisMode> TimeAxisModes { get; } =
+        new[] { TimeAxisMode.Relative, TimeAxisMode.Sequence };
+
+    [ObservableProperty]
+    private string _bdAddr = string.Empty;
+
+    [ObservableProperty]
+    private BluetoothPort? _selectedPort;
+
+    [ObservableProperty]
+    private string _outputDirectory = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "captures");
+
+    [ObservableProperty]
+    private TimeAxisMode _timeAxis = TimeAxisMode.Relative;
+
+    /// <summary>
+    /// Per-axis Y-range bindings (4 axes total, all rendered on the
+    /// left side of the plot).  Empty string == "auto-scale".
+    /// Strings (not nullable doubles) so the user can type freely;
+    /// the plot code-behind parses with <c>double.TryParse</c>.
+    ///
+    /// Defaults match the LEGO Color sensor's natural split:
+    ///   axis 1: 0..100   (Reflection / R / G / B)
+    ///   axis 2: 0..1024  (Intensity)
+    ///   axis 3: empty    (autoscale — reserved for future schemas)
+    ///   axis 4: empty    (autoscale — reserved for future schemas)
+    /// </summary>
+    [ObservableProperty] private string _axis1Min = "0";
+    [ObservableProperty] private string _axis1Max = "100";
+    [ObservableProperty] private string _axis2Min = "0";
+    [ObservableProperty] private string _axis2Max = "1024";
+    [ObservableProperty] private string _axis3Min = string.Empty;
+    [ObservableProperty] private string _axis3Max = string.Empty;
+    [ObservableProperty] private string _axis4Min = string.Empty;
+    [ObservableProperty] private string _axis4Max = string.Empty;
+
+    [ObservableProperty]
+    private bool _isConnected;
+
+    [ObservableProperty]
+    private string _statusText = "Idle";
+
+    /// <summary>
+    /// Color shown next to the BT bar — green when connected, gray
+    /// otherwise.  The view binds <c>BtIndicatorBrush</c> to a Border
+    /// fill.
+    /// </summary>
+    public Avalonia.Media.IBrush BtIndicatorBrush =>
+        IsConnected
+            ? new Avalonia.Media.SolidColorBrush(
+                Avalonia.Media.Color.FromUInt32(0xFF80E090))
+            : new Avalonia.Media.SolidColorBrush(
+                Avalonia.Media.Color.FromUInt32(0xFF606060));
+
+    /// <summary>
+    /// Raised whenever the plot needs to redraw — new capture loaded,
+    /// visibility toggled, field selection changed.  The view code-
+    /// behind subscribes once and calls <c>AvaPlot.Refresh()</c>.
+    /// </summary>
+    public event Action? PlotInvalidated;
+
+    public MainViewModel()
+    {
+        _captureWriter = new CaptureFileWriter(_outputDirectory);
+        _btConnection = new BtConnection(OnLiveSession, AppendLog);
+        _portEnumerator = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? new LinuxPortEnumerator()
+            : new EmptyPortEnumerator();
+
+        // Best-effort: kick off a port refresh on launch so the
+        // ComboBox is pre-populated.  Errors are swallowed (logged) —
+        // bluetoothctl missing on the path is not fatal.
+        _ = LoadPortsAsync();
+    }
+
+    [RelayCommand]
+    private Task RefreshPortsAsync() => LoadPortsAsync();
+
+    private async Task LoadPortsAsync()
+    {
+        try
+        {
+            var ports = await _portEnumerator.GetPairedPortsAsync(default);
+            Ports.Clear();
+            foreach (var port in ports) Ports.Add(port);
+            if (ports.Count > 0)
+            {
+                AppendLog($"Found {ports.Count} paired BT device(s)");
+            }
+            else
+            {
+                AppendLog("No paired BT devices (run `bluetoothctl pair ...` first)");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Port refresh failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>Fallback enumerator for non-Linux hosts.</summary>
+    private sealed class EmptyPortEnumerator : IBluetoothPortEnumerator
+    {
+        public Task<IReadOnlyList<BluetoothPort>> GetPairedPortsAsync(CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<BluetoothPort>>(Array.Empty<BluetoothPort>());
+    }
+
+    [RelayCommand]
+    private async Task OpenFileAsync()
+    {
+        var top = GetMainWindow();
+        if (top is null) return;
+
+        // Default to the configured Save dir so the picker opens where
+        // live captures land.  Falls back to the platform default if
+        // the directory does not exist (yet).
+        Avalonia.Platform.Storage.IStorageFolder? startFolder = null;
+        if (Directory.Exists(OutputDirectory))
+        {
+            startFolder = await top.StorageProvider
+                .TryGetFolderFromPathAsync(PathToUri(OutputDirectory))
+                .ConfigureAwait(true);
+        }
+
+        var files = await top.StorageProvider.OpenFilePickerAsync(
+            new Avalonia.Platform.Storage.FilePickerOpenOptions
+            {
+                Title = "Open .cap files",
+                AllowMultiple = true,
+                SuggestedStartLocation = startFolder,
+                FileTypeFilter =
+                [
+                    new Avalonia.Platform.Storage.FilePickerFileType("Capture files")
+                    {
+                        Patterns = ["*.cap"],
+                    },
+                ],
+            });
+
+        foreach (var file in files)
+        {
+            await LoadCaptureFromPathAsync(file.Path.LocalPath);
+        }
+    }
+
+    /// <summary>
+    /// Parse a single .cap file and add it to <see cref="Loaded"/>.
+    /// Used by both the file-picker command and the drag-drop handler
+    /// in MainWindow.axaml.cs.  Errors are surfaced through the log
+    /// pane only — the rest of the workflow keeps running.
+    /// </summary>
+    public async Task LoadCaptureFromPathAsync(string path)
+    {
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(path);
+            AddCapture(CaptureFile.Parse(bytes), Path.GetFileName(path));
+            StatusText =
+                $"Loaded {Path.GetFileName(path)} ({Loaded[^1].Capture.SchemaName}, " +
+                $"{Loaded[^1].Capture.RecordCount} records)";
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Open `{path}` failed: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task BrowseSaveDirAsync()
+    {
+        var top = GetMainWindow();
+        if (top is null) return;
+
+        Avalonia.Platform.Storage.IStorageFolder? startFolder = null;
+        if (Directory.Exists(OutputDirectory))
+        {
+            startFolder = await top.StorageProvider
+                .TryGetFolderFromPathAsync(PathToUri(OutputDirectory))
+                .ConfigureAwait(true);
+        }
+
+        var folders = await top.StorageProvider.OpenFolderPickerAsync(
+            new Avalonia.Platform.Storage.FolderPickerOpenOptions
+            {
+                Title = "Choose a folder for live BT captures",
+                SuggestedStartLocation = startFolder,
+                AllowMultiple = false,
+            });
+
+        if (folders.Count == 0) return;
+        var picked = folders[0].Path.LocalPath;
+        OutputDirectory = picked;
+    }
+
+    private static Avalonia.Controls.Window? GetMainWindow() =>
+        Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+    /// <summary>
+    /// Convert a local filesystem path to the file:// URI form
+    /// Avalonia.StorageProvider expects.  Handles both Linux
+    /// ("/home/ouwa/captures") and Windows ("C:\Users\...") paths.
+    /// </summary>
+    private static Uri PathToUri(string absolutePath)
+    {
+        var full = Path.GetFullPath(absolutePath);
+        // UriBuilder ensures we end up with a properly-encoded
+        // file://<host>/<path> form regardless of the OS.
+        return new Uri(full).IsFile
+            ? new Uri(full)
+            : new UriBuilder("file", "", -1, full).Uri;
+    }
+
+    [RelayCommand]
+    private void ClearAll()
+    {
+        Loaded.Clear();
+        StatusText = "Cleared";
+        PlotInvalidated?.Invoke();
+    }
+
+    /// <summary>
+    /// Fit-to-data shortcut.  Clears the Y-range overrides so both
+    /// axes auto-scale, then re-fires <see cref="PlotInvalidated"/>
+    /// so the redraw rescans the visible captures' value ranges.
+    /// </summary>
+    [RelayCommand]
+    private void AutoFit()
+    {
+        Axis1Min = string.Empty; Axis1Max = string.Empty;
+        Axis2Min = string.Empty; Axis2Max = string.Empty;
+        Axis3Min = string.Empty; Axis3Max = string.Empty;
+        Axis4Min = string.Empty; Axis4Max = string.Empty;
+        PlotInvalidated?.Invoke();
+        StatusText = "Auto-fit";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanConnect))]
+    private async Task ConnectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(BdAddr))
+        {
+            StatusText = "BD address is empty";
+            return;
+        }
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            StatusText = "Live BT receive is Linux-only in v1";
+            AppendLog(StatusText);
+            return;
+        }
+
+        // Refresh the live counter so each connect session starts at
+        // "live #1".  The counter is per-VM, not per-row, so without
+        // this reconnects would silently keep counting up.
+        _liveCounter = 0;
+
+        // Re-create the writer in case OutputDirectory changed since
+        // the App started.  Cheap (mkdir -p only).
+        _captureWriter = new CaptureFileWriter(OutputDirectory);
+
+        try
+        {
+            StatusText = $"Connecting to {BdAddr}...";
+            await _btConnection.ConnectAsync(BdAddr);
+            IsConnected = true;
+            StatusText = "Connected";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Connect failed: {ex.Message}";
+            AppendLog(StatusText);
+        }
+    }
+
+    private bool CanConnect() => !IsConnected;
+
+    [RelayCommand(CanExecute = nameof(CanDisconnect))]
+    private async Task DisconnectAsync()
+    {
+        await _btConnection.DisposeAsync();
+        // Replace the connection so a subsequent Connect is fresh.
+        _btConnection = new BtConnection(OnLiveSession, AppendLog);
+        IsConnected = false;
+        StatusText = "Disconnected";
+    }
+
+    private bool CanDisconnect() => IsConnected;
+
+    [RelayCommand(CanExecute = nameof(CanDisconnect))]
+    private async Task TriggerCaptureModeAsync()
+    {
+        try
+        {
+            await _btConnection.TriggerCaptureModeAsync();
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"MODE CAPTURE failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Invoked by the per-row CSV button — pops a save-file picker
+    /// and writes the selected capture out as CSV.  Wired into each
+    /// <see cref="LoadedCaptureViewModel"/> at construction time so
+    /// the row VM can bind to a local command and dodge Avalonia's
+    /// cross-DataTemplate binding cast issue.
+    /// </summary>
+    private async Task ExportRowCsvAsync(LoadedCaptureViewModel row)
+    {
+        var top = GetMainWindow();
+        if (top is null) return;
+
+        Avalonia.Platform.Storage.IStorageFolder? startFolder = null;
+        if (Directory.Exists(OutputDirectory))
+        {
+            startFolder = await top.StorageProvider
+                .TryGetFolderFromPathAsync(PathToUri(OutputDirectory))
+                .ConfigureAwait(true);
+        }
+
+        var file = await top.StorageProvider.SaveFilePickerAsync(
+            new Avalonia.Platform.Storage.FilePickerSaveOptions
+            {
+                Title = "Save CSV",
+                SuggestedFileName =
+                    $"{row.Capture.SchemaName}_{row.Capture.StartTimestampUs}.csv",
+                SuggestedStartLocation = startFolder,
+                DefaultExtension = "csv",
+            });
+        if (file is null) return;
+
+        try
+        {
+            CsvExporter.Save(row.Capture, file.Path.LocalPath);
+            AppendLog($"CSV saved to {file.Path.LocalPath}");
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"CSV export failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Drop a single capture from the loaded list.  Wired per-row in
+    /// <see cref="AddCapture"/>.
+    /// </summary>
+    private void RemoveRow(LoadedCaptureViewModel row)
+    {
+        if (!Loaded.Remove(row)) return;
+        StatusText = $"Removed {row.Label}";
+        PlotInvalidated?.Invoke();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _btConnection.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Wired to <see cref="BtConnection"/> — invoked on the receiver
+    /// task thread.  We marshal back to the UI thread before mutating
+    /// <see cref="Loaded"/> so the bound list view does not throw.
+    /// </summary>
+    private void OnLiveSession(SessionScan scan)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                var saved = _captureWriter.Save(scan.Capture);
+                AppendLog($"Saved live capture to {saved}");
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"Live save failed: {ex.Message}");
+            }
+
+            _liveCounter++;
+            AddCapture(scan.Capture, $"live #{_liveCounter}");
+        });
+    }
+
+    private void AddCapture(CaptureFile capture, string label)
+    {
+        var color = Palette[Loaded.Count % Palette.Length];
+        Loaded.Add(new LoadedCaptureViewModel(
+            capture, label, color,
+            ExportRowCsvAsync,
+            RemoveRow,
+            onFieldVisibilityChanged: () => PlotInvalidated?.Invoke()));
+        StatusText = $"Loaded {label} ({capture.SchemaName}, {capture.RecordCount} records)";
+        PlotInvalidated?.Invoke();
+    }
+
+    private void AppendLog(string line)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            LogLines.Add($"{DateTime.Now:HH:mm:ss}  {line}");
+            while (LogLines.Count > 200) LogLines.RemoveAt(0);
+        });
+    }
+
+    partial void OnSelectedPortChanged(BluetoothPort? value)
+    {
+        if (_bdAddrUpdating || value is null) return;
+        _bdAddrUpdating = true;
+        try
+        {
+            BdAddr = value.BdAddr;
+        }
+        finally
+        {
+            _bdAddrUpdating = false;
+        }
+    }
+
+    partial void OnBdAddrChanged(string value)
+    {
+        if (_bdAddrUpdating) return;
+        // If the user types an address that matches a known port,
+        // reflect it in the ComboBox; otherwise leave SelectedPort
+        // null so the ComboBox doesn't show a stale label.
+        _bdAddrUpdating = true;
+        try
+        {
+            BluetoothPort? match = null;
+            foreach (var p in Ports)
+            {
+                if (string.Equals(p.BdAddr, value, StringComparison.OrdinalIgnoreCase))
+                {
+                    match = p;
+                    break;
+                }
+            }
+            SelectedPort = match;
+        }
+        finally
+        {
+            _bdAddrUpdating = false;
+        }
+    }
+
+    partial void OnTimeAxisChanged(TimeAxisMode value) => PlotInvalidated?.Invoke();
+    partial void OnAxis1MinChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis1MaxChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis2MinChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis2MaxChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis3MinChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis3MaxChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis4MinChanged(string value)        => PlotInvalidated?.Invoke();
+    partial void OnAxis4MaxChanged(string value)        => PlotInvalidated?.Invoke();
+
+    partial void OnIsConnectedChanged(bool value)
+    {
+        ConnectCommand.NotifyCanExecuteChanged();
+        DisconnectCommand.NotifyCanExecuteChanged();
+        TriggerCaptureModeCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(BtIndicatorBrush));
+    }
+}

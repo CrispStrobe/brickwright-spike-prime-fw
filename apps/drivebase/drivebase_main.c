@@ -1,0 +1,2605 @@
+/****************************************************************************
+ * apps/drivebase/drivebase_main.c
+ *
+ * NSH CLI shell for the SPIKE Prime drivebase daemon (Issue #77).
+ * This file is the user-facing front-end; the heavy lifting (RT control
+ * loop, observer, trajectory, motor / IMU drain) lives in sibling
+ * sources to be added in subsequent commits of the same Issue:
+ *
+ *   commit #4  drivebase_motor.c       LEGOSENSOR fd lifetime + actuation
+ *   commit #5  drivebase_{angle,observer,control,trajectory,settings}.c
+ *   commit #6  drivebase_servo.c       per-motor PID closing the loop
+ *   commit #7  drivebase_drivebase.c   L/R aggregation + heading control
+ *   commit #8  drivebase_rt.c          5 ms tick + jitter ring
+ *   commit #9  drivebase_chardev_handler.c   command pickup / state publish
+ *   commit #10 drivebase_imu.c         sensor_imu0 push + gyro heading
+ *   commit #11 drivebase_daemon.c      lifecycle FSM + stall watchdog
+ *
+ * For the present commit (#3) the CLI only exposes `drivebase status`,
+ * which exercises DRIVEBASE_GET_STATUS through the kernel chardev shim
+ * and confirms the ABI plumbing end-to-end without requiring the daemon
+ * to have attached yet.  All other subcommands print "not yet
+ * implemented" so the usage page already tracks the planned surface.
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#include <arch/board/board_drivebase.h>
+
+#include "drivebase_motor.h"
+#include "drivebase_settings.h"
+#include "drivebase_trajectory.h"
+#include "drivebase_observer.h"
+#include "drivebase_control.h"
+#include "drivebase_angle.h"
+#include "drivebase_servo.h"
+#include "drivebase_drivebase.h"
+#include "drivebase_rt.h"
+#include "drivebase_chardev_handler.h"
+#include "drivebase_imu.h"
+#include "drivebase_daemon.h"
+#include "drivebase_battery.h"
+#include "drivebase_sysid.h"
+
+#include <pthread.h>
+#include <time.h>
+
+/****************************************************************************
+ * Private Functions: hidden _motor test verbs (Issue #77 development only)
+ *
+ * These verbs let us bench drivebase_motor.c primitives from NSH while
+ * the surrounding daemon is being built up commit-by-commit.  They will
+ * be removed once commit #11 lands the lifecycle FSM that owns init /
+ * deinit and the drive verbs become the public surface.
+ ****************************************************************************/
+
+static int parse_side(const char *s, enum db_side_e *out)
+{
+  if ((s[0] == 'l' || s[0] == 'L') && s[1] == '\0')
+    {
+      *out = DB_SIDE_LEFT;
+      return 0;
+    }
+  if ((s[0] == 'r' || s[0] == 'R') && s[1] == '\0')
+    {
+      *out = DB_SIDE_RIGHT;
+      return 0;
+    }
+  return -1;
+}
+
+static int do_motor_subcmd(int argc, FAR char *argv[])
+{
+  /* Common: init both sides for every invocation, deinit at the end.
+   * Fresh task per invocation = stateless from CLI's perspective.
+   */
+
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _motor "
+              "{open|read [l|r]|select <l|r> <mode>|"
+              "duty <l|r> <-10000..10000>|coast <l|r>|brake <l|r>}\n");
+      return 1;
+    }
+
+  int rc = drivebase_motor_init();
+  if (rc < 0)
+    {
+      fprintf(stderr, "drivebase_motor_init: %s\n", strerror(-rc));
+      return 1;
+    }
+
+  const char *sub = argv[0];
+  int ret = 0;
+
+  if (strcmp(sub, "open") == 0)
+    {
+      printf("L: port_idx=%d (sensor_motor_l)\n",
+             drivebase_motor_port_idx(DB_SIDE_LEFT));
+      printf("R: port_idx=%d (sensor_motor_r)\n",
+             drivebase_motor_port_idx(DB_SIDE_RIGHT));
+    }
+  else if (strcmp(sub, "read") == 0)
+    {
+      enum db_side_e sides[2] = { DB_SIDE_LEFT, DB_SIDE_RIGHT };
+      int n_sides = 2;
+      if (argc >= 2)
+        {
+          enum db_side_e s;
+          if (parse_side(argv[1], &s) < 0)
+            {
+              fprintf(stderr, "bad side: %s\n", argv[1]);
+              ret = 1;
+              goto out;
+            }
+          sides[0] = s;
+          n_sides  = 1;
+        }
+      for (int i = 0; i < n_sides; i++)
+        {
+          struct db_motor_sample_s sm;
+          int dr;
+
+          /* Retry drain for ~10 ms — the upper-half sensor framework
+           * starts a fresh subscriber at "no data yet" and only fills
+           * the per-fd cursor when a new publish arrives.  LUMP runs
+           * ~1 kHz so 10 attempts × 1 ms is plenty.  The daemon does
+           * not need this — it owns a long-lived fd that sees every
+           * publish from the moment it subscribed.
+           */
+
+          for (int attempt = 0; attempt < 10; attempt++)
+            {
+              dr = drivebase_motor_drain(sides[i], &sm);
+              if (dr != -EAGAIN)
+                {
+                  break;
+                }
+              usleep(1000);
+            }
+
+          const char *name = (sides[i] == DB_SIDE_LEFT) ? "L" : "R";
+          if (dr == 0)
+            {
+              printf("%s port=%u mode=%u type=%u nval=%u "
+                     "seq=%lu gen=%lu ts_us=%llu raw=%ld\n",
+                     name, sm.port_idx, sm.mode_id, sm.data_type,
+                     sm.num_values,
+                     (unsigned long)sm.seq, (unsigned long)sm.generation,
+                     (unsigned long long)sm.timestamp_us,
+                     (long)sm.raw_value);
+            }
+          else if (dr == DB_MOTOR_DRAIN_DISCONNECTED)
+            {
+              printf("%s drain: disconnected (port lost, #154)\n", name);
+            }
+          else
+            {
+              printf("%s drain: %s\n", name, strerror(-dr));
+            }
+        }
+    }
+  else if (strcmp(sub, "select") == 0)
+    {
+      enum db_side_e s;
+      if (argc < 3 || parse_side(argv[1], &s) < 0)
+        {
+          fprintf(stderr, "usage: _motor select <l|r> <mode>\n");
+          ret = 1;
+          goto out;
+        }
+      int mode = atoi(argv[2]);
+      int sr = drivebase_motor_select_mode(s, (uint8_t)mode);
+      if (sr < 0)
+        {
+          fprintf(stderr, "select: %s\n", strerror(-sr));
+          ret = 1;
+        }
+    }
+  else if (strcmp(sub, "duty") == 0)
+    {
+      enum db_side_e s;
+      if (argc < 3 || parse_side(argv[1], &s) < 0)
+        {
+          fprintf(stderr, "usage: _motor duty <l|r> <-10000..10000>\n");
+          ret = 1;
+          goto out;
+        }
+      int duty = atoi(argv[2]);
+      if (duty < -10000 || duty > 10000)
+        {
+          fprintf(stderr, "duty out of range: %d\n", duty);
+          ret = 1;
+          goto out;
+        }
+      int sr = drivebase_motor_set_duty(s, (int16_t)duty);
+      if (sr < 0)
+        {
+          fprintf(stderr, "set_duty: %s\n", strerror(-sr));
+          ret = 1;
+        }
+    }
+  else if (strcmp(sub, "coast") == 0)
+    {
+      enum db_side_e s;
+      if (argc < 2 || parse_side(argv[1], &s) < 0)
+        {
+          fprintf(stderr, "usage: _motor coast <l|r>\n");
+          ret = 1;
+          goto out;
+        }
+      int sr = drivebase_motor_coast(s);
+      if (sr < 0)
+        {
+          fprintf(stderr, "coast: %s\n", strerror(-sr));
+          ret = 1;
+        }
+    }
+  else if (strcmp(sub, "brake") == 0)
+    {
+      enum db_side_e s;
+      if (argc < 2 || parse_side(argv[1], &s) < 0)
+        {
+          fprintf(stderr, "usage: _motor brake <l|r>\n");
+          ret = 1;
+          goto out;
+        }
+      int sr = drivebase_motor_brake(s);
+      if (sr < 0)
+        {
+          fprintf(stderr, "brake: %s\n", strerror(-sr));
+          ret = 1;
+        }
+    }
+  else
+    {
+      fprintf(stderr, "_motor: unknown subcommand '%s'\n", sub);
+      ret = 1;
+    }
+
+out:
+  drivebase_motor_deinit();
+  return ret;
+}
+
+/* Forward decls needed because the _drive block (next) uses helpers
+ * defined later in the file inside the _servo block.
+ */
+
+static uint64_t now_us(void);
+
+/****************************************************************************
+ * Private Functions: hidden _imu test verb (Issue #77 development only)
+ *
+ * Open /dev/uorb/sensor_imu0, drain a few ticks, print bias / heading.
+ * Used to validate the integration math + bias estimator before the
+ * daemon FSM (commit #11) wires SET_USE_GYRO into the drivebase loop.
+ *
+ *   drivebase _imu calibrate          ~250 ms idle: bias should stabilise
+ *   drivebase _imu heading <ms>       integrate for <ms> and dump heading
+ *
+ * Phase 2.5 (Issue #145) adds three properties-style verbs for the
+ * test pipeline:
+ *
+ *   drivebase _imu drift <sec>        static drift rate over <sec> seconds
+ *                                     (calibrates first; one properties
+ *                                     line: drift_mdegpm=... samples=...
+ *                                     temp_*_c=... loaded=...)
+ *   drivebase _imu verify <deg> [ms]  manual <deg> rotation vs gyro
+ *                                     integration; one properties line
+ *                                     (target_deg / actual_mdeg /
+ *                                     error_mdeg / samples / loaded)
+ *   drivebase _imu show               dump cal.* + runtime.* state for
+ *                                     spot-checking the loader, matmul
+ *                                     and temperature accessor
+ ****************************************************************************/
+
+/* Calibrate idle window with no per-tick printout (helper for the
+ * Phase 2.5 verbs that only care about the post-calibration heading
+ * + bias state).
+ */
+
+static void imu_calibrate_silent(struct db_imu_s *im, uint32_t ms)
+{
+  for (uint32_t t = 0; t < ms; t += 25)
+    {
+      usleep(25000);
+      db_imu_drain_and_update(im, now_us());
+    }
+}
+
+/* Issue #147 diagnostic.  Stream heading + quaternion state once per
+ * 1000 ms so we can observe whether Madgwick is tracking motion live or
+ * the heading is being pulled back during static phases.  Calibration
+ * + heading reset + drain loop are the same as `_imu drift`; only the
+ * per-tick print differs.
+ */
+
+static int do_imu_watch(struct db_imu_s *im, int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr, "usage: drivebase _imu watch <sec>\n");
+      return 1;
+    }
+
+  uint32_t sec = (uint32_t)atoi(argv[0]);
+  if (sec == 0 || sec > 120)
+    {
+      fprintf(stderr, "_imu watch: sec must be 1..120\n");
+      return 1;
+    }
+
+  imu_calibrate_silent(im, 250);
+  db_imu_set_heading_mdeg(im, 0);
+
+  printf("# t_ms heading_mdeg q0_x1000 q1 q2 q3 tilt_mdeg "
+         "fsr_match samples\n");
+
+  uint64_t t0_us       = now_us();
+  uint64_t next_log_us = t0_us;
+  uint64_t deadline_us = t0_us + (uint64_t)sec * 1000000ULL;
+
+  while (now_us() < deadline_us)
+    {
+      usleep(10000);
+      db_imu_drain_and_update(im, now_us());
+
+      uint64_t now = now_us();
+      if (now >= next_log_us)
+        {
+          float q[4];
+          db_imu_get_quaternion(im, q);
+          int64_t heading = db_imu_get_heading_mdeg(im);
+          int32_t tilt_mdeg =
+              (int32_t)(db_imu_get_tilt_deg(im) * 1000.0f);
+
+          printf("watch t_ms=%lu heading=%lld q=%ld %ld %ld %ld "
+                 "tilt_mdeg=%ld xl=%d s=%lu\n",
+                 (unsigned long)((now - t0_us) / 1000),
+                 (long long)heading,
+                 (long)(q[0] * 1000.0f),
+                 (long)(q[1] * 1000.0f),
+                 (long)(q[2] * 1000.0f),
+                 (long)(q[3] * 1000.0f),
+                 (long)tilt_mdeg,
+                 (int)im->accel_fsr_match,
+                 (unsigned long)im->sample_count);
+
+          next_log_us += 1000000ULL;
+        }
+    }
+
+  return 0;
+}
+
+static int do_imu_drift(struct db_imu_s *im, int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr, "usage: drivebase _imu drift <sec>\n");
+      return 1;
+    }
+
+  uint32_t sec = (uint32_t)atoi(argv[0]);
+  if (sec == 0 || sec > 600)
+    {
+      fprintf(stderr, "_imu drift: sec must be 1..600\n");
+      return 1;
+    }
+
+  imu_calibrate_silent(im, 250);
+
+  /* Reset heading after calibration so we measure post-cal drift. */
+
+  db_imu_set_heading_mdeg(im, 0);
+  uint32_t start_samples = im->sample_count;
+  int16_t  temp_start_raw = db_imu_get_temperature_raw(im);
+
+  /* 10 ms drain interval keeps the uORB ring (nbuffer=10) from
+   * overflowing at 833 Hz: each cycle captures ~8 samples and leaves
+   * the kernel ring under capacity.  Sleeping 50 ms drops ~75 % of
+   * samples (only the 10 oldest survive the overwrite) and would
+   * make the drift estimate noisier than necessary.
+   */
+
+  uint64_t deadline_us = now_us() + (uint64_t)sec * 1000000ULL;
+  while (now_us() < deadline_us)
+    {
+      usleep(10000);
+      db_imu_drain_and_update(im, now_us());
+    }
+
+  int64_t  heading_mdeg = db_imu_get_heading_mdeg(im);
+  uint32_t samples = im->sample_count - start_samples;
+  int16_t  temp_end_raw = db_imu_get_temperature_raw(im);
+
+  /* drift in milli-degrees per minute over the measurement window.
+   * sec is bounded to 600 above, so the multiplication fits int64.
+   */
+
+  int64_t drift_mdegpm = heading_mdeg * 60 / (int64_t)sec;
+  uint32_t dt_avg_us =
+      (samples > 0) ? (uint32_t)((uint64_t)sec * 1000000ULL / samples) : 0;
+
+  /* T_c = 25 + raw/256.  Integer truncation is fine for logging. */
+
+  int temp_start_c = 25 + (int)temp_start_raw / 256;
+  int temp_end_c   = 25 + (int)temp_end_raw   / 256;
+
+  printf("drift_mdegpm=%lld samples=%lu dt_avg_us=%lu "
+         "temp_start_c=%d temp_end_c=%d loaded=%d\n",
+         (long long)drift_mdegpm,
+         (unsigned long)samples,
+         (unsigned long)dt_avg_us,
+         temp_start_c, temp_end_c,
+         (int)im->cal.loaded);
+  return 0;
+}
+
+static int do_imu_verify(struct db_imu_s *im, int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _imu verify <deg> [duration_ms]\n");
+      return 1;
+    }
+
+  int target_deg = atoi(argv[0]);
+  if (target_deg == 0 || target_deg < -1080 || target_deg > 1080)
+    {
+      fprintf(stderr,
+              "_imu verify: deg must be -1080..1080 (excluding 0)\n");
+      return 1;
+    }
+
+  uint32_t duration_ms = (argc >= 2) ? (uint32_t)atoi(argv[1]) : 10000;
+  if (duration_ms < 1000 || duration_ms > 60000)
+    {
+      fprintf(stderr,
+              "_imu verify: duration_ms must be 1000..60000 "
+              "(default 10000)\n");
+      return 1;
+    }
+
+  imu_calibrate_silent(im, 250);
+  db_imu_set_heading_mdeg(im, 0);
+  uint32_t start_samples = im->sample_count;
+
+  printf("# rotate by %d deg within %u ms (manual)\n",
+         target_deg, (unsigned)duration_ms);
+
+  /* 10 ms drain interval — see do_imu_drift().  Especially important
+   * for verify since fast rotations push the per-sample angular
+   * displacement up; a 50 ms drain would drop ~75 % of samples and
+   * the integration would lose more on the high-rate sections of
+   * accel/decel.
+   *
+   * Phase 3a (Issue #147): heading_mdeg is the unwrapped world-
+   * vertical yaw extracted from the Madgwick quaternion, so a tilted
+   * IMU mounting no longer scales the result by cos(θ).  A physical
+   * 360° rotation on a 51° tilted bench should now read
+   * actual_mdeg ≈ target_deg × 1000 ± 4°.
+   */
+
+  uint64_t deadline_us = now_us() + (uint64_t)duration_ms * 1000ULL;
+  while (now_us() < deadline_us)
+    {
+      usleep(10000);
+      db_imu_drain_and_update(im, now_us());
+    }
+
+  int64_t  actual_mdeg = db_imu_get_heading_mdeg(im);
+  int64_t  target_mdeg = (int64_t)target_deg * 1000;
+  int64_t  error_mdeg  = actual_mdeg - target_mdeg;
+  uint32_t samples = im->sample_count - start_samples;
+
+  printf("target_deg=%d actual_mdeg=%lld error_mdeg=%lld "
+         "samples=%lu duration_ms=%lu loaded=%d\n",
+         target_deg,
+         (long long)actual_mdeg,
+         (long long)error_mdeg,
+         (unsigned long)samples,
+         (unsigned long)duration_ms,
+         (int)im->cal.loaded);
+  return 0;
+}
+
+static int do_imu_show(struct db_imu_s *im)
+{
+  /* Drain long enough to (a) populate cur_fsr_gy_dps / gyro_mdps_num /
+   * temp from the live driver state, and (b) let the Z-bias idle EMA
+   * cross its 200 ms `DB_IMU_DEFAULT_BIAS_WINDOW_US` window so
+   * `runtime.calibrated` reports the converged value instead of the
+   * fresh-instance default 0.  Pre-#149 we drained 100 ms which
+   * structurally couldn't satisfy the 200 ms window — the diagnostic
+   * always read `calibrated=0` even on a perfectly idle bench, masking
+   * any real bias-estimator regression behind a known artifact.  Reuse
+   * `imu_calibrate_silent()` (also used by `_imu drift` / `_imu watch`)
+   * so the convergence semantics stay uniform across diagnostic verbs.
+   */
+
+  imu_calibrate_silent(im, 250);
+
+  int temp_c = 25 + (int)db_imu_get_temperature_raw(im) / 256;
+
+  printf("cal.loaded=%d\n", (int)im->cal.loaded);
+  printf("cal.schema_version=%u\n", (unsigned)im->cal.schema_version);
+  printf("cal.fsr_gy_dps=%u\n", (unsigned)im->cal.fsr_gy_dps);
+  printf("cal.fsr_xl_g=%u\n", (unsigned)im->cal.fsr_xl_g);
+  printf("cal.odr_hz=%u\n", (unsigned)im->cal.odr_hz);
+  printf("cal.ambient_temp_c=%d\n", (int)im->cal.ambient_temp_c);
+  printf("cal.gyro_bias_x1000=%ld %ld %ld\n",
+         (long)im->cal.gyro_bias_lsb_x1000[0],
+         (long)im->cal.gyro_bias_lsb_x1000[1],
+         (long)im->cal.gyro_bias_lsb_x1000[2]);
+  printf("cal.gyro_M_x1000=%ld %ld %ld %ld %ld %ld %ld %ld %ld\n",
+         (long)im->cal.gyro_M_x1000[0][0],
+         (long)im->cal.gyro_M_x1000[0][1],
+         (long)im->cal.gyro_M_x1000[0][2],
+         (long)im->cal.gyro_M_x1000[1][0],
+         (long)im->cal.gyro_M_x1000[1][1],
+         (long)im->cal.gyro_M_x1000[1][2],
+         (long)im->cal.gyro_M_x1000[2][0],
+         (long)im->cal.gyro_M_x1000[2][1],
+         (long)im->cal.gyro_M_x1000[2][2]);
+  printf("runtime.bias_lsb_x1000=%ld %ld %ld\n",
+         (long)im->bias_lsb_x1000[0],
+         (long)im->bias_lsb_x1000[1],
+         (long)im->bias_lsb_x1000[2]);
+  printf("runtime.calibrated=%d\n", (int)im->calibrated);
+  printf("runtime.cur_fsr_gy_dps=%u\n", (unsigned)im->cur_fsr_gy_dps);
+  printf("runtime.gyro_mdps_num=%ld\n", (long)im->gyro_mdps_num);
+  printf("runtime.temperature_raw=%d\n",
+         (int)db_imu_get_temperature_raw(im));
+  printf("runtime.temperature_c=%d\n", temp_c);
+
+  /* Phase 3a Madgwick diagnostics.  q0..q3 are scaled to mdeg-style
+   * x1000 (= micro-units) so the print stays integer-only and matches
+   * the convention the rest of the line uses.  tilt_deg is also
+   * x1000 — i.e. the value is "milli-degrees of tilt from world
+   * vertical".  beta_x1000 is the configured base gain × 1000.
+   */
+
+  float q[4];
+  db_imu_get_quaternion(im, q);
+  printf("madgwick.q_x1000=%ld %ld %ld %ld\n",
+         (long)(q[0] * 1000.0f),
+         (long)(q[1] * 1000.0f),
+         (long)(q[2] * 1000.0f),
+         (long)(q[3] * 1000.0f));
+  printf("madgwick.tilt_mdeg=%ld\n",
+         (long)(db_imu_get_tilt_deg(im) * 1000.0f));
+  printf("madgwick.beta_x1000=%ld\n",
+         (long)(db_imu_get_beta(im) * 1000.0f));
+  printf("madgwick.initialized=%d\n", (int)im->madgwick.initialized);
+  printf("madgwick.accel_fsr_match=%d\n", (int)im->accel_fsr_match);
+  return 0;
+}
+
+static int do_imu_subcmd(int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _imu "
+              "{calibrate|heading <ms>|drift <sec>|"
+              "verify <deg> [ms]|show|watch <sec>}\n");
+      return 1;
+    }
+
+  struct db_imu_s im;
+  int rc = db_imu_open(&im);
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_imu_open: %s\n", strerror(-rc));
+      return 1;
+    }
+
+  if (strcmp(argv[0], "calibrate") == 0)
+    {
+      printf("calibrating: keep robot still ~250 ms ...\n");
+      uint32_t total_ms = 250;
+      for (uint32_t t = 0; t < total_ms; t += 25)
+        {
+          usleep(25000);
+          db_imu_drain_and_update(&im, now_us());
+          printf("  t=%3lums bias_lsb=%ld samples=%lu cal=%d "
+                 "heading=%lld mdeg\n",
+                 (unsigned long)t,
+                 (long)db_imu_get_bias_z_lsb(&im),
+                 (unsigned long)im.sample_count,
+                 (int)db_imu_is_calibrated(&im),
+                 (long long)db_imu_get_heading_mdeg(&im));
+        }
+    }
+  else if (strcmp(argv[0], "heading") == 0)
+    {
+      uint32_t ms = (argc >= 2) ? (uint32_t)atoi(argv[1]) : 2000;
+
+      /* Calibrate first. */
+
+      printf("calibrating ~250 ms ...\n");
+      for (uint32_t t = 0; t < 250; t += 25)
+        {
+          usleep(25000);
+          db_imu_drain_and_update(&im, now_us());
+        }
+      printf("  bias_lsb=%ld cal=%d\n",
+             (long)db_imu_get_bias_z_lsb(&im),
+             (int)db_imu_is_calibrated(&im));
+
+      /* Reset heading after calibration so the post-cal integral
+       * starts from 0.
+       */
+
+      db_imu_set_heading_mdeg(&im, 0);
+
+      uint32_t step_ms = ms / 10;
+      if (step_ms < 25) step_ms = 25;
+      for (uint32_t t = 0; t < ms; t += step_ms)
+        {
+          usleep(step_ms * 1000);
+          db_imu_drain_and_update(&im, now_us());
+          printf("  t=%4lums heading=%lld mdeg samples=%lu\n",
+                 (unsigned long)t,
+                 (long long)db_imu_get_heading_mdeg(&im),
+                 (unsigned long)im.sample_count);
+        }
+    }
+  else if (strcmp(argv[0], "drift") == 0)
+    {
+      int sub_rc = do_imu_drift(&im, argc - 1, &argv[1]);
+      db_imu_close(&im);
+      return sub_rc;
+    }
+  else if (strcmp(argv[0], "verify") == 0)
+    {
+      int sub_rc = do_imu_verify(&im, argc - 1, &argv[1]);
+      db_imu_close(&im);
+      return sub_rc;
+    }
+  else if (strcmp(argv[0], "show") == 0)
+    {
+      int sub_rc = do_imu_show(&im);
+      db_imu_close(&im);
+      return sub_rc;
+    }
+  else if (strcmp(argv[0], "watch") == 0)
+    {
+      int sub_rc = do_imu_watch(&im, argc - 1, &argv[1]);
+      db_imu_close(&im);
+      return sub_rc;
+    }
+  else
+    {
+      fprintf(stderr, "_imu: unknown subcommand '%s'\n", argv[0]);
+      db_imu_close(&im);
+      return 1;
+    }
+
+  db_imu_close(&im);
+  return 0;
+}
+
+/****************************************************************************
+ * Private Functions: hidden _daemon test verb (Issue #77 development only)
+ *
+ * End-to-end smoke for the chardev IPC path.  Spawns a daemon thread
+ * that runs db_chardev_handler_tick + db_drivebase_update from
+ * drivebase_rt's RT loop, then issues drive ioctls from the main
+ * thread to exercise PICKUP_CMD + dispatch + state publish.
+ *
+ *   drivebase _daemon attach        # smoke: attach + idle 500ms + detach
+ *   drivebase _daemon straight 200  # config + drive_straight + watch state
+ *   drivebase _daemon turn 90       # config + turn
+ *   drivebase _daemon stop_lat      # measure STOP fast-path latency
+ ****************************************************************************/
+
+struct daemon_ctx_s
+{
+  struct db_drivebase_s          db;
+  struct db_chardev_handler_s    handler;
+  struct db_rt_s                 rt;
+  pthread_mutex_t                lock;
+};
+
+static int daemon_tick_cb(uint64_t now_us, void *arg)
+{
+  struct daemon_ctx_s *ctx = (struct daemon_ctx_s *)arg;
+  pthread_mutex_lock(&ctx->lock);
+  /* drain commands & dispatch */
+  db_chardev_handler_tick(&ctx->handler, now_us);
+  /* run drivebase loop if configured */
+  if (ctx->handler.configured)
+    {
+      db_drivebase_update(&ctx->db, now_us);
+      /* publish post-update state so a client polling GET_STATE sees
+       * the latest distance/heading immediately (Issue #135: single
+       * canonical publish path).
+       */
+      struct drivebase_state_s st;
+      db_drivebase_get_state(&ctx->db, &st);
+      st.tick_seq = (uint32_t)(now_us & 0xffffffff);
+      db_chardev_handler_publish_state(&ctx->handler, &st);
+    }
+  pthread_mutex_unlock(&ctx->lock);
+  return 0;
+}
+
+/* `daemon_ctx_s` carries struct db_drivebase_s inside (~3 KB).  Stack-
+ * allocating it would push the CLI task's 4 KB stack over the edge, so
+ * we calloc it from the user heap instead — keeps usram .bss tight at
+ * the cost of a per-invocation umm_alloc/free pair.  The verb is a
+ * developer smoke test that should not run while the production daemon
+ * FSM is alive (g_daemon owns the same drivebase state).
+ */
+
+static int do_daemon_run(const char *kind, int32_t arg1, int32_t arg2,
+                         uint32_t wheel_d_um, uint32_t axle_t_um)
+{
+  struct daemon_ctx_s *ctxp = calloc(1, sizeof(*ctxp));
+  if (ctxp == NULL)
+    {
+      fprintf(stderr, "_daemon: out of memory\n");
+      return 1;
+    }
+  pthread_mutex_init(&ctxp->lock, NULL);
+#define ctx (*ctxp)
+
+  /* 1. Bring up motors (CLAIM both fds, verify type 48 ×2). */
+
+  int rc = drivebase_motor_init();
+  if (rc < 0)
+    {
+      fprintf(stderr, "drivebase_motor_init: %s\n", strerror(-rc));
+      free(ctxp);
+      return 1;
+    }
+  drivebase_motor_select_mode(DB_SIDE_LEFT,  2);
+  drivebase_motor_select_mode(DB_SIDE_RIGHT, 2);
+  usleep(30000);
+
+  int port_l = drivebase_motor_port_idx(DB_SIDE_LEFT);
+  int port_r = drivebase_motor_port_idx(DB_SIDE_RIGHT);
+
+  /* 2. Init drivebase up-front (skip the CONFIG ioctl path for now —
+   *    that exercises a separate dispatch in the RT thread context
+   *    that's covered in commit #11 once the daemon FSM owns it.
+   *    Hard-code wheel_d_um / axle_t_um from the verb args.)
+   */
+
+  rc = db_drivebase_init(&ctx.db, wheel_d_um, axle_t_um,
+                         DB_RT_TICK_MS_DEFAULT);
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_drivebase_init: %s\n", strerror(-rc));
+      drivebase_motor_deinit();
+      free(ctxp);
+      return 1;
+    }
+  rc = db_drivebase_reset(&ctx.db, now_us());
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_drivebase_reset: %s\n", strerror(-rc));
+      drivebase_motor_deinit();
+      free(ctxp);
+      return 1;
+    }
+
+  /* 3. ATTACH to /dev/drivebase. */
+
+  rc = db_chardev_handler_attach(&ctx.handler, &ctx.db, port_l, port_r,
+                                 DRIVEBASE_ON_COMPLETION_COAST);
+  if (rc < 0)
+    {
+      fprintf(stderr, "chardev_handler_attach: %s\n", strerror(-rc));
+      drivebase_motor_deinit();
+      free(ctxp);
+      return 1;
+    }
+  /* Tell the handler that drivebase is already configured so it won't
+   * wait for a CONFIG envelope from the user before dispatching drive
+   * verbs.
+   */
+
+  ctx.handler.configured = true;
+  ctx.handler.wheel_d_um = wheel_d_um;
+  ctx.handler.axle_t_um  = axle_t_um;
+  ctx.handler.tick_ms    = DB_RT_TICK_MS_DEFAULT;
+
+  /* 3. Spawn the RT tick task. */
+
+  db_rt_init(&ctx.rt, DB_RT_TICK_US_DEFAULT);
+  rc = db_rt_start(&ctx.rt, CONFIG_APP_DRIVEBASE_RT_PRIORITY,
+                   daemon_tick_cb, &ctx);
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_rt_start: %s\n", strerror(-rc));
+      db_chardev_handler_detach(&ctx.handler);
+      drivebase_motor_deinit();
+      free(ctxp);
+      return 1;
+    }
+
+  /* 4. From the main thread, issue ioctls to the chardev so the daemon
+   *    thread sees them through PICKUP_CMD on the next tick.
+   */
+
+  int dev = open(DRIVEBASE_DEVPATH, O_RDWR);
+  if (dev < 0)
+    {
+      fprintf(stderr, "open dev: %s\n", strerror(errno));
+      db_rt_stop(&ctx.rt, 100);
+      db_chardev_handler_detach(&ctx.handler);
+      drivebase_motor_deinit();
+      free(ctxp);
+      return 1;
+    }
+
+  int exit_rc = 0;
+
+  if (strcmp(kind, "attach") == 0)
+    {
+      printf("attach: ok\n");
+      usleep(500000);
+    }
+  else
+    {
+      /* (CONFIG already applied at daemon init — issue drive verb
+       * directly via ioctl through the kernel cmd_ring.)
+       */
+
+      if (strcmp(kind, "straight") == 0)
+        {
+          struct drivebase_drive_straight_s a = {
+            .distance_mm   = arg1,
+            .on_completion = DRIVEBASE_ON_COMPLETION_BRAKE,
+          };
+          if (ioctl(dev, DRIVEBASE_DRIVE_STRAIGHT,
+                    (unsigned long)&a) < 0)
+            {
+              fprintf(stderr, "DRIVE_STRAIGHT: %s\n", strerror(errno));
+              exit_rc = 1; goto out;
+            }
+        }
+      else if (strcmp(kind, "turn") == 0)
+        {
+          struct drivebase_turn_s a = {
+            .angle_deg     = arg1,
+            .on_completion = DRIVEBASE_ON_COMPLETION_BRAKE,
+          };
+          if (ioctl(dev, DRIVEBASE_TURN, (unsigned long)&a) < 0)
+            {
+              fprintf(stderr, "TURN: %s\n", strerror(errno));
+              exit_rc = 1; goto out;
+            }
+        }
+      else if (strcmp(kind, "forever") == 0)
+        {
+          struct drivebase_drive_forever_s a = {
+            .speed_mmps    = arg1,
+            .turn_rate_dps = arg2,
+          };
+          if (ioctl(dev, DRIVEBASE_DRIVE_FOREVER,
+                    (unsigned long)&a) < 0)
+            {
+              fprintf(stderr, "DRIVE_FOREVER: %s\n", strerror(errno));
+              exit_rc = 1; goto out;
+            }
+        }
+      else if (strcmp(kind, "stop_lat") == 0)
+        {
+          /* Start a forever, wait for motor to be moving, time STOP. */
+          struct drivebase_drive_forever_s f = {
+            .speed_mmps    = 200,
+            .turn_rate_dps = 0,
+          };
+          ioctl(dev, DRIVEBASE_DRIVE_FOREVER, (unsigned long)&f);
+          usleep(700000);  /* let motors reach speed */
+          struct drivebase_state_s st_before;
+          ioctl(dev, DRIVEBASE_GET_STATE, (unsigned long)&st_before);
+
+          struct timespec t0, t1;
+          clock_gettime(CLOCK_MONOTONIC, &t0);
+          struct drivebase_stop_s st = {
+            .on_completion = DRIVEBASE_ON_COMPLETION_COAST,
+          };
+          ioctl(dev, DRIVEBASE_STOP, (unsigned long)&st);
+          clock_gettime(CLOCK_MONOTONIC, &t1);
+
+          uint64_t lat_us =
+              (uint64_t)(t1.tv_sec - t0.tv_sec) * 1000000ULL +
+              (uint64_t)(t1.tv_nsec - t0.tv_nsec) / 1000ULL;
+          printf("STOP latency: %llu us  (kernel emergency_cb path)\n",
+                 (unsigned long long)lat_us);
+          usleep(50000);
+          struct drivebase_state_s st_after;
+          ioctl(dev, DRIVEBASE_GET_STATE, (unsigned long)&st_after);
+          printf("  pre-STOP  v=%ld dist=%ld\n",
+                 (long)st_before.drive_speed_mmps,
+                 (long)st_before.distance_mm);
+          printf("  post-STOP v=%ld dist=%ld\n",
+                 (long)st_after.drive_speed_mmps,
+                 (long)st_after.distance_mm);
+          goto out;
+        }
+
+      /* Poll state for up to ~3 sec. */
+
+      for (int i = 0; i < 30; i++)
+        {
+          usleep(100000);
+          struct drivebase_state_s st;
+          if (ioctl(dev, DRIVEBASE_GET_STATE, (unsigned long)&st) < 0)
+            {
+              break;
+            }
+          printf("t=%4dms dist=%ld v=%ld angle=%ld done=%d cmd=%u\n",
+                 (i + 1) * 100, (long)st.distance_mm,
+                 (long)st.drive_speed_mmps, (long)st.angle_mdeg,
+                 (int)st.is_done, st.active_command);
+          if (st.is_done) break;
+        }
+
+      /* Final stop. */
+
+      struct drivebase_stop_s sst = {
+        .on_completion = DRIVEBASE_ON_COMPLETION_COAST,
+      };
+      ioctl(dev, DRIVEBASE_STOP, (unsigned long)&sst);
+      usleep(20000);
+    }
+
+out:
+  close(dev);
+  db_rt_stop(&ctx.rt, 100);
+  db_chardev_handler_detach(&ctx.handler);
+  drivebase_motor_deinit();
+#undef ctx
+  free(ctxp);
+  return exit_rc;
+}
+
+static int do_daemon_subcmd(int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _daemon "
+              "{attach|straight <mm>|turn <deg>|forever <mmps> <dps>|"
+              "stop_lat} [wheel_mm] [axle_mm]\n");
+      return 1;
+    }
+
+  const char *kind = argv[0];
+  int32_t  arg1 = (argc >= 2) ? (int32_t)atol(argv[1]) : 0;
+  int32_t  arg2 = (argc >= 3) ? (int32_t)atol(argv[2]) : 0;
+  double   wheel_mm = (argc >= 4) ? strtod(argv[3], NULL) : 56.0;
+  double   axle_mm  = (argc >= 5) ? strtod(argv[4], NULL) : 112.0;
+  uint32_t wheel_d_um = (uint32_t)(wheel_mm * 1000.0 + 0.5);
+  uint32_t axle_t_um  = (uint32_t)(axle_mm  * 1000.0 + 0.5);
+  return do_daemon_run(kind, arg1, arg2, wheel_d_um, axle_t_um);
+}
+
+/****************************************************************************
+ * Private Functions: hidden _rt test verb (Issue #77 development only)
+ *
+ * Spawns the SCHED_FIFO 5 ms tick task with a no-op callback so the
+ * jitter ring fills up under realistic scheduling pressure (BTstack,
+ * sound DAC, USB CDC, LUMP kthreads all running).  Stops after the
+ * requested duration and prints the histogram.
+ ****************************************************************************/
+
+static int rt_noop_cb(uint64_t now_us, void *arg)
+{
+  (void)now_us;
+  (void)arg;
+  return 0;
+}
+
+static int do_rt_subcmd(int argc, FAR char *argv[])
+{
+  uint32_t duration_ms = (argc >= 1) ? (uint32_t)atoi(argv[0]) : 2000;
+
+  struct db_rt_s rt;
+  db_rt_init(&rt, DB_RT_TICK_US_DEFAULT);
+  int rc = db_rt_start(&rt, CONFIG_APP_DRIVEBASE_RT_PRIORITY,
+                       rt_noop_cb, NULL);
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_rt_start: %s\n", strerror(-rc));
+      return 1;
+    }
+
+  /* Sleep at the CLI task's priority while the RT task burns ticks. */
+
+  usleep(duration_ms * 1000);
+
+  db_rt_stop(&rt, 100);
+
+  struct drivebase_jitter_dump_s d;
+  db_rt_get_jitter(&rt, &d);
+
+  printf("rt: ticks=%lu max_lag=%lu us miss=%lu\n",
+         (unsigned long)d.total_ticks,
+         (unsigned long)d.max_lag_us,
+         (unsigned long)d.deadline_miss_count);
+  printf("    hist <50/50-100/100-200/200-500/500-1k/1k-2k/2k-5k/5k+:\n"
+         "         %5lu %5lu %5lu %5lu %5lu %5lu %5lu %5lu\n",
+         (unsigned long)d.hist_us[0], (unsigned long)d.hist_us[1],
+         (unsigned long)d.hist_us[2], (unsigned long)d.hist_us[3],
+         (unsigned long)d.hist_us[4], (unsigned long)d.hist_us[5],
+         (unsigned long)d.hist_us[6], (unsigned long)d.hist_us[7]);
+
+  if (d.total_ticks > 0)
+    {
+      uint32_t cum = 0;
+      uint32_t p50_th  = (d.total_ticks + 1) / 2;
+      uint32_t p99_th  = (d.total_ticks * 99 + 99) / 100;
+      uint32_t p999_th = (d.total_ticks * 999 + 999) / 1000;
+      static const uint32_t bucket_hi[8] =
+        { 50, 100, 200, 500, 1000, 2000, 5000, UINT32_MAX };
+      uint32_t p50 = 0, p99 = 0, p999 = 0;
+      for (uint32_t i = 0; i < 8; i++)
+        {
+          cum += d.hist_us[i];
+          if (p50  == 0 && cum >= p50_th)  p50  = bucket_hi[i];
+          if (p99  == 0 && cum >= p99_th)  p99  = bucket_hi[i];
+          if (p999 == 0 && cum >= p999_th) p999 = bucket_hi[i];
+        }
+      printf("    p50<= %lu  p99<= %lu  p999<= %lu  (us)\n",
+             (unsigned long)p50, (unsigned long)p99,
+             (unsigned long)p999);
+    }
+  return 0;
+}
+
+/****************************************************************************
+ * Private Functions: hidden _drive test verb (Issue #77 development only)
+ *
+ * Standalone L+R closed-loop runs through drivebase_drivebase before
+ * the daemon FSM (commit #11) wires the user-facing verbs.  Each
+ * invocation does motor_init + drivebase_init + reset + drive +
+ * tick-loop + stop + deinit in one task.
+ ****************************************************************************/
+
+/* `struct db_drivebase_s` is ~3 KB (two servos × ~1.4 KB each).
+ * Stack-allocating it overflows the 4 KB CLI stack, so the test
+ * verb calloc's it from the user heap and frees it on exit.  Avoids
+ * keeping the same bytes resident in usram .bss for a developer
+ * smoke verb that should not run while the production daemon FSM is
+ * alive (which would also conflict with g_daemon's drivebase state).
+ */
+
+static int do_drive_run(const char *kind, int32_t arg1, int32_t arg2,
+                        uint32_t duration_ms, uint8_t on_completion,
+                        uint32_t wheel_d_um, uint32_t axle_t_um)
+{
+  struct db_drivebase_s *dbp = calloc(1, sizeof(*dbp));
+  if (dbp == NULL)
+    {
+      fprintf(stderr, "_drive: out of memory\n");
+      return 1;
+    }
+#define db (*dbp)
+
+  int rc = drivebase_motor_init();
+  if (rc < 0)
+    {
+      fprintf(stderr, "drivebase_motor_init: %s\n", strerror(-rc));
+      free(dbp);
+      return 1;
+    }
+
+  drivebase_motor_select_mode(DB_SIDE_LEFT,  2);
+  drivebase_motor_select_mode(DB_SIDE_RIGHT, 2);
+  usleep(30000);
+
+  rc = db_drivebase_init(&db, wheel_d_um, axle_t_um,
+                         DB_RT_TICK_MS_DEFAULT);
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_drivebase_init: %s\n", strerror(-rc));
+      drivebase_motor_deinit();
+      free(dbp);
+      return 1;
+    }
+
+  uint64_t t0 = now_us();
+  rc = db_drivebase_reset(&db, t0);
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_drivebase_reset: %s\n", strerror(-rc));
+      drivebase_motor_deinit();
+      free(dbp);
+      return 1;
+    }
+
+  if (strcmp(kind, "straight") == 0)
+    {
+      rc = db_drivebase_drive_straight(&db, t0, arg1,
+                                       0 /* default speed */,
+                                       on_completion);
+    }
+  else if (strcmp(kind, "turn") == 0)
+    {
+      rc = db_drivebase_turn(&db, t0, arg1,
+                             0 /* default turn rate */,
+                             on_completion);
+    }
+  else if (strcmp(kind, "curve") == 0)
+    {
+      rc = db_drivebase_drive_curve(&db, t0, arg1, arg2, on_completion);
+    }
+  else if (strcmp(kind, "forever") == 0)
+    {
+      rc = db_drivebase_drive_forever(&db, t0, arg1, arg2);
+    }
+  else
+    {
+      rc = db_drivebase_stop(&db, t0, on_completion);
+    }
+  if (rc < 0)
+    {
+      fprintf(stderr, "drive %s: %s\n", kind, strerror(-rc));
+      db_drivebase_stop(&db, now_us(), DRIVEBASE_ON_COMPLETION_COAST);
+      drivebase_motor_deinit();
+      free(dbp);
+      return 1;
+    }
+
+  /* 5 ms tick loop */
+
+  struct timespec next;
+  clock_gettime(CLOCK_MONOTONIC, &next);
+  uint32_t total_ticks  = duration_ms / 5;
+  uint32_t status_every = total_ticks / 12;
+  if (status_every == 0) status_every = 1;
+
+  for (uint32_t i = 0; i < total_ticks; i++)
+    {
+      next.tv_nsec += 5000000;
+      if (next.tv_nsec >= 1000000000)
+        {
+          next.tv_nsec -= 1000000000;
+          next.tv_sec  += 1;
+        }
+      clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+
+      int ur = db_drivebase_update(&db, now_us());
+      if (ur < 0)
+        {
+          fprintf(stderr, "tick %lu: update %s\n",
+                  (unsigned long)i, strerror(-ur));
+          break;
+        }
+
+      if ((i % status_every) == 0)
+        {
+          struct drivebase_state_s st;
+          db_drivebase_get_state(&db, &st);
+          printf("t=%4lums dist=%ld mm v=%ld mmps angle=%ld mdeg "
+                 "tr=%ld dps done=%d stall=%d cmd=%u\n",
+                 (unsigned long)(i * 5),
+                 (long)st.distance_mm, (long)st.drive_speed_mmps,
+                 (long)st.angle_mdeg, (long)st.turn_rate_dps,
+                 (int)st.is_done, (int)st.is_stalled,
+                 st.active_command);
+        }
+    }
+
+  db_drivebase_stop(&db, now_us(), DRIVEBASE_ON_COMPLETION_COAST);
+  drivebase_motor_deinit();
+#undef db
+  free(dbp);
+  return 0;
+}
+
+static int do_drive_subcmd(int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _drive {straight|turn|curve|forever|stop}\n"
+              "       <arg1> [arg2] [duration_ms] [coast|brake|hold]\n"
+              "       [wheel_mm] [axle_mm]\n"
+              "  straight: arg1 = distance_mm\n"
+              "  turn:     arg1 = angle_deg (positive = CCW from above)\n"
+              "  curve:    arg1 = radius_mm, arg2 = angle_deg\n"
+              "  forever:  arg1 = speed_mmps, arg2 = turn_rate_dps\n");
+      return 1;
+    }
+
+  const char *kind = argv[0];
+  int32_t arg1 = 0, arg2 = 0;
+  uint32_t duration = 3000;
+  uint8_t on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+  double wheel_mm = 56.0;
+  double axle_mm  = 112.0;
+
+  if (argc >= 2) arg1 = (int32_t)atol(argv[1]);
+  if (argc >= 3) arg2 = (int32_t)atol(argv[2]);
+  if (argc >= 4) duration = (uint32_t)atoi(argv[3]);
+  if (argc >= 5)
+    {
+      if (strcmp(argv[4], "coast") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_COAST;
+      else if (strcmp(argv[4], "brake") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+      else if (strcmp(argv[4], "hold") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_HOLD;
+    }
+  if (argc >= 6) wheel_mm = strtod(argv[5], NULL);
+  if (argc >= 7) axle_mm  = strtod(argv[6], NULL);
+
+  uint32_t wheel_d_um = (uint32_t)(wheel_mm * 1000.0 + 0.5);
+  uint32_t axle_t_um  = (uint32_t)(axle_mm  * 1000.0 + 0.5);
+  return do_drive_run(kind, arg1, arg2, duration, on_completion,
+                      wheel_d_um, axle_t_um);
+}
+
+/****************************************************************************
+ * Private Functions: now_us helper (used by remaining test verbs)
+ *
+ * The `_servo` dev verb that used to live here was deleted in #141
+ * (Phase 2 removed per-motor closed loop).  Single-motor smoke tests
+ * are now done via `_drive` (whole drivebase) or by reading encoder
+ * via `_motor read` directly.
+ ****************************************************************************/
+
+static uint64_t now_us(void)
+{
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (uint64_t)ts.tv_sec * 1000000ULL + (uint64_t)ts.tv_nsec / 1000ULL;
+}
+
+#if 0  /* _servo verb removed in #141 — kept here as a code island for
+        * reference until the next cleanup pass.  Calls into the
+        * pre-#141 db_servo_position_relative / db_servo_forever /
+        * db_servo_stop APIs which no longer exist.
+        */
+static int do_servo_run(enum db_side_e side, const char *target_kind,
+                        int32_t target, uint32_t duration_ms,
+                        uint8_t on_completion)
+{
+  int rc = drivebase_motor_init();
+  if (rc < 0)
+    {
+      fprintf(stderr, "drivebase_motor_init: %s\n", strerror(-rc));
+      return 1;
+    }
+
+  /* Select POS mode 2 on the side we drive so the encoder is signed
+   * int32 deg.
+   */
+
+  drivebase_motor_select_mode(side, 2);
+
+  /* Give the device ~30 ms to ack the SELECT and warm the subscriber
+   * cursor — at 1 kHz LUMP publish rate this is ~30 frames, plenty
+   * for the new mode to take effect.
+   */
+
+  usleep(30000);
+
+  /* Same heap-not-BSS reasoning as do_drive_run: the servo struct is
+   * ~1.4 KB which crowds the 4 KB CLI stack once printf frames pile
+   * on top.  calloc'd here, freed at function exit; only used by the
+   * dev-only _servo verb which must not run while the production
+   * daemon FSM owns g_daemon.servo[].
+   */
+
+  struct db_servo_s *servop = calloc(1, sizeof(*servop));
+  if (servop == NULL)
+    {
+      fprintf(stderr, "_servo: out of memory\n");
+      drivebase_motor_deinit();
+      return 1;
+    }
+#define servo (*servop)
+  db_servo_init(&servo, side, DB_RT_TICK_MS_DEFAULT);
+  rc = db_servo_reset(&servo, now_us());
+  if (rc < 0)
+    {
+      fprintf(stderr, "db_servo_reset: %s\n", strerror(-rc));
+      drivebase_motor_deinit();
+      free(servop);
+      return 1;
+    }
+
+  uint64_t t0 = now_us();
+  if (strcmp(target_kind, "position") == 0)
+    {
+      const struct db_traj_limits_s *dl = db_settings_distance_limits(56);
+      db_servo_position_relative(&servo, t0,
+                                 (int64_t)target * 1000,  /* deg→mdeg */
+                                 dl->v_max_mdegps,
+                                 dl->accel_mdegps2,
+                                 dl->decel_mdegps2,
+                                 on_completion);
+    }
+  else if (strcmp(target_kind, "forever") == 0)
+    {
+      const struct db_traj_limits_s *dl = db_settings_distance_limits(56);
+      db_servo_forever(&servo, t0,
+                       target * 1000 /* mdegps */,
+                       dl->accel_mdegps2);
+    }
+  else
+    {
+      db_servo_stop(&servo, t0, on_completion);
+    }
+
+  /* 5 ms tick loop.  clock_nanosleep absolute deadlines drift-free. */
+
+  struct timespec next;
+  clock_gettime(CLOCK_MONOTONIC, &next);
+  uint32_t total_ticks = duration_ms / 5;
+  uint32_t status_every = total_ticks / 10;
+  if (status_every == 0) status_every = 1;
+
+  for (uint32_t i = 0; i < total_ticks; i++)
+    {
+      next.tv_nsec += 5000000;
+      if (next.tv_nsec >= 1000000000)
+        {
+          next.tv_nsec -= 1000000000;
+          next.tv_sec  += 1;
+        }
+      clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+
+      int ur = db_servo_update(&servo, now_us());
+      if (ur < 0)
+        {
+          fprintf(stderr, "tick %lu: update %s\n",
+                  (unsigned long)i, strerror(-ur));
+          break;
+        }
+
+      if ((i % status_every) == 0)
+        {
+          struct db_servo_status_s st;
+          db_servo_get_status(&servo, &st);
+          printf("t=%4lums ref_x=%lld act_x=%lld v=%ld duty=%ld "
+                 "act=%u done=%d stall=%d\n",
+                 (unsigned long)(i * 5),
+                 (long long)st.ref_x_mdeg,
+                 (long long)st.act_x_mdeg,
+                 (long)st.act_v_mdegps, (long)st.applied_duty,
+                 st.actuation, (int)st.done, (int)st.stalled);
+        }
+    }
+
+  /* Final stop unless caller wanted HOLD. */
+
+  db_servo_stop(&servo, now_us(), DRIVEBASE_ON_COMPLETION_COAST);
+  drivebase_motor_deinit();
+#undef servo
+  free(servop);
+  return 0;
+}
+
+static int do_servo_subcmd(int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _servo {position|forever|stop} <l|r> "
+              "<value> [duration_ms] [coast|brake|hold|csmart|bsmart]\n"
+              "  position: value = relative deg target\n"
+              "  forever:  value = signed deg/s\n"
+              "  stop:     value ignored\n");
+      return 1;
+    }
+
+  if (argc < 3)
+    {
+      fprintf(stderr, "_servo %s: need <l|r> <value>\n", argv[0]);
+      return 1;
+    }
+
+  enum db_side_e side;
+  if (parse_side(argv[1], &side) < 0)
+    {
+      fprintf(stderr, "bad side: %s\n", argv[1]);
+      return 1;
+    }
+  int32_t value     = (int32_t)atol(argv[2]);
+  uint32_t duration = (argc >= 4) ? (uint32_t)atoi(argv[3]) : 1500;
+
+  uint8_t on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+  if (argc >= 5)
+    {
+      if (strcmp(argv[4], "coast") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_COAST;
+      else if (strcmp(argv[4], "brake") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+      else if (strcmp(argv[4], "hold") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_HOLD;
+      else if (strcmp(argv[4], "csmart") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_COAST_SMART;
+      else if (strcmp(argv[4], "bsmart") == 0)
+        on_completion = DRIVEBASE_ON_COMPLETION_BRAKE_SMART;
+    }
+
+  return do_servo_run(side, argv[0], value, duration, on_completion);
+}
+#endif /* _servo verb removed in #141 */
+
+/****************************************************************************
+ * Private Functions: hidden _alg test verbs (Issue #77 development only)
+ *
+ * Sample the trapezoidal trajectory and the default settings tables
+ * from NSH so commit #5 is verifiable without a host-side unit test.
+ * Removed once the daemon's drive verbs subsume the surface in commit
+ * #11.
+ ****************************************************************************/
+
+static int do_alg_traj(int argc, FAR char *argv[])
+{
+  if (argc < 5)
+    {
+      fprintf(stderr,
+              "usage: drivebase _alg traj <x0_mdeg> <x1_mdeg> "
+              "<vmax_mdegps> <accel_mdegps2> <decel_mdegps2>\n");
+      return 1;
+    }
+
+  int64_t x0  = (int64_t)atoll(argv[0]);
+  int64_t x1  = (int64_t)atoll(argv[1]);
+  int32_t v   = (int32_t)atol(argv[2]);
+  int32_t a   = (int32_t)atol(argv[3]);
+  int32_t d   = (int32_t)atol(argv[4]);
+
+  struct db_trajectory_s tr;
+  db_trajectory_init_position(&tr, 0, x0, x1, v, a, d);
+
+  printf("traj: dir=%d v_peak=%ld accel_dt=%llu cruise_dt=%llu "
+         "decel_dt=%llu total=%llu us\n",
+         tr.direction, (long)tr.v_peak_mdegps,
+         (unsigned long long)tr.accel_dt_us,
+         (unsigned long long)tr.cruise_dt_us,
+         (unsigned long long)tr.decel_dt_us,
+         (unsigned long long)tr.total_dt_us);
+  printf("     x_accel_end=%lld x_cruise_end=%lld x1=%lld mdeg\n",
+         (long long)tr.x_accel_end_mdeg,
+         (long long)tr.x_cruise_end_mdeg,
+         (long long)tr.x1_mdeg);
+
+  /* Sample at 0%, 25%, 50%, 75%, 100%, 110% of total time */
+
+  uint64_t pts[6];
+  pts[0] = 0;
+  pts[1] = tr.total_dt_us / 4;
+  pts[2] = tr.total_dt_us / 2;
+  pts[3] = (tr.total_dt_us * 3) / 4;
+  pts[4] = tr.total_dt_us;
+  pts[5] = tr.total_dt_us + tr.total_dt_us / 10;
+
+  for (int i = 0; i < 6; i++)
+    {
+      struct db_trajectory_ref_s ref;
+      db_trajectory_get_reference(&tr, pts[i], &ref);
+      printf("  t=%llu us  x=%lld v=%ld a=%ld done=%d\n",
+             (unsigned long long)pts[i],
+             (long long)ref.x_mdeg, (long)ref.v_mdegps,
+             (long)ref.a_mdegps2, (int)ref.done);
+    }
+
+  return 0;
+}
+
+static int do_alg_settings(int argc, FAR char *argv[])
+{
+  /* Default to the live daemon's geometry when the caller did not pass
+   * explicit wheel / axle on the CLI (Issue #143).  Falls back to the
+   * compiled SPIKE defaults if the daemon is not running or the ioctl
+   * fails — that path keeps the verb usable for offline maths.
+   */
+
+  double wheel_mm = 56.0;
+  double axle_mm  = 112.0;
+
+  if (argc >= 1)
+    {
+      wheel_mm = strtod(argv[0], NULL);
+    }
+  if (argc >= 2)
+    {
+      axle_mm  = strtod(argv[1], NULL);
+    }
+
+  if (argc < 2)
+    {
+      int fd = open(DRIVEBASE_DEVPATH, O_RDONLY);
+      if (fd >= 0)
+        {
+          struct drivebase_status_s st;
+          memset(&st, 0, sizeof(st));
+          if (ioctl(fd, DRIVEBASE_GET_STATUS, (unsigned long)&st) == 0 &&
+              st.daemon_attached && st.wheel_d_um > 0 && st.axle_t_um > 0)
+            {
+              if (argc < 1)
+                {
+                  wheel_mm = (double)st.wheel_d_um / 1000.0;
+                }
+              axle_mm = (double)st.axle_t_um / 1000.0;
+            }
+          close(fd);
+        }
+    }
+
+  uint32_t wheel_d_um = (uint32_t)(wheel_mm * 1000.0 + 0.5);
+  uint32_t axle_t_um  = (uint32_t)(axle_mm  * 1000.0 + 0.5);
+
+  const struct db_servo_gains_s        *gd =
+      db_settings_pid_gains(DB_AXIS_DISTANCE);
+  const struct db_servo_gains_s        *gh =
+      db_settings_pid_gains(DB_AXIS_HEADING);
+  const struct db_traj_limits_s        *dl = db_settings_distance_limits(wheel_d_um);
+  const struct db_traj_limits_s        *hl = db_settings_heading_limits(wheel_d_um, axle_t_um);
+  const struct db_stall_settings_s     *st = db_settings_stall();
+  const struct db_completion_settings_s *cd =
+      db_settings_completion_axis(DB_AXIS_DISTANCE);
+  const struct db_completion_settings_s *ch =
+      db_settings_completion_axis(DB_AXIS_HEADING);
+  const struct db_ff_axis_gains_s      *ffd =
+      db_settings_ff_axis_gains(DB_AXIS_DISTANCE);
+  const struct db_ff_axis_gains_s      *ffh =
+      db_settings_ff_axis_gains(DB_AXIS_HEADING);
+  const struct db_ff_motor_friction_s  *ffm =
+      db_settings_ff_motor_friction();
+  const struct db_battery_settings_s   *bat =
+      db_settings_battery();
+
+  printf("wheel_d=%g mm  axle_t=%g mm\n", wheel_mm, axle_mm);
+  printf("dist gains : kp_pos=%ld ki_pos=%ld kd_pos=%ld "
+         "kp_speed=%ld ki_speed=%ld deadband=%ld out=[%ld,%ld]\n",
+         (long)gd->kp_pos, (long)gd->ki_pos, (long)gd->kd_pos,
+         (long)gd->kp_speed, (long)gd->ki_speed,
+         (long)gd->deadband_mdeg, (long)gd->out_min, (long)gd->out_max);
+  printf("hdg  gains : kp_pos=%ld ki_pos=%ld kd_pos=%ld "
+         "kp_speed=%ld ki_speed=%ld deadband=%ld out=[%ld,%ld]\n",
+         (long)gh->kp_pos, (long)gh->ki_pos, (long)gh->kd_pos,
+         (long)gh->kp_speed, (long)gh->ki_speed,
+         (long)gh->deadband_mdeg, (long)gh->out_min, (long)gh->out_max);
+  printf("distance limits: v=%ld accel=%ld decel=%ld mdeg/s,/s/s\n",
+         (long)dl->v_max_mdegps, (long)dl->accel_mdegps2,
+         (long)dl->decel_mdegps2);
+  printf("heading  limits: v=%ld accel=%ld decel=%ld mdeg/s,/s/s\n",
+         (long)hl->v_max_mdegps, (long)hl->accel_mdegps2,
+         (long)hl->decel_mdegps2);
+  printf("stall: low_speed=%ld min_duty=%ld window=%lu ms\n",
+         (long)st->stall_speed_mdegps, (long)st->stall_duty_min,
+         (unsigned long)st->stall_window_ms);
+  printf("dist completion: pos_tol=%ld speed_tol=%ld smart_continue=%ld "
+         "done_window=%lu ms smart_hold=%lu ms\n",
+         (long)cd->pos_tolerance_mdeg,
+         (long)cd->speed_tolerance_mdegps,
+         (long)cd->smart_continue_window_mdeg,
+         (unsigned long)cd->done_window_ms,
+         (unsigned long)cd->smart_passive_hold_ms);
+  printf("hdg  completion: pos_tol=%ld speed_tol=%ld smart_continue=%ld "
+         "done_window=%lu ms smart_hold=%lu ms\n",
+         (long)ch->pos_tolerance_mdeg,
+         (long)ch->speed_tolerance_mdegps,
+         (long)ch->smart_continue_window_mdeg,
+         (unsigned long)ch->done_window_ms,
+         (unsigned long)ch->smart_passive_hold_ms);
+  printf("dist ff    : kV=%ld kA=%ld (.01%% per deg/s, deg/s^2)\n",
+         (long)ffd->kV, (long)ffd->kA);
+  printf("hdg  ff    : kV=%ld kA=%ld (.01%% per deg/s, deg/s^2)\n",
+         (long)ffh->kV, (long)ffh->kA);
+  printf("motor ff   : kS=%ld v_hyst=[%ld,%ld] mdeg/s breakaway=%ld "
+         "(per-side, /2 applied)\n",
+         (long)ffm->kS, (long)ffm->v_hyst_exit_mdegps,
+         (long)ffm->v_hyst_enter_mdegps,
+         (long)ffm->terminal_breakaway);
+  printf("battery    : vbat=%ld mV nominal=%ld mV min=%ld mV\n",
+         (long)db_battery_get_mv(),
+         (long)bat->nominal_mv, (long)bat->min_mv);
+  return 0;
+}
+
+static int do_alg_angle(int argc, FAR char *argv[])
+{
+  if (argc < 2)
+    {
+      fprintf(stderr,
+              "usage: drivebase _alg angle <wheel_d_mm> <mdeg>\n");
+      return 1;
+    }
+  double   wheel_mm   = strtod(argv[0], NULL);
+  uint32_t wheel_d_um = (uint32_t)(wheel_mm * 1000.0 + 0.5);
+  int64_t  mdeg       = (int64_t)atoll(argv[1]);
+  int32_t  mm         = db_angle_mdeg_to_mm(mdeg, wheel_d_um);
+  int64_t  back       = db_angle_mm_to_mdeg(mm, wheel_d_um);
+  printf("wheel_d=%g mm  mdeg=%lld -> mm=%ld -> mdeg=%lld\n",
+         wheel_mm, (long long)mdeg, (long)mm, (long long)back);
+  return 0;
+}
+
+/* `drivebase _alg stretch` (Issue #144 Phase 4 C): exercise
+ * db_trajectory_stretch_to_total on host-side parameters without any
+ * hardware.  Builds a follower + leader pair, stretches the follower
+ * to match the leader's total_dt_us, and reports BEFORE/AFTER state +
+ * a 5-point sampling along the leader's timeline.  The displacement
+ * residual is sampled at total_dt_us - 1 us (the last sample before
+ * the trajectory's final-time clamp); the assertion gate is 100 mdeg.
+ */
+
+static int do_alg_stretch(int argc, FAR char *argv[])
+{
+  if (argc < 8)
+    {
+      fprintf(stderr,
+              "usage: drivebase _alg stretch "
+              "<f_x1> <f_v> <f_a> <f_d> "
+              "<l_x1> <l_v> <l_a> <l_d>\n"
+              "  follower / leader trapezoidal params (x0=0 each).\n"
+              "  Stretches the follower so its total_dt matches the\n"
+              "  leader's, preserving displacement (|x1 - x0|).\n");
+      return 1;
+    }
+
+  int64_t f_x1 = (int64_t)atoll(argv[0]);
+  int32_t f_v  = (int32_t)atol(argv[1]);
+  int32_t f_a  = (int32_t)atol(argv[2]);
+  int32_t f_d  = (int32_t)atol(argv[3]);
+  int64_t l_x1 = (int64_t)atoll(argv[4]);
+  int32_t l_v  = (int32_t)atol(argv[5]);
+  int32_t l_a  = (int32_t)atol(argv[6]);
+  int32_t l_d  = (int32_t)atol(argv[7]);
+
+  struct db_trajectory_s f;
+  struct db_trajectory_s l;
+  db_trajectory_init_position(&f, 0, 0, f_x1, f_v, f_a, f_d);
+  db_trajectory_init_position(&l, 0, 0, l_x1, l_v, l_a, l_d);
+
+  printf("BEFORE follower: dir=%d v_peak=%ld accel_dt=%llu cruise_dt=%llu "
+         "decel_dt=%llu total=%llu us  x1=%lld\n",
+         f.direction, (long)f.v_peak_mdegps,
+         (unsigned long long)f.accel_dt_us,
+         (unsigned long long)f.cruise_dt_us,
+         (unsigned long long)f.decel_dt_us,
+         (unsigned long long)f.total_dt_us,
+         (long long)f.x1_mdeg);
+  printf("BEFORE leader:   dir=%d v_peak=%ld accel_dt=%llu cruise_dt=%llu "
+         "decel_dt=%llu total=%llu us  x1=%lld\n",
+         l.direction, (long)l.v_peak_mdegps,
+         (unsigned long long)l.accel_dt_us,
+         (unsigned long long)l.cruise_dt_us,
+         (unsigned long long)l.decel_dt_us,
+         (unsigned long long)l.total_dt_us,
+         (long long)l.x1_mdeg);
+
+  int rc = -EINVAL;
+  if (l.total_dt_us > f.total_dt_us)
+    {
+      rc = db_trajectory_stretch_to_total(&f, l.total_dt_us);
+    }
+  printf("stretch rc=%d\n", rc);
+  printf("AFTER  follower: dir=%d v_peak=%ld accel_dt=%llu cruise_dt=%llu "
+         "decel_dt=%llu total=%llu us  x1=%lld\n",
+         f.direction, (long)f.v_peak_mdegps,
+         (unsigned long long)f.accel_dt_us,
+         (unsigned long long)f.cruise_dt_us,
+         (unsigned long long)f.decel_dt_us,
+         (unsigned long long)f.total_dt_us,
+         (long long)f.x1_mdeg);
+
+  printf("validation: total_match=%d  x1_match=%d\n",
+         (int)(rc == 0 && f.total_dt_us == l.total_dt_us),
+         (int)(f.x1_mdeg == f_x1));
+
+  /* 0/25/50/75/100 % timeline sampling using the leader's total_dt. */
+
+  uint64_t T = l.total_dt_us;
+  for (int i = 0; i <= 4; i++)
+    {
+      uint64_t t = T * (uint64_t)i / 4;
+      struct db_trajectory_ref_s rf;
+      struct db_trajectory_ref_s rl;
+      db_trajectory_get_reference(&f, t, &rf);
+      db_trajectory_get_reference(&l, t, &rl);
+      printf("  t=%llu us  follower x=%lld v=%ld done=%d  "
+             "leader x=%lld v=%ld done=%d\n",
+             (unsigned long long)t,
+             (long long)rf.x_mdeg, (long)rf.v_mdegps, (int)rf.done,
+             (long long)rl.x_mdeg, (long)rl.v_mdegps, (int)rl.done);
+    }
+
+  /* Residual displacement at end-of-decel, sampled just before the
+   * trajectory's terminal x1 clamp.  Threshold = 100 mdeg per v3 plan.
+   */
+
+  if (rc == 0 && f.total_dt_us > 0)
+    {
+      uint64_t t_just_before = f.total_dt_us - 1;
+      struct db_trajectory_ref_s rf_end;
+      db_trajectory_get_reference(&f, t_just_before, &rf_end);
+      int64_t residual = rf_end.x_mdeg - f.x1_mdeg;
+      int64_t abs_residual = residual < 0 ? -residual : residual;
+      printf("residual at (total_dt - 1us): %lld mdeg (%lld µdeg)\n",
+             (long long)residual, (long long)residual * 1000);
+      printf("residual bound: %s (<= 100 mdeg threshold)\n",
+             abs_residual <= 100 ? "PASS" : "FAIL");
+    }
+
+  return rc;
+}
+
+/* `drivebase _alg ff-trace` (Issue #158 Phase 7): offline replay of one
+ * axis's trapezoidal trajectory + the feed-forward duty the current
+ * gains would command.  The trace is SAMPLED (~80 points across the
+ * move, floored at the 5 ms RT tick) — short moves resolve every tick,
+ * long moves are summarised; the FF curve is piecewise-linear so the
+ * shape is preserved either way.  Diagnoses WHY the heading FF behaves
+ * as it does without instrumenting the RT path.
+ *
+ * NOMINAL, UNSATURATED trace.  db_trajectory_get_reference is the exact
+ * function the RT path samples, but the live aggregate applies a
+ * reference-time PAUSE when the PID output rails (anti-windup,
+ * drivebase_aggregate.c).  That pause is NOT replayed here, so under
+ * sustained saturation the live wall-clock FF duration/energy diverges
+ * from this trace.  For a clean (non-saturating) move it matches the
+ * live reference tick-for-tick.
+ *
+ * Runs in the CLI task, never the RT thread: no ABI change, no per-tick
+ * cost, free to use int64.  All positions/velocities are motor-mdeg
+ * STATE space (heading = (sR - sL)/2) — exactly what ff_head_kV consumes.
+ */
+
+static void ff_trace_one_axis(const char *axis,
+                              int64_t x1_mdeg, int32_t v_mdegps,
+                              int32_t accel, int32_t decel,
+                              const struct db_ff_axis_gains_s *ff)
+{
+  struct db_trajectory_s tr;
+  db_trajectory_init_position(&tr, 0, 0, x1_mdeg, v_mdegps, accel, decel);
+
+  printf("# %s axis: x1=%lld v_peak=%ld accel=%ld decel=%ld total=%llu us "
+         "kV=%ld kA=%ld\n",
+         axis, (long long)tr.x1_mdeg, (long)tr.v_peak_mdegps,
+         (long)accel, (long)decel,
+         (unsigned long long)tr.total_dt_us,
+         (long)ff->kV, (long)ff->kA);
+  printf("# t_ms  ref_x_mdeg  ref_v_mdegps  ref_a_mdegps2  duty_ff_pct01\n");
+
+  /* Sample ~80 points across the move + a 10 % tail (so the post-done
+   * FF=0 flat is visible), floored at the 5 ms RT tick so short moves
+   * still resolve the accel/decel ramps.
+   */
+
+  uint64_t span = tr.total_dt_us + tr.total_dt_us / 10;
+  uint64_t step = span / 80;
+  if (step < 5000) step = 5000;
+
+  for (uint64_t t = 0; t <= span; t += step)
+    {
+      struct db_trajectory_ref_s ref;
+      db_trajectory_get_reference(&tr, t, &ref);
+
+      /* Mirror drivebase_aggregate.c FF math exactly: 32-bit /1000 first
+       * (RT-safe form), then multiply.  Keeps the trace bit-aligned with
+       * what the live path computes for the same reference.
+       */
+
+      int32_t v_dps   = ref.v_mdegps  / 1000;
+      int32_t a_dps2  = ref.a_mdegps2 / 1000;
+      int32_t duty_ff = ff->kV * v_dps + ff->kA * a_dps2;
+
+      printf("%6ld  %10lld  %12ld  %13ld  %12ld\n",
+             (long)(t / 1000), (long long)ref.x_mdeg,
+             (long)ref.v_mdegps, (long)ref.a_mdegps2, (long)duty_ff);
+    }
+}
+
+static int do_alg_ff_trace(int argc, FAR char *argv[])
+{
+  if (argc < 2 ||
+      (strcmp(argv[0], "straight") != 0 && strcmp(argv[0], "turn") != 0))
+    {
+      fprintf(stderr,
+              "usage: drivebase _alg ff-trace "
+              "{straight <mm> [<mmps>] | turn <deg> [<dps>]}\n"
+              "  Offline NOMINAL replay of the per-axis trajectory + the\n"
+              "  feed-forward duty the current gains command.  SAMPLED\n"
+              "  (~80 points, >= 5 ms grid), not every RT tick.\n"
+              "  Values are motor-mdeg STATE space (heading = (sR-sL)/2).\n"
+              "  Reference-time pause (anti-windup) is NOT replayed, so\n"
+              "  under saturation the live FF diverges from this trace.\n"
+              "  Geometry comes from the running daemon, else 56/112 mm.\n");
+      return 1;
+    }
+
+  /* Resolve geometry from the live daemon, else compiled SPIKE default
+   * (same pattern as `_alg settings`).
+   */
+
+  uint32_t wheel_d_um = 56000;
+  uint32_t axle_t_um  = 112000;
+  int fd = open(DRIVEBASE_DEVPATH, O_RDONLY);
+  if (fd >= 0)
+    {
+      struct drivebase_status_s st;
+      memset(&st, 0, sizeof(st));
+      if (ioctl(fd, DRIVEBASE_GET_STATUS, (unsigned long)&st) == 0 &&
+          st.daemon_attached && st.wheel_d_um > 0 && st.axle_t_um > 0)
+        {
+          wheel_d_um = st.wheel_d_um;
+          axle_t_um  = st.axle_t_um;
+        }
+      close(fd);
+    }
+
+  printf("# ff-trace: wheel_d=%lu um axle_t=%lu um  (ref-time pause NOT "
+         "replayed)\n",
+         (unsigned long)wheel_d_um, (unsigned long)axle_t_um);
+
+  /* Fetch only the axis we need inside each branch — the limit
+   * accessors may hand back a recomputed static, so we must not hold a
+   * distance pointer across a heading call (or vice versa).
+   */
+
+  if (strcmp(argv[0], "straight") == 0)
+    {
+      const struct db_traj_limits_s *dl =
+          db_settings_distance_limits(wheel_d_um);
+      int32_t mm   = (int32_t)atol(argv[1]);
+      int32_t mmps = (argc >= 3) ? (int32_t)atol(argv[2]) : 0;
+      int64_t x1   = db_angle_mm_to_mdeg(mm, wheel_d_um);
+      int32_t v    = (mmps != 0)
+                     ? db_angle_mmps_to_mdegps(mmps < 0 ? -mmps : mmps,
+                                               wheel_d_um)
+                     : dl->v_max_mdegps;
+      ff_trace_one_axis("distance", x1, v,
+                        dl->accel_mdegps2, dl->decel_mdegps2,
+                        db_settings_ff_axis_gains(DB_AXIS_DISTANCE));
+    }
+  else /* turn */
+    {
+      const struct db_traj_limits_s *hl =
+          db_settings_heading_limits(wheel_d_um, axle_t_um);
+      int32_t deg = (int32_t)atol(argv[1]);
+      int32_t dps = (argc >= 3) ? (int32_t)atol(argv[2]) : 0;
+      int64_t x1  = db_angle_heading_mdeg_to_state_mdeg((int64_t)deg * 1000,
+                                                        wheel_d_um, axle_t_um);
+      /* Same heading-rate -> state-velocity conversion as
+       * db_drivebase_turn (v_state = dps * 1000 * axle_t / wheel_d).
+       */
+
+      int32_t v   = (dps != 0)
+                    ? (int32_t)((int64_t)(dps < 0 ? -dps : dps) * 1000 *
+                                (int64_t)axle_t_um / wheel_d_um)
+                    : hl->v_max_mdegps;
+      ff_trace_one_axis("heading", x1, v,
+                        hl->accel_mdegps2, hl->decel_mdegps2,
+                        db_settings_ff_axis_gains(DB_AXIS_HEADING));
+    }
+
+  return 0;
+}
+
+static int do_alg_subcmd(int argc, FAR char *argv[])
+{
+  if (argc < 1)
+    {
+      fprintf(stderr,
+              "usage: drivebase _alg "
+              "{traj|stretch|settings|angle|ff-trace} ...\n");
+      return 1;
+    }
+  if (strcmp(argv[0], "traj") == 0)
+    {
+      return do_alg_traj(argc - 1, &argv[1]);
+    }
+  if (strcmp(argv[0], "stretch") == 0)
+    {
+      return do_alg_stretch(argc - 1, &argv[1]);
+    }
+  if (strcmp(argv[0], "settings") == 0)
+    {
+      return do_alg_settings(argc - 1, &argv[1]);
+    }
+  if (strcmp(argv[0], "angle") == 0)
+    {
+      return do_alg_angle(argc - 1, &argv[1]);
+    }
+  if (strcmp(argv[0], "ff-trace") == 0)
+    {
+      return do_alg_ff_trace(argc - 1, &argv[1]);
+    }
+  fprintf(stderr, "_alg: unknown subcommand '%s'\n", argv[0]);
+  return 1;
+}
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static int open_drivebase(void)
+{
+  int fd = open(DRIVEBASE_DEVPATH, O_RDWR);
+  if (fd < 0)
+    {
+      fprintf(stderr, "open(%s): %s\n", DRIVEBASE_DEVPATH, strerror(errno));
+    }
+  return fd;
+}
+
+static int do_status(void)
+{
+  int fd = open_drivebase();
+  if (fd < 0)
+    {
+      return 1;
+    }
+
+  struct drivebase_status_s st;
+  memset(&st, 0, sizeof(st));
+
+  int ret = ioctl(fd, DRIVEBASE_GET_STATUS, (unsigned long)&st);
+  close(fd);
+
+  if (ret < 0)
+    {
+      fprintf(stderr, "DRIVEBASE_GET_STATUS: %s\n", strerror(errno));
+      return 1;
+    }
+
+  printf("daemon_attached  = %u\n", st.daemon_attached);
+  printf("attach_generation= %lu\n", (unsigned long)st.attach_generation);
+  printf("configured       = %u\n", st.configured);
+  printf("motor_l_bound    = %u\n", st.motor_l_bound);
+  printf("motor_r_bound    = %u\n", st.motor_r_bound);
+  printf("imu_present      = %u\n", st.imu_present);
+  printf("use_gyro         = %u\n", st.use_gyro);
+  printf("use_gyro_requested= %u\n", st.use_gyro_requested);
+  printf("use_gyro_latched = %u\n", st.use_gyro_latched);
+  printf("last_set_gyro_rc = %d\n", (int)st.last_set_gyro_rc);
+  printf("wheel_d_um       = %lu\n", (unsigned long)st.wheel_d_um);
+  printf("axle_t_um        = %lu\n", (unsigned long)st.axle_t_um);
+  printf("tick_us          = %lu\n", (unsigned long)st.tick_us);
+  printf("tick_count       = %lu\n", (unsigned long)st.tick_count);
+  printf("tick_overrun     = %lu\n", (unsigned long)st.tick_overrun_count);
+  printf("tick_max_lag_us  = %lu\n", (unsigned long)st.tick_max_lag_us);
+  printf("cmd_ring_depth   = %lu\n", (unsigned long)st.cmd_ring_depth);
+  printf("cmd_drop_count   = %lu\n", (unsigned long)st.cmd_drop_count);
+  printf("last_cmd_seq     = %lu\n", (unsigned long)st.last_cmd_seq);
+  printf("last_pickup_us   = %lu\n", (unsigned long)st.last_pickup_us);
+  printf("last_publish_us  = %lu\n", (unsigned long)st.last_publish_us);
+  printf("encoder_drops    = %lu\n", (unsigned long)st.encoder_drop_count);
+
+  return 0;
+}
+
+static void usage(void)
+{
+  fprintf(stderr,
+          "usage:\n"
+          "  drivebase                                   show this help\n"
+          "  drivebase status                            DRIVEBASE_GET_STATUS snapshot\n"
+          "  drivebase start [wheel_mm [axle_mm [tick_ms]]]\n"
+          "                                              launch daemon\n"
+          "                                              (defaults: 56 / 112 / 2;\n"
+          "                                              tick_ms in [1, 20])\n"
+          "  drivebase stop                              teardown daemon\n"
+          "  drivebase config <wheel_mm> <axle_mm>       DRIVEBASE_CONFIG (decimals OK)\n"
+          "  drivebase reset [distance_mm] [angle_deg]   DRIVEBASE_RESET (default 0 0)\n"
+          "  drivebase straight <mm> [<mmps>] [coast|brake|hold]\n"
+          "                                              DRIVE_STRAIGHT\n"
+          "  drivebase turn <deg> [<dps>] [coast|brake|hold]\n"
+          "                                              TURN\n"
+          "  drivebase curve <radius_mm> <angle_deg> [coast|brake|hold]\n"
+          "                                              DRIVE_CURVE\n"
+          "  drivebase arc <radius_mm> <distance_mm> [coast|brake|hold]\n"
+          "                                              DRIVE_ARC_DISTANCE\n"
+          "  drivebase forever <speed_mmps> <turn_dps>   DRIVE_FOREVER\n"
+          "  drivebase stop-motion <coast|brake|hold>    STOP\n"
+          "  drivebase get-state [duration_ms [interval_ms]]\n"
+          "                                              GET_STATE (table; default one-shot)\n"
+          "  drivebase set-gyro <none|3d>                SET_USE_GYRO\n"
+          "  drivebase jitter [reset]                    JITTER_DUMP\n"
+          "  drivebase _sysid {ramp-ks|ramp-kv|ramp-ka|vbat} ...\n"
+          "                                              FF system-id\n"
+          "                                              (daemon must be stopped;\n"
+          "                                              ground-only, see help)\n");
+}
+
+/****************************************************************************
+ * Public Function: main
+ ****************************************************************************/
+
+int main(int argc, FAR char *argv[])
+{
+  if (argc < 2)
+    {
+      usage();
+      return 0;
+    }
+
+  const char *verb = argv[1];
+
+  if (strcmp(verb, "status") == 0)
+    {
+      return do_status();
+    }
+
+  if (strcmp(verb, "_motor") == 0)
+    {
+      return do_motor_subcmd(argc - 2, &argv[2]);
+    }
+
+  if (strcmp(verb, "_alg") == 0)
+    {
+      return do_alg_subcmd(argc - 2, &argv[2]);
+    }
+
+  /* `_servo` dev verb removed in #141 — per-motor closed loop no
+   * longer exists.  Use `_drive` or the production daemon verbs for
+   * end-to-end testing.
+   */
+
+  if (strcmp(verb, "_drive") == 0)
+    {
+      return do_drive_subcmd(argc - 2, &argv[2]);
+    }
+
+  if (strcmp(verb, "_rt") == 0)
+    {
+      return do_rt_subcmd(argc - 2, &argv[2]);
+    }
+
+  if (strcmp(verb, "_daemon") == 0)
+    {
+      return do_daemon_subcmd(argc - 2, &argv[2]);
+    }
+
+  if (strcmp(verb, "_imu") == 0)
+    {
+      return do_imu_subcmd(argc - 2, &argv[2]);
+    }
+
+  if (strcmp(verb, "_sysid") == 0)
+    {
+      return drivebase_sysid_cli(argc - 2, &argv[2]);
+    }
+
+  if (strcmp(verb, "help") == 0 ||
+      strcmp(verb, "-h")   == 0 ||
+      strcmp(verb, "--help") == 0)
+    {
+      usage();
+      return 0;
+    }
+
+  /* User-facing verbs.  start/stop talk to drivebase_daemon_*; the
+   * rest go through real ioctl on /dev/drivebase, served by the
+   * kernel chardev shim from commit #2.
+   */
+
+  if (strcmp(verb, "start") == 0)
+    {
+      /* Three-tier precedence (Issue #143): CLI explicit (argc) > config
+       * (loaded inside the daemon task from /mnt/flash/drivebase.cfg) >
+       * compiled-in default.  Pass 0 to the daemon for any positional
+       * the caller omitted so the daemon-side merge picks up the config
+       * value.  CLI 0 is rejected as invalid input.
+       */
+
+      uint32_t wheel_d_um = 0;
+      uint32_t axle_t_um  = 0;
+      uint32_t tick_us    = 0;
+
+      if (argc >= 3)
+        {
+          double wheel_mm = strtod(argv[2], NULL);
+          if (wheel_mm <= 0.0)
+            {
+              fprintf(stderr,
+                      "drivebase start: wheel_mm must be positive\n");
+              return 1;
+            }
+          wheel_d_um = (uint32_t)(wheel_mm * 1000.0 + 0.5);
+        }
+
+      if (argc >= 4)
+        {
+          double axle_mm = strtod(argv[3], NULL);
+          if (axle_mm <= 0.0)
+            {
+              fprintf(stderr,
+                      "drivebase start: axle_mm must be positive\n");
+              return 1;
+            }
+          axle_t_um = (uint32_t)(axle_mm * 1000.0 + 0.5);
+        }
+
+      if (argc >= 5)
+        {
+          int tick_ms = atoi(argv[4]);
+          if (tick_ms < (int)(DB_RT_TICK_US_MIN / 1000) ||
+              tick_ms > (int)(DB_RT_TICK_US_MAX / 1000))
+            {
+              fprintf(stderr,
+                      "drivebase start: tick_ms must be in [%d, %d]\n",
+                      DB_RT_TICK_US_MIN / 1000,
+                      DB_RT_TICK_US_MAX / 1000);
+              return 1;
+            }
+          tick_us = (uint32_t)tick_ms * 1000u;
+        }
+
+      /* Snapshot attach_generation BEFORE daemon_start so we can
+       * distinguish the new daemon's publish from stale cache from a
+       * previous start/stop cycle (Issue #143).
+       */
+
+      uint32_t prev_gen = 0;
+      int sfd = open(DRIVEBASE_DEVPATH, O_RDONLY);
+      if (sfd >= 0)
+        {
+          struct drivebase_status_s st;
+          memset(&st, 0, sizeof(st));
+          if (ioctl(sfd, DRIVEBASE_GET_STATUS,
+                    (unsigned long)&st) == 0)
+            {
+              prev_gen = st.attach_generation;
+            }
+          close(sfd);
+        }
+
+      int rc = drivebase_daemon_start(wheel_d_um, axle_t_um, tick_us);
+      if (rc < 0)
+        {
+          fprintf(stderr, "drivebase start: %s\n", strerror(-rc));
+          return 1;
+        }
+
+      /* Daemon resolves wheel/axle/tick inside its own task using the
+       * CLI > /mnt/flash/drivebase.cfg > compiled-default precedence
+       * (Issue #143).  Wait for attach_generation to bump (the new
+       * daemon has fully attached and published its status) so the
+       * geometry we show isn't a stale value from a previous start.
+       */
+
+      uint32_t shown_wheel = wheel_d_um;
+      uint32_t shown_axle  = axle_t_um;
+      uint32_t shown_tick  = tick_us;
+      sfd = open(DRIVEBASE_DEVPATH, O_RDONLY);
+      if (sfd >= 0)
+        {
+          for (int i = 0; i < 20; i++)
+            {
+              struct drivebase_status_s st;
+              memset(&st, 0, sizeof(st));
+              if (ioctl(sfd, DRIVEBASE_GET_STATUS,
+                        (unsigned long)&st) == 0 &&
+                  st.daemon_attached &&
+                  st.attach_generation != prev_gen &&
+                  st.wheel_d_um > 0)
+                {
+                  shown_wheel = st.wheel_d_um;
+                  shown_axle  = st.axle_t_um;
+                  shown_tick  = st.tick_us;
+                  break;
+                }
+              usleep(50000);   /* 50 ms × up to 20 = 1 s ceiling */
+            }
+          close(sfd);
+        }
+
+      printf("drivebase: started (pid=%d wheel=%.3f mm axle=%.3f mm "
+             "tick=%lu us)\n",
+             rc,
+             (double)shown_wheel / 1000.0,
+             (double)shown_axle  / 1000.0,
+             (unsigned long)shown_tick);
+      return 0;
+    }
+
+  if (strcmp(verb, "stop") == 0)
+    {
+      int rc = drivebase_daemon_stop(2000);
+      if (rc < 0 && rc != -EAGAIN)
+        {
+          fprintf(stderr, "drivebase stop: %s\n", strerror(-rc));
+          return 1;
+        }
+      printf("drivebase: %s\n",
+             rc == -EAGAIN ? "not running" : "stopped");
+      return 0;
+    }
+
+  /* All remaining verbs need an open /dev/drivebase. */
+
+  int dev = -1;
+  if (strcmp(verb, "config")     == 0 || strcmp(verb, "reset")     == 0 ||
+      strcmp(verb, "straight")   == 0 || strcmp(verb, "turn")      == 0 ||
+      strcmp(verb, "curve")      == 0 || strcmp(verb, "arc")       == 0 ||
+      strcmp(verb, "forever")    == 0 || strcmp(verb, "stop-motion")== 0 ||
+      strcmp(verb, "get-state")  == 0 || strcmp(verb, "set-gyro")  == 0 ||
+      strcmp(verb, "jitter")     == 0)
+    {
+      dev = open(DRIVEBASE_DEVPATH, O_RDWR);
+      if (dev < 0)
+        {
+          fprintf(stderr, "open(%s): %s\n", DRIVEBASE_DEVPATH,
+                  strerror(errno));
+          return 1;
+        }
+    }
+
+  if (strcmp(verb, "config") == 0)
+    {
+      if (argc < 4)
+        {
+          fprintf(stderr, "usage: drivebase config <wheel_mm> <axle_mm>\n");
+          close(dev); return 1;
+        }
+
+      char *endp;
+      double wheel = strtod(argv[2], &endp);
+      if (endp == argv[2] || *endp != '\0' || wheel <= 0.0)
+        {
+          fprintf(stderr, "bad wheel_mm: %s\n", argv[2]);
+          close(dev); return 1;
+        }
+      double axle = strtod(argv[3], &endp);
+      if (endp == argv[3] || *endp != '\0' || axle <= 0.0)
+        {
+          fprintf(stderr, "bad axle_mm: %s\n", argv[3]);
+          close(dev); return 1;
+        }
+
+      /* ABI carries micrometers (0.001 mm), so the float input keeps
+       * its sub-mm precision through to the daemon's angle math.
+       */
+
+      struct drivebase_config_s c =
+        { .wheel_d_um = (uint32_t)(wheel * 1000.0 + 0.5),
+          .axle_t_um  = (uint32_t)(axle  * 1000.0 + 0.5) };
+      int rc = ioctl(dev, DRIVEBASE_CONFIG, (unsigned long)&c);
+      close(dev);
+      if (rc < 0)
+        {
+          fprintf(stderr, "DRIVEBASE_CONFIG: %s\n", strerror(errno));
+          return 1;
+        }
+      return 0;
+    }
+
+  if (strcmp(verb, "reset") == 0)
+    {
+      /* `drivebase reset [distance_mm] [angle_deg]` re-anchors the
+       * daemon's published distance/heading at the requested
+       * baseline (default 0/0).  Daemon also auto-resets at
+       * `drivebase start`, so this verb is mainly for re-zeroing
+       * mid-session.
+       */
+
+      double dist_mm = 0.0;
+      double angle_deg = 0.0;
+      if (argc >= 3) dist_mm   = strtod(argv[2], NULL);
+      if (argc >= 4) angle_deg = strtod(argv[3], NULL);
+      struct drivebase_reset_s r =
+        { .distance_mm = (int32_t)(dist_mm  + (dist_mm  >= 0 ? 0.5 : -0.5)),
+          .angle_mdeg  = (int32_t)(angle_deg * 1000.0 +
+                                   (angle_deg >= 0 ? 0.5 : -0.5)) };
+      int rc = ioctl(dev, DRIVEBASE_RESET, (unsigned long)&r);
+      close(dev);
+      if (rc < 0)
+        {
+          fprintf(stderr, "DRIVEBASE_RESET: %s\n", strerror(errno));
+          return 1;
+        }
+      return 0;
+    }
+
+  if (strcmp(verb, "straight") == 0)
+    {
+      if (argc < 3)
+        {
+          fprintf(stderr, "usage: drivebase straight <mm> "
+                          "[<mmps>] [coast|brake|hold]\n");
+          close(dev); return 1;
+        }
+      struct drivebase_drive_straight_s a;
+      memset(&a, 0, sizeof(a));
+      a.distance_mm   = (int32_t)atoi(argv[2]);
+      a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+      a.speed_mmps    = 0;       /* 0 = use default                       */
+      /* argv[3] / argv[4]: either a numeric speed override or a
+       * completion keyword (coast/brake/hold), in any order.  Numeric =
+       * strtol consumes the whole token (Issue #137).
+       */
+      for (int i = 3; i < argc && i <= 4; i++)
+        {
+          if      (strcmp(argv[i], "coast") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_COAST;
+          else if (strcmp(argv[i], "brake") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+          else if (strcmp(argv[i], "hold")  == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_HOLD;
+          else
+            {
+              char *endp;
+              long v = strtol(argv[i], &endp, 10);
+              if (endp != argv[i] && *endp == '\0')
+                {
+                  a.speed_mmps = (int32_t)v;
+                }
+            }
+        }
+      int rc = ioctl(dev, DRIVEBASE_DRIVE_STRAIGHT, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "DRIVE_STRAIGHT: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  if (strcmp(verb, "turn") == 0)
+    {
+      if (argc < 3)
+        {
+          fprintf(stderr, "usage: drivebase turn <deg> "
+                          "[<dps>] [coast|brake|hold]\n");
+          close(dev); return 1;
+        }
+      struct drivebase_turn_s a;
+      memset(&a, 0, sizeof(a));
+      a.angle_deg     = (int32_t)atoi(argv[2]);
+      a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+      a.turn_rate_dps = 0;       /* 0 = use default                       */
+      for (int i = 3; i < argc && i <= 4; i++)
+        {
+          if      (strcmp(argv[i], "coast") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_COAST;
+          else if (strcmp(argv[i], "brake") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+          else if (strcmp(argv[i], "hold")  == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_HOLD;
+          else
+            {
+              char *endp;
+              long v = strtol(argv[i], &endp, 10);
+              if (endp != argv[i] && *endp == '\0')
+                {
+                  a.turn_rate_dps = (int32_t)v;
+                }
+            }
+        }
+      int rc = ioctl(dev, DRIVEBASE_TURN, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "TURN: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  /* Issue #138: public CLI for curve / arc.  Both target ioctls
+   * (DRIVEBASE_DRIVE_CURVE / DRIVEBASE_DRIVE_ARC_DISTANCE) and the
+   * underlying db_drivebase_drive_{curve,arc_distance} were already
+   * wired internally; only the user-facing verbs were missing.  Per
+   * Issue #138 we expose distance-mode arc (radius + distance_mm);
+   * angle-mode arc remains internal — equivalent input is achievable
+   * through `curve <r> <angle>`.
+   */
+
+  if (strcmp(verb, "curve") == 0)
+    {
+      if (argc < 4)
+        {
+          fprintf(stderr, "usage: drivebase curve <radius_mm> "
+                          "<angle_deg> [coast|brake|hold]\n");
+          close(dev); return 1;
+        }
+      struct drivebase_drive_curve_s a;
+      memset(&a, 0, sizeof(a));
+      a.radius_mm     = (int32_t)atoi(argv[2]);
+      a.angle_deg     = (int32_t)atoi(argv[3]);
+      a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+      if (argc >= 5)
+        {
+          if      (strcmp(argv[4], "coast") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_COAST;
+          else if (strcmp(argv[4], "brake") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+          else if (strcmp(argv[4], "hold")  == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_HOLD;
+        }
+      int rc = ioctl(dev, DRIVEBASE_DRIVE_CURVE, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "DRIVE_CURVE: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  if (strcmp(verb, "arc") == 0)
+    {
+      if (argc < 4)
+        {
+          fprintf(stderr, "usage: drivebase arc <radius_mm> "
+                          "<distance_mm> [coast|brake|hold]\n");
+          close(dev); return 1;
+        }
+      struct drivebase_drive_arc_s a;
+      memset(&a, 0, sizeof(a));
+      a.radius_mm     = (int32_t)atoi(argv[2]);
+      a.arg           = (int32_t)atoi(argv[3]);  /* distance_mm */
+      a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+      if (argc >= 5)
+        {
+          if      (strcmp(argv[4], "coast") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_COAST;
+          else if (strcmp(argv[4], "brake") == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_BRAKE;
+          else if (strcmp(argv[4], "hold")  == 0) a.on_completion = DRIVEBASE_ON_COMPLETION_HOLD;
+        }
+      int rc = ioctl(dev, DRIVEBASE_DRIVE_ARC_DISTANCE, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "DRIVE_ARC_DISTANCE: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  if (strcmp(verb, "forever") == 0)
+    {
+      if (argc < 4)
+        {
+          fprintf(stderr, "usage: drivebase forever <mmps> <dps>\n");
+          close(dev); return 1;
+        }
+      struct drivebase_drive_forever_s a =
+        { .speed_mmps    = (int32_t)atoi(argv[2]),
+          .turn_rate_dps = (int32_t)atoi(argv[3]) };
+      int rc = ioctl(dev, DRIVEBASE_DRIVE_FOREVER, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "DRIVE_FOREVER: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  if (strcmp(verb, "stop-motion") == 0)
+    {
+      uint8_t oc = DRIVEBASE_ON_COMPLETION_COAST;
+      if (argc >= 3)
+        {
+          if      (strcmp(argv[2], "coast") == 0) oc = DRIVEBASE_ON_COMPLETION_COAST;
+          else if (strcmp(argv[2], "brake") == 0) oc = DRIVEBASE_ON_COMPLETION_BRAKE;
+          else if (strcmp(argv[2], "hold")  == 0) oc = DRIVEBASE_ON_COMPLETION_HOLD;
+        }
+      struct drivebase_stop_s a = { .on_completion = oc };
+      int rc = ioctl(dev, DRIVEBASE_STOP, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "STOP: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  if (strcmp(verb, "get-state") == 0)
+    {
+      uint32_t duration_ms = 0;
+      uint32_t interval_ms = 100;
+      if (argc >= 3)
+        {
+          int v = atoi(argv[2]);
+          if (v < 0)
+            {
+              fprintf(stderr,
+                      "usage: drivebase get-state "
+                      "[duration_ms [interval_ms]]\n");
+              close(dev); return 1;
+            }
+          duration_ms = (uint32_t)v;
+        }
+      if (argc >= 4)
+        {
+          int v = atoi(argv[3]);
+          if (v <= 0)
+            {
+              fprintf(stderr,
+                      "usage: drivebase get-state "
+                      "[duration_ms [interval_ms]]\n");
+              close(dev); return 1;
+            }
+          interval_ms = (uint32_t)v;
+        }
+
+      printf("%8s  %8s  %7s  %10s  %7s  %4s  %5s  %3s  %10s  %6s\n",
+             "time_ms", "dist_mm", "v_mmps", "angle_mdeg", "tr_dps",
+             "done", "stall", "cmd", "tick", "afault");
+
+      struct timespec t0;
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+
+      for (;;)
+        {
+          struct drivebase_state_s st;
+          int rc = ioctl(dev, DRIVEBASE_GET_STATE, (unsigned long)&st);
+          if (rc < 0)
+            {
+              fprintf(stderr, "GET_STATE: %s\n", strerror(errno));
+              close(dev); return 1;
+            }
+
+          struct timespec tn;
+          clock_gettime(CLOCK_MONOTONIC, &tn);
+          long elapsed_ms = (tn.tv_sec - t0.tv_sec) * 1000L +
+                            (tn.tv_nsec - t0.tv_nsec) / 1000000L;
+
+          printf("%8ld  %8ld  %7ld  %10ld  %7ld  %4u  %5u  %3u  %10lu  %6u\n",
+                 elapsed_ms,
+                 (long)st.distance_mm, (long)st.drive_speed_mmps,
+                 (long)st.angle_mdeg, (long)st.turn_rate_dps,
+                 st.is_done, st.is_stalled, st.active_command,
+                 (unsigned long)st.tick_seq, st.actuation_fault);
+
+          if (duration_ms == 0 || (uint32_t)elapsed_ms >= duration_ms)
+            {
+              break;
+            }
+          usleep(interval_ms * 1000);
+        }
+      close(dev);
+      return 0;
+    }
+
+  if (strcmp(verb, "set-gyro") == 0)
+    {
+      if (argc < 3)
+        {
+          fprintf(stderr, "usage: drivebase set-gyro <none|3d>\n");
+          close(dev); return 1;
+        }
+      uint8_t mode;
+      if      (strcmp(argv[2], "none") == 0) mode = DRIVEBASE_USE_GYRO_NONE;
+      else if (strcmp(argv[2], "3d")   == 0) mode = DRIVEBASE_USE_GYRO_3D;
+      else
+        {
+          /* Codex NIT: silent fallback to NONE hides typos.  Surface
+           * the bad argument and bail rather than mutating state.
+           * Issue #157: `1d` was removed — its fused-projection heading
+           * is now `3d`, so point users at the replacement explicitly.
+           */
+
+          if (strcmp(argv[2], "1d") == 0)
+            {
+              fprintf(stderr,
+                      "drivebase set-gyro: '1d' was removed; "
+                      "use '3d' (same projection heading)\n");
+            }
+          else
+            {
+              fprintf(stderr,
+                      "drivebase set-gyro: unknown mode '%s' "
+                      "(expected none|3d)\n", argv[2]);
+            }
+          close(dev);
+          return 1;
+        }
+      struct drivebase_set_use_gyro_s a = { .use_gyro = mode };
+      int rc = ioctl(dev, DRIVEBASE_SET_USE_GYRO, (unsigned long)&a);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "SET_USE_GYRO: %s\n", strerror(errno)); return 1; }
+      return 0;
+    }
+
+  if (strcmp(verb, "jitter") == 0)
+    {
+      if (argc >= 3 && strcmp(argv[2], "reset") == 0)
+        {
+          int rc = ioctl(dev, DRIVEBASE_JITTER_RESET, 0);
+          close(dev);
+          if (rc < 0)
+            {
+              fprintf(stderr, "JITTER_RESET: %s\n", strerror(errno));
+              return 1;
+            }
+          /* The daemon's idle loop applies the reset on its next wake
+           * (~50 ms).  Wait briefly so the next `drivebase jitter`
+           * sees the cleared cache instead of pre-reset values.
+           */
+
+          usleep(80000);
+          printf("jitter reset\n");
+          return 0;
+        }
+      struct drivebase_jitter_dump_s d;
+      int rc = ioctl(dev, DRIVEBASE_JITTER_DUMP, (unsigned long)&d);
+      close(dev);
+      if (rc < 0) { fprintf(stderr, "JITTER_DUMP: %s\n", strerror(errno)); return 1; }
+      printf("ticks=%lu max_lag=%lu us miss=%lu\n",
+             (unsigned long)d.total_ticks,
+             (unsigned long)d.max_lag_us,
+             (unsigned long)d.deadline_miss_count);
+      printf("hist <50/50-100/100-200/200-500/500-1k/1k-2k/2k-5k/5k+:\n"
+             "     %5lu %5lu %5lu %5lu %5lu %5lu %5lu %5lu\n",
+             (unsigned long)d.hist_us[0], (unsigned long)d.hist_us[1],
+             (unsigned long)d.hist_us[2], (unsigned long)d.hist_us[3],
+             (unsigned long)d.hist_us[4], (unsigned long)d.hist_us[5],
+             (unsigned long)d.hist_us[6], (unsigned long)d.hist_us[7]);
+      return 0;
+    }
+
+  fprintf(stderr, "drivebase: unknown verb '%s'\n", verb);
+  usage();
+  return 1;
+}

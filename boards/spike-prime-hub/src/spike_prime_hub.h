@@ -1,0 +1,397 @@
+/****************************************************************************
+ * boards/spike-prime-hub/src/spike_prime_hub.h
+ ****************************************************************************/
+
+#ifndef __BOARDS_SPIKE_PRIME_HUB_SRC_SPIKE_PRIME_HUB_H
+#define __BOARDS_SPIKE_PRIME_HUB_SRC_SPIKE_PRIME_HUB_H
+
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+#include <nuttx/compiler.h>
+#include <stdint.h>
+#include <arch/stm32/chip.h>
+#include <arch/board/board_rgbled.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Power control
+ *   PA13 = BAT_PWR_EN  (main battery power, must be HIGH to stay on)
+ *   PA14 = PORT_3V3_EN (3.3V to I/O ports)
+ */
+
+#define GPIO_BAT_PWR_EN (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
+                         GPIO_OUTPUT_SET | GPIO_PORTA | GPIO_PIN13)
+#define GPIO_PORT_3V3_EN (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
+                          GPIO_OUTPUT_SET | GPIO_PORTA | GPIO_PIN14)
+
+/* Bluetooth button */
+
+#define MIN_IRQBUTTON   BUTTON_USER
+#define MAX_IRQBUTTON   BUTTON_USER
+#define NUM_IRQBUTTONS  1
+
+#define GPIO_BTN_USER   (GPIO_INPUT | GPIO_PULLUP | GPIO_EXTI | \
+                         GPIO_PORTA | GPIO_PIN0)
+
+/* IMU (LSM6DS3TR-C)
+ *   PB4 = INT1 (gyro DRDY, EXTI4)
+ */
+
+#define GPIO_LSM6DSL_INT1 (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | \
+                           GPIO_PORTB | GPIO_PIN4)
+
+/* TLC5955 LED Driver
+ *   SPI1: MOSI=PA7, MISO=PA6, SCK=PA5 (AF5)
+ *   LAT:  PA15 (GPIO output, latch data on HIGH->LOW)
+ *   GSCLK: TIM12 CH2 = PB15 (9.6 MHz PWM clock for LED driver)
+ */
+
+#define GPIO_TLC5955_LAT  (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
+                           GPIO_OUTPUT_CLEAR | GPIO_PORTA | GPIO_PIN15)
+
+/* TLC5955 channel IDs (TLC5955_NUM_CHANNELS, TLC5955_CH_*) are defined in
+ * <arch/board/board_rgbled.h>, included above so both kernel-space and
+ * user-space code share the same layout.
+ */
+
+/* USB OTG FS
+ *   PA9  = OTG_FS_VBUS
+ */
+
+#undef  GPIO_OTGFS_VBUS
+#define GPIO_OTGFS_VBUS (GPIO_INPUT | GPIO_FLOAT | GPIO_SPEED_100MHz | \
+                         GPIO_OPENDRAIN | GPIO_PORTA | GPIO_PIN9)
+
+/* W25Q256 SPI NOR Flash chip select (active low, idle HIGH)
+ *   PB12 = /CS (GPIO software NSS for SPI2)
+ */
+
+#define GPIO_W25_CS       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
+                           GPIO_OUTPUT_SET | GPIO_PORTB | GPIO_PIN12)
+
+/* CC2564C Bluetooth nSHUTD (chip enable, active HIGH)
+ *   PA2 = BT_nSHUTD  (GPIO output, drive LOW at boot to keep chip in reset
+ *                     until stm32_bluetooth_initialize() brings it up)
+ *
+ * Note: PA2 is also defined as GPIO_USART2_TX_1 in the pinmap, but this
+ * board uses USART2_TX_2 (PD5) for the HCI UART to the BT controller, so
+ * PA2 is free for nSHUTD control.
+ */
+
+#define GPIO_BT_NSHUTD    (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
+                           GPIO_OUTPUT_CLEAR | GPIO_PORTA | GPIO_PIN2)
+
+/* procfs */
+
+#ifdef CONFIG_FS_PROCFS
+#  ifdef CONFIG_NSH_PROC_MOUNTPOINT
+#    define STM32_PROCFS_MOUNTPOINT CONFIG_NSH_PROC_MOUNTPOINT
+#  else
+#    define STM32_PROCFS_MOUNTPOINT "/proc"
+#  endif
+#endif
+
+/* Sound (DAC1 CH1 / amp enable)
+ *   PA4  = DAC1 OUT1 (analog, upstream GPIO_DAC1_OUT1_0 from pinmap)
+ *   PC10 = Amplifier enable (push-pull, active high, CLEAR at boot)
+ */
+
+#define GPIO_AMP_EN         (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
+                             GPIO_OUTPUT_CLEAR | GPIO_PORTC | GPIO_PIN10)
+
+/* Resistor ladder decoder
+ *
+ * Two resistor ladders encode digital signals as analog voltages:
+ *   DEV_0 (PC4, ADC rank 4): CH1 = center button, CH2 = /CHG (MP2639A)
+ *   DEV_1 (PA1, ADC rank 5): CH0 = left, CH1 = right, CH2 = BT button
+ */
+
+#define RLAD_CH0  0x01
+#define RLAD_CH1  0x02
+#define RLAD_CH2  0x04
+
+/* Center button (ADC resistor ladder)
+ *   PC4 = ADC1_CH14 (not CH4! PC4 maps to CH14 on STM32F413)
+ *   Unpressed: ADC ~3645, Pressed: ADC ~2872
+ *   Threshold: below 3200 = pressed
+ */
+
+#define GPIO_ADC_CENTER_BTN       (GPIO_ANALOG | GPIO_PORTC | GPIO_PIN4)
+#define CENTER_BTN_ADC_CH         14
+#define CENTER_BTN_PRESS_THRESHOLD 3200
+
+/* Battery charger ISET PWM (TIM5 CH1, PA0, AF2)
+ *
+ * Note: PA0 is also defined as GPIO_BTN_USER for the Bluetooth button,
+ * but the physical BT button is on the resistor ladder (PA1).  When the
+ * battery charger is enabled, PA0 is used for ISET PWM.
+ */
+
+#define GPIO_ISET_PWM  (GPIO_ALT | GPIO_AF2 | GPIO_SPEED_50MHz | \
+                        GPIO_PUSHPULL | GPIO_PORTA | GPIO_PIN0)
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+#ifndef __ASSEMBLY__
+
+int stm32_bringup(void);
+
+#ifdef CONFIG_STM32_I2C2
+int stm32_lsm6dsl_initialize(void);
+#endif
+
+void weak_function stm32_usbinitialize(void);
+
+#ifdef CONFIG_STM32_SPI1
+int tlc5955_initialize(void);
+void tlc5955_set_duty(uint8_t ch, uint16_t value); /* Auto-schedules update */
+int tlc5955_update_sync(void);  /* Immediate update (init/shutdown) */
+int stm32_rgbled_register(void);  /* /dev/rgbled0 char device */
+#endif
+
+/* Resistor ladder decoder and threshold tables */
+
+uint8_t resistor_ladder_decode(uint16_t adc_value, const uint16_t levels[8]);
+
+extern const uint16_t g_ladder_dev0_levels[8];
+extern const uint16_t g_ladder_dev1_levels[8];
+
+#ifdef CONFIG_STM32_ADC1
+/* ADC DMA scan ranks (index into DMA buffer) */
+
+#define ADC_RANK_IBAT         0   /* CH10 PC0: Battery current */
+#define ADC_RANK_VBAT         1   /* CH11 PC1: Battery voltage */
+#define ADC_RANK_NTC          2   /* CH8  PB0: Battery temperature */
+#define ADC_RANK_IBUSBCH      3   /* CH3  PA3: USB charger current */
+#define ADC_RANK_BTN_CENTER   4   /* CH14 PC4: Center button */
+#define ADC_RANK_BTN_LRB      5   /* CH1  PA1: Left/Right/BT buttons */
+
+int stm32_adc_dma_initialize(void);
+uint16_t stm32_adc_read(uint8_t rank);
+int stm32_power_initialize(void);
+int stm32_btbutton_initialize(void);
+#endif
+
+#ifdef CONFIG_BATTERY_GAUGE
+int stm32_battery_gauge_initialize(void);
+#endif
+
+#ifdef CONFIG_BATTERY_CHARGER
+int stm32_battery_charger_initialize(void);
+#endif
+
+#ifdef CONFIG_SCHED_CPULOAD_EXTCLK
+void stm32_cpuload_initialize(void);
+#endif
+
+#ifdef CONFIG_SCHED_HPWORK
+int stm32_hpwork_softdog_initialize(void);
+#endif
+
+/* Reset reason + breadcrumb persistence (stm32_bcrumb.c).  Carves the top
+ * 64 bytes of the kernel heap (0x2001FFC0..0x20020000) as a non-cleared
+ * struct that survives MCU soft-reset.  Call stm32_bcrumb_initialize()
+ * from stm32_bringup() before any other syslog so the BCRUMB lines lead
+ * dmesg.  Producer hooks below set the *first* cause only.
+ */
+
+#define BCRUMB_PRE_NONE          0u
+#define BCRUMB_PRE_SOFTDOG       1u   /* hpwork softdog timeout pre-PANIC */
+#define BCRUMB_PRE_USER_REBOOT   2u   /* NSH `reboot` */
+#define BCRUMB_PRE_POWER_BUTTON  3u   /* center button long-press */
+#define BCRUMB_PRE_ASSERT_HOOK   4u   /* future: assert.c hook */
+
+/* HPWORK worker tracking via stm32_bcrumb_worker_entry/exit() —
+ * caller passes any small uint8_t worker ID (0..255).  Encode as
+ * `(id << 24) | counter24` in marker[1]/[2] so a mismatch identifies
+ * which worker was inside HPWORK at stall time.  IDs are not predefined;
+ * each consumer chooses their own range when adding the hooks.
+ */
+
+void stm32_bcrumb_initialize(void);
+void stm32_bcrumb_set_pre_reason(uint32_t reason, uint32_t arg);
+void stm32_bcrumb_set_board_reset(int status);
+void stm32_bcrumb_set_marker(unsigned int slot, uint32_t value);
+void stm32_bcrumb_worker_entry(unsigned int worker_id);
+void stm32_bcrumb_worker_exit(unsigned int worker_id);
+
+int stm32_sound_initialize(void);
+int stm32_tone_register(void);
+int stm32_pcm_register(void);
+
+#ifdef CONFIG_STM32_SPI2
+int stm32_w25q256_initialize(void);
+#endif
+
+#ifdef CONFIG_STM32_TIM8
+/* Start the 32.768 kHz TIM8 CH4 PWM on PC9 for the CC2564C SLOWCLK.  Must
+ * be called before driving GPIO_BT_NSHUTD HIGH.
+ */
+
+int stm32_bt_slowclk_initialize(void);
+#endif
+
+#ifdef CONFIG_STM32_USART2
+/* Initialise USART2 + DMA for the CC2564C HCI link and return a board-local
+ * btuart_lowerhalf_s.  Call from the Bluetooth bring-up code after the slow
+ * clock is stable but before nSHUTD HIGH so the UART is already accepting
+ * traffic when the chip finishes its ROM boot.
+ */
+
+struct btuart_lowerhalf_s;
+FAR struct btuart_lowerhalf_s *stm32_btuart_instantiate(void);
+
+/* Return the number of bytes currently sitting in the RX ring.  Non-
+ * destructive; safe to call from any context including poll() setup.
+ */
+
+size_t stm32_btuart_rx_available(FAR const struct btuart_lowerhalf_s *lower);
+
+/* Power on the CC2564C (slow clock + nSHUTD toggle) and leave the USART2
+ * lower-half instantiated.  HCI bring-up (reset / init script / baud
+ * negotiation) is delegated to the higher-level host stack — see the
+ * btstack port under apps/btsensor/ (Issue #52).
+ */
+
+int stm32_bluetooth_initialize(void);
+
+/* Pulse nSHUTD low/high to force the CC2564C through a fresh ROM boot.
+ * Slow clock and the chardev set up by stm32_bluetooth_initialize()
+ * are kept untouched; only the chip itself is reset.  Call this before
+ * each `btsensor start` so a previous btstack session's chip state
+ * does not block the next bring-up from reaching HCI_STATE_WORKING.
+ */
+
+int stm32_bluetooth_chip_reset(void);
+
+/* Return the USART2 lower-half produced by stm32_bluetooth_initialize().
+ * NULL until the bring-up has run successfully.
+ */
+
+FAR struct btuart_lowerhalf_s *stm32_btuart_lower(void);
+
+/* Register the /dev/ttyBT character device that wraps the btuart lower-half
+ * so user-mode apps can drive HCI over POSIX read/write/poll/ioctl.  See
+ * boards/spike-prime-hub/include/board_btuart.h for the ABI.
+ */
+
+int stm32_btuart_chardev_register(FAR struct btuart_lowerhalf_s *lower);
+#endif
+
+#ifdef CONFIG_LEGO_PORT
+/* Initialize the I/O port DCM (Issue #42).  Configures GPIOs for the 6
+ * external ports A-F, registers /dev/legoport0..5, and starts the HPWORK
+ * polling loop at 2 ms cadence.
+ */
+
+#include <arch/board/board_legoport.h>
+
+int stm32_legoport_initialize(void);
+int stm32_legoport_chardev_register(void);
+
+/* DCM handoff API used by the LUMP engine (Issue #43).  Per the
+ * contract in `board_legoport.h:154`, owners MUST call
+ * `stm32_legoport_release_uart(port)` from every exit path; the LUMP
+ * engine then re-registers the CB to accept the next handoff.
+ */
+
+int stm32_legoport_register_uart_handoff(int port,
+                                         legoport_uart_handoff_cb_t cb,
+                                         void *priv);
+int stm32_legoport_release_uart(int port);
+#endif
+
+#ifdef CONFIG_LEGO_LUMP
+struct lump_data_frame_s;
+
+/* Pop one DATA frame off the per-port LUMP ring (Phase 3).  Used by
+ * `LEGOPORT_LUMP_POLL_DATA` ioctl in the legoport chardev to feed
+ * `port lump watch`.  Returns 0 on success, -EAGAIN if empty.
+ */
+
+int lump_pop_data_frame(int port, struct lump_data_frame_s *out);
+#endif
+
+#ifdef CONFIG_LEGO_LUMP
+/* Initialise the LUMP UART protocol engine (Issue #43).  Pre-creates
+ * 6 per-port kernel threads (sleeping), registers the DCM handoff
+ * callback for each port, and installs per-port watchdog timers.
+ * Must be called after `stm32_legoport_initialize()` so the DCM is
+ * already running and the handoff registry is alive.
+ *
+ * Returns 0 on success or a negated errno.  `-EALREADY` if called twice.
+ */
+
+int stm32_legoport_lump_register(void);
+#endif
+
+#ifdef CONFIG_LEGO_SENSOR
+/* Register the six /dev/uorb/sensor_lego[0..5] uORB topics (Issue #45)
+ * and attach per-port LUMP publish callbacks.  Must be called after
+ * `stm32_legoport_lump_register()`; partial failure is rolled back
+ * before returning so the rest of bringup is unaffected.
+ */
+
+int legosensor_uorb_register(void);
+#endif
+
+#ifdef CONFIG_LEGO_PORT
+/* H-bridge PWM port HAL (Issue #80, integrated into LEGO_PORT).
+ * Initializes TIM1 / TIM3 / TIM4 and pre-COASTs every port so the
+ * legoport chardev (`/dev/legoport[N]`) can route LEGOPORT_PWM_*
+ * ioctls into it.  No standalone chardev — see board_legoport.h for
+ * the public ABI.
+ */
+
+int stm32_legoport_pwm_initialize(void);
+
+/* Per-port H-bridge actuation primitives.  Used by board_legosensor.h
+ * dispatch (LEGOSENSOR_SET_PWM / LEGOSENSOR_MOTOR_*_{COAST,BRAKE}) and
+ * by the /dev/drivebase emergency-stop fast path (Issue #77).  `idx` is
+ * 0..5 (port A..F).
+ */
+
+int stm32_legoport_pwm_set_duty(int idx, int16_t duty);
+int stm32_legoport_pwm_coast(int idx);
+int stm32_legoport_pwm_brake(int idx);
+#endif
+
+#ifdef CONFIG_BOARD_DRIVEBASE_CHARDEV
+/* /dev/drivebase kernel-side thin chardev (Issue #77).  Registers the
+ * device node and brings up the cmd_ring / state_db / status / watchdog
+ * machinery used by the userspace drivebase daemon (apps/drivebase/).
+ * Daemon attach happens lazily through the DRIVEBASE_DAEMON_ATTACH
+ * ioctl after this returns; the chardev exists from board boot so user
+ * tools can poll DRIVEBASE_GET_STATUS while the daemon is offline.
+ */
+
+int stm32_drivebase_chardev_register(void);
+#endif
+
+#ifdef CONFIG_BOARD_BTCAP_CHARDEV
+/****************************************************************************
+ * Name: stm32_btcap_chardev_register
+ *
+ * Description:
+ *   Register /dev/btcap, the kernel-resident pipe-style chardev that
+ *   carries lossless capture sessions from the apps/capture writer to
+ *   the btsensor MODE CAPTURE reader (Issue #122).  Single-instance,
+ *   single open per direction, internal ring buffer
+ *   (CONFIG_BOARD_BTCAP_RING_BYTES, default 1024 B).
+ *
+ * Returned Value:
+ *   Zero on success, negated errno on failure.
+ ****************************************************************************/
+
+int stm32_btcap_chardev_register(void);
+#endif
+
+#endif /* __ASSEMBLY__ */
+#endif /* __BOARDS_SPIKE_PRIME_HUB_SRC_SPIKE_PRIME_HUB_H */

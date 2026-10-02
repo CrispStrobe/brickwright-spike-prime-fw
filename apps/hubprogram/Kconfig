@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 Brickwright contributors
+config APP_HUBPROGRAM
+	tristate "Brickwright autonomous program and MicroPython runner"
+	default n
+	depends on LEGO_PORT && LEGO_LUMP
+	---help---
+		Runs bounded Brickwright instruction programs and embedded MicroPython
+		inside NuttX using the real LEGO port drivers. hubprogram packet HEX
+		provides the USB NSH transport; btsensor serves the same service over BLE.
+		The current robot API controls A/B motors and C/D/E sensor predicates.
+		The VM has a 32 KiB heap, 16 KiB worker stack and 120 second timeout.

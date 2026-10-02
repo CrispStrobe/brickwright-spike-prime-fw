@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: MIT
+// SPIKE Prime additions to Renode's STM32F4 model.
+//
+// The F413VG exposes 320 KiB as a contiguous Cortex-M SRAM address range.
+// Renode's common F4 model supplies the first 256 KiB; this supplies the
+// remaining 64 KiB without overlapping it.  The external W25Q256 is initially
+// represented as memory so opaque images can execute against a deterministic
+// snapshot while the command-level SPI model is developed.
+
+using "platforms/cpus/stm32f4.repl"
+
+sramUpper: Memory.MappedMemory @ sysbus 0x20040000
+    size: 0x10000
+
+externalFlash: Memory.MappedMemory @ sysbus 0x10000000
+    size: 0x2000000
+
+imu: SPIKEPrime.LSM6DS3TRC @ i2c2 0x6a
+
+display: SPIKEPrime.TLC5955 @ spi1
+
+flashMux: SPI.SPIMultiplexer @ spi2
+    init:
+        SetActiveLow 0
+
+norFlash: SPIKEPrime.W25Q256JV @ flashMux 0
+
+gpioPortB:
+    12 -> flashMux@0

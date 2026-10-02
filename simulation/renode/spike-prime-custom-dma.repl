@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: MIT
+// Request wiring exposed by the private generic STM32 DMA/SPI/UART model fork.
+
+using "./spike-prime.repl"
+
+// STM32F413 request routing selected by boards/spike-prime-hub/include/board.h.
+spi1:
+    DMAReceive -> dma2@2
+    DMATransmit -> dma2@3
+
+spi2:
+    DMATransmit -> dma1@4
+
+usart2:
+    DMARequest -> dma1@7
+    DMATransmit -> dma1@6
