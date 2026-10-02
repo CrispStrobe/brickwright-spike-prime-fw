@@ -10,7 +10,14 @@ a motor command never changes an attached sensor into a motor. The sensor API
 retains color/reflection C, distance D and force-button E. It is a bounded API,
 not complete SPIKE Python compatibility.
 
-The simulation and USB NSH profiles include the application. USB NSH accepts
+The simulation profile starts local program execution independently of radio
+startup. Its TI-free default leaves the Bluetooth daemon stopped: no HCI
+controller is attached by the motor/sensor arena. A separately configured
+virtual-controller run can opt in with `CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI=y`,
+with the controller connected before boot. The option does not create a
+controller or establish Bluetooth compatibility. Physical firmware retains
+its Bluetooth startup. Both the simulation and USB NSH profiles include the
+application. USB NSH accepts
 `hubprogram packet HEX`, where HEX encodes one 8–20 byte protocol request.
 The modern BLE service accepts the identical packet and returns its 20 byte
 reply. An emulator-only, ELF-resolved debug mailbox submits packets to the same
