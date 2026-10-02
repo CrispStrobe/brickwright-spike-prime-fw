@@ -1,3 +1,18 @@
-using "platforms/cpus/stm32f4.repl"
-sramUpper: Memory.MappedMemory @ sysbus 0x20040000
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2026 Brickwright contributors
+// Simulation guest platform using Renode's MIT-licensed core model interfaces.
+// This guest has no device drivers; no STM32 peripheral/SVD downloads are needed.
+flash: Memory.MappedMemory @ sysbus 0x08000000
     size: 0x10000
+
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x50000
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    priorityMask: 0xF0
+    systickFrequency: 72000000
+    IRQ -> cpu@0
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m4"
+    nvic: nvic
