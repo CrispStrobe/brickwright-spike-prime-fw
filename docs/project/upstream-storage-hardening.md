@@ -34,6 +34,12 @@ reduces transfer setup overhead while still reading and checking every byte.
 The simulator's byte-level DMA pacing remains intact, so fewer calls do not
 imply the same factor of improvement in elapsed time.
 
+Simulator coverage keeps erased-media first boot separate from an explicit
+synthetic already-formatted filesystem for normal boot. The latter exercises
+mounting existing media and cannot replace the full blank-scan gate. Fixture
+provenance, loading lifecycle and selected tags are documented in
+[the synthetic filesystem fixture record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/docs/project/synthetic-littlefs-fixture.md).
+
 To recover existing data, inspect or back up `/dev/mtdblock0` first. An operator
 who chooses to discard the filesystem can explicitly run:
 

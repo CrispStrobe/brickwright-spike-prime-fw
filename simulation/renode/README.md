@@ -84,6 +84,16 @@ synchronous board bring-up, LPF2 devices, and USB are tracked in `PLAN.md` C8. A
 passing emulator run is never evidence for RF behavior, TI service-pack
 semantics, electrical behavior, or physical timing.
 
+Flash scenarios distinguish erased-media first boot from explicitly loaded,
+synthetic existing filesystems. CI retains the erased-media board gate and
+selects separate normal-boot board/HCI tags. The fixture is generated from the
+exact qualified LittleFS sources, validated and programmed through public NOR
+SPI commands while paused before guest execution; default reset remains
+unchanged. See the
+[fixture provenance and coverage record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/docs/project/synthetic-littlefs-fixture.md)
+for tag names, lifecycle and limits. Generating this fixture alone provides no
+guest-boot qualification.
+
 ## Virtual HCI boundary
 
 `tools/test_renode_virtual_hci_bridge.sh` builds and tests a small Apache-2.0
