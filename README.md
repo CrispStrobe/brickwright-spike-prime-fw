@@ -106,6 +106,11 @@ git submodule update --init nuttx nuttx-apps
 make nuttx BOARD_CONFIG=simulation
 ```
 
+The build applies the [reviewed NuttX backports](docs/project/nuttx-backports.md)
+to the exact pinned dependencies and checks their source hashes. Keep the
+patch series when reinitializing submodules. Use a clean build after changing
+configuration; stale archive members in this baseline can survive an incremental build.
+
 The simulation profile excludes the TI service pack. CI builds and runs
 this profile; [the TI exclusion checker](tools/check_ti_free_image.py)
 checks images and build references for service-pack material. No flashable

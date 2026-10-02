@@ -8,6 +8,7 @@ component.
 | spike-nx baseline | `owhinata/spike-nx@00524ea5464bddb46c852967e382f8f6b073abe6` | MIT | Project baseline; root `LICENSE`. |
 | NuttX | `owhinata/nuttx@a67efb31cf4f236e456882589b91862f04594528` | Primarily Apache-2.0; optional files vary | External gitlink. Optional BSD components are disabled in the target configuration. Its own licence/NOTICE controls. |
 | NuttX Apps | `owhinata/nuttx-apps@55f0bc216565ccab8dee600a88f4485c7693bf8b` | Primarily Apache-2.0; optional files vary | External gitlink. Only the configured application closure is linked. Its own licence/NOTICE controls. |
+| Reviewed NuttX/NuttX Apps backports | Source SHAs, authors and adaptations in [policy/nuttx-backports.json](policy/nuttx-backports.json) | Apache-2.0 | Hash-checked patches on the existing dependency pins; original ASF headers/NOTICE preserved. Full grant in `licenses/Apache-2.0.txt`. |
 | Zephyr Bluetooth host selection | Zephyr `v4.4.1`, exact commit in `third_party/zephyr-host/manifest.json` | Apache-2.0 | Vendored, hash-pinned selection; upstream licence retained and local patch recorded. |
 | Pybricks-derived/reference code | Audited baseline reference `101c6babb592148bda9a8fd912b7953c7d561c0a`; present at all 46 current-path introductions in spike-nx | MIT and BSD-3-Clause; UART selects MIT from MIT OR GPL-2.0-only | 46 local source/reference files mapped in `policy/pybricks-reuse.json`. Original Pybricks, LEGO and David Lechner notices retained; full grants in `licenses/`. Per-path history in `policy/source-origin-review.json`; pin availability does not establish every external reading event. |
 | Fusion inclination-feedback adapters | `xioTechnologies/Fusion@a8d7224f36a0ec82345ef49a3db50e65f8d3bab8` | MIT, Copyright (c) 2021 x-io Technologies; adaptations Copyright (c) 2026 Brickwright contributors | Replaces the inherited host and firmware gradient-descent bodies. Reduced gravity-vector feedback adapters with exponential quaternion integration; historical caller names retained. Pin, hashes and changes in `policy/orientation-filter.json`; full grant in `licenses/Fusion-MIT.txt`. Retired revisions remain uncleared private evidence; the advertised-history cleanup is recorded in `policy/public-history-review.json`. |
@@ -28,7 +29,7 @@ user-supplied local files and are never CI artifacts.
 expressions and pinned embedded-interpreter inputs during CI and builds.
 The configured simulation build is separately recorded in
 `policy/simulation-firmware-inputs.json`: 3,244 conservative source/header/linker
-inputs, 1,249 archive-member selections and the direct startup object. The
+inputs, 1,248 archive-member selections and the direct startup object. The
 superset includes compiled or inventoried inputs whose code may not survive
 linking. `licenses/Simulation-Firmware-NOTICES.txt` bundles their grants and
 attribution. `tools/check_simulation_firmware.sh` checks source/config/runtime

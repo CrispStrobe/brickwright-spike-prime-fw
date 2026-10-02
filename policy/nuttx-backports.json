@@ -1,0 +1,193 @@
+{
+  "schema": 1,
+  "scope": "Selected Apache-2.0 backports and documented Brickwright adaptations on exact pinned dependencies. Does not clear other NuttX configurations or replace the existing F413/zmodem fork fixes.",
+  "components": [
+    {
+      "path": "nuttx",
+      "base_commit": "a67efb31cf4f236e456882589b91862f04594528",
+      "selected_licence": "Apache-2.0",
+      "patch": "patches/nuttx-hardening/nuttx.patch",
+      "patch_sha256": "642858e3efa9fadc8f02cf121515bece393fc8e361c15245bf69895a321c7c08",
+      "upstream_changes": [
+        {
+          "commit": "20752312eaac24994487891207c81fa22c02f7b5",
+          "url": "https://github.com/apache/nuttx/commit/20752312eaac24994487891207c81fa22c02f7b5",
+          "author": "AlmAck",
+          "adaptation": "Descriptor allocation bounds; unchanged"
+        },
+        {
+          "commit": "84f363d79d710780592253e4e08638cb3bcee9c2",
+          "url": "https://github.com/apache/nuttx/commit/84f363d79d710780592253e4e08638cb3bcee9c2",
+          "author": "yushuailong",
+          "adaptation": "Static task group failure cleanup adapted to older group layout"
+        },
+        {
+          "commit": "ef37425f71cdaf6c78ef966e05e77939c1f0b78b",
+          "url": "https://github.com/apache/nuttx/commit/ef37425f71cdaf6c78ef966e05e77939c1f0b78b",
+          "author": "Junbo Zheng",
+          "adaptation": "PR_GET_NAME buffer bound; unchanged"
+        },
+        {
+          "commit": "f2739fe4f430004c13046871688f666b32396b1e",
+          "url": "https://github.com/apache/nuttx/commit/f2739fe4f430004c13046871688f666b32396b1e",
+          "author": "Royyan Zahir",
+          "adaptation": "Only ARMv7-M syscall validation, older debug include retained"
+        },
+        {
+          "commit": "ce0038f2bc3ef2ba336ab132fb4a78ce59c15b6f",
+          "url": "https://github.com/apache/nuttx/commit/ce0038f2bc3ef2ba336ab132fb4a78ce59c15b6f",
+          "author": "Jacob Dahl",
+          "adaptation": "Only STM32 OTGFS interrupt mask"
+        },
+        {
+          "commit": "8302295dd01850bfdb19648466e507ca4784eede",
+          "url": "https://github.com/apache/nuttx/commit/8302295dd01850bfdb19648466e507ca4784eede",
+          "author": "Jinji Cui",
+          "adaptation": "SPI DMA chunking; first deferred chunk waits for trigger, subsequent chunks start automatically"
+        },
+        {
+          "commit": "09423194bf8ba6e3551edd6df0802d3964e200cd",
+          "url": "https://github.com/apache/nuttx/commit/09423194bf8ba6e3551edd6df0802d3964e200cd",
+          "author": "Daniel P. Carvalho",
+          "adaptation": "Timer forced event approach; unsigned full-range cancellation with hardware compare flag replaces signed remaining-time logic"
+        }
+      ],
+      "files": [
+        {
+          "path": "arch/arm/src/armv7-m/arm_svcall.c",
+          "before_sha256": "b0325e4d46136c48ecde16927aa7ea72ee13a0bed5fa508bc7032a54ec454707",
+          "after_sha256": "46ef060ed0be31d6e9dcbf2ff57eea5b4f68e1df013515b7b59063cd6d9f85f6"
+        },
+        {
+          "path": "arch/arm/src/stm32/stm32_otgfsdev.c",
+          "before_sha256": "8ceb6d2a70ff1284e0964460bece2c73590f8aedbb94f48c58dff36a04e7ce0a",
+          "after_sha256": "86640dcd8c33336d2899ecc22c340f05f6409bbf9b7bacce929bcd6c92a26a44"
+        },
+        {
+          "path": "arch/arm/src/stm32/stm32_spi.c",
+          "before_sha256": "4012f398e57b12d32ccbb85ca4d3c16555eb4948af5b97583239f9780556e096",
+          "after_sha256": "ddb7abb67b59a4006fc3db9d0451c87bb342a26959f69d740836d3a5f6d423b8"
+        },
+        {
+          "path": "arch/arm/src/stm32/stm32_tickless.c",
+          "before_sha256": "6f6181e615f4bf5679718aa19083cd6dadb6e961736cb3f84f5ba9f4f32f6c9e",
+          "after_sha256": "846dce69e1dd823c7fd7c9a5b02d394c40d5f4bf2fc8a720ff4c5a9479afbaf9"
+        },
+        {
+          "path": "boards/Board.mk",
+          "before_sha256": "6a5c312d86190094eb09101e5de0e9b78c93b3692c33b0b35fa2a82e7947c1b8",
+          "after_sha256": "57d93522347fb3c17cfd42ab50d2e8ff7fe4b5714b644ff1edcfd47c6dcbe4e1"
+        },
+        {
+          "path": "fs/inode/fs_files.c",
+          "before_sha256": "ee712f4e24a37fb092d6c2eaab3c0b4c99a0ae8d778a25b6eccdbad18c23ef83",
+          "after_sha256": "0d512c55bd6e53298e18ff4d870cfb0f715a4cac94e9f9b06de01e85da68db5f"
+        },
+        {
+          "path": "sched/group/group_create.c",
+          "before_sha256": "4b1c56890cc0a3974ed6acbfa918281b2568d14e0f0511a325dff5f683f0e650",
+          "after_sha256": "60b275554a1da756876a957e318837a441272414adae6847408f94bf86fb6e17"
+        },
+        {
+          "path": "sched/task/task_prctl.c",
+          "before_sha256": "d5869d22d91cc54e6c1fd5ec69a943da22120e36e54267cb2b31c56917e5cd68",
+          "after_sha256": "3f1984f2db489e0e5b83747bd04787cf50bc264f4f6fc5020421a1e79a471ef3"
+        }
+      ],
+      "local_adaptations": [
+        {
+          "author": "Brickwright contributors",
+          "description": "Allow a board-specific GENROMFS command, preserving the generic genromfs default. The SPIKE board selects the original BSD-3-Clause deterministic format writer in tools/make_romfs.py.",
+          "paths": [
+            "boards/Board.mk"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "nuttx-apps",
+      "base_commit": "55f0bc216565ccab8dee600a88f4485c7693bf8b",
+      "selected_licence": "Apache-2.0",
+      "patch": "patches/nuttx-hardening/nuttx-apps.patch",
+      "patch_sha256": "3a3b9ecb08def8af7d097079809d9ec8154324ac7d8408695ff628172800333e",
+      "upstream_changes": [
+        {
+          "commit": "ed063a0981f97949c1294745eb5602bfa8170d36",
+          "url": "https://github.com/apache/nuttx-apps/commit/ed063a0981f97949c1294745eb5602bfa8170d36",
+          "author": "wangjianyu3",
+          "adaptation": "NSH stdout failure; unchanged"
+        },
+        {
+          "commit": "96f6e7d46097ec01e6effbafd0a5f3594a54d32c",
+          "url": "https://github.com/apache/nuttx-apps/commit/96f6e7d46097ec01e6effbafd0a5f3594a54d32c",
+          "author": "raiden00pl",
+          "adaptation": "Readline terminal setup; unchanged"
+        },
+        {
+          "commit": "c44f9a0556aef8cc7d9e50c5e4a86a41b26e143f",
+          "url": "https://github.com/apache/nuttx-apps/commit/c44f9a0556aef8cc7d9e50c5e4a86a41b26e143f",
+          "author": "Nightt",
+          "adaptation": "Only nshlib/nsh_envcmds.c allocation checks"
+        },
+        {
+          "commit": "9b51035300f15afde063c0cc5413d8ce2b728bf0",
+          "url": "https://github.com/apache/nuttx-apps/commit/9b51035300f15afde063c0cc5413d8ce2b728bf0",
+          "author": "hanzhijian",
+          "adaptation": "Cat/fdinfo allocation checks; unchanged"
+        }
+      ],
+      "files": [
+        {
+          "path": "nshlib/nsh_console.c",
+          "before_sha256": "e554f82b282a539fcb98b768376e9535b244b62c95969fec2746052277ad58e4",
+          "after_sha256": "146dff9ab86a38cbdebec7a9cd354615bc405fdd9fd7a77a4c71d5d585bbfcc1"
+        },
+        {
+          "path": "nshlib/nsh_envcmds.c",
+          "before_sha256": "a42f9d2a3c41aa74e64ffb4e1a4680a1d0b2e8d716b2ee0c31b62453e866c503",
+          "after_sha256": "ddc518adb2fb2b8cfe97acdade6d71b74faef2eab3832803450f5b3cdd3cdefd"
+        },
+        {
+          "path": "nshlib/nsh_fscmds.c",
+          "before_sha256": "f4ff4189695d5b7570aaf9577515c07bbb0e2002abd2af4f7b96e6434eb70d96",
+          "after_sha256": "ab83e2392c4d4c139b1b2633400092d9b29ed92c1ad69cb544aff4c0e95db75c"
+        },
+        {
+          "path": "nshlib/nsh_fsutils.c",
+          "before_sha256": "f68a3d4b42a21ce3a5be8b93eafd659a538e507775ffbed34c0d1b4cf713b2f0",
+          "after_sha256": "8de10b5d0f45e2975e2252debdcb784032d52a6ff2498d34693ccfeb4e2ca785"
+        },
+        {
+          "path": "system/readline/readline_fd.c",
+          "before_sha256": "fef0b1dcd0f8823ff75424bbe0a2ec98d07289f2231072d8a3c2a4916ff944ca",
+          "after_sha256": "4cd5629379aa56eb472ecef9413a297c6202f1e1911fdbe9814956b911d3d436"
+        }
+      ]
+    }
+  ],
+  "required_notices": {
+    "licenses/Apache-2.0.txt": "fea26e329e7dd773fbee25b903a6fcdd6a38d689f7983b62592cbd470a004450",
+    "licenses/NuttX-NOTICE.txt": "1f6ac972692c4f94fe4b904590654aeb795ff08efd9799427c2358fb568814bb",
+    "licenses/NuttX-Apps-NOTICE.txt": "f280fc32b68c831fd6847bbecf01a45c1bd8e907d719bc7c68a4f94ce25eeeda",
+    "licenses/Brickwright-BSD-3-Clause.txt": "e0be31379ef4d9655ffcc922df438bc0e8287d469a34b9d0bcf277c91399429b"
+  },
+  "integration_files": [
+    {
+      "path": "tools/make_romfs.py",
+      "sha256": "886210dd7cf4d41d8a332326cf20c34032378b6209734efaa78d55eb72d622ad",
+      "selected_licence": "BSD-3-Clause"
+    },
+    {
+      "path": "boards/spike-prime-hub/src/Makefile",
+      "sha256": "780c1ad33615c01080fe5a63cc214b17a59e6f00e4671dc8c4624a53d722fc5a",
+      "selected_licence": "MIT"
+    }
+  ],
+  "simulator_companion": {
+    "repository": "https://github.com/CrispStrobe/renode-infrastructure-spike-prime",
+    "commit": "a85666b9054543d8d8a75cb7127324ed7ea5b1ee",
+    "pull_request": "https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/17",
+    "scope": "STM32 software compare generation and flag latching; not installed in the stock portable Renode runtime."
+  },
+  "modification_notices": "Every modified Apache dependency file carries a prominent Brickwright modification notice; original copyright/licence headers retained."
+}

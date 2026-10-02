@@ -1,0 +1,257 @@
+diff --git a/nshlib/nsh_console.c b/nshlib/nsh_console.c
+index cb95e0342..1522589e3 100644
+--- a/nshlib/nsh_console.c
++++ b/nshlib/nsh_console.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -131,18 +137,19 @@ static ssize_t nsh_consolewrite(FAR struct nsh_vtbl_s *vtbl,
+                                 FAR const void *buffer, size_t nbytes)
+ {
+   FAR struct console_stdio_s *pstate = (FAR struct console_stdio_s *)vtbl;
+-  ssize_t ret;
+-
+-  /* Write the data to the output stream */
+-
+-  ret = write(OUTFD(pstate), buffer, nbytes);
+-  if (ret < 0)
+-    {
+-      _err("ERROR: [%d] Failed to send buffer: %d\n",
+-          OUTFD(pstate), errno);
+-    }
+ 
+-  return ret;
++  /* Write the data to the output stream.
++   *
++   * Errors are reported to the caller via the negative return value and
++   * errno; do NOT _err() here.  OUTFD may itself be wired to the syslog
++   * backend (e.g. nsh_catfile dumping /dev/log on dmesg), in which case
++   * logging on write failure would produce new bytes, get picked up by
++   * the next read(), and lock the shell into an infinite loop at the
++   * highest priority — independent of which errno (EPIPE/EIO/ENOSPC/...)
++   * the underlying device returns.
++   */
++
++  return write(OUTFD(pstate), buffer, nbytes);
+ }
+ 
+ /****************************************************************************
+diff --git a/nshlib/nsh_envcmds.c b/nshlib/nsh_envcmds.c
+index d2378bb38..f631abff9 100644
+--- a/nshlib/nsh_envcmds.c
++++ b/nshlib/nsh_envcmds.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -257,17 +263,38 @@ int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
+   else if (strcmp(path, "-") == 0)
+     {
+       alloc = strdup(nsh_getwd(g_oldpwd));
++      if (alloc == NULL)
++        {
++          nsh_error(vtbl, g_fmtcmdoutofmemory, argv[0]);
++          ret = ERROR;
++          goto errout;
++        }
++
+       path  = alloc;
+     }
+ #endif
+   else if (strcmp(path, "..") == 0)
+     {
+       alloc = strdup(nsh_getcwd(vtbl));
++      if (alloc == NULL)
++        {
++          nsh_error(vtbl, g_fmtcmdoutofmemory, argv[0]);
++          ret = ERROR;
++          goto errout;
++        }
++
+       path  = dirname(alloc);
+     }
+   else
+     {
+       fullpath = nsh_getfullpath(vtbl, path);
++      if (fullpath == NULL)
++        {
++          nsh_error(vtbl, g_fmtcmdoutofmemory, argv[0]);
++          ret = ERROR;
++          goto errout;
++        }
++
+       path     = fullpath;
+     }
+ 
+@@ -288,6 +315,7 @@ int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
+ 
+   /* Free any memory that was allocated */
+ 
++errout:
+   if (alloc)
+     {
+       free(alloc);
+diff --git a/nshlib/nsh_fscmds.c b/nshlib/nsh_fscmds.c
+index 13f26f694..2879d1e3c 100644
+--- a/nshlib/nsh_fscmds.c
++++ b/nshlib/nsh_fscmds.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -695,13 +701,14 @@ static int fdinfo_callback(FAR struct nsh_vtbl_s *vtbl,
+   if (ret < 0)
+     {
+       nsh_error(vtbl, g_fmtcmdfailed, "fdinfo", "asprintf", NSH_ERRNO);
++      return ret;
+     }
+ 
+   nsh_output(vtbl, "\npid:%s", entryp->d_name);
+   ret = nsh_catfile(vtbl, "fdinfo", filepath);
+   if (ret < 0)
+     {
+-      nsh_error(vtbl, g_fmtcmdfailed, "fdinfo", "nsh_catfaile", NSH_ERRNO);
++      nsh_error(vtbl, g_fmtcmdfailed, "fdinfo", "nsh_catfile", NSH_ERRNO);
+     }
+ 
+   free(filepath);
+@@ -813,6 +820,10 @@ int cmd_cat(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
+   if (argc == 1)
+     {
+       char *buf = malloc(BUFSIZ);
++      if (buf == NULL)
++        {
++          return -ENOMEM;
++        }
+ 
+       /* Dump from input */
+ 
+diff --git a/nshlib/nsh_fsutils.c b/nshlib/nsh_fsutils.c
+index 878c1d18e..e814c1003 100644
+--- a/nshlib/nsh_fsutils.c
++++ b/nshlib/nsh_fsutils.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -228,8 +234,14 @@ int nsh_catfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
+                                  NSH_ERRNO_OF(errcode));
+                     }
+ 
++                  /* Jump straight to cleanup.  On a broken stdout (e.g.
++                   * closed PTY master) we must not keep reading: the
++                   * outer loop would otherwise drain /dev/log forever
++                   * when cat is dumping it on dmesg.
++                   */
++
+                   ret = ERROR;
+-                  break;
++                  goto errout;
+                 }
+               else
+                 {
+@@ -255,6 +267,7 @@ int nsh_catfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
+ 
+   /* Close the input file and return the result */
+ 
++errout:
+   close(fd);
+   free(buffer);
+   return ret;
+diff --git a/system/readline/readline_fd.c b/system/readline/readline_fd.c
+index 2a37d2335..24e9fcd5c 100644
+--- a/system/readline/readline_fd.c
++++ b/system/readline/readline_fd.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -30,6 +36,7 @@
+ #include <unistd.h>
+ #include <errno.h>
+ #include <assert.h>
++#include <stdbool.h>
+ #include <termios.h>
+ 
+ #include "system/readline.h"
+@@ -209,16 +216,19 @@ ssize_t readline_fd(FAR char *buf, int buflen, int infd, int outfd)
+ 
+   struct readline_s vtbl;
+   struct termios cfg;
++  struct termios newcfg;
++  bool restore_termios = false;
+   ssize_t ret;
+ 
+-  if (isatty(infd))
++  if (isatty(infd) && tcgetattr(infd, &cfg) == 0 &&
++      (cfg.c_lflag & ICANON) != 0)
+     {
+-      tcgetattr(infd, &cfg);
+-      if (cfg.c_lflag & ICANON)
++      newcfg = cfg;
++      newcfg.c_lflag &= ~ICANON;
++
++      if (tcsetattr(infd, TCSANOW, &newcfg) == 0)
+         {
+-          cfg.c_lflag &= ~ICANON;
+-          tcsetattr(infd, TCSANOW, &cfg);
+-          cfg.c_lflag |= ICANON;
++          restore_termios = true;
+         }
+     }
+ 
+@@ -237,7 +247,7 @@ ssize_t readline_fd(FAR char *buf, int buflen, int infd, int outfd)
+ 
+   ret = readline_common(&vtbl.vtbl, buf, buflen);
+ 
+-  if (isatty(infd) && (cfg.c_lflag & ICANON))
++  if (restore_termios)
+     {
+       tcsetattr(infd, TCSANOW, &cfg);
+     }
