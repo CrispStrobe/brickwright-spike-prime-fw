@@ -188,7 +188,7 @@
   "integration_files": [
     {
       "path": "tools/make_romfs.py",
-      "sha256": "886210dd7cf4d41d8a332326cf20c34032378b6209734efaa78d55eb72d622ad",
+      "sha256": "bb7f3a0ee4c4658ef375e2a7c8237d985d79c7f7692c07c1e59f0ce46b8762be",
       "selected_licence": "BSD-3-Clause"
     },
     {
