@@ -6,9 +6,11 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import unittest
-from make_littlefs_fixture import SOURCES, generate, verify_fixture, verify_sources
+from make_littlefs_fixture import (SOURCES, COMPILE_DEFINITIONS, compile_harness,
+                                   generate, verify_fixture, verify_sources)
 
 SOURCE = None
 
@@ -43,6 +45,41 @@ class FixtureTests(unittest.TestCase):
                          [0x100000, 0x101000])
         self.assertFalse(receipt['covers_erased_first_boot'])
         self.assertEqual(receipt['geometry']['block_count'] * 4096, 31 * 1024 * 1024)
+
+    def test_guest_limits_reject_old_format_and_accept_corrected_format(self):
+        # Compile actual pinned LittleFS twice, reproducing the prior host/guest
+        # discrepancy. The guest build rejects the old name_max255 superblock.
+        legacy_dir = self.root / 'legacy-build'
+        guest_dir = self.root / 'guest-build'
+        legacy_dir.mkdir()
+        guest_dir.mkdir()
+        legacy = compile_harness(SOURCE, legacy_dir,
+                                 [item.replace('NAME_MAX=32', 'NAME_MAX=255')
+                                  for item in COMPILE_DEFINITIONS])
+        guest = compile_harness(SOURCE, guest_dir)
+        old_records = self.root / 'old-records.bin'
+        old_records.write_bytes(subprocess.check_output([str(legacy)]))
+        subprocess.run([str(guest), str(old_records), '-22'], check=True)
+        new_records = self.root / 'new-records.bin'
+        new_records.write_bytes(subprocess.check_output([str(guest)]))
+        subprocess.run([str(guest), str(new_records), '0'], check=True)
+        receipt = json.loads(self.receipt)
+        self.assertEqual(receipt['compile_definitions'], COMPILE_DEFINITIONS)
+        self.assertEqual(receipt['geometry']['name_max'], 32)
+        for field in ('name_max', 'file_max', 'attr_max'):
+            target = self.root / ('bad-' + field)
+            shutil.copytree(self.valid, target)
+            changed = json.loads(self.receipt)
+            changed['geometry'][field] += 1
+            (target / 'receipt.json').write_text(json.dumps(changed))
+            with self.assertRaisesRegex(ValueError, 'geometry'):
+                verify_fixture(target)
+        target = self.root / 'bad-definitions'
+        shutil.copytree(self.valid, target)
+        receipt['compile_definitions'][0] = 'LFS_NAME_MAX=255'
+        (target / 'receipt.json').write_text(json.dumps(receipt))
+        with self.assertRaisesRegex(ValueError, 'provenance'):
+            verify_fixture(target)
 
     def test_source_and_licence_drift_rejected(self):
         source = self.root / 'modified-inputs'

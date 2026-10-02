@@ -41,7 +41,8 @@ def main():
         binary = pathlib.Path(temp) / 'test'
         subprocess.run(['cc', '-std=c99', '-O1', '-Wall', '-Wextra', '-Werror',
                         '-Wno-sign-compare', '-D_DEFAULT_SOURCE', '-DLFS_NO_DEBUG', '-DLFS_NO_WARN',
-                        '-DLFS_NO_ERROR', '-I' + str(source), '-I' + temp,
+                        '-DLFS_NO_ERROR', '-DLFS_NAME_MAX=32', '-DLFS_FILE_MAX=2147483647',
+                        '-DLFS_ATTR_MAX=1022', '-I' + str(source), '-I' + temp,
                         str(ROOT / 'apps/hubprogram/test/littlefs_power_loss_test.c'),
                         str(ROOT / 'apps/hubprogram/program.c'),
                         str(ROOT / 'apps/hubprogram/upload.c'),

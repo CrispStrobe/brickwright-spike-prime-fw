@@ -135,3 +135,10 @@ fails both parser configurations. Linux read-only mounting remains valid.
 Exact input hashing
 remains enabled and the ARM image must be rebuilt for the new deterministic
 filesystem layout.
+
+Both the crash/restart harness and synthetic fixture compiler use the qualified
+NuttX persistent limits: `LFS_NAME_MAX=32`, `LFS_FILE_MAX=2147483647` and
+`LFS_ATTR_MAX=1022`. Matching block geometry alone is insufficient: LittleFS
+rejects superblocks with a filename limit larger than the mount implementation.
+The fixture regression reproduces the former host-default 255 / guest 32
+mismatch with separate actual-library builds and verifies the corrected mount.

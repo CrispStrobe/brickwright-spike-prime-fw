@@ -29,7 +29,7 @@ download or vendor LittleFS or copy any production flash contents. The
 original BSD-3-Clause notices remain in those external files. Its host adapter
 and tooling are original BSD-3-Clause Brickwright code.
 
-The geometry matches the simulation build: a 31 MiB partition beginning at
+The geometry and persistent limits match the simulation build: a 31 MiB partition beginning at
 chip offset 1 MiB, 4096-byte erase blocks, 256-byte NOR pages, LittleFS
 read/program/cache sizes of 1024 bytes, 7936 blocks, 200 block cycles and a
 992-byte lookahead buffer. Formatting changes only blocks at chip offsets
@@ -73,3 +73,17 @@ machine. Erased-media scenarios never invoke the loader. The first 1 MiB
 reserved area and all bytes outside the two destination blocks are preserved.
 Generated data, receipts and compiled helpers stay under ignored `.local/` or
 temporary directories and are not published as firmware artifacts.
+
+The host compiler also uses the exact NuttX `fs/littlefs/Make.defs` definitions:
+`LFS_NAME_MAX=32`, `LFS_FILE_MAX=2147483647` and `LFS_ATTR_MAX=1022`.
+These limits are recorded in the receipt with the geometry and compiler definitions.
+The device named `/dev/mtdblock0` is registered with `register_mtddriver`;
+NuttX obtains its MTD geometry directly: 256-byte pages and 4096-byte erase
+blocks, with the partition reduced to 7936 erase blocks. Read, program and
+cache factors of four give 1024 bytes, and automatic lookahead is 992 bytes.
+
+The earlier host-only fixture used LittleFS's default filename limit of 255.
+The guest permits 32, so it rejected that fixture's superblock with `-EINVAL`.
+The regression now compiles the actual pinned library separately with each
+limit: the guest build rejects the old format and mounts the corrected format.
+The crash/restart harness uses the same three guest compiler definitions.

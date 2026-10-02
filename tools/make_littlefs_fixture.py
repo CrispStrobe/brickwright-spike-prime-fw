@@ -25,10 +25,13 @@ GEOMETRY = dict(chip_size=32*1024*1024, partition_offset=1024*1024,
                 partition_size=31*1024*1024, erased_byte=255, page_size=256,
                 block_size=4096, block_count=7936, read_size=1024,
                 prog_size=1024, cache_size=1024, block_cycles=200,
-                lookahead_size=992)
+                lookahead_size=992, name_max=32, file_max=2147483647, attr_max=1022)
+COMPILE_DEFINITIONS = [
+    'LFS_NAME_MAX=32', 'LFS_FILE_MAX=2147483647', 'LFS_ATTR_MAX=1022',
+]
 BLOCK_HASHES = (
-    'c3ee61f28454a39a00208038ed35185f6c80dc308e7b07af17fd43826dd22820',
-    'f5ac5610971ea0374ba06fe9eb81a6f61a865cd04c485c6ac18ac0b1393a1bb5',
+    'f11900b4e77fdd93fed3dbfe5db5bf8b9e2c3107d61bf7f61936101467b1efc3',
+    'f1b8c5aaf33085b6d6c864a22bfbef3a98f5803e75a757cae144d133e3b0b25c',
 )
 HARNESS = r'''/* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 Brickwright contributors
@@ -57,9 +60,21 @@ static int sync_flash(const struct lfs_config *c) {(void)c;return 0;}
 static const struct lfs_config cfg={.read=rd,.prog=prog,.erase=erase,.sync=sync_flash,
   .read_size=1024,.prog_size=1024,.block_size=4096,.block_count=7936,
   .block_cycles=200,.cache_size=1024,.lookahead_size=992};
-int main(void) {
+int main(int argc, char **argv) {
   lfs_t fs={0};lfs_dir_t dir;struct lfs_info info;unsigned b,i,dots=0;int rc;
-  flash=malloc(BYTES);assert(flash);memset(flash,255,BYTES);assert(lfs_format(&fs,&cfg)==0);
+  flash=malloc(BYTES);assert(flash);memset(flash,255,BYTES);
+  if(argc==3) {
+    FILE *input=fopen(argv[1],"rb");uint8_t offset[4];assert(input);
+    while(fread(offset,1,4,input)==4) {
+      b=((unsigned)offset[0]<<24)|((unsigned)offset[1]<<16)|((unsigned)offset[2]<<8)|offset[3];
+      assert(b<7936);assert(fread(flash+b*4096u,1,4096,input)==4096);
+    }
+    assert(feof(input));assert(fclose(input)==0);
+    rc=lfs_mount(&fs,&cfg);assert(rc==atoi(argv[2]));
+    if(rc==0)assert(lfs_unmount(&fs)==0);
+    free(flash);return 0;
+  }
+  assert(argc==1);assert(lfs_format(&fs,&cfg)==0);
   /* The serialized state must mount as an empty filesystem without writes. */
   writes=0;assert(lfs_mount(&fs,&cfg)==0);assert(lfs_dir_open(&fs,&dir,"/")==0);
   while((rc=lfs_dir_read(&fs,&dir,&info))>0) {
@@ -88,8 +103,8 @@ def verify_sources(source):
             raise ValueError(f'{name}: does not match the qualified LittleFS source')
 
 
-def compile_fixture(source, temp):
-    """Return records produced by real format/mount calls, not canned bytes."""
+def compile_harness(source, temp, definitions=COMPILE_DEFINITIONS):
+    """Compile with the same persistent-limit definitions as NuttX Make.defs."""
     (temp / 'nuttx/mm').mkdir(parents=True)
     (temp / 'nuttx/mm/mm.h').write_text('/* Host allocator shim. */\n')
     (temp / 'fs_heap.h').write_text('#include <stdlib.h>\n#define fs_heap_malloc malloc\n#define fs_heap_free free\n')
@@ -98,9 +113,16 @@ def compile_fixture(source, temp):
     binary = temp / 'fixture'
     subprocess.run(['cc', '-std=c99', '-O1', '-Wall', '-Wextra', '-Werror',
                     '-Wno-sign-compare', '-DLFS_NO_DEBUG', '-DLFS_NO_WARN',
-                    '-DLFS_NO_ERROR', '-I' + str(source), '-I' + str(temp),
+                    '-DLFS_NO_ERROR', *['-D' + definition for definition in definitions],
+                    '-I' + str(source), '-I' + str(temp),
                     str(c), str(source / 'lfs.c'), str(source / 'lfs_util.c'),
                     '-o', str(binary)], check=True)
+    return binary
+
+
+def compile_fixture(source, temp):
+    """Return records produced by real format/mount calls, not canned bytes."""
+    binary = compile_harness(source, temp)
     first = subprocess.check_output([str(binary)])
     if subprocess.check_output([str(binary)]) != first:
         raise ValueError('Independent format/mount runs produced different bytes')
@@ -124,7 +146,8 @@ def fixture_from_records(records):
         payload.extend(data)
     receipt = dict(schema=1, purpose='synthetic already-formatted empty LittleFS boot',
                    covers_erased_first_boot=False, littlefs_version='v2.5.1',
-                   source_sha256=SOURCES, geometry=GEOMETRY, blocks=blocks,
+                   source_sha256=SOURCES, geometry=GEOMETRY,
+                   compile_definitions=COMPILE_DEFINITIONS, blocks=blocks,
                    payload_file='flash-blocks.bin', payload_size=len(payload),
                    payload_sha256=digest(payload))
     return bytes(payload), receipt
@@ -134,7 +157,8 @@ def verify_fixture(directory):
     receipt = json.loads((directory / 'receipt.json').read_text())
     payload = (directory / 'flash-blocks.bin').read_bytes()
     if (receipt.get('schema') != 1 or receipt.get('source_sha256') != SOURCES or
-            receipt.get('littlefs_version') != 'v2.5.1'):
+            receipt.get('littlefs_version') != 'v2.5.1' or
+            receipt.get('compile_definitions') != COMPILE_DEFINITIONS):
         raise ValueError('Fixture source provenance differs from qualification')
     if receipt.get('geometry') != GEOMETRY or receipt.get('covers_erased_first_boot') is not False:
         raise ValueError('Fixture geometry or coverage claim differs')
