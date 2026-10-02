@@ -45,6 +45,7 @@ tools/__pycache__/
 # ELF build artifacts
 .elf-build/
 build/
+build-embed/
 nuttx/nuttx-export
 nuttx/nuttx-export-*.tar.gz
 

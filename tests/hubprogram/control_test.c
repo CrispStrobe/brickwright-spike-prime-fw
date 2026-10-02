@@ -1,0 +1,130 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 Brickwright contributors
+ */
+#include <assert.h>
+#include <stdarg.h>
+#include <stdlib.h>
+/* Substitute only the syscall boundary; compile the actual board ABI and
+ * device implementation, without a NuttX kernel or attached motors. */
+#define open fixture_open
+#define close fixture_close
+#define ioctl fixture_ioctl
+#include "../../apps/hubprogram/device.c"
+#undef open
+#undef close
+#undef ioctl
+
+static struct lump_data_frame_s frames[6][32];
+static unsigned head[6], tail[6], polls, writes, brakes, closes;
+static int fail_op, fail_errno, open_error, synced=1, type_id=48;
+static int32_t written;
+int fixture_open(const char *path,int flags,...) {
+  (void)flags;
+  if(open_error) {errno=open_error;return -1;}
+  return 100+atoi(path+13);
+}
+int fixture_close(int fd) {(void)fd;closes++;return 0;}
+int fixture_ioctl(int fd,unsigned long op,...) {
+  va_list ap; unsigned long arg; unsigned port=(unsigned)(fd-100);
+  assert(port<6);
+  va_start(ap,op);arg=va_arg(ap,unsigned long);va_end(ap);
+  if((int)op==fail_op) {errno=fail_errno;return -1;}
+  if(op==LEGOPORT_LUMP_GET_INFO) {
+    struct lump_device_info_s *info=(void *)arg;
+    memset(info,0,sizeof(*info));info->type_id=type_id;
+    info->flags=synced ? LUMP_FLAG_SYNCED : 0;return 0;
+  }
+  if(op==LEGOPORT_LUMP_SELECT)return 0;
+  if(op==LEGOPORT_LUMP_POLL_DATA) {
+    polls++;
+    if(head[port]==tail[port]) {errno=EAGAIN;return -1;}
+    *(struct lump_data_frame_s *)arg=frames[port][head[port]++];return 0;
+  }
+  if(op==LEGOPORT_PWM_SET_DUTY) {writes++;written=(int32_t)(long)arg;return 0;}
+  if(op==LEGOPORT_PWM_BRAKE) {brakes++;return 0;}
+  assert(0);return -1;
+}
+static void queue(unsigned port,int mode,int32_t degrees) {
+  struct lump_data_frame_s *f=&frames[port][tail[port]++];
+  uint32_t raw=(uint32_t)degrees;unsigned i;
+  assert(tail[port]<=32);memset(f,0,sizeof(*f));f->mode=mode;f->len=4;
+  for(i=0;i<4;i++)f->data[i]=(uint8_t)(raw>>(i*8));
+}
+static struct bw_program_io reset(void) {
+  struct bw_program_io io;
+  bw_device_release();memset(head,0,sizeof(head));memset(tail,0,sizeof(tail));
+  polls=writes=brakes=closes=0;fail_op=fail_errno=open_error=0;synced=1;type_id=48;
+  bw_device_init(&io);return io;
+}
+static void motor_tests(void) {
+  struct bw_motor_control m={0};int32_t duty;
+  bw_motor_speed(&m,1110);duty=bw_motor_step(&m,0,0,0);
+  assert(m.reference==20 && duty>0 && duty<10000);
+  assert(bw_motor_step(&m,0,0,0)==duty && m.reference==20);
+  bw_motor_step(&m,10,0,0);assert(m.reference==40);
+  bw_motor_step(&m,5,0,0);assert(m.reference==40 && m.last==10);
+  bw_motor_step(&m,10000,0,0);assert(m.reference==140);
+  bw_motor_speed(&m,0);bw_motor_step(&m,10010,0,0);assert(m.reference==100);
+  bw_motor_speed(&m,-1110);bw_motor_step(&m,10020,0,0);assert(m.reference==80);
+  for(unsigned i=0;i<100;i++)bw_motor_step(&m,10030+i*50,0,INT32_MAX);
+  assert(m.integral==-2000000 && m.duty==-10000);
+  memset(&m,0,sizeof(m));bw_motor_position(&m,100000,-90,300);
+  assert(m.target==10000);bw_motor_step(&m,0,100000,0);assert(m.reference<0);
+  for(unsigned i=1;i<100;i++)bw_motor_step(&m,i*10,100000,0);
+  assert(m.active); /* A stalled encoder never completes a position move. */
+  bw_motor_step(&m,1000,10000,0);assert(m.active && m.settled==1);
+  bw_motor_step(&m,1000,10000,0);assert(m.settled==1);
+  bw_motor_step(&m,1010,10000,21);assert(m.settled==0);
+  bw_motor_step(&m,1020,10000,0);bw_motor_step(&m,1030,10000,0);
+  assert(bw_motor_step(&m,1040,10000,0)==0 && !m.active);
+  bw_motor_speed(&m,300);assert(m.reference==0 && m.integral==0 && !m.timed);
+}
+static void device_tests(void) {
+  struct bw_program_io io=reset();struct bw_program_debug debug={0};unsigned before;
+  assert(io.motor(NULL,2,100)==-EINVAL && io.motor(NULL,0,1111)==-EINVAL);
+  open_error=EBUSY;assert(io.motor(NULL,0,100)==-EBUSY);open_error=0;
+  synced=0;assert(io.motor(NULL,0,100)==-EAGAIN);synced=1;
+  type_id=62;assert(io.motor(NULL,0,100)==-ENODEV);type_id=48;
+  assert(io.position(NULL,0,90,300)==0 && io.done(NULL,0)==0);
+  assert(bw_device_tick(0)==0 && writes==0);
+  queue(0,1,999);queue(0,2,0);assert(bw_device_tick(10)==0 && writes==1);
+  queue(0,2,1);queue(0,2,3);assert(bw_device_tick(20)==0);
+  bw_device_snapshot(&debug);assert(debug.position_a_deg==3 && debug.speed_a_dps==300);
+  queue(0,2,4);assert(bw_device_tick(20)==0);
+  bw_device_snapshot(&debug);assert(debug.speed_a_dps==400);
+  queue(0,2,-1);assert(bw_device_tick(30)==0);
+  bw_device_snapshot(&debug);assert(debug.speed_a_dps==-500);
+  before=polls;assert(bw_device_tick(29)==-EINVAL && polls==before);
+  assert(io.done(NULL,0)==0);assert(bw_device_tick(131)==-EAGAIN);
+  assert(io.done(NULL,0)==-EIO);
+  bw_device_release();assert(closes==1);bw_device_snapshot(&debug);
+  assert(debug.valid_ports==0 && debug.speed_a_dps==0 && debug.duty_a==0);
+  io=reset();assert(io.position(NULL,0,90,300)==0);
+  assert(io.motor(NULL,0,100)==0);queue(0,2,0);assert(bw_device_tick(10)==0);
+  assert(!g_ports[0].deferred && !g_ports[0].control.positioning);
+  assert(io.brake(NULL,0)==0 && brakes==1);queue(0,2,10);
+  assert(bw_device_tick(20)==0 && io.done(NULL,0)==0);
+  queue(0,2,10);assert(bw_device_tick(30)==0 && io.done(NULL,0)==1);
+  assert(io.motor(NULL,0,100)==0);queue(0,2,10);assert(bw_device_tick(40)==0);
+  assert(g_ports[0].control.reference==20 && written>0);
+  fail_op=LEGOPORT_PWM_SET_DUTY;fail_errno=EIO;queue(0,2,10);
+  assert(bw_device_tick(50)==-EIO);fail_op=0;
+  queue(0,2,10);frames[0][tail[0]-1].len=3;assert(bw_device_tick(60)==-EPROTO);
+  fail_op=LEGOPORT_LUMP_POLL_DATA;fail_errno=ENODEV;assert(bw_device_tick(70)==-ENODEV);
+  fail_op=0;bw_device_release();
+  assert(io.motor(NULL,0,-100)==0);queue(0,2,-1);
+  assert(bw_device_tick(80)==0 && g_ports[0].control.reference==-20);
+  bw_device_release();
+}
+static void sensor_tests(void) {
+  struct bw_program_io io=reset();int32_t value;
+  type_id=62;
+  const int32_t distances[]={0,32767,32768,65534,65535};
+  for(unsigned i=0;i<sizeof(distances)/sizeof(distances[0]);i++) {
+    queue(3,0,distances[i]);frames[3][tail[3]-1].len=2;
+    assert(io.sensor(NULL,1,&value)==0);
+    assert(value==(distances[i]==65535 ? -1 : distances[i]));
+  }
+  bw_device_release();
+}
+int main(void) {struct bw_program_io io;bw_device_init(&io);motor_tests();device_tests();sensor_tests();puts("hubprogram motor/device tests passed");return 0;}

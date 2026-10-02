@@ -41,7 +41,7 @@ def main() -> int:
     initial_sp, reset_pc = struct.unpack_from("<II", kernel)
     if not 0x20000000 <= initial_sp <= 0x20050000:
         raise SystemExit(f"invalid initial SP: 0x{initial_sp:08x}")
-    if not 0x08008001 <= reset_pc < 0x08080000 or not reset_pc & 1:
+    if not 0x08008001 <= reset_pc < 0x08060000 or not reset_pc & 1:
         raise SystemExit(f"invalid Thumb reset vector: 0x{reset_pc:08x}")
 
     destination = args.output / args.name
@@ -49,7 +49,7 @@ def main() -> int:
     manifest = {
         "name": args.name,
         "load_address_kernel": "0x08008000",
-        "load_address_userspace": "0x08080000",
+        "load_address_userspace": "0x08060000",
         "initial_sp": f"0x{initial_sp:08x}",
         "reset_pc": f"0x{reset_pc:08x}",
         "files": {},

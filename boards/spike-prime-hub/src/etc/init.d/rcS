@@ -16,10 +16,16 @@
 
 #include <nuttx/config.h>
 
+#ifdef CONFIG_APP_HUBPROGRAM
+/* Local program execution must not depend on radio startup. */
+hubprogram serve
+#endif
+
 #ifdef CONFIG_APP_BTSENSOR
 btsensor start
 #endif
 
-#ifdef CONFIG_APP_DRIVEBASE
+#if defined(CONFIG_APP_DRIVEBASE) && !defined(CONFIG_APP_HUBPROGRAM)
+/* Autonomous programs acquire their own ports; do not pre-claim A/B. */
 drivebase start
 #endif

@@ -1,0 +1,1043 @@
+Retained source copyright and licence notices for the full firmware package.
+Source notices remain authoritative; dependency licence texts are supplied alongside.
+
+apps/btsensor/btsensor_classic.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_classic.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_cmd_neutral.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_font5.c
+SPDX-License-Identifier: MIT
+
+apps/btsensor/btsensor_font5.h
+SPDX-License-Identifier: MIT
+
+apps/btsensor/btsensor_lifecycle.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_lifecycle.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_main.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_modern.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_modern.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_modern_backend.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_modern_backend.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_modern_notify.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_modern_notify.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_nuttx_peripheral.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_nuttx_peripheral.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_nuttx_snapshot.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_nuttx_snapshot.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_peripheral.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_scheduler.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_scheduler.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_sound.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_sound.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_ti_payload.c
+SPDX-License-Identifier: MIT
+
+apps/btsensor/btsensor_ti_payload.h
+SPDX-License-Identifier: MIT
+
+apps/btsensor/btsensor_transport.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_transport.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/btsensor_tx.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/arch/board/board_legoport.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/arch/board/board_legosensor.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/arch/board/board_lump.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/arch/board/board_rgbled.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/arch/board/board_sound.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/nuttx/config.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/include/nuttx/power/battery_ioctl.h
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_classic.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_cmd_neutral.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_modern_backend.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_nuttx_peripheral.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_nuttx_snapshot.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_sound.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_btsensor_tx.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_scheduler.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test/test_ti_payload.c
+SPDX-License-Identifier: MIT
+
+apps/btsensor/test_btsensor_modern.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/btsensor/test_btsensor_modern_notify.c
+SPDX-License-Identifier: Apache-2.0
+
+apps/hubprogram/debug.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/device.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/device.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/hubprogram_main.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/micropython/brickwright_module.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/micropython/mpconfigport.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/motor.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/motor.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/program.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/program.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/service.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/service.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/test/program_test.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/test/python_test.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/upload.c
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+apps/hubprogram/upload.h
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 Brickwright contributors
+
+bluetooth/daemon/daemon_transport.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/daemon/daemon_transport.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/daemon/hub_protocol.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/daemon/hub_protocol.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/daemon/test_daemon_transport.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/daemon/test_hub_protocol.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/ti_service_pack/test_ti_bts_loader.c
+SPDX-License-Identifier: MIT
+
+bluetooth/ti_service_pack/ti_bts_loader.c
+SPDX-License-Identifier: MIT
+
+bluetooth/ti_service_pack/ti_bts_loader.h
+SPDX-License-Identifier: MIT
+
+bluetooth/zephyr_compat/include/brickwright/classic_spp.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/controller_lifecycle.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/ehcill.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/entropy.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/fd02_service.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/h4.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/h4_netbuf.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/h4_transport.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/hci_driver.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/hub_transport.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/log.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/mbedtls_nuttx_config.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/psa_crypto_nuttx_config.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/settings_store.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/brickwright/virtual_hci.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/soc.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/autoconf.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/debug/stack.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/device.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/devicetree.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/init.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/irq.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/kernel.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/kernel/thread.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/kernel/thread_stack.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/logging/log.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/settings/settings.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/spinlock.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/__assert.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/atomic.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/byteorder.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/crc.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/iterable_sections.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/math_extras.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/printk.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/slist.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/time_units.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/util.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys/uuid.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/sys_clock.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/toolchain.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/include/zephyr/types.h
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/classic_spp.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/controller_lifecycle.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/ehcill.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/entropy.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/fd02_service.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/h4.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/h4_netbuf.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/h4_transport.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/hci_driver.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/hex.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/hub_transport.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/iterable_sentinels.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/log.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/mbedtls_entropy.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/mbedtls_external_rng.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/settings.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/uuid.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/virtual_hci.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/src/work.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/nuttx_pthread_self.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_controller_lifecycle.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_core.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_ehcill.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_entropy.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_h4.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_h4_netbuf.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_h4_transport.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_h4_transport_fault.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_host_link.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_log.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_settings.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_sync.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_sync_compile.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_upstream_addr.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_upstream_bt_buf.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_upstream_buf_pool.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_upstream_buf_simple.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_upstream_uuid.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_virtual_hci.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_work.c
+SPDX-License-Identifier: Apache-2.0
+
+bluetooth/zephyr_compat/test/test_work_compile.c
+SPDX-License-Identifier: Apache-2.0
+
+boards/spike-prime-hub/include/board_lsm6dsl.h
+this work for additional information regarding copyright ownership.  The
+ASF licenses this file to you under the Apache License, Version 2.0 (the
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+under the License.
+
+boards/spike-prime-hub/kernel/stm32_userspace.c
+SPDX-License-Identifier: Apache-2.0
+this work for additional information regarding copyright ownership.  The
+ASF licenses this file to you under the Apache License, Version 2.0 (the
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+under the License.
+
+boards/spike-prime-hub/src/legosensor_uorb.c
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version
+
+boards/spike-prime-hub/src/lsm6dsl_uorb.c
+this work for additional information regarding copyright ownership.  The
+ASF licenses this file to you under the Apache License, Version 2.0 (the
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+under the License.
+
+boards/spike-prime-hub/src/lsm6dsl_uorb.h
+this work for additional information regarding copyright ownership.  The
+ASF licenses this file to you under the Apache License, Version 2.0 (the
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+under the License.
+
+boards/spike-prime-hub/src/stm32_legoport_lump.c
+SPDX-License-Identifier: MIT
+Copyright (c) 2018-2023 The Pybricks Authors
+
+boards/spike-prime-hub/src/stm32_legoport_pwm.c
+pybricks (MIT, Copyright (c) 2018-2025 The Pybricks Authors).
+
+boards/spike-prime-hub/src/stm32_legoport_uart_hw.c
+SPDX-License-Identifier: MIT
+
+boards/stm32f413-discovery/kernel/stm32_userspace.c
+SPDX-License-Identifier: Apache-2.0
+this work for additional information regarding copyright ownership.  The
+ASF licenses this file to you under the Apache License, Version 2.0 (the
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+under the License.
+
+protocol/c/spike_codec.c
+SPDX-License-Identifier: Apache-2.0
+
+protocol/c/spike_codec.h
+SPDX-License-Identifier: Apache-2.0
+
+protocol/c/test_spike_codec.c
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/drivers/bluetooth/hci/h4.c
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/addr.h
+Copyright (c) 2019 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/assigned_numbers.h
+Copyright (c) 2015-2025 Intel Corporation
+Copyright (c) 2017-2025 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/att.h
+Copyright (c) 2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/bluetooth.h
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/buf.h
+Copyright (c) 2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/byteorder.h
+Copyright (c) 2023 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/a2dp.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2024 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/avdtp.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2024 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/avrcp.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (C) 2024 Xiaomi Corporation
+Copyright 2025-2026 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/classic.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2024 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/l2cap_br.h
+Copyright 2025 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/rfcomm.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/classic/sdp.h
+Copyright (c) 2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/conn.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2025 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/crypto.h
+Copyright (c) 2017-2020 Nordic Semiconductor ASA
+Copyright (c) 2015-2017 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/direction.h
+Copyright (c) 2020 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/gap.h
+Copyright (c) 2019 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/gatt.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/hci.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/hci_types.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2023 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/hci_vs.h
+Copyright (c) 2017-2018 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/iso.h
+Copyright (c) 2020 Intel Corporation
+Copyright (c) 2021-2025 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/l2cap.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2023 Nordic Semiconductor
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/testing.h
+Copyright (c) 2024 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/bluetooth/uuid.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/drivers/bluetooth.h
+Copyright (c) 2024 Johan Hedberg
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/net_buf.h
+Copyright (c) 2015 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_internal.h
+Copyright (c) 2011-2014, Wind River Systems, Inc.
+Copyright (c) 2020, Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_internal_is_eq.h
+Copyright (c) 2011-2014, Wind River Systems, Inc.
+Copyright (c) 2020, Nordic Semiconductor ASA
+Copyright (c) 2023, Meta
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_internal_util_dec.h
+Copyright (c) 2011-2014, Wind River Systems, Inc.
+Copyright (c) 2020, Nordic Semiconductor ASA
+Copyright (c) 2023, Meta
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_internal_util_inc.h
+Copyright (c) 2011-2014, Wind River Systems, Inc.
+Copyright (c) 2020, Nordic Semiconductor ASA
+Copyright (c) 2023, Meta
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_internal_util_x2.h
+Copyright (c) 2011-2014, Wind River Systems, Inc.
+Copyright (c) 2020, Nordic Semiconductor ASA
+Copyright (c) 2023, Meta
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_listify.h
+Copyright (c) 2021, Nordic Semiconductor ASA
+Copyright (c) 2023, Meta
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_loops.h
+Copyright (c) 2021, Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/include/zephyr/sys/util_macro.h
+Copyright (c) 2011-2014, Wind River Systems, Inc.
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/lib/net_buf/buf.c
+Copyright (c) 2015-2019 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c
+Copyright (c) 2015-2019 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/addr.c
+Copyright (c) 2022 Stephanos Ioannidis <root@stephanos.io>
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/assert.h
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/bt_settings_commit.h
+Copyright (c) 2024 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/bt_str.c
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/bt_str.h
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/hci_common_internal.h
+Copyright (c) 2025 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/rpa.c
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/common/rpa.h
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/crypto/bt_crypto.c
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/crypto/bt_crypto.h
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/crypto/bt_crypto_psa.c
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/addr.c
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/addr_internal.h
+Copyright (c) 2023 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/adv.c
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/adv.h
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/att.c
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2025 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/att_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/buf_view.h
+Copyright (c) 2024 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/a2dp_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2025 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/avctp_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (C) 2024 Xiaomi Corporation
+Copyright 2025 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/avdtp_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2021,2024-2025 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/avrcp_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (C) 2024 Xiaomi Corporation
+Copyright 2025 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/br.c
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/br.h
+Copyright (c) 2025 Xiaomi Corporation
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/conn_br.c
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2025 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/conn_br_internal.h
+Copyright (c) 2015 Intel Corporation
+Copyright (c) 2021 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/did_internal.h
+Copyright 2025 Xiaomi Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/keys_br.c
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/l2cap_br.c
+Copyright (c) 2016 Intel Corporation
+Copyright 2024-2026 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/l2cap_br_interface.h
+Copyright (c) 2024 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/l2cap_br_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/rfcomm.c
+Copyright (c) 2016 Intel Corporation
+Copyright 2024-2025 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/rfcomm_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/sco.c
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2024 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/sco_internal.h
+Copyright 2024 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/sdp.c
+Copyright (c) 2016 Intel Corporation
+Copyright 2024-2026 NXP
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/sdp_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/ssp.c
+Copyright (c) 2017-2025 Nordic Semiconductor ASA
+Copyright (c) 2015 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/classic/ssp.h
+Copyright (c) 2020 Nordic Semiconductor ASA
+Copyright (c) 2017 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/conn.c
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2025 Nordic Semiconductor ASA
+Copyright (c) 2025 Xiaomi Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/conn_internal.h
+Copyright (c) 2015 Intel Corporation
+Copyright (c) 2021 Nordic Semiconductor ASA
+Copyright (c) 2025 Xiaomi Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/crypto.h
+Copyright (c) 2016-2017 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/crypto_psa.c
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/data.c
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/direction_internal.h
+Copyright (c) 2020 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/ecc.c
+Copyright (c) 2017 Nordic Semiconductor ASA
+Copyright (c) 2015 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/ecc.h
+Copyright (c) 2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/gatt.c
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2023 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/gatt_gap_svc_validate.h
+Copyright (c) 2025 Koppel Electronic
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/gatt_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/hci_common.c
+Copyright (c) 2020 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/hci_core.c
+Copyright (c) 2017-2025 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+Copyright 2025 NXP
+Copyright (c) 2025 Xiaomi Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/hci_core.h
+Copyright (c) 2021-2025 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/id.c
+Copyright (c) 2017-2025 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/id.h
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/iso_internal.h
+Copyright (c) 2020 Intel Corporation
+Copyright (c) 2021-2024 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/keys.c
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/keys.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/l2cap.c
+Copyright (c) 2015-2016 Intel Corporation
+Copyright (c) 2023 Nordic Semiconductor
+Copyright (c) 2025 Xiaomi Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/l2cap_internal.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/long_wq.c
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/long_wq.h
+Copyright (c) 2022 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/monitor.h
+Copyright (c) 2016 Intel Corporation
+Copyright (c) 2025 Silicon Laboratories Inc.
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/scan.c
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/scan.h
+Copyright (c) 2017-2021 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/settings.c
+Copyright (c) 2018 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/settings.h
+Copyright (c) 2018 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/smp.c
+Copyright (c) 2025 Xiaomi Corporation
+Copyright (c) 2017-2025 Nordic Semiconductor ASA
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/smp.h
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+
+third_party/zephyr-host/upstream/subsys/bluetooth/host/uuid.c
+Copyright (c) 2025 Xiaomi Corporation
+Copyright (c) 2015-2016 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+

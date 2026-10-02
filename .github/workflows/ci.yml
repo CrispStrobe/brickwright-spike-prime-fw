@@ -50,6 +50,9 @@ jobs:
           tools/check_controller_lifecycle.sh
           tools/check_btsensor_nuttx_snapshot.sh
 
+      - name: Test autonomous programs and embedded MicroPython offline
+        run: tools/check_hubprogram.sh
+
       - name: Test simulation guest program interpreter
         run: |
           cc -std=c99 -Wall -Wextra -Werror simulation/arena-demo/program-test.c -o /tmp/arena-program-test

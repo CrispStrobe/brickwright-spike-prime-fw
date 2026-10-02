@@ -3,12 +3,15 @@
  *
  * STM32F413VGT6 SPIKE Prime Hub, BUILD_PROTECTED layout.
  *
- * Flash map (1.5 MB @ 0x08000000; 0x08000000..0x08008000 is the LEGO
+ * Flash map (1 MB @ 0x08000000; 0x08000000..0x08008000 is the LEGO
  * bootloader and must not be overwritten):
  *
- *   kflash: 0x08008000..0x08080000  = 480 KB  (privileged kernel code)
- *   uflash: 0x08080000..0x08100000  = 512 KB  (user-space code, 2^n aligned)
- *   xflash: 0x08100000..0x08180000  = 512 KB  (user-space extras / future)
+ *   kflash: 0x08008000..0x08060000  = 352 KB  (privileged kernel code)
+ *   uflash: 0x08060000..0x08100000  = 640 KB  (user-space code)
+ *
+ * The ARMv7-M MPU maps user flash through a 1 MiB aligned region with
+ * its first three 128 KiB subregions disabled. NuttX mpu_modify_region()
+ * computes that base and subregion mask; kernel/bootloader remain privileged.
  *
  * SRAM map (320 KB @ 0x20000000, post-#98):
  *
@@ -45,15 +48,14 @@
  * 64 KB slot alone satisfies it even if the ksram tail were ever consumed
  * entirely by the idle stack.  SRAM1_END is 0x20050000.
  *
- * CONFIG_NUTTX_USERSPACE must equal the start of uflash (0x08080000).
+ * CONFIG_NUTTX_USERSPACE must equal the start of uflash (0x08060000).
  *
  ****************************************************************************/
 
 MEMORY
 {
-  kflash (rx)      : ORIGIN = 0x08008000, LENGTH = 480K
-  uflash (rx)      : ORIGIN = 0x08080000, LENGTH = 512K
-  xflash (rx)      : ORIGIN = 0x08100000, LENGTH = 512K
+  kflash (rx)      : ORIGIN = 0x08008000, LENGTH = 352K
+  uflash (rx)      : ORIGIN = 0x08060000, LENGTH = 640K
 
   ksram (rwx)      : ORIGIN = 0x20000000, LENGTH = 64K
 

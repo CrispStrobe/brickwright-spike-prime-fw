@@ -26,6 +26,9 @@
 #include "btsensor_transport.h"
 #include "btsensor_tx.h"
 #include "hub_protocol.h"
+#ifdef CONFIG_APP_HUBPROGRAM
+#  include "service.h"
+#endif
 #include "spike_codec.h"
 
 #ifndef CONFIG_APP_BTSENSOR_STOP_TIMEOUT_MS
@@ -190,6 +193,15 @@ static int protocol_message(enum brickwright_protocol_kind kind,
       return -EPROTO;
     }
 
+#ifdef CONFIG_APP_HUBPROGRAM
+  if(length && data[0]==BW_PROGRAM_REQUEST) {
+    uint8_t reply[20];
+    int rc=bw_program_service_request(2,data,length,reply);
+    /* Return protocol errors in-band; preserve transport send failures. */
+    (void)rc;
+    return modern_send(reply,sizeof(reply),high_priority,NULL);
+  }
+#endif
   return btsensor_modern_receive(&g_modern_service, data, length,
                                   high_priority);
 }
@@ -243,6 +255,10 @@ static int services_start(void *context)
       service_pack_size == 0)
     return -ENOENT;
 #endif
+#ifdef CONFIG_APP_HUBPROGRAM
+  int program_rc=bw_program_service_init();
+  if(program_rc<0)return program_rc;
+#endif
   int rc = btsensor_scheduler_acquire();
   if (rc < 0) return rc;
   memset(&g_modern_timer, 0, sizeof(g_modern_timer));
@@ -292,6 +308,9 @@ static int services_start(void *context)
 static void services_stop(void *context)
 {
   (void)context;
+#ifdef CONFIG_APP_HUBPROGRAM
+  (void)bw_program_service_stop();
+#endif
   btsensor_classic_link_state(BRICKWRIGHT_HUB_LINK_CLASSIC, false);
   btsensor_modern_notifier_deinit(&g_modern_notifier);
   btsensor_sound_shutdown();

@@ -30,6 +30,7 @@ endif
 # The imported Apache Zephyr host and its pinned Mbed TLS crypto dependency are
 # one archive. Keeping it separate avoids source-basename collisions and
 # prevents application-local controller firmware or BTstack copies returning.
+CFLAGS += -I$(APPDIR)/external/hubprogram
 CFLAGS += -I$(APPDIR)/external/btsensor
 CFLAGS += -I$(APPDIR)/../bluetooth/zephyr_compat/include
 CFLAGS += -I$(APPDIR)/../third_party/zephyr-host/upstream/include

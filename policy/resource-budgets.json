@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "protected_userspace": {
-    "flash_bytes_max": 523264,
+    "flash_bytes_max": 654336,
     "static_ram_bytes_max": 98304,
     "ti_payload_symbol": "brickwright_local_ti_bts_image",
     "ti_payload_bytes_exact": 0

@@ -18,8 +18,7 @@
  *   time (see boards/spike-prime-hub/scripts/memory.ld):
  *     usram   0x20020000..0x20040000  (128 KB, .data/.bss + heap head)
  *     xsram   0x20040000..0x20050000  ( 64 KB, heap tail)
- *     uflash  0x08080000..0x08100000  (512 KB, user .text/.rodata)
- *     xflash  0x08100000..0x08180000  (512 KB, reserved for user)
+ *     uflash  0x08060000..0x08100000  (640 KB, user .text/.rodata)
  *
  *   board_user_in_ok(p, n)  - p..p+n is in user-readable memory
  *                             (RAM data/heap OR user flash text/rodata).
@@ -47,8 +46,8 @@
 #define BOARD_USRAM_START   0x20020000UL
 #define BOARD_USRAM_END     0x20050000UL  /* usram (128K) + xsram (64K) */
 
-#define BOARD_UFLASH_START  0x08080000UL
-#define BOARD_UFLASH_END    0x08180000UL  /* uflash (512K) + xflash (512K) */
+#define BOARD_UFLASH_START  0x08060000UL
+#define BOARD_UFLASH_END    0x08100000UL  /* end of physical 1 MiB flash */
 
 static inline bool board_user_out_ok(FAR const void *p, size_t n)
 {
