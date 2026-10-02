@@ -26,13 +26,17 @@ GEOMETRY = dict(chip_size=32*1024*1024, partition_offset=1024*1024,
                 partition_size=31*1024*1024, erased_byte=255, page_size=256,
                 block_size=4096, block_count=7936, read_size=1024,
                 prog_size=1024, cache_size=1024, block_cycles=200,
-                lookahead_size=992)
+                lookahead_size=992, name_max=32,
+                file_max=2147483647, attr_max=1022)
 BLOCK_HASHES = (
-    'c3ee61f28454a39a00208038ed35185f6c80dc308e7b07af17fd43826dd22820',
-    'f5ac5610971ea0374ba06fe9eb81a6f61a865cd04c485c6ac18ac0b1393a1bb5',
+    'f11900b4e77fdd93fed3dbfe5db5bf8b9e2c3107d61bf7f61936101467b1efc3',
+    'f1b8c5aaf33085b6d6c864a22bfbef3a98f5803e75a757cae144d133e3b0b25c',
 )
 
-PAYLOAD_SHA256 = 'b5e1ad2812dfafb561b8b59b7e839cd18c7b3ec1b5d6b8d0fdf647b4973e31b5'
+COMPILE_DEFINITIONS = ['LFS_NAME_MAX=32', 'LFS_FILE_MAX=2147483647',
+                       'LFS_ATTR_MAX=1022']
+
+PAYLOAD_SHA256 = '4ae9878c92b095387721da4d128722faa7eefef68250b4875256cef4bc82ccad'
 
 
 def _digest(data):
@@ -47,7 +51,8 @@ def validate_fixture(directory):
         raise ValueError('Fixture receipt exceeds size limit')
     receipt = json.loads(raw.decode('utf-8'))
     if (receipt.get('schema') != 1 or receipt.get('littlefs_version') != 'v2.5.1'
-            or receipt.get('source_sha256') != SOURCES):
+            or receipt.get('source_sha256') != SOURCES
+            or receipt.get('compile_definitions') != COMPILE_DEFINITIONS):
         raise ValueError('Fixture source provenance differs from qualification')
     if (receipt.get('geometry') != GEOMETRY
             or receipt.get('covers_erased_first_boot') is not False
@@ -117,6 +122,7 @@ def load_fixture(flash, directory):
                 partition_offset=1048576, partition_size=32505856,
                 payload_sha256=PAYLOAD_SHA256, covers_erased_first_boot=False,
                 littlefs_version=receipt['littlefs_version'],
+                compile_definitions=receipt['compile_definitions'],
                 source_sha256=receipt['source_sha256'],
                 geometry=receipt['geometry'], blocks=receipt['blocks'])
 

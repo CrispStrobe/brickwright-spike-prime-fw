@@ -96,6 +96,8 @@ class LoaderTests(unittest.TestCase):
         changes = [
             lambda r: r['source_sha256'].__setitem__('lfs.c', '0'*64),
             lambda r: r['geometry'].__setitem__('partition_size', 4096),
+            lambda r: r['geometry'].__setitem__('name_max', 255),
+            lambda r: r['compile_definitions'].__setitem__(0, 'LFS_NAME_MAX=255'),
             lambda r: r['blocks'][0].__setitem__('chip_offset', 0),
             lambda r: r['blocks'][1].__setitem__('chip_offset', 32*1024*1024),
             lambda r: r.__setitem__('covers_erased_first_boot', True),
