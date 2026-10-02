@@ -137,11 +137,13 @@ jobs:
             --include brickwright-tickless \
             --include brickwright-userspace \
             --include brickwright-board-models \
+            --include brickwright-existing-filesystem-board \
             --include brickwright-board-stubs
 
       - name: Test the transport-neutral virtual HCI bridge
         env:
           BRICKWRIGHT_RENODE_FIRMWARE_TEST: "1"
+          BRICKWRIGHT_RENODE_TAG: brickwright-simulation-hci-existing-filesystem
         run: tools/test_renode_virtual_hci_bridge.sh
 
       # Deliberately no artifact upload. The firmware is simulation-only until
