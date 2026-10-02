@@ -67,7 +67,8 @@ Requests begin with `70 01 OP 00` followed by a nonzero little-endian program
 ID. STATUS permits ID zero as a wildcard. BEGIN (0) adds instruction count and
 CRC-32/ISO-HDLC; BEGIN_PYTHON (7) adds source byte length and CRC instead.
 Both are 16 bytes. CHUNK (1) adds a 16-bit byte offset and 1–10 payload bytes.
-COMMIT (2), START (3), STOP (4), STATUS (5) and ABORT (6) are exactly eight bytes.
+COMMIT (2), START (3), STOP (4), STATUS (5), ABORT (6), SAVE (8) and
+LOAD (9) are exactly eight bytes.
 
 Uploads are contiguous and bound to one transport owner and ID. Identical
 chunk retries are accepted. Conflicting or out-of-order chunks fail. Staging
@@ -81,6 +82,35 @@ are little-endian. The ID echoes the request, except wildcard STATUS returns
 the committed ID. States are EMPTY=0, READY=1, RUNNING=2, COMPLETE=3, STOPPED=4,
 FAULT=5. Results use negative errno values. Count means instructions for an
 instruction program and source bytes for Python.
+
+## Explicit program persistence
+
+SAVE (8) writes the committed program with the matching nonzero ID to the
+single firmware-controlled path `/mnt/flash/brickwright.program`. LOAD (9)
+requires that saved ID and restores the program to READY; it does not run it.
+There is no automatic load or execution on boot. USB NSH, the modern transport
+and the debug mailbox all use the same service mutex and fixed slot. Both
+operations reject a running program, an active upload or an unwinding Python
+VM with `-EBUSY`. Packet fields cannot select filesystem paths.
+
+The portable storage record has a 20-byte header: magic `BWP1`, version 1,
+language (0 native, 1 Python), two zero reserved bytes, little-endian ID,
+count and payload length. Native payloads contain the same signed
+little-endian instruction words as uploads; Python payloads contain source
+bytes without NUL. A final CRC-32/ISO-HDLC covers both header and payload.
+Loads reject corrupt, truncated, oversized, trailing or semantically invalid
+records before changing the committed program. A mismatched ID returns
+`-ENOENT`. Reads and writes allocate at most one 4120-byte record plus a short
+temporary path; they do not add a large static buffer or stack allocation.
+
+Saving writes a temporary sibling file, synchronizes and closes it, then
+renames it over the slot. Errors leave the committed in-memory program
+unchanged. Host tests verify that failure to create the temporary file also
+preserves the previous slot. The full ARM firmware also saved native and completed Python programs on
+LittleFS; separate Renode processes restored their flash snapshots, loaded
+each program to READY and executed it successfully. Power-loss durability,
+physical flash behavior and wider filesystem operations remain unqualified. Python file I/O remains
+unavailable; persistence is an explicit service operation.
 
 ## Memory and licences
 
@@ -102,7 +132,7 @@ on the port configuration.
 ## Validation
 
 Run `tools/check_hubprogram.sh` for sanitizer-backed portable interpreter,
-upload, device/controller tests and a real host MicroPython VM execution test.
+upload, storage corruption/truncation and replacement-failure tests, device/controller tests and a real host MicroPython VM execution test.
 Run `python3 tools/check_resource_budgets.py --elf nuttx/nuttx_user.elf` after
 building the full protected simulation profile. The ARM build and budget
 checks do not establish a functioning USB/BLE connection or successful robot
@@ -132,8 +162,11 @@ Python output is kept in a 1024-byte buffer and truncated on overflow; it never
 blocks on an absent USB/BLE console. Each VM execution clears the buffer.
 Host VM tests exercise output overflow followed by another execution.
 
+The SPI/DMA follow-up qualified blank external flash formatting and mounting
+in Renode. That does not yet qualify program-file persistence.
+
 Remaining integration gaps include USB OTG transport, an actual Bluetooth
-radio/link, external LittleFS formatting, runtime MPU isolation qualification,
+radio/link, file operations and restart persistence on LittleFS, runtime MPU isolation qualification,
 and wider long-duration and resource-exhaustion tests. Original LEGO and
 upstream LEGO_HUB_NO6 MicroPython images have only bounded CPU startup probes;
 no original-firmware robot-program or peripheral compatibility is claimed.

@@ -9,6 +9,10 @@ cd "$root"
 python3 tools/check_reuse_licenses.py
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/test/program_test.c -o "$output/program"
 "$output/program"
+cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/storage.c apps/hubprogram/test/storage_test.c -o "$output/storage"
+"$output/storage"
+cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/test/service_test.c -pthread -o "$output/service"
+"$output/service"
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/hubprogram/include -Iboards/spike-prime-hub/include apps/hubprogram/motor.c tests/hubprogram/control_test.c -o "$output/control"
 "$output/control"
 mp=third_party/micropython-embed

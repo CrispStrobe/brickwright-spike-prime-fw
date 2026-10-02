@@ -3,6 +3,7 @@
  */
 #include "service.h"
 #include "device.h"
+#include "storage.h"
 #include <errno.h>
 #include <pthread.h>
 #include <sched.h>
@@ -20,6 +21,28 @@ static uint64_t now_ms(void) {
   struct timespec ts; clock_gettime(CLOCK_MONOTONIC,&ts);
   return (uint64_t)ts.tv_sec*1000+(uint64_t)ts.tv_nsec/1000000;
 }
+/* All three transports use the same fixed slot and serialization policy. */
+static int request_locked(uint32_t owner,uint64_t now,const uint8_t *data,size_t n,uint8_t reply[20]) {
+  unsigned op=data && n>=3 ? data[2] : 255;
+  int storage=op==8 || op==9;
+  if((g_python_active && (op==0 || op==2 || op==3 || op==7 || storage)) || storage) {
+    uint8_t status[8]={BW_PROGRAM_REQUEST,1,5,0,0,0,0,0};
+    uint32_t id=0;int rc=-EINVAL;unsigned i;
+    (void)bw_program_request(&g_program,&g_upload,owner,now,status,8,reply);
+    if(data && n>=8)for(i=0;i<4;i++)id|=(uint32_t)data[4+i]<<(8*i);
+    if(g_python_active)rc=-EBUSY;
+    else if(owner && n==8 && data[0]==BW_PROGRAM_REQUEST && data[1]==1 && !data[3] && id) {
+      if(g_upload.active || g_program.state==BW_PROGRAM_RUNNING)rc=-EBUSY;
+      else if(op==8)rc=bw_program_save(&g_program,id,"/mnt/flash/brickwright.program");
+      else rc=bw_program_restore(&g_program,id,"/mnt/flash/brickwright.program");
+    }
+    (void)bw_program_request(&g_program,&g_upload,owner,now,status,8,reply);
+    reply[2]=(uint8_t)op;
+    for(i=0;i<4;i++){reply[4+i]=(uint8_t)(id>>(8*i));reply[8+i]=(uint8_t)((uint32_t)rc>>(8*i));}
+    return rc;
+  }
+  return bw_program_request(&g_program,&g_upload,owner,now,data,n,reply);
+}
 static void debug_locked(uint64_t now) {
   uint32_t seq=g_bw_program_debug.request_seq;
   if(seq && !(seq&1u) && seq!=g_bw_program_debug.reply_seq) {
@@ -28,12 +51,7 @@ static void debug_locked(uint64_t now) {
     if(length>20)length=0;
     for(i=0;i<length;i++)packet[i]=g_bw_program_debug.request[i];
     if(seq==g_bw_program_debug.request_seq) {
-      if(g_python_active && length>=3 && (packet[2]==0 || packet[2]==2 || packet[2]==3 || packet[2]==7)) {
-        uint8_t status[8]={BW_PROGRAM_REQUEST,1,5,0,0,0,0,0};
-        (void)bw_program_request(&g_program,&g_upload,3,now,status,8,reply);
-        reply[2]=packet[2];memcpy(reply+4,packet+4,4);
-        reply[8]=(uint8_t)(-EBUSY);reply[9]=reply[10]=reply[11]=255;
-      } else (void)bw_program_request(&g_program,&g_upload,3,now,packet,length,reply);
+      (void)request_locked(3,now,packet,length,reply);
       for(i=0;i<20;i++)g_bw_program_debug.reply[i]=reply[i];
       g_bw_program_debug.reply_seq=seq;
     }
@@ -54,7 +72,7 @@ static void tick_locked(void) {
     (void)bw_program_stop(&g_program);g_program.state=BW_PROGRAM_FAULT;
     g_program.error=rc<0 ? rc : -ETIMEDOUT;return;
   }
-  if(!g_program.language)bw_program_tick(&g_program,now);
+  if(!g_program.language || g_program.ending)bw_program_tick(&g_program,now);
 }
 static void *worker(void *arg) {
   (void)arg;
@@ -62,7 +80,7 @@ static void *worker(void *arg) {
     struct timespec pause={0,10000000}; unsigned run;
     pthread_mutex_lock(&g_lock);
     tick_locked();
-    run=g_program.state==BW_PROGRAM_RUNNING && g_program.language && !g_python_active;
+    run=g_program.state==BW_PROGRAM_RUNNING && g_program.language && !g_program.ending && !g_python_active;
     if(run)g_python_active=1;
     if(!g_python_active && (g_program.state==BW_PROGRAM_COMPLETE || g_program.state==BW_PROGRAM_STOPPED || g_program.state==BW_PROGRAM_FAULT))bw_device_release();
     pthread_mutex_unlock(&g_lock);
@@ -72,7 +90,7 @@ static void *worker(void *arg) {
       if(g_program.state==BW_PROGRAM_RUNNING) {
         int stopped=bw_program_stop(&g_program);
         g_program.state=rc<0 || stopped<0 ? BW_PROGRAM_FAULT : BW_PROGRAM_RUNNING;
-        if(g_program.state==BW_PROGRAM_RUNNING) {g_program.language=0;g_program.ending=1;g_program.moving=-1;}
+        if(g_program.state==BW_PROGRAM_RUNNING) {g_program.ending=1;g_program.moving=-1;}
         g_program.error=rc<0 ? rc : stopped;
       }
       g_python_active=0;
@@ -109,13 +127,7 @@ int bw_program_service_request(uint32_t owner,const uint8_t *data,size_t n,uint8
     return rc;
   }
   pthread_mutex_lock(&g_lock);
-  /* A stopped Python VM must finish unwinding before its source can change. */
-  if(g_python_active && data && n>=3 && (data[2]==0 || data[2]==2 || data[2]==3 || data[2]==7)) {
-    uint8_t status[8]={BW_PROGRAM_REQUEST,1,5,0,0,0,0,0};
-    (void)bw_program_request(&g_program,&g_upload,owner,now_ms(),status,8,reply);
-    reply[2]=data[2];if(n>=8)memcpy(reply+4,data+4,4);
-    reply[8]=(uint8_t)(-EBUSY);reply[9]=reply[10]=reply[11]=255;rc=-EBUSY;
-  } else rc=bw_program_request(&g_program,&g_upload,owner,now_ms(),data,n,reply);
+  rc=request_locked(owner,now_ms(),data,n,reply);
   pthread_mutex_unlock(&g_lock);return rc;
 }
 int bw_program_service_stop(void) {
