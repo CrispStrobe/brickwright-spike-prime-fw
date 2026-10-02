@@ -3,9 +3,9 @@
 //
 // The F413VG exposes 320 KiB as a contiguous Cortex-M SRAM address range.
 // Renode's common F4 model supplies the first 256 KiB; this supplies the
-// remaining 64 KiB without overlapping it.  The external W25Q256 is initially
-// represented as memory so opaque images can execute against a deterministic
-// snapshot while the command-level SPI model is developed.
+// remaining 64 KiB without overlapping it. NuttX accesses the external W25Q256
+// through the command-level SPI model below. The separate externalFlash memory
+// region is retained for synthetic snapshots; it is not SPI NOR storage.
 
 using "platforms/cpus/stm32f4.repl"
 

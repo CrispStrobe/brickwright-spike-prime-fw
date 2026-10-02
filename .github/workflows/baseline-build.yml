@@ -125,6 +125,7 @@ jobs:
       - name: Execute protected firmware in Renode
         run: |
           tools/test_renode_protected_images.sh \
+            --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
             --include brickwright \
             --include brickwright-tickless \
             --include brickwright-userspace \

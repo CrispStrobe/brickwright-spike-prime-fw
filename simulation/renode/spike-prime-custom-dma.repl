@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Request wiring exposed by the private generic STM32 DMA/SPI/UART model fork.
+// Request wiring exposed by our STM32 DMA/SPI/UART model fork.
 
 using "./spike-prime.repl"
 
