@@ -166,7 +166,7 @@ The SPI/DMA follow-up qualified blank external flash formatting and mounting
 in Renode. That does not yet qualify program-file persistence.
 
 Remaining integration gaps include USB OTG transport, an actual Bluetooth
-radio/link, file operations and restart persistence on LittleFS, runtime MPU isolation qualification,
+radio/link, power-loss recovery and wider filesystem operations, runtime MPU isolation qualification,
 and wider long-duration and resource-exhaustion tests. Original LEGO and
 upstream LEGO_HUB_NO6 MicroPython images have only bounded CPU startup probes;
 no original-firmware robot-program or peripheral compatibility is claimed.
