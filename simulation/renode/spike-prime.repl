@@ -9,6 +9,12 @@
 
 using "platforms/cpus/stm32f4.repl"
 
+// The F413 board feeds TIM9 from its 96 MHz APB2 timer clock. The generic
+// F4 platform's 10 MHz value makes the firmware's 100 kHz tickless counter
+// run 9.6 times too slowly despite the board's correct prescaler.
+timer9:
+    frequency: 96000000
+
 sramUpper: Memory.MappedMemory @ sysbus 0x20040000
     size: 0x10000
 
