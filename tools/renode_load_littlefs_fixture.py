@@ -115,7 +115,10 @@ def load_fixture(flash, directory):
             raise ValueError('NOR fixture readback differs')
     return dict(pages_programmed=pages, bytes_programmed=len(payload),
                 partition_offset=1048576, partition_size=32505856,
-                payload_sha256=PAYLOAD_SHA256, covers_erased_first_boot=False)
+                payload_sha256=PAYLOAD_SHA256, covers_erased_first_boot=False,
+                littlefs_version=receipt['littlefs_version'],
+                source_sha256=receipt['source_sha256'],
+                geometry=receipt['geometry'], blocks=receipt['blocks'])
 
 
 def mc_load_littlefs_fixture(directory):
