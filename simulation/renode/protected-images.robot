@@ -66,6 +66,36 @@ Brickwright protected pair executes
     [Tags]    brickwright
     Boot Protected Pair And Prove Progress    brickwright
 
+Brickwright tickless timer services repeated hardware rollovers
+    [Tags]    brickwright-tickless
+    Boot Protected Pair And Prove Progress    brickwright
+    # Isolate board bring-up, then run the actual kernel and TIM9 ISR. This
+    # qualifies elapsed timer periods without claiming USB or board fidelity.
+    Execute Command    cpu PC `cpu LR`
+    ${timer_state}=    Execute Command    sysbus GetSymbolAddress "g_tickless"
+    # In the pinned STM32 tickless implementation, overflow is the uint32_t
+    # field at offset 12. Its reviewed layout is part of the source manifest.
+    ${overflow_address}=    Evaluate    int($timer_state.strip(), 0) + 12
+    ${callbacks_path}=    Set Variable    ${OUTPUT_DIR}/tickless-callbacks.txt
+    Create File    ${callbacks_path}
+    ${scheduler_timer}=    Execute Command    sysbus GetSymbolAddress "nxsched_process_timer"
+    # Count actual scheduler callbacks without changing guest registers or
+    # skipping the compare ISR. The diagnostic file stays with local results.
+    Execute Command    cpu AddHook ${scheduler_timer.strip()} "f=open('${callbacks_path}', 'a'); f.write('1'); f.close()"
+    Execute Command    emulation RunFor "0.1"
+    ${initial}=    Execute Command    sysbus ReadDoubleWord ${overflow_address}
+    ${initial_callbacks}=    Get File    ${callbacks_path}
+    Execute Command    emulation RunFor "2.0"
+    ${middle}=    Execute Command    sysbus ReadDoubleWord ${overflow_address}
+    ${middle_callbacks}=    Get File    ${callbacks_path}
+    Should Be True    int($middle.strip(), 0) >= int($initial.strip(), 0) + 2
+    Should Be True    len($middle_callbacks) > len($initial_callbacks)
+    Execute Command    emulation RunFor "2.0"
+    ${final}=    Execute Command    sysbus ReadDoubleWord ${overflow_address}
+    ${final_callbacks}=    Get File    ${callbacks_path}
+    Should Be True    int($final.strip(), 0) >= int($middle.strip(), 0) + 2
+    Should Be True    len($final_callbacks) > len($middle_callbacks)
+
 Brickwright reaches protected userspace with board boundary isolated
     [Tags]    brickwright-userspace
     Boot Protected Pair And Prove Progress    brickwright
