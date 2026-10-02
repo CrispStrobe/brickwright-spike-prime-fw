@@ -22,12 +22,17 @@ static uint64_t now_ms(void) {
   return (uint64_t)ts.tv_sec*1000+(uint64_t)ts.tv_nsec/1000000;
 }
 static void pause_ms(void) { struct timespec ts={0,1000000};nanosleep(&ts,NULL);bw_python_poll(); }
+static unsigned motor_port(mp_obj_t value) {
+  mp_int_t port=mp_obj_get_int(value);
+  if(port<0 || port>=(mp_int_t)BW_PROGRAM_PORT_COUNT)mp_raise_OSError(EINVAL);
+  return (unsigned)port;
+}
 static mp_obj_t motor(mp_obj_t port,mp_obj_t speed) {
-  check(bw_program_service_motor(mp_obj_get_int(port),mp_obj_get_int(speed)));return mp_const_none;
+  check(bw_program_service_motor(motor_port(port),mp_obj_get_int(speed)));return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_2(motor_obj,motor);
 static mp_obj_t position(size_t n,const mp_obj_t *args) {
-  unsigned port=(unsigned)mp_obj_get_int(args[0]);int rc;
+  unsigned port=motor_port(args[0]);int rc;
   (void)n;check(bw_program_service_position(port,mp_obj_get_int(args[1]),mp_obj_get_int(args[2])));
   do {pause_ms();rc=bw_program_service_done(port);check(rc);} while(!rc);
   return mp_const_none;

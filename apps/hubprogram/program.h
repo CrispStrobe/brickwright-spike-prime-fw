@@ -5,6 +5,7 @@
 #define BRICKWRIGHT_PROGRAM_H
 #include <stddef.h>
 #include <stdint.h>
+#define BW_PROGRAM_PORT_COUNT 6u
 #define BW_PROGRAM_LIMIT 256u
 #define BW_PROGRAM_TIME_LIMIT 120000u
 struct bw_instruction { int32_t op, a, b, c; };

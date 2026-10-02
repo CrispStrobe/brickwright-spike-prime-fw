@@ -7,17 +7,23 @@
 #include <errno.h>
 #include <stdio.h>
 static int polls,speed,delta;
+static unsigned motors,positions;
 int bw_program_service_poll(void) { return ++polls>1000 ? -ETIMEDOUT : 0; }
-int bw_program_service_motor(unsigned port,int32_t value) { assert(port==0);speed=value;return 0; }
+int bw_program_service_motor(unsigned port,int32_t value) { assert(port<6);motors|=1u<<port;speed=value;return 0; }
 int bw_program_service_position(unsigned port,int32_t degrees,int32_t velocity) {
-  assert(port==1 && velocity==500);delta=degrees;return 0;
+  assert(port<6 && velocity==500);positions|=1u<<port;delta=degrees;return 0;
 }
-int bw_program_service_done(unsigned port) { assert(port==1);return 1; }
+int bw_program_service_done(unsigned port) { assert(port<6);return 1; }
 int bw_program_service_sensor(unsigned predicate,int32_t *value) { assert(predicate==1);*value=200;return 0; }
 int main(void) {
   const char *source="import brickwright as b\nvalues=[x*x for x in range(6)]\nassert sum(values)==55\nb.motor(b.A,400)\nb.position(b.B,-90,500)\nassert b.sensor(1)==200\nprint('embedded MicroPython calculation and robot API: PASS')\n";
   assert(!bw_python_execute(source));assert(speed==400 && delta==-90);
   assert(g_bw_python_output.length>0);
+  assert(!bw_python_execute("import brickwright as b\nfor port in range(2,6):\n b.motor(port,400)\n b.position(port,-90,500)\n"));
+  assert(motors==61 && positions==62);
+  /* Invalid integers must fail before truncation or reaching the service. */
+  assert(!bw_python_execute("import brickwright as b\nfor port in (-1,6,4294967296,18446744073709551616):\n for operation in (b.motor,b.position):\n  try:\n   if operation == b.motor: operation(port,400)\n   else: operation(port,-90,500)\n  except (OSError,OverflowError): pass\n  else: raise AssertionError('invalid port accepted')\n"));
+  assert(motors==61 && positions==62);
   assert(!bw_python_execute("print('x' * 10000)\n"));
   assert(g_bw_python_output.length==BW_PYTHON_OUTPUT_CAPACITY && g_bw_python_output.truncated);
   assert(!bw_python_execute("assert 1+1 == 2\n"));

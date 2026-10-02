@@ -3,8 +3,12 @@
 The `hubprogram` application runs inside the protected NuttX userspace. It
 uses `/dev/legoport*` for discovery, mode selection, encoder samples and PWM;
 the host does not supply motor positions or execute the program instructions.
-The current robot contract covers motors A/B, color/reflection C, distance D
-and force-button E. It is a bounded API, not complete SPIKE Python compatibility.
+Motor commands accept physical ports A–F (integer indices 0–5) when the
+attached device reports a supported motor type (46, 48, 49 or 65). Missing
+ports, unsynchronized discovery and wrong device types return driver errors;
+a motor command never changes an attached sensor into a motor. The sensor API
+retains color/reflection C, distance D and force-button E. It is a bounded API,
+not complete SPIKE Python compatibility.
 
 The simulation and USB NSH profiles include the application. USB NSH accepts
 `hubprogram packet HEX`, where HEX encodes one 8–20 byte protocol request.
@@ -22,7 +26,10 @@ wait (2), wait for sensor (3), jump (4), conditional sensor jump (5), and
 relative motor position (6). The final row must be END. Speeds use degrees per
 second, positions degrees, waits milliseconds, distance millimeters, color
 IDs and reflection percentages. Speed magnitude is at most 1110; relative
-positions are at most 36000 degrees. Positions block the instruction stream
+positions are at most 36000 degrees. Motor port operands are 0–5 in both
+native instructions and Python calls.
+Python retains `b.A` and `b.B`; use integers 2–5 for C–F.
+Positions block the instruction stream
 while another motor's earlier continuous command can remain active.
 
 The worker runs every 10 milliseconds using NuttX monotonic time. In Renode
@@ -31,6 +38,9 @@ this clock is driven by simulated hardware time. Zero-duration waits yield;
 Programs time out after 120 simulated seconds. Unknown/stale sensor samples
 cannot satisfy a condition. Driver errors terminate execution and attempt to
 brake only the motors owned by the program. END waits for those motors to stop.
+The version-1 debug snapshot still contains only motors A/B. The current
+arena wiring remains A/B motors and C/D/E sensors; host device-IO fixtures
+cover other attached-motor layouts without claiming six-motor Renode coverage.
 There is no position-hold guarantee after the devices are released.
 
 Encoder-feedback control ramps the reference, applies a bounded PWM demand,
@@ -172,3 +182,8 @@ upstream LEGO_HUB_NO6 MicroPython images have only bounded CPU startup probes;
 no original-firmware robot-program or peripheral compatibility is claimed.
 Private image inputs, generated run records and complete transcripts remain
 outside public repositories.
+
+The exported `g_bw_program_storage_abi` value 1 advertises the fixed-slot
+SAVE/LOAD contract. Consumers must verify this value in the running firmware;
+older images without the symbol do not advertise storage support. This does
+not change the version-1 debug transport or its two-motor snapshot layout.

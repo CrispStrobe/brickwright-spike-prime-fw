@@ -17,11 +17,15 @@
 static struct lump_data_frame_s frames[6][32];
 static unsigned head[6], tail[6], polls, writes, brakes, closes;
 static int fail_op, fail_errno, open_error, synced=1, type_id=48;
+static int port_type[6], unavailable[6];
+static unsigned port_writes[6], port_brakes[6], selections[6];
 static int32_t written;
 int fixture_open(const char *path,int flags,...) {
   (void)flags;
   if(open_error) {errno=open_error;return -1;}
-  return 100+atoi(path+13);
+  unsigned port=(unsigned)atoi(path+13);
+  if(unavailable[port]) {errno=ENOENT;return -1;}
+  return 100+port;
 }
 int fixture_close(int fd) {(void)fd;closes++;return 0;}
 int fixture_ioctl(int fd,unsigned long op,...) {
@@ -31,17 +35,17 @@ int fixture_ioctl(int fd,unsigned long op,...) {
   if((int)op==fail_op) {errno=fail_errno;return -1;}
   if(op==LEGOPORT_LUMP_GET_INFO) {
     struct lump_device_info_s *info=(void *)arg;
-    memset(info,0,sizeof(*info));info->type_id=type_id;
+    memset(info,0,sizeof(*info));info->type_id=port_type[port] ? port_type[port] : type_id;
     info->flags=synced ? LUMP_FLAG_SYNCED : 0;return 0;
   }
-  if(op==LEGOPORT_LUMP_SELECT)return 0;
+  if(op==LEGOPORT_LUMP_SELECT) {selections[port]++;return 0;}
   if(op==LEGOPORT_LUMP_POLL_DATA) {
     polls++;
     if(head[port]==tail[port]) {errno=EAGAIN;return -1;}
     *(struct lump_data_frame_s *)arg=frames[port][head[port]++];return 0;
   }
-  if(op==LEGOPORT_PWM_SET_DUTY) {writes++;written=(int32_t)(long)arg;return 0;}
-  if(op==LEGOPORT_PWM_BRAKE) {brakes++;return 0;}
+  if(op==LEGOPORT_PWM_SET_DUTY) {writes++;port_writes[port]++;written=(int32_t)(long)arg;return 0;}
+  if(op==LEGOPORT_PWM_BRAKE) {brakes++;port_brakes[port]++;return 0;}
   assert(0);return -1;
 }
 static void queue(unsigned port,int mode,int32_t degrees) {
@@ -54,6 +58,9 @@ static struct bw_program_io reset(void) {
   struct bw_program_io io;
   bw_device_release();memset(head,0,sizeof(head));memset(tail,0,sizeof(tail));
   polls=writes=brakes=closes=0;fail_op=fail_errno=open_error=0;synced=1;type_id=48;
+  memset(port_type,0,sizeof(port_type));memset(unavailable,0,sizeof(unavailable));
+  memset(port_writes,0,sizeof(port_writes));memset(port_brakes,0,sizeof(port_brakes));
+  memset(selections,0,sizeof(selections));
   bw_device_init(&io);return io;
 }
 static void motor_tests(void) {
@@ -81,7 +88,7 @@ static void motor_tests(void) {
 }
 static void device_tests(void) {
   struct bw_program_io io=reset();struct bw_program_debug debug={0};unsigned before;
-  assert(io.motor(NULL,2,100)==-EINVAL && io.motor(NULL,0,1111)==-EINVAL);
+  assert(io.motor(NULL,6,100)==-EINVAL && io.motor(NULL,0,1111)==-EINVAL);
   open_error=EBUSY;assert(io.motor(NULL,0,100)==-EBUSY);open_error=0;
   synced=0;assert(io.motor(NULL,0,100)==-EAGAIN);synced=1;
   type_id=62;assert(io.motor(NULL,0,100)==-ENODEV);type_id=48;
@@ -127,4 +134,57 @@ static void sensor_tests(void) {
   }
   bw_device_release();
 }
-int main(void) {struct bw_program_io io;bw_device_init(&io);motor_tests();device_tests();sensor_tests();puts("hubprogram motor/device tests passed");return 0;}
+static void six_port_tests(void) {
+  struct bw_program_io io=reset();struct bw_program_debug debug={0};int32_t value;
+  /* Real sensor identities are never relabelled by a motor command. */
+  port_type[2]=61;port_type[3]=62;port_type[4]=63;
+  for(unsigned port=2;port<5;port++) {
+    assert(io.motor(NULL,port,100)==-ENODEV);
+    assert(io.position(NULL,port,90,300)==-ENODEV);
+    assert(io.done(NULL,port)==-ENODEV);
+    assert(io.brake(NULL,port)==0 && !port_brakes[port] && !selections[port]);
+  }
+  unavailable[5]=1;assert(io.motor(NULL,5,100)==-ENOENT);
+  unavailable[5]=0;port_type[5]=49;
+  assert(io.position(NULL,5,90,300)==0 && io.done(NULL,5)==0);
+  queue(5,2,-10);assert(bw_device_tick(10)==0);
+  assert(g_ports[5].control.target==80000 && port_writes[5]==1);
+  queue(5,2,80);assert(bw_device_tick(20)==0 && !io.done(NULL,5));
+  for(unsigned t=30;t<=50;t+=10) {queue(5,2,80);assert(!bw_device_tick(t));}
+  assert(io.done(NULL,5)==1 && port_brakes[5]==1);
+  queue(2,0,7);frames[2][tail[2]-1].len=1;
+  assert(!io.sensor(NULL,4,&value) && value==7);
+  queue(3,0,250);frames[3][tail[3]-1].len=2;
+  assert(!io.sensor(NULL,1,&value) && value==250);
+  queue(4,1,1);frames[4][tail[4]-1].len=1;
+  assert(!io.sensor(NULL,3,&value) && value==1);
+  bw_device_snapshot(&debug);assert(debug.valid_ports==0);
+  bw_device_release();assert(closes==4);
+  assert(!port_brakes[2] && !port_brakes[3] && !port_brakes[4]);
+  /* This separate attached-motor fixture covers all six physical ports. */
+  io=reset();
+  const int types[]={48,49,46,65,48,49};
+  for(unsigned port=0;port<6;port++) {
+    port_type[port]=types[port];assert(!io.motor(NULL,port,100));queue(port,2,0);
+  }
+  assert(!bw_device_tick(10));
+  for(unsigned port=0;port<6;port++) {
+    assert(port_writes[port]==1);queue(port,2,-2);
+  }
+  assert(!bw_device_tick(20));
+  for(unsigned port=0;port<6;port++) {
+    assert(g_ports[port].speed==-200);assert(!io.brake(NULL,port));queue(port,2,-2);
+  }
+  assert(!bw_device_tick(30));
+  for(unsigned port=0;port<6;port++)assert(io.done(NULL,port)==1);
+  bw_device_snapshot(&debug);assert(debug.valid_ports==3);
+  bw_device_release();assert(closes==6);
+  for(unsigned port=0;port<6;port++)assert(port_brakes[port]==2);
+  /* Replacement with a sensor must reject demand and cleanup PWM. */
+  io=reset();assert(!io.motor(NULL,5,100));queue(5,2,0);assert(!bw_device_tick(10));
+  unsigned selected=selections[5], written_before=port_writes[5], braked=port_brakes[5];
+  port_type[5]=62;assert(bw_device_tick(20)==-ENODEV);
+  assert(io.done(NULL,5)==-ENODEV && io.brake(NULL,5)==-ENODEV);
+  bw_device_release();assert(selections[5]==selected && port_writes[5]==written_before && port_brakes[5]==braked);
+}
+int main(void) {struct bw_program_io io;bw_device_init(&io);motor_tests();device_tests();sensor_tests();six_port_tests();puts("hubprogram motor/device tests passed");return 0;}
