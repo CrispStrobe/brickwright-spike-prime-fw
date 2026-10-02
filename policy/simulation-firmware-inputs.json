@@ -2,7 +2,7 @@
   "schema": 1,
   "profile": "simulation",
   "scope": "Reviewed conservative compiler input closure plus the GNU linker-selected archive members for one ARM protected build. Includes extra unlinked interpreter/library inputs; not an exact linked-line count, hardware approval or history/clean-room claim.",
-  "source_reference_commit": "c947fcadc4c1c661f5e0f68f442724baf425b5f9",
+  "source_reference_commit": "af7403fc62f921a75d71db0c6ce792205ca794b9",
   "external_components": {
     "nuttx": "a67efb31cf4f236e456882589b91862f04594528",
     "nuttx_apps": "55f0bc216565ccab8dee600a88f4485c7693bf8b",
@@ -2323,7 +2323,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/stm32_w25q256.c",
-      "sha256": "4594eafc9575c5a8a081ba728a978cd2342539a42b03dc754ac24fd1407e2e15",
+      "sha256": "796d5e60e6cdf092a86d7a3601d9c2188c6e273d8e97990d543415a9088cbec6",
       "spdx": [
         "MIT"
       ],
@@ -33524,9 +33524,9 @@
   ],
   "images": {
     "kernel": {
-      "elf_sha256": "f96516ab58b6c0f7704c7993ef85a36ab4673ec3756e3ee0b93b94e974882296",
-      "binary_sha256": "b9fc5ea49ade04e0bf8c2a4c90d806056c8488564b7701de394434c6ab21c91b",
-      "binary_bytes": 220208,
+      "elf_sha256": "d95acdd18d56e8566d09db773ae29bb391552a5b2bd296763c79ccdcd9e5bcf8",
+      "binary_sha256": "2a6ebe06c5f608f99e5aef4ce2a08a02ac05a20a807f77fbef59ea3cb5a813e3",
+      "binary_bytes": 220236,
       "selected_archive_members": 668,
       "archive_counts": {
         "libkarch.a": 56,
@@ -33544,8 +33544,8 @@
       }
     },
     "userspace": {
-      "elf_sha256": "4414db47596880c078aafae5e078ca5d674d8e7498e32d84988bde3840a49deb",
-      "binary_sha256": "717d228b57e4359ddfcf910b7d92cdacc62894ff38e6ede6a67f732423fae45c",
+      "elf_sha256": "8d736a927c3999928e5d67fb6ec4583b5e56a2877b77c596e11c393e349ef92a",
+      "binary_sha256": "55b1d026cf556acc715229288e9dbb50893c44f2d8aa5e780b407d3ce20574a6",
       "binary_bytes": 581544,
       "selected_archive_members": 580,
       "archive_counts": {
@@ -33623,7 +33623,7 @@
       }
     },
     "libboard.a": {
-      "sha256": "a5107314d2923eccfc1b4b664f8680d1f03c49ab9d9807533e277d5ca45c5b7b",
+      "sha256": "48b7691dbd426284a567d3d5520daba17ba4b6b7476bf76a59db4b398b9f79ac",
       "members": {
         "etctmp.o": "097858d291bd205a14433c54c47526e93cacc9b0e593f1b398eda056db170067",
         "legosensor_uorb.o": "368cd6405262a45a7ed181b034c3ebd5bab60de20e88d89601251e398e898b0d",
@@ -33660,7 +33660,7 @@
         "stm32_tlc5955.o": "2a68b8bcf6cc10fd757c9cee5394240ea58b3b0a2f77622c2856b0a22c358509",
         "stm32_tone.o": "061370eeed33a574192d2e6acc7d19b0532997f3779146af0645509fe86539ac",
         "stm32_usbdev.o": "af3e915634e49f0f936a5e5e97c0088f9a13e71dbf1e295e44bea2e467c59d86",
-        "stm32_w25q256.o": "91099bbe61c623bc3ea7594f6f2997ba6e4feeded5bf0c07f304fef9be1e39b1"
+        "stm32_w25q256.o": "8a823dab44062ff2e3c5b5358fa758b713c96f813a39ca8a2dd8711dcdcd490f"
       }
     },
     "libgcc.a": {
@@ -34061,7 +34061,7 @@
       }
     },
     "libkc.a": {
-      "sha256": "194a6efaa361ed825f688ec12699d354a10a629d4be79ba6d1ce0d4cb1b278bd",
+      "sha256": "53b8c58edc392c9d4707cd65fbb78ce1d5348b06532c2a5fcf5a3230493da461",
       "members": {
         "lib_abort.o": "155a554d7e1f8aefcf72439af61c2c03fafc44c2c581cef3cc8613d924923616",
         "lib_asprintf.o": "c6a102bd5c21ba09e19676008fbf6e2272b404581bd5bb38bece84b07a483886",
@@ -34126,7 +34126,7 @@
         "lib_time.o": "7b2336a20f1175b7ca1bbdea5b37994f7c9a27c84cb10a65e3b685e54ce4495d",
         "lib_ultoa_invert.o": "83153e77cad42d881b80af4b35c69bc6b2249400338e87c1f257763d859d2827",
         "lib_umask.o": "7e7dea316f75d04272dfb5db7a1e976285c9e23c08010e6cdb04eb44b673849c",
-        "lib_utsname.o": "d5e30187e466188d4e8976f3cd8a86276bd4503287f18d9ea93fe576ac2b4888",
+        "lib_utsname.o": "cb176e50244b82e25948627680bbcabf6a02a8a8e18d1bc06a4695f6b1595933",
         "lib_vasprintf.o": "9a8addbc9e9bcb0700773468122074617ad845e51b19e3282a024d8f983c10ee",
         "lib_vsnprintf.o": "74bdef1a4980de0d0eff5276ad145181c57613907b48ee63ea8f8d652d36c23b",
         "pthread_exit.o": "19c73c11df2b9deaa89fb3ec30f11bcc0d301005cec180dc9756874db369f636",
@@ -34295,7 +34295,7 @@
       }
     },
     "libc.a": {
-      "sha256": "1b5372c20bdb0f45e071b73712d099f83cbbd9b0c5fe7bf01b403b2543164e9f",
+      "sha256": "d16787c266637eca17d111718ae34fdd7b079d0d94b7524e9c50d481fb67ec15",
       "members": {
         "lib_abort.o": "155a554d7e1f8aefcf72439af61c2c03fafc44c2c581cef3cc8613d924923616",
         "lib_asprintf.o": "225bc4c312bce93978310c29c84121f6b558830fb49817c71a39d2f92b1f5811",
@@ -34438,7 +34438,7 @@
         "lib_truncate.o": "acbc80ac4f69baca7099b05749af38bbe2dfab09f17f2c30746149bb85ae41ec",
         "lib_ultoa_invert.o": "83153e77cad42d881b80af4b35c69bc6b2249400338e87c1f257763d859d2827",
         "lib_usleep.o": "2a621c1cad40eb500eb9a5c1e4910849dc4d65709e469ffa771c47d943452a47",
-        "lib_utsname.o": "7583c96d7c3985447cec608d834e55f9052119372edb776300fd6ce9a58463d6",
+        "lib_utsname.o": "cb176e50244b82e25948627680bbcabf6a02a8a8e18d1bc06a4695f6b1595933",
         "lib_uuid_create_nil.o": "528d2214ea36fc79c55c0da293877034025eca914d3085c2a1707efc5b23530e",
         "lib_uuid_from_string.o": "e051cb3cf6be3daebc3adec0fada1260f78a8e11423d0c933ba41ce66599da74",
         "lib_uuid_to_string.o": "5a6363b25ae1aaef19c8f8049e05537ca7bf2bde59e4e79d5f225c957c22fce6",
@@ -35016,5 +35016,5 @@
   "version_metadata_note": "Only literal CONFIG_VERSION_STRING/MAJOR/MINOR/PATCH/BUILD values may vary with Git tag availability. Other version-header content remains hash-pinned.",
   "source_origin_review": "policy/source-origin-review.json",
   "source_origin_review_status": "reviewed-current-source-and-advertised-history",
-  "build_revision_note": "2026-10-02 fresh isolated ARM build after correcting the deterministic ROMFS root sibling chain. All 3244 reviewed compiler inputs and linker-selected archive member sets retained. The only changed compiled input is generated etctmp.c, reproduced exactly from the reviewed writer, actual preprocessed init scripts, and xxd; literal Git version metadata remains normalized. Corrected ROMFS traversal is verified against the pinned NuttX cached and uncached parsers and a Linux read-only mount. Source dependency pins, build configuration, and runtime library remain unchanged. Archive, selected member, map, and image hashes were captured from this build; different debug paths prevent a whole-build reproducibility claim."
+  "build_revision_note": "2026-10-02 actual ARM rebuild after reviewed exhaustive blank-flash scan batching. All 3244 reviewed compiler inputs and linker-selected archive member sets retained. The sole reviewed source change is stm32_w25q256.c SHA256 796d5e60e6cdf092a86d7a3601d9c2188c6e273d8e97990d543415a9088cbec6: a bounded 4096-byte heap buffer preserves every byte of the 31 MiB erased-partition criterion and fails safely on allocation/read errors. Literal Git version metadata remains normalized; generated ROMFS is reconstructed exactly if changed. Dependency pins, configuration, source licences and runtime library remain unchanged. Archive/member/map/image hashes are captured from the actual build; debug paths prevent a whole-build reproducibility claim."
 }
