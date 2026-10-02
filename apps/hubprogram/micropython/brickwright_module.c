@@ -22,18 +22,21 @@ static uint64_t now_ms(void) {
   return (uint64_t)ts.tv_sec*1000+(uint64_t)ts.tv_nsec/1000000;
 }
 static void pause_ms(void) { struct timespec ts={0,1000000};nanosleep(&ts,NULL);bw_python_poll(); }
+static int32_t bounded_integer(mp_obj_t value,int32_t low,int32_t high) {
+  mp_int_t integer=mp_obj_get_int(value);
+  if(integer<low || integer>high)mp_raise_OSError(EINVAL);
+  return (int32_t)integer;
+}
 static unsigned motor_port(mp_obj_t value) {
-  mp_int_t port=mp_obj_get_int(value);
-  if(port<0 || port>=(mp_int_t)BW_PROGRAM_PORT_COUNT)mp_raise_OSError(EINVAL);
-  return (unsigned)port;
+  return (unsigned)bounded_integer(value,0,BW_PROGRAM_PORT_COUNT-1);
 }
 static mp_obj_t motor(mp_obj_t port,mp_obj_t speed) {
-  check(bw_program_service_motor(motor_port(port),mp_obj_get_int(speed)));return mp_const_none;
+  check(bw_program_service_motor(motor_port(port),bounded_integer(speed,-1110,1110)));return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_2(motor_obj,motor);
 static mp_obj_t position(size_t n,const mp_obj_t *args) {
   unsigned port=motor_port(args[0]);int rc;
-  (void)n;check(bw_program_service_position(port,mp_obj_get_int(args[1]),mp_obj_get_int(args[2])));
+  (void)n;check(bw_program_service_position(port,bounded_integer(args[1],-36000,36000),bounded_integer(args[2],1,1110)));
   do {pause_ms();rc=bw_program_service_done(port);check(rc);} while(!rc);
   return mp_const_none;
 }
