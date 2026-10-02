@@ -6,7 +6,7 @@
 # dependencies; this does not download a prebuilt Renode executable/runtime.
 set -euo pipefail
 
-runtime_revision=e39bd2fead70772971a2a20c9cf73cd6afa07b48
+runtime_revision=1f98d38c425f55636162201ac9e1e01a9385825e
 infrastructure_revision=ce776fdaddacf4006e178f70f2384601c4be1bc6
 resources_revision=14b80cde0a136b684f316eb7f6a31aeaae0684bf
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -84,7 +84,8 @@ fi
     -r "$runtime_dir/tests/requirements.txt"
 
 "$venv_dir/bin/python" - "$runtime_dir" "$runtime_revision" \
-    "$infrastructure_revision" "$resources_revision" <<'PY'
+    "$infrastructure_revision" "$resources_revision" \
+    "$tools_dir/renode-fork-$runtime_revision.build-receipt.json" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -109,7 +110,7 @@ receipt = {
     "sha256": {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
                for path in files},
 }
-(root / "brickwright-build-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+Path(sys.argv[5]).write_text(json.dumps(receipt, indent=2) + "\n")
 PY
 "$runtime_dir/renode" --version
 printf 'RENODE_DIR=%s\nRENODE_TEST_VENV=%s\n' "$runtime_dir" "$venv_dir"

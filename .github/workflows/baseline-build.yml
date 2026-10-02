@@ -31,6 +31,7 @@ jobs:
           python3 tools/test_upstream_hardening.py --nuttx nuttx
           python3 tools/test_upstream_arm_hardening.py --nuttx nuttx
           python3 tools/test_usb_wakeup.py --nuttx nuttx
+          python3 tools/test_nuttx_romfs.py --nuttx nuttx
           python3 tools/check_nuttx_apps_hardening.py --apps nuttx-apps --baseline 55f0bc216565ccab8dee600a88f4485c7693bf8b
 
       - name: Build the pinned tool container
@@ -105,8 +106,16 @@ jobs:
           wc -c nuttx/nuttx.bin nuttx/nuttx_user.bin
           sha256sum nuttx/nuttx.bin nuttx/nuttx_user.bin
 
-      - name: Install pinned Renode
-        run: tools/install_renode.sh
+      - name: Set up the reviewed Renode build SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build the pinned Renode fork from source
+        run: |
+          tools/install_renode_fork.sh
+          echo "RENODE_DIR=$(tools/install_renode_fork.sh --print-runtime)" >> "$GITHUB_ENV"
+          echo "RENODE_TEST_VENV=$(tools/install_renode_fork.sh --print-venv)" >> "$GITHUB_ENV"
 
       - name: Stage the clean simulation pair
         run: |
@@ -117,11 +126,14 @@ jobs:
         run: |
           tools/test_renode_protected_images.sh \
             --include brickwright \
+            --include brickwright-tickless \
             --include brickwright-userspace \
             --include brickwright-board-models \
             --include brickwright-board-stubs
 
       - name: Test the transport-neutral virtual HCI bridge
+        env:
+          BRICKWRIGHT_RENODE_FIRMWARE_TEST: "1"
         run: tools/test_renode_virtual_hci_bridge.sh
 
       # Deliberately no artifact upload. The firmware is simulation-only until
