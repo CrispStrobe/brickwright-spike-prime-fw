@@ -8,6 +8,7 @@ runtime=$("$compiler" -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 python3 "$root/tools/collect_build_inputs.py" --root "$root" \
   --dependency-root "$root" \
   --include-embed-inventory "$root/policy/micropython-embed.json" \
+  --input "$root/apps/hubprogram/micropython/brickwright_module.c" \
   --input "$root/boards/spike-prime-hub/scripts/memory.ld" \
   --input "$root/boards/spike-prime-hub/scripts/kernel-space.ld" \
   --input "$root/boards/spike-prime-hub/scripts/user-space.ld" \

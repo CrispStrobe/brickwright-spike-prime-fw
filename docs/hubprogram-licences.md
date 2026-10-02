@@ -3,7 +3,10 @@
 The simulator runner, upload protocol, motor controller and NuttX MicroPython
 port in `apps/hubprogram` are newly authored under BSD-3-Clause, with the full
 text in `apps/hubprogram/LICENSE`. Their copyright attribution is to
-Brickwright contributors.
+Brickwright contributors. The simulation input collector explicitly includes
+`apps/hubprogram/micropython/brickwright_module.c`: embed build rules do not
+emit its compiler dependency file. Earlier inventories omitted that authored
+wrapper; the six-port refresh adds only this BSD-3-Clause source input.
 
 The embedded interpreter comes from MicroPython v1.26.1 at
 `647c8b96cae7e202c7a020395b7cfe65e5b8ce04`. Its core, embed port and GC helper
