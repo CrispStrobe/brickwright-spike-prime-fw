@@ -76,7 +76,7 @@ Brickwright tickless timer services repeated hardware rollovers
     # In the pinned STM32 tickless implementation, overflow is the uint32_t
     # field at offset 12. Its reviewed layout is part of the source manifest.
     ${overflow_address}=    Evaluate    int($timer_state.strip(), 0) + 12
-    ${callbacks_path}=    Set Variable    ${OUTPUT_DIR}/tickless-callbacks.txt
+    ${callbacks_path}=    Set Variable    ${CURDIR}/../../.local/renode-tickless-callbacks.txt
     Create File    ${callbacks_path}
     ${scheduler_timer}=    Execute Command    sysbus GetSymbolAddress "nxsched_process_timer"
     # Count actual scheduler callbacks without changing guest registers or
