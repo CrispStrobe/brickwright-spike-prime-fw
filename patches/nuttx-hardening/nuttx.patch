@@ -1,0 +1,546 @@
+diff --git a/arch/arm/src/armv7-m/arm_svcall.c b/arch/arm/src/armv7-m/arm_svcall.c
+index 8fab2575d70..a090b1e2512 100644
+--- a/arch/arm/src/armv7-m/arm_svcall.c
++++ b/arch/arm/src/armv7-m/arm_svcall.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -30,6 +36,7 @@
+ #include <stdint.h>
+ #include <string.h>
+ #include <assert.h>
++#include <errno.h>
+ #include <debug.h>
+ #include <syscall.h>
+ 
+@@ -313,15 +320,12 @@ int arm_svcall(int irq, void *context, void *arg)
+           struct tcb_s *rtcb = this_task();
+           int index = rtcb->xcp.nsyscalls;
+ 
+-          /* Verify that the SYS call number is within range */
+-
+-          DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
+-
+-          /* Make sure that there is a no saved syscall return address.  We
+-           * cannot yet handle nested system calls.
+-           */
+-
+-          DEBUGASSERT(index < CONFIG_SYS_NNEST);
++          if (cmd < CONFIG_SYS_RESERVED || cmd >= SYS_maxsyscall ||
++              index >= CONFIG_SYS_NNEST)
++            {
++              regs[REG_R0] = -ENOSYS;
++              break;
++            }
+ 
+           /* Use ip to create a debug frame.
+            * we can use gdb backtrace from syscall to user space.
+diff --git a/arch/arm/src/stm32/stm32_otgfsdev.c b/arch/arm/src/stm32/stm32_otgfsdev.c
+index f62d12ffb82..50b2dd969ac 100644
+--- a/arch/arm/src/stm32/stm32_otgfsdev.c
++++ b/arch/arm/src/stm32/stm32_otgfsdev.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -5559,8 +5565,9 @@ static void stm32_hwinitialize(struct stm32_usbdev_s *priv)
+ 
+   /* Enable the interrupts in the INTMSK */
+ 
+-  regval = (OTGFS_GINT_RXFLVL | OTGFS_GINT_USBSUSP | OTGFS_GINT_ENUMDNE |
+-            OTGFS_GINT_IEP | OTGFS_GINT_OEP | OTGFS_GINT_USBRST);
++  regval = (OTGFS_GINT_RXFLVL | OTGFS_GINT_USBSUSP | OTGFS_GINT_WKUP |
++            OTGFS_GINT_ENUMDNE | OTGFS_GINT_IEP | OTGFS_GINT_OEP |
++            OTGFS_GINT_USBRST);
+ 
+ #ifdef CONFIG_USBDEV_ISOCHRONOUS
+   regval |= (OTGFS_GINT_IISOIXFR | OTGFS_GINT_IISOOXFR);
+diff --git a/arch/arm/src/stm32/stm32_spi.c b/arch/arm/src/stm32/stm32_spi.c
+index 91d468e9f47..77988c0eff3 100644
+--- a/arch/arm/src/stm32/stm32_spi.c
++++ b/arch/arm/src/stm32/stm32_spi.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * The external functions, stm32_spi1/2/3select and stm32_spi1/2/3status must
+  * be provided by board-specific logic.  They are implementations of the
+@@ -148,6 +154,19 @@
+ #  error "Unknown STM32 DMA"
+ #endif
+ 
++/* Maximum number of data items per single DMA descriptor.
++ *
++ * Both the STM32 DMA IPv1 (CNDTR on F0/F1/F3/G4/L0/L1/L4) and IPv2 (SxNDTR
++ * on F2/F4/F7/H7) transfer-count registers are 16 bits wide, so each call
++ * to stm32_dmasetup() can program at most 65535 transfers.  spi_exchange()
++ * below chunks larger requests to stay within this limit; without it a
++ * single SPI_EXCHANGE() of >= 64 KiB silently programs NDTR to 0 (low 16
++ * bits of nwords) and the driver blocks forever waiting on a DMA-complete
++ * IRQ that never fires.
++ */
++
++#  define STM32_SPI_DMA_MAX_XFER  65535u
++
+ #  define SPIDMA_BUFFER_MASK   (4 - 1)
+ #  define SPIDMA_SIZE(b) (((b) + SPIDMA_BUFFER_MASK) & ~SPIDMA_BUFFER_MASK)
+ #  define SPIDMA_BUF_ALIGN   aligned_data(4)
+@@ -1871,14 +1890,20 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+     {
+       static uint16_t rxdummy = 0xffff;
+       static const uint16_t txdummy = 0xffff;
++      const size_t word_size = (priv->nbits > 8) ? 2u : 1u;
++      const uint8_t *txp;
++      uint8_t       *rxp;
++#ifdef CONFIG_SPI_TRIGGER
++      bool first_chunk = true;
++#endif
+ 
+-      spiinfo("txbuffer=%p rxbuffer=%p nwords=%d\n",
++      spiinfo("txbuffer=%p rxbuffer=%p nwords=%zu\n",
+                txbuffer, rxbuffer, nwords);
+       DEBUGASSERT(priv && priv->spibase);
+ 
+       /* Setup DMAs */
+ 
+-      /* If this bus uses a in driver buffers we will incur 2 copies,
++      /* If this bus uses an in-driver buffer we will incur 2 copies,
+        * The copy cost is << less the non DMA transfer time and having
+        * the buffer in the driver ensures DMA can be used. This is because
+        * the API does not support passing the buffer extent so the only
+@@ -1897,40 +1922,89 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+           memcpy(priv->txbuf, txbuffer, nbytes);
+           txbuffer  = priv->txbuf;
+           rxbuffer  = rxbuffer ? priv->rxbuf : rxbuffer;
++
++          /* Rescale nwords to match the (possibly clamped) nbytes. */
++
++          nwords = (priv->nbits > 8) ? nbytes >> 1 : nbytes;
+         }
+ 
+-      spi_dmarxsetup(priv, rxbuffer, &rxdummy, nwords);
+-      spi_dmatxsetup(priv, txbuffer, &txdummy, nwords);
++      txp = (const uint8_t *)txbuffer;
++      rxp = (uint8_t *)rxbuffer;
++      ret = OK;
++
++      /* Walk the request in chunks of at most STM32_SPI_DMA_MAX_XFER words.
++       * The STM32 DMA NDTR/CNDTR transfer-count register is only 16 bits
++       * wide; submitting more than 65535 transfers in a single descriptor
++       * silently programs NDTR to (nwords & 0xffff) and on most paths
++       * results in a stream that never raises transfer-complete, causing
++       * the SPI driver to block forever in spi_dmarxwait().  Splitting the
++       * request keeps each descriptor within the hardware limit and lets
++       * the W25/SD/etc. driver remain agnostic of this constraint.
++       */
++
++      while (nwords > 0)
++        {
++          size_t chunk = (nwords > STM32_SPI_DMA_MAX_XFER)
++                         ? STM32_SPI_DMA_MAX_XFER
++                         : nwords;
++
++          spi_dmarxsetup(priv, rxp, &rxdummy, chunk);
++          spi_dmatxsetup(priv, txp, &txdummy, chunk);
+ 
+ #ifdef CONFIG_SPI_TRIGGER
+-      /* Is deferred triggering in effect? */
++          /* Is deferred triggering in effect? */
+ 
+-      if (!priv->defertrig)
+-        {
+-          /* No.. Start the DMAs */
++          if (!priv->defertrig || !first_chunk)
++            {
++              /* No.. Start the DMAs */
+ 
+-          spi_dmarxstart(priv);
+-          spi_dmatxstart(priv);
+-        }
+-      else
+-        {
+-          /* Yes.. indicated that we are ready to be started */
++              spi_dmarxstart(priv);
++              spi_dmatxstart(priv);
++            }
++          else
++            {
++              /* Yes.. indicate that we are ready to be started.  Deferred
++               * triggering is only meaningful for the first (often only)
++               * chunk; subsequent chunks must run unconditionally or the
++               * caller would have to re-arm between chunks.
++               */
+ 
+-          priv->trigarmed = true;
+-        }
++              priv->trigarmed = true;
++            }
+ #else
+-      /* Start the DMAs */
++          /* Start the DMAs */
+ 
+-      spi_dmarxstart(priv);
+-      spi_dmatxstart(priv);
++          spi_dmarxstart(priv);
++          spi_dmatxstart(priv);
+ #endif
+ 
+-      /* Then wait for each to complete */
++          /* Then wait for each to complete */
+ 
+-      ret = spi_dmarxwait(priv);
+-      if (ret < 0)
+-        {
+-          ret = spi_dmatxwait(priv);
++          ret = spi_dmarxwait(priv);
++          if (ret < 0)
++            {
++              ret = spi_dmatxwait(priv);
++            }
++
++          if (ret < 0)
++            {
++              break;
++            }
++
++          if (txp != NULL)
++            {
++              txp += chunk * word_size;
++            }
++
++          if (rxp != NULL)
++            {
++              rxp += chunk * word_size;
++            }
++
++          nwords -= chunk;
++#ifdef CONFIG_SPI_TRIGGER
++          first_chunk = false;
++#endif
+         }
+ 
+       if (rxbuffer != NULL && priv->rxbuf != NULL && ret >= 0)
+diff --git a/arch/arm/src/stm32/stm32_tickless.c b/arch/arm/src/stm32/stm32_tickless.c
+index 50d5bb9f5b6..85f7c076ca1 100644
+--- a/arch/arm/src/stm32/stm32_tickless.c
++++ b/arch/arm/src/stm32/stm32_tickless.c
+@@ -36,6 +36,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Tickless OS Support.
+  *
+@@ -207,6 +213,15 @@ static inline void stm32_tickless_ackint(int channel)
+   stm32_putreg16(STM32_BTIM_SR_OFFSET, ~(1 << channel));
+ }
+ 
++/****************************************************************************
++ * Name: stm32_tickless_trigint
++ ****************************************************************************/
++
++static inline void stm32_tickless_trigint(int channel)
++{
++  stm32_putreg16(STM32_ATIM_EGR_OFFSET, 1 << channel);
++}
++
+ /****************************************************************************
+  * Name: stm32_tickless_getint
+  ****************************************************************************/
+@@ -784,6 +799,7 @@ int up_timer_cancel(struct timespec *ts)
+   uint64_t nsec;
+   uint32_t count;
+   uint32_t period;
++  bool expired;
+ 
+   /* Was the timer running? */
+ 
+@@ -818,6 +834,13 @@ int up_timer_cancel(struct timespec *ts)
+   count  = STM32_TIM_GETCOUNTER(g_tickless.tch);
+   period = g_tickless.period;
+ 
++  /* Read the flag after the counter to catch a match between these reads.
++   * Hardware status avoids signed half-range tests: valid delays can span
++   * the full counter range.
++   */
++
++  expired = (stm32_tickless_getint() & (1 << g_tickless.channel)) != 0;
++
+   g_tickless.pending = false;
+   leave_critical_section(flags);
+ 
+@@ -834,17 +857,7 @@ int up_timer_cancel(struct timespec *ts)
+       tmrinfo("period=%lu count=%lu\n",
+              (unsigned long)period, (unsigned long)count);
+ 
+-#ifndef HAVE_32BIT_TICKLESS
+-      if (count > period)
+-        {
+-          /* Handle rollover */
+-
+-          period += UINT16_MAX;
+-        }
+-      else if (count == period)
+-#else
+-      if (count >= period)
+-#endif
++      if (expired || count == period)
+         {
+           /* No time remaining */
+ 
+@@ -861,8 +874,13 @@ int up_timer_cancel(struct timespec *ts)
+        *   usecs     = (ticks * USEC_PER_SEC) / frequency;
+        */
+ 
+-      usec        = (((uint64_t)(period - count)) * USEC_PER_SEC) /
+-                    g_tickless.frequency;
++#ifndef HAVE_32BIT_TICKLESS
++      usec = ((uint64_t)(uint16_t)(period - count) * USEC_PER_SEC) /
++             g_tickless.frequency;
++#else
++      usec = ((uint64_t)(uint32_t)(period - count) * USEC_PER_SEC) /
++             g_tickless.frequency;
++#endif
+ 
+       /* Return the time remaining in the correct form */
+ 
+@@ -927,20 +945,17 @@ int up_timer_start(const struct timespec *ts)
+       up_timer_cancel(NULL);
+     }
+ 
+-  /* Express the delay in microseconds */
++  /* Negative, zero and sub-tick delays dispatch immediately. */
+ 
+-  usec = (uint64_t)ts->tv_sec * USEC_PER_SEC +
+-         (uint64_t)(ts->tv_nsec / NSEC_PER_USEC);
+-
+-  /* Get the timer counter frequency and determine the number of counts need
+-   * to achieve the requested delay.
+-   *
+-   *   frequency = ticks / second
+-   *   ticks     = seconds * frequency
+-   *             = (usecs * frequency) / USEC_PER_SEC;
+-   */
++  usec = 0;
++  period = 0;
++  if (ts->tv_sec > 0 || (ts->tv_sec == 0 && ts->tv_nsec > 0))
++    {
++      usec = (uint64_t)ts->tv_sec * USEC_PER_SEC +
++             (uint64_t)(ts->tv_nsec / NSEC_PER_USEC);
++      period = (usec * (uint64_t)g_tickless.frequency) / USEC_PER_SEC;
++    }
+ 
+-  period = (usec * (uint64_t)g_tickless.frequency) / USEC_PER_SEC;
+   count  = STM32_TIM_GETCOUNTER(g_tickless.tch);
+ 
+   tmrinfo("usec=%llu period=%08llx\n", usec, period);
+@@ -967,54 +982,22 @@ int up_timer_start(const struct timespec *ts)
+   stm32_tickless_ackint(g_tickless.channel);
+   stm32_tickless_enableint(g_tickless.channel);
+ 
+-  /* Race-fix (spike-nx Issue #74): if execution between GETCOUNTER above
+-   * and SETCOMPARE was delayed long enough for the counter to pass our
+-   * target (e.g., a high-priority IRQ slipped in even though we are in
+-   * a critical section, or the period was simply too short), the compare
+-   * match has already been missed.  The next interrupt will not fire
+-   * until the counter wraps a full cycle — 655.36ms on 16-bit TIM9 at
+-   * USEC_PER_TICK=10 — blocking the entire HPWORK / scheduler tick.
+-   *
+-   * Detect the "late compare" case and re-arm the timer to a near-future
+-   * value so the interrupt fires within a few ticks.  Bounded loop so a
+-   * pathological storm of preemption can't hang the system.
+-   */
++  g_tickless.pending = true;
+ 
+-  for (int retry = 0; retry < 4; retry++)
+-    {
+-      uint32_t now = STM32_TIM_GETCOUNTER(g_tickless.tch);
+-#ifdef HAVE_32BIT_TICKLESS
+-      uint32_t elapsed = (uint32_t)(now - count);
+-#else
+-      uint16_t elapsed = (uint16_t)((uint16_t)now - (uint16_t)count);
+-#endif
+-      if ((uint64_t)elapsed < period)
+-        {
+-          /* Compare is still in the future — interrupt will fire on time. */
+-          break;
+-        }
++  /* Force a missed compare through EGR instead of repeatedly choosing a
++   * near-future compare which can race again.  Unsigned subtraction also
++   * accounts for counter rollover.
++   */
+ 
+-      /* Already late.  Set compare to current+1 (one tick of forward
+-       * margin) and re-verify on the next iteration.  One tick is
+-       * sufficient because (a) GETCOUNTER → SETCOMPARE is sub-tick on
+-       * Cortex-M4 @ 96 MHz (~0.05 tick), (b) SVCall (the only IRQ that
+-       * can preempt this critical section at BASEPRI=0x80) completes in
+-       * <= 0.5 tick on this build, and (c) the bounded 4-iteration retry
+-       * gives further headroom if a rare edge case lands the counter
+-       * exactly at the new compare value.
+-       */
+ #ifdef HAVE_32BIT_TICKLESS
+-      g_tickless.period = (uint32_t)(now + 1);
++  if ((uint32_t)(STM32_TIM_GETCOUNTER(g_tickless.tch) - count) >= period)
+ #else
+-      g_tickless.period = (uint16_t)(now + 1);
++  if ((uint16_t)(STM32_TIM_GETCOUNTER(g_tickless.tch) - count) >= period)
+ #endif
+-      STM32_TIM_SETCOMPARE(g_tickless.tch, g_tickless.channel,
+-                           g_tickless.period);
+-      count  = now;
+-      period = 1;
++    {
++      stm32_tickless_trigint(g_tickless.channel);
+     }
+ 
+-  g_tickless.pending = true;
+   leave_critical_section(flags);
+   return OK;
+ }
+diff --git a/boards/Board.mk b/boards/Board.mk
+index f355bc1fe40..3d50c90f44b 100644
+--- a/boards/Board.mk
++++ b/boards/Board.mk
+@@ -1,3 +1,7 @@
++# Modified for Brickwright in 2026: local integration hook.
++# Original copyright and licence notices retained; see the firmware
++# repository policy/nuttx-backports.json for source commits and scope.
++
+ ############################################################################
+ # boards/Board.mk
+ #
+@@ -18,6 +22,8 @@
+ #
+ ############################################################################
+ 
++GENROMFS ?= genromfs
++
+ ifneq ($(RCSRCS)$(RCRAWS),)
+ ETCDIR := etctmp
+ ETCSRC := $(ETCDIR:%=%.c)
+@@ -35,7 +41,7 @@ $(ETCSRC): $(foreach raw,$(RCRAWS), $(if $(wildcard $(BOARD_DIR)$(DELIM)src$(DEL
+ 	  $(shell rm -rf $(ETCDIR)$(DELIM)$(raw)) \
+ 	  $(shell mkdir -p $(dir $(ETCDIR)$(DELIM)$(raw))) \
+ 	  $(shell cp -rfp $(if $(wildcard $(BOARD_DIR)$(DELIM)src$(DELIM)$(raw)), $(BOARD_DIR)$(DELIM)src$(DELIM)$(raw), $(if $(wildcard $(BOARD_COMMON_DIR)$(DELIM)$(raw)), $(BOARD_COMMON_DIR)$(DELIM)$(raw), $(BOARD_DIR)$(DELIM)src$(DELIM)$(raw))) $(ETCDIR)$(DELIM)$(raw)))
+-	$(Q) genromfs -f romfs.img -d $(ETCDIR)$(DELIM)$(CONFIG_ETC_ROMFSMOUNTPT) -V "NSHInitVol"
++	$(Q) $(GENROMFS) -f romfs.img -d $(ETCDIR)$(DELIM)$(CONFIG_ETC_ROMFSMOUNTPT) -V "NSHInitVol"
+ 	$(Q) echo "#include <nuttx/compiler.h>" > $@
+ 	$(Q) xxd -i romfs.img | sed -e "s/^unsigned char/const unsigned char aligned_data(4)/g" >> $@
+ 	$(Q) rm romfs.img
+diff --git a/fs/inode/fs_files.c b/fs/inode/fs_files.c
+index 8ecb9cfd19f..f3b00ff3795 100644
+--- a/fs/inode/fs_files.c
++++ b/fs/inode/fs_files.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -104,7 +110,7 @@ static int fdlist_extend(FAR struct fdlist *list, size_t row)
+       return 0;
+     }
+ 
+-  if (CONFIG_NFILE_DESCRIPTORS_PER_BLOCK * (orig_rows + 1) > OPEN_MAX)
++  if (CONFIG_NFILE_DESCRIPTORS_PER_BLOCK * row > OPEN_MAX)
+     {
+       fdlist_dump(list);
+       return -EMFILE;
+diff --git a/sched/group/group_create.c b/sched/group/group_create.c
+index 122a25d06d6..f7e8e57a794 100644
+--- a/sched/group/group_create.c
++++ b/sched/group/group_create.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -200,7 +206,12 @@ int group_allocate(FAR struct tcb_s *tcb, uint8_t ttype)
+   return OK;
+ 
+ errout_with_group:
+-  kmm_free(group);
++  if (group != &g_kthread_group)
++    {
++      kmm_free(group);
++    }
++
++  tcb->group = NULL;
+   return ret;
+ }
+ 
+diff --git a/sched/task/task_prctl.c b/sched/task/task_prctl.c
+index 4435e4eba4e..344acbd9633 100644
+--- a/sched/task/task_prctl.c
++++ b/sched/task/task_prctl.c
+@@ -20,6 +20,12 @@
+  *
+  ****************************************************************************/
+ 
++/* Modified for Brickwright in 2026: reviewed Apache NuttX backports and
++ * local integration/adaptations. Original copyright and licence notices
++ * retained. Source commits and scope: policy/nuttx-backports.json in the
++ * Brickwright firmware repository.
++ */
++
+ /****************************************************************************
+  * Included Files
+  ****************************************************************************/
+@@ -137,8 +143,7 @@ int prctl(int option, ...)
+                * necessary.
+                */
+ 
+-              strlcpy(name, tcb->name, sizeof(tcb->name));
+-              name[CONFIG_TASK_NAME_SIZE - 1] = '\0';
++              strlcpy(name, tcb->name, CONFIG_TASK_NAME_SIZE);
+             }
+         }
+         break;

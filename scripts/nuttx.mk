@@ -27,7 +27,7 @@ DOCKER_RUN_IT := docker run --rm -it \
 	$(DOCKER_IMAGE)
 
 .PHONY: build configure clean distclean docker-build submodules \
-        menuconfig savedefconfig
+        menuconfig savedefconfig backports
 
 build: docker-build link-apps configure
 	python3 tools/check_reuse_licenses.py
@@ -55,7 +55,10 @@ docker-build: nuttx/Makefile
 		docker build -t $(DOCKER_IMAGE) -f docker/Dockerfile.nuttx docker; \
 	fi
 
-configure: docker-build
+backports: nuttx/Makefile
+	python3 tools/apply_nuttx_backports.py
+
+configure: docker-build backports
 	@if [ ! -f nuttx/.config ]; then \
 		$(DOCKER_RUN) ./tools/configure.sh -l -a ../nuttx-apps $(CONFIGURE_ARG); \
 	fi

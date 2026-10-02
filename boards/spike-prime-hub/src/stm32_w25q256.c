@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  * Copyright (c) 2019-2023 The Pybricks Authors
  * Copyright (c) 2022 The Pybricks Authors
+ * Copyright (c) 2026 Brickwright contributors
  */
 /****************************************************************************
  * boards/spike-prime-hub/src/stm32_w25q256.c
@@ -691,9 +692,16 @@ w25q256_initialize(FAR struct spi_dev_s *spi)
   priv->mtd.ioctl  = w25q256_mtd_ioctl;
   priv->mtd.name   = "w25q256";
 
-  /* Probe the chip */
+  /* Release deep power-down before probing.  This follows the hardware
+   * initialization precaution in Apache NuttX commit 014f22b1c24c02ebf7e53afffdac54b6c96fd8fc.
+   * Keep the existing MIT notices; this board adaptation is MIT licensed.
+   */
 
   w25q256_lock(priv);
+  SPI_SELECT(priv->spi, SPIDEV_FLASH(0), true);
+  SPI_SEND(priv->spi, W25Q256_CMD_RDP);
+  SPI_SELECT(priv->spi, SPIDEV_FLASH(0), false);
+  nxsched_usleep(20);
   ret = w25q256_read_jedec(priv, &jedec);
   w25q256_unlock(priv);
 
@@ -717,6 +725,78 @@ w25q256_initialize(FAR struct spi_dev_s *spi)
 
   return &priv->mtd;
 }
+
+#ifdef CONFIG_FS_LITTLEFS
+/****************************************************************************
+ * Name: w25q256_partition_erased
+ *
+ * Check every byte of the filesystem partition before automatically
+ * formatting it.  A damaged superblock is not evidence of blank flash.
+ * The reserved LEGO area is outside the supplied partition.
+ ****************************************************************************/
+
+static int w25q256_partition_erased(FAR struct mtd_dev_s *partition)
+{
+  uint8_t buffer[W25Q256_PAGE_SIZE];
+  off_t offset;
+  size_t i;
+  ssize_t ret;
+
+  for (offset = 0;
+       offset < (off_t)(W25Q256_CHIP_SIZE - W25Q256_RESERVED_BYTES);
+       offset += sizeof(buffer))
+    {
+      ret = MTD_READ(partition, offset, sizeof(buffer), buffer);
+      if (ret < 0)
+        {
+          return (int)ret;
+        }
+
+      if (ret != (ssize_t)sizeof(buffer))
+        {
+          return -EIO;
+        }
+
+      for (i = 0; i < sizeof(buffer); i++)
+        {
+          if (buffer[i] != W25Q256_ERASED_STATE)
+            {
+              return 0;
+            }
+        }
+    }
+
+  return 1;
+}
+
+static int w25q256_mount(FAR struct mtd_dev_s *partition)
+{
+  int ret;
+  int erased;
+
+  ret = nx_mount(W25Q256_MTDBLOCK_PATH, W25Q256_MOUNT_POINT,
+                 W25Q256_FS_TYPE, 0, NULL);
+  if (ret != -EFAULT && ret != -EINVAL)
+    {
+      return ret;
+    }
+
+  erased = w25q256_partition_erased(partition);
+  if (erased < 0)
+    {
+      return erased;
+    }
+
+  if (!erased)
+    {
+      return ret;
+    }
+
+  syslog(LOG_INFO, "W25Q256: erased filesystem partition, formatting...\n");
+  return nx_mount(W25Q256_MTDBLOCK_PATH, W25Q256_MOUNT_POINT,
+                  W25Q256_FS_TYPE, 0, "forceformat");
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -761,7 +841,6 @@ int stm32_w25q256_initialize(void)
   FAR struct spi_dev_s *spi;
   FAR struct mtd_dev_s *mtd_full = NULL;
   FAR struct mtd_dev_s *mtd_part = NULL;
-  bool registered = false;
   int ret;
 
   /* /CS = PB12, idle HIGH */
@@ -808,36 +887,24 @@ int stm32_w25q256_initialize(void)
       goto errout_free_full;
     }
 
-  registered = true;
-
 #ifdef CONFIG_FS_LITTLEFS
-  /* Try to mount.  NuttX's "autoformat" only triggers on -EFAULT (CORRUPT),
-   * but a freshly erased chip with no superblock at all returns -EINVAL
-   * (LFS_ERR_INVAL from lfs_rawmount when the directory scan completes
-   * without finding any superblock — see littlefs/lfs.c:4259).  Treat both
-   * as "absent or unrecognized FS" and format on first boot.  Any other
-   * error (notably -EIO from SPI) propagates without touching the chip.
+  /* Automatic formatting is allowed only for a wholly erased partition.
+   * Preserve an unreadable filesystem for inspection and explicit recovery.
    */
 
-  ret = nx_mount(W25Q256_MTDBLOCK_PATH, W25Q256_MOUNT_POINT,
-                 W25Q256_FS_TYPE, 0, NULL);
-  if (ret == -EFAULT || ret == -EINVAL)
-    {
-      syslog(LOG_INFO,
-             "W25Q256: no LittleFS detected (mount=%d), formatting...\n",
-             ret);
-      ret = nx_mount(W25Q256_MTDBLOCK_PATH, W25Q256_MOUNT_POINT,
-                     W25Q256_FS_TYPE, 0, "forceformat");
-    }
-
+  ret = w25q256_mount(mtd_part);
   if (ret < 0)
     {
       syslog(LOG_ERR,
-             "W25Q256: LittleFS mount %s failed: %d (use "
-             "'mount -t littlefs -o autoformat %s %s' to recover)\n",
+             "W25Q256: LittleFS mount %s failed: %d; flash preserved. "
+             "Explicit destructive recovery: mount -t littlefs "
+             "-o forceformat %s %s\n",
              W25Q256_MOUNT_POINT, ret,
              W25Q256_MTDBLOCK_PATH, W25Q256_MOUNT_POINT);
-      goto errout_unregister;
+
+      /* Keep the partition registered so recovery remains possible. */
+
+      return ret;
     }
 
   syslog(LOG_INFO, "W25Q256: LittleFS mounted at %s\n",
@@ -845,12 +912,6 @@ int stm32_w25q256_initialize(void)
 #endif
 
   return OK;
-
-errout_unregister:
-  if (registered)
-    {
-      unregister_mtddriver(W25Q256_MTDBLOCK_PATH);
-    }
 
 errout_free_full:
   /* mtd_full is the first field of our struct w25q256_dev_s, so freeing
