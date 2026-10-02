@@ -83,6 +83,47 @@ class RomfsTests(unittest.TestCase):
             self.assertEqual(entries['/middle/link'],(3,False,b'script'))
             self.assertEqual(len(entries),16)
 
+    def test_boot_root_traversal_and_disconnected_root_mutation(self):
+        # NuttX starts root enumeration at the first file header. Opening the
+        # init script must work from that sibling chain as well as spec-info.
+        def read_script(image):
+            root = (image.index(0, 16) + 16) & ~15
+            start = root
+            for component in ('init.d', 'rcS'):
+                seen = set()
+                while start:
+                    self.assertNotIn(start, seen)
+                    seen.add(start)
+                    following, special, size, unused = struct.unpack_from('>IIII', image, start)
+                    end = image.index(0, start + 16)
+                    name = image[start + 16:end].decode()
+                    if name == component:
+                        if component == 'rcS':
+                            body = (end + 16) & ~15
+                            return image[body:body + size]
+                        start = special
+                        break
+                    start = following & ~15
+                else:
+                    raise FileNotFoundError(component)
+            raise AssertionError('script not reached')
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root/'init.d').mkdir()
+            script = b'hubprogram serve\n'
+            (root/'init.d/rcS').write_bytes(script)
+            image = make_image(root)
+            self.assertEqual(read_script(image), script)
+            self.assertEqual(parse_image(image)['/init.d/rcS'][2], script)
+            mutant = bytearray(image)
+            offset = (mutant.index(0, 16) + 16) & ~15
+            following = struct.unpack_from('>I', mutant, offset)[0]
+            struct.pack_into('>I', mutant, offset, following & 15)
+            # Remove the root's sibling link: this was the mounted-but-empty
+            # root regression. Lookup must detect it before firmware packaging.
+            with self.assertRaises(FileNotFoundError):
+                read_script(mutant)
+
     def test_unsupported_input_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             os.mkfifo(Path(temp)/'fifo')
