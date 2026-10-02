@@ -194,3 +194,21 @@ The exported `g_bw_program_storage_abi` value 1 advertises the fixed-slot
 SAVE/LOAD contract. Consumers must verify this value in the running firmware;
 older images without the symbol do not advertise storage support. This does
 not change the version-1 debug transport or its two-motor snapshot layout.
+
+Fresh virtual flash can be initialized with
+`python3 tools/make_simulation_littlefs_seed.py NEW_OUTPUT_FILE`. The tool
+requires the reviewed retained LittleFS sources and the matching configured
+simulation tree. It compiles a small host formatter in `TMPDIR`, formats via
+LittleFS v2.5.1, and verifies a read-only mount and empty root before creating
+an output file. Existing files are never overwritten. The seed is exactly
+8192 bytes: the first two 4096-byte superblocks of the mounted partition.
+Load it at chip offset `0x100000`, preserving the reserved first MiB; the
+partition has 7936 erase blocks within the 32 MiB W25Q256. The driver reports
+256-byte MTD pages, and the configured LittleFS read/program/cache factor of
+four gives 1024-byte operations. The remaining virtual flash must initially
+read as `0xff`; Renode's `GenericSpiFlash` sets its `MappedMemory.ResetByte`
+to that erased value. Do not apply an empty seed to an existing flash image.
+This fresh-image initialization leaves firmware mount failure and nonblank
+flash preservation unchanged. Full blank-chip scanning remains a separate
+boot qualification; the seed avoids that 31 MiB scan during routine fresh
+virtual boots.

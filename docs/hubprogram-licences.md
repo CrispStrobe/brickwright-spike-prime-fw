@@ -30,3 +30,14 @@ notice files alongside the source-built kernel and userspace images.
 
 Original LEGO firmware is neither a dependency of this runner nor a packaged
 asset. Optional local-image testing is separate from this licence inventory.
+
+The empty simulation-flash generator in `tools/make_simulation_littlefs_seed.py`
+and `tools/format_simulation_littlefs.c` is authored BSD-3-Clause, copyright
+2026 Brickwright contributors. It compiles the already reviewed, NuttX-patched
+LittleFS v2.5.1 `lfs.c` and `lfs_util.c` through their public API, without
+changing those sources. LittleFS retains BSD-3-Clause, copyright 2022 the
+littlefs authors and 2017 Arm Limited. Preserve
+`nuttx/fs/littlefs/littlefs/LICENSE.md` alongside packaged firmware and any
+redistributed formatter binary; its exact hash is in the simulation notice
+inventory. The generated empty filesystem contains filesystem metadata,
+not an imported firmware image. This host tool adds no firmware dependencies.
