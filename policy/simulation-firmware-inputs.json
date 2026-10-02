@@ -2,7 +2,7 @@
   "schema": 1,
   "profile": "simulation",
   "scope": "Reviewed conservative compiler input closure plus the GNU linker-selected archive members for one ARM protected build. Includes extra unlinked interpreter/library inputs; not an exact linked-line count, hardware approval or history/clean-room claim.",
-  "source_reference_commit": "3dbc7ed510f63585a8384a373f678712fa61ace4",
+  "source_reference_commit": "f9645a6",
   "external_components": {
     "nuttx": "a67efb31cf4f236e456882589b91862f04594528",
     "nuttx_apps": "55f0bc216565ccab8dee600a88f4485c7693bf8b",
@@ -826,7 +826,7 @@
     },
     {
       "path": "apps/hubprogram/program.c",
-      "sha256": "c27ee223869cf4f1307eb23766ca80f6f13c53bbd9cb250f861e1d133131dbc5",
+      "sha256": "696c8637bb5aa80a77635bbc9898ce531cdf97b85be234b328862a5b3135c1cc",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -848,7 +848,7 @@
     },
     {
       "path": "apps/hubprogram/service.c",
-      "sha256": "582a30546011c5a044b5e5ebdbc9db3625c11a4f1bfdcdd6509e531fa05d8c4c",
+      "sha256": "bf0cc6e4d1d1df55559a0ec0943a73d337b69131d2d7cd180f35d306caa357f0",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -869,8 +869,30 @@
       "basis": "Explicit per-file SPDX; select the permitted OR branch."
     },
     {
+      "path": "apps/hubprogram/storage.c",
+      "spdx": [
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause"
+      ],
+      "basis": "New Brickwright storage component; explicit BSD-3-Clause notice and apps/hubprogram/LICENSE.",
+      "sha256": "0e9b16ed4e258c3b4f4173722ae7ef1be5561a11c8045f10ab37e6ac0cc108d1"
+    },
+    {
+      "path": "apps/hubprogram/storage.h",
+      "spdx": [
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause"
+      ],
+      "basis": "New Brickwright storage component; explicit BSD-3-Clause notice and apps/hubprogram/LICENSE.",
+      "sha256": "0704b4d0ee260324ac3b3489dc7a80be383c9a5f8cee02ac03018eae8c9f36c8"
+    },
+    {
       "path": "apps/hubprogram/upload.c",
-      "sha256": "5ba5dfc4a0bc02d59c2643bb157f311d4cff815d1e8d997660ea9f2faddcc69f",
+      "sha256": "9e0811ecf32a9696f0231ce37533c4616be899e92e57321030e79b8fe74d617a",
       "spdx": [
         "BSD-3-Clause"
       ],
