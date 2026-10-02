@@ -56,6 +56,7 @@ def main():
 #define CONFIG_NFILE_DESCRIPTORS_PER_BLOCK 8
 #define CONFIG_TASK_NAME_SIZE 31
 #define W25Q256_PAGE_SIZE 256u
+#define W25Q256_SECTOR_SIZE 4096u
 #define W25Q256_CHIP_SIZE (32u * 1024u * 1024u)
 #define W25Q256_RESERVED_BYTES (1u * 1024u * 1024u)
 #define W25Q256_ERASED_STATE 0xff
@@ -73,8 +74,17 @@ static void fdlist_dump(struct fdlist *f) { (void)f; dumps++; }
 struct task_group_s { int dummy; };
 static struct task_group_s g_kthread_group;
 struct tcb_s { struct task_group_s *group; char name[32]; };
-static int frees;
-static void kmm_free(void *p) { assert(p != &g_kthread_group); frees++; }
+static int frees, allocation_failure;
+static unsigned allocations, scan_frees;
+static void *scan_buffer;
+static void *kmm_malloc(size_t n) {
+  assert(n==W25Q256_SECTOR_SIZE && !scan_buffer);allocations++;
+  return allocation_failure ? NULL : (scan_buffer=malloc(n));
+}
+static void kmm_free(void *p) {
+  if(p==scan_buffer){assert(p);scan_frees++;free(p);scan_buffer=NULL;}
+  else {assert(p!=&g_kthread_group);frees++;}
+}
 #define strlcpy test_strlcpy
 static size_t test_strlcpy(char *d,const char *s,size_t n) {
   size_t len=strlen(s); if(n){size_t copy=len<n?len:n-1;memcpy(d,s,copy);d[copy]=0;}return len;
@@ -85,6 +95,7 @@ static int mount_error,format_error,read_error,short_read;
 static off_t dirty_at;
 static ssize_t mock_read(struct mtd_dev_s *m,off_t offset,size_t n,uint8_t *b) {
   (void)m; assert(offset>=0);assert(offset+(off_t)n <= W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES);
+  assert(n==W25Q256_SECTOR_SIZE && offset==(off_t)(reads*W25Q256_SECTOR_SIZE));
   reads++; if(read_error)return read_error; if(short_read)return n-1;
   memset(b,255,n);if(dirty_at>=offset && dirty_at<offset+(off_t)n)b[dirty_at-offset]=0;return n;
 }
@@ -92,7 +103,7 @@ static ssize_t mock_read(struct mtd_dev_s *m,off_t offset,size_t n,uint8_t *b) {
 static int nx_mount(const char *source,const char *target,const char *fs,unsigned long flags,const void *data) {
   assert(strcmp(source,W25Q256_MTDBLOCK_PATH)==0);
   assert(strcmp(target,W25Q256_MOUNT_POINT)==0);assert(strcmp(fs,"littlefs")==0);assert(flags==0);
-  mount_calls++;if(data){assert(strcmp(data,"forceformat")==0);formats++;return format_error;}return mount_error;
+  assert(!scan_buffer);mount_calls++;if(data){assert(strcmp(data,"forceformat")==0);formats++;return format_error;}return mount_error;
 }
 static char events[16];static unsigned event_count;
 struct w25q256_dev_s {void *spi;};
@@ -113,6 +124,7 @@ static int w25q256_read_jedec(struct w25q256_dev_s *p,uint32_t *id){(void)p;*id=
     source += function(board, 'static int w25q256_mount(') + '\n'
     source += r'''
 static void setup(int error,off_t dirty) {
+  assert(!scan_buffer);allocations=scan_frees=0;allocation_failure=0;
   reads=mount_calls=formats=0;mount_error=error;format_error=read_error=short_read=0;dirty_at=dirty;
 }
 int main(void) {
@@ -134,15 +146,18 @@ int main(void) {
   setup(0,-1);assert(w25q256_mount(&part)==0);assert(reads==0 && formats==0 && mount_calls==1);
   setup(-EIO,-1);assert(w25q256_mount(&part)==-EIO);assert(reads==0 && formats==0);
   setup(-EINVAL,-1);assert(w25q256_mount(&part)==0);assert(formats==1 && mount_calls==2);
-  assert(reads==(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_PAGE_SIZE);
+  assert(reads==(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_SECTOR_SIZE);assert(allocations==1&&scan_frees==1&&!scan_buffer);
   setup(-EFAULT,-1);assert(w25q256_mount(&part)==0);assert(formats==1);
-  setup(-EFAULT,0);assert(w25q256_mount(&part)==-EFAULT);assert(reads==1 && formats==0);
+  setup(-EFAULT,-1);allocation_failure=1;assert(w25q256_mount(&part)==-ENOMEM);
+  assert(!reads&&!formats&&allocations==1&&!scan_frees&&!scan_buffer);
+  setup(-EFAULT,0);assert(w25q256_mount(&part)==-EFAULT);assert(reads==1 && formats==0 && scan_frees==1 && !scan_buffer);
   setup(-EINVAL,W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES-1);
   assert(w25q256_mount(&part)==-EINVAL);assert(formats==0);
-  assert(reads==(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_PAGE_SIZE);
-  setup(-EINVAL,-1);read_error=-EIO;assert(w25q256_mount(&part)==-EIO);assert(formats==0);
-  setup(-EFAULT,-1);short_read=1;assert(w25q256_mount(&part)==-EIO);assert(formats==0);
+  assert(reads==(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_SECTOR_SIZE);assert(allocations==1&&scan_frees==1&&!scan_buffer);
+  setup(-EINVAL,-1);read_error=-EIO;assert(w25q256_mount(&part)==-EIO);assert(formats==0&&scan_frees==1&&!scan_buffer);
+  setup(-EFAULT,-1);short_read=1;assert(w25q256_mount(&part)==-EIO);assert(formats==0&&scan_frees==1&&!scan_buffer);
   setup(-EINVAL,-1);format_error=-ENOSPC;assert(w25q256_mount(&part)==-ENOSPC);assert(formats==1);
+  printf("flash scan: full 31 MiB in %u reads, previously %u; allocation/error/edge frees verified\n",(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_SECTOR_SIZE,(W25Q256_CHIP_SIZE-W25Q256_RESERVED_BYTES)/W25Q256_PAGE_SIZE);
   puts("NuttX hardening fault-injection and flash recovery tests passed");return 0;
 }
 '''

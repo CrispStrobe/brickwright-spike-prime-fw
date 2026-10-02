@@ -77,6 +77,7 @@ static int flash_unlink(const char *p) {return posix_result(lfs_remove(&fs,p));}
 /* Extracted board policy, with real lfs_mount/lfs_format behind nx_mount. */
 #define FAR
 #define W25Q256_PAGE_SIZE 256u
+#define W25Q256_SECTOR_SIZE 4096u
 #define W25Q256_CHIP_SIZE (32u*1024u*1024u)
 #define W25Q256_RESERVED_BYTES (1024u*1024u)
 #define W25Q256_ERASED_STATE 255
@@ -86,13 +87,25 @@ static int flash_unlink(const char *p) {return posix_result(lfs_remove(&fs,p));}
 #define LOG_INFO 0
 #define syslog(...) ((void)0)
 struct mtd_dev_s {int unused;};
+static unsigned partition_reads,scan_allocations,scan_frees;
+static int scan_allocation_failure,scan_read_error,scan_short_read;
+static void *scan_buffer;
+static void *kmm_malloc(size_t n) {
+  assert(n==4096&&!scan_buffer);scan_allocations++;
+  return scan_allocation_failure?NULL:(scan_buffer=malloc(n));
+}
+static void kmm_free(void *p) {assert(p&&p==scan_buffer);scan_frees++;free(p);scan_buffer=NULL;}
 static ssize_t partition_read(struct mtd_dev_s *p,off_t off,size_t n,uint8_t *out) {
-  (void)p;assert(off>=0&&(size_t)off+n<=FLASH_BYTES);memcpy(out,flash+off,n);return (ssize_t)n;
+  (void)p;assert(off>=0&&(size_t)off+n<=FLASH_BYTES&&n==4096);
+  assert(off==(off_t)(partition_reads*4096));partition_reads++;
+  if(scan_read_error)return scan_read_error;
+  if(scan_short_read)return (ssize_t)n-1;
+  memcpy(out,flash+off,n);return (ssize_t)n;
 }
 #define MTD_READ partition_read
 static int nx_mount(const char *a,const char *b,const char *type,unsigned long flags,const void *data) {
   (void)a;(void)b;(void)type;(void)flags;
-  if(data) {assert(!strcmp(data,"forceformat"));formats++;assert(lfs_format(&fs,&config)==0);}
+  assert(!scan_buffer);if(data) {assert(!strcmp(data,"forceformat"));formats++;assert(lfs_format(&fs,&config)==0);}
   memset(&fs,0,sizeof(fs));int rc=lfs_mount(&fs,&config);
   /* Match the NuttX VFS mapping for damaged metadata. */
   return rc==LFS_ERR_CORRUPT?-EFAULT:rc;
@@ -144,15 +157,25 @@ int main(void) {
   scenario(0,0,64);scenario(0,1,64);scenario(1,0,64);scenario(1,1,64);
   scenario(2,0,0);scenario(2,1,0);
   /* Truly erased partitions may format, corrupt/nonblank partitions may not. */
-  memset(flash,255,FLASH_BYTES);formats=0;assert(w25q256_mount(&part)==0&&formats==1);assert(lfs_unmount(&fs)==0);
+  memset(flash,255,FLASH_BYTES);formats=0;assert(w25q256_mount(&part)==0&&formats==1);
+  assert(partition_reads==FLASH_BYTES/4096&&scan_allocations==1&&scan_frees==1&&!scan_buffer);assert(lfs_unmount(&fs)==0);
   /* Destroy both metadata-pair blocks; assert the actual board does not write. */
   memset(flash,0,8192);damaged=malloc(FLASH_BYTES);assert(damaged);memcpy(damaged,flash,FLASH_BYTES);
-  formats=0;assert(w25q256_mount(&part)==-EFAULT);assert(!formats&&!memcmp(damaged,flash,FLASH_BYTES));
+  formats=0;partition_reads=0;assert(w25q256_mount(&part)==-EFAULT);assert(!formats&&!memcmp(damaged,flash,FLASH_BYTES));
   /* Dirty byte at either end defeats the wholly-erased criterion. */
   for(block=0;block<2;block++) {
-    memset(flash,255,FLASH_BYTES);flash[block?FLASH_BYTES-1:0]=0;memcpy(damaged,flash,FLASH_BYTES);
+    partition_reads=0;memset(flash,255,FLASH_BYTES);flash[block?FLASH_BYTES-1:0]=0;memcpy(damaged,flash,FLASH_BYTES);
     assert(w25q256_mount(&part)==-EFAULT);assert(!formats&&!memcmp(damaged,flash,FLASH_BYTES));
   }
+  /* Allocation and transport failure must neither format nor alter flash. */
+  memset(flash,255,FLASH_BYTES);memcpy(damaged,flash,FLASH_BYTES);
+  partition_reads=0;scan_allocation_failure=1;
+  assert(w25q256_mount(&part)==-ENOMEM&&!partition_reads&&!scan_buffer&&!formats);
+  scan_allocation_failure=0;scan_read_error=-EIO;
+  assert(w25q256_mount(&part)==-EIO&&!scan_buffer&&!formats);
+  partition_reads=0;scan_read_error=0;scan_short_read=1;
+  assert(w25q256_mount(&part)==-EIO&&!scan_buffer&&!formats);
+  assert(!memcmp(damaged,flash,FLASH_BYTES)&&scan_allocations==scan_frees+1);
   free(damaged);assert(munmap(flash,FLASH_BYTES)==0);
   printf("%u real LittleFS crash/restart cases; corrupted metadata/nonblank flash preserved byte-for-byte\n",crash_cases);
   return 0;

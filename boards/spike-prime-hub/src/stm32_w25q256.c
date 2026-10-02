@@ -737,36 +737,52 @@ w25q256_initialize(FAR struct spi_dev_s *spi)
 
 static int w25q256_partition_erased(FAR struct mtd_dev_s *partition)
 {
-  uint8_t buffer[W25Q256_PAGE_SIZE];
+  FAR uint8_t *buffer;
   off_t offset;
   size_t i;
   ssize_t ret;
+  int erased = 1;
+
+  /* Batch the scan without placing a sector-sized buffer on the boot
+   * task's stack.  Every byte is still checked before formatting.
+   */
+
+  buffer = kmm_malloc(W25Q256_SECTOR_SIZE);
+  if (buffer == NULL)
+    {
+      return -ENOMEM;
+    }
 
   for (offset = 0;
        offset < (off_t)(W25Q256_CHIP_SIZE - W25Q256_RESERVED_BYTES);
-       offset += sizeof(buffer))
+       offset += W25Q256_SECTOR_SIZE)
     {
-      ret = MTD_READ(partition, offset, sizeof(buffer), buffer);
+      ret = MTD_READ(partition, offset, W25Q256_SECTOR_SIZE, buffer);
       if (ret < 0)
         {
-          return (int)ret;
+          erased = (int)ret;
+          goto out;
         }
 
-      if (ret != (ssize_t)sizeof(buffer))
+      if (ret != (ssize_t)W25Q256_SECTOR_SIZE)
         {
-          return -EIO;
+          erased = -EIO;
+          goto out;
         }
 
-      for (i = 0; i < sizeof(buffer); i++)
+      for (i = 0; i < W25Q256_SECTOR_SIZE; i++)
         {
           if (buffer[i] != W25Q256_ERASED_STATE)
             {
-              return 0;
+              erased = 0;
+              goto out;
             }
         }
     }
 
-  return 1;
+out:
+  kmm_free(buffer);
+  return erased;
 }
 
 static int w25q256_mount(FAR struct mtd_dev_s *partition)
