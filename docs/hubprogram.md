@@ -212,3 +212,11 @@ This fresh-image initialization leaves firmware mount failure and nonblank
 flash preservation unchanged. Full blank-chip scanning remains a separate
 boot qualification; the seed avoids that 31 MiB scan during routine fresh
 virtual boots.
+
+The audited simulation policy declares `capabilities.motorPorts: 6` for this
+qualified own build. The package generator may use it to offer an optional
+six-motor sandbox profile; storage ABI alone is not a topology declaration.
+The actual A–F sequence passed 207 observations with speed, relative position,
+concurrent activity, native/Python cancellation and a run beyond 12 seconds.
+The largest position error was 1.73 degrees against the existing 3-degree
+bound. These are simulated observations, not physical calibration evidence.
