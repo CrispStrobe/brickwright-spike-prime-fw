@@ -354,15 +354,17 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 | 2026-10-03 | C8.5 (guest fusion snapshots and source timing) | Complete within recorded synthetic scope | Candidate `992c390f4f46f3799b840465ababa61fea2a3311` passes source/docs CI `37139593470` and both clean firmware/runtime profiles in matrix `37139588608`. Explicit Classic START/STOP/STATUS/GET reaches the actual credited MIT producer; four snapshots prove physical body units, source-time heading integration, same-step matrix, nonconsuming reads, live 52 Hz/4 g/500 dps conversion, guest-time expiration beyond 300 ms, final powerdown and fresh reopening. Vectors and matrix/face conventions remain explicit; sparse fixtures report ready=false. Host regressions prove nominal first/config/recovery intervals, invalid ODR/FSR, stale/gap rejection and ordering across configuration changes. Zero-gravity and older-config recovery tests fail on the earlier candidate and pass after success-only timing references and accepted timestamp retention. Stop checks use a 20 ms idle poll; ordinary peer request budgets and 120 s overall fusion bound remain unchanged, while the new expiration test allows measured slow guest-time progress. Classic lines cap at 256 bytes before TX admission; BLE diagnostics remain unavailable. Both profiles enforce 3,247 current compiler inputs, selected members, notices, resource bounds and TI exclusion. Original notices, inherited source hashes and historical binary evidence remain intact. Fusion remains off at boot; stationary calibration readiness, full modern wire mappings and physical accuracy/timing remain separate. |
 
+| 2026-10-03 | C8.5 (stationary fusion readiness) | Complete within recorded synthetic scope | Candidate `170f2604cf1f62106562c6be51dfad8409b9aac0` passes source/docs CI `37143026283` and both clean firmware/runtime profiles in matrix `37142992259`. A separately armed, bounded 104 Hz guest-time fixture sends 261 paired samples through the actual driver/uORB/producer with zero skipped ticks. Classic snapshots report not-ready with the expected fixed gyro rates at sequences 1/101, then ready with residual rates below 0.001 deg/s at 261. Nonconsuming reads, final sensor powerdown and fresh not-ready reopening with unsaved bias cleared pass. Four actual IMU model tests verify cadence, unread-pair admission, reset and ODR/powerdown stops; 17 parser/lifecycle tests cover wrong readiness, retained bias, skipped ticks, timeout and cancellation cleanup. The real producer host harness separately proves first readiness at sample 138 at 13 Hz, same-sample correction, initial bias export after the third window at 164, ten-minute expiry and reopening. No production firmware source, startup behavior, inherited attribution or compiler-input inventory changes. This establishes digital stationary readiness and live bias behavior, not durable calibration saving, physical accuracy or modern wire mappings. Fusion remains off at boot. |
+
 ## Current next action
 
-Qualify stationary calibration readiness through the actual guest before enabling
-fusion at boot. The explicitly controlled producer now has recorded synthetic
-qualification for physical units, source timing, live ODR/FSR changes, coherent
-snapshots, freshness and stop/reopen; sparse fixtures do not establish readiness.
-Define full modern protocol orientation mappings, wire units and up-side conversion
-rules before emitting modern IMU records. The 21-byte record has no temperature
-field; any temperature transport needs a separate contract. Encoder-completed
-degree moves, stall/capability policy and cold-restart bond reuse also need
-separate evidence. Physical C5/C6.4 validation remains open and cannot be closed
-by simulation.
+Qualify six physical poses and configured base-axis transformations through the
+actual guest, then define modern IMU wire units, orientation and yaw-face/reset
+mappings from an explicit contract and independent evidence. Stationary fusion
+readiness and live gyro bias now have configured-rate synthetic guest evidence;
+durable calibration saving and physical calibration remain separate. Keep fusion
+explicitly controlled while integrating the modern stream. The 21-byte record
+has no temperature field; any temperature transport needs a separate contract.
+Encoder-completed degree moves, stall/capability policy and cold-restart bond
+reuse also need separate evidence. Physical C5/C6.4 validation remains open and
+cannot be closed by simulation.

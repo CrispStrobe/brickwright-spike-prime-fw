@@ -4,16 +4,21 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Peripherals;
 using Antmicro.Renode.Peripherals.I2C;
 using Antmicro.Renode.Peripherals.SPI;
+using Antmicro.Renode.Peripherals.Timers;
 
 namespace Antmicro.Renode.Peripherals.SPIKEPrime
 {
     // Synthetic paired acquisition subset. Register/routing semantics follow ST
-    // AN5130 sections 4.2-4.4; no FIFO, physical motion or autonomous ODR clock.
+    // AN5130 sections 4.2-4.4; no FIFO or physical motion. Periodic synthetic
+    // feeding is explicitly armed, bounded and disabled by default.
     public sealed class LSM6DS3TRC : II2CPeripheral
     {
-        public LSM6DS3TRC()
+        public LSM6DS3TRC(IMachine machine)
         {
             INT1 = new GPIO();
+            fixtureTimer = new LimitTimer(machine.ClockSource, 1, this, "fixture",
+                limit: 1, enabled: false, eventEnabled: true);
+            fixtureTimer.LimitReached += FixtureTick;
             Reset();
         }
 
@@ -62,10 +67,77 @@ namespace Antmicro.Renode.Peripherals.SPIKEPrime
             }
         }
 
+        // Attempt exactly one paired synthetic sample per configured guest-time
+        // ODR period. Unread pairs are skipped rather than overwritten/retried.
+        // The tick bound limits both successful and skipped attempts. Mismatched
+        // accel/gyro rates are outside this paired fixture and cannot be armed.
+        public bool StartFixtureFeed(int gx, int gy, int gz, int ax, int ay, int az, int ticks)
+        {
+            var values = new[] { gx, gy, gz, ax, ay, az };
+            foreach(var value in values)
+                if(value < short.MinValue || value > short.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Raw sample must fit signed 16 bits");
+            if(ticks < 1 || ticks > 10000)
+                throw new ArgumentOutOfRangeException(nameof(ticks), "Fixture tick count must be 1..10000");
+            lock(sync)
+            {
+                if(fixtureActive || !PairEnabled ||
+                   (registers[Ctrl1XL] >> 4) != (registers[Ctrl2G] >> 4)) return false;
+                fixtureValues = values;
+                fixtureFrequency = OdrHz[registers[Ctrl1XL] >> 4];
+                fixtureAttempts = fixtureAccepted = fixtureSkipped = 0;
+                fixtureRemaining = ticks;
+                fixtureTimer.Frequency = (ulong)fixtureFrequency;
+                fixtureTimer.ResetValue();
+                fixtureActive = true;
+                fixtureTimer.Enabled = true;
+                return true;
+            }
+        }
+
+        public void StopFixtureFeed()
+        {
+            lock(sync)
+            {
+                fixtureActive = false;
+                fixtureTimer.Enabled = false;
+            }
+        }
+
+        // Atomic copied diagnostics: active, Hz, attempted, accepted, skipped,
+        // remaining. Stopping retains counters and any published unread pair.
+        public long[] GetFixtureFeedState()
+        {
+            lock(sync)
+            {
+                return new long[] { fixtureActive ? 1 : 0, fixtureFrequency,
+                    fixtureAttempts, fixtureAccepted, fixtureSkipped, fixtureRemaining };
+            }
+        }
+
+        private void FixtureTick()
+        {
+            lock(sync)
+            {
+                if(!fixtureActive) return;
+                fixtureAttempts++;
+                fixtureRemaining--;
+                if(InjectSample(fixtureValues[0], fixtureValues[1], fixtureValues[2],
+                                fixtureValues[3], fixtureValues[4], fixtureValues[5]))
+                    fixtureAccepted++;
+                else fixtureSkipped++;
+                if(fixtureRemaining == 0) StopFixtureFeed();
+            }
+        }
+
         public void Reset()
         {
             lock(sync)
             {
+                StopFixtureFeed();
+                fixtureFrequency = fixtureAttempts = fixtureAccepted = fixtureSkipped = fixtureRemaining = 0;
+                fixtureValues = null;
+                fixtureTimer.ResetValue();
                 Array.Clear(registers, 0, registers.Length);
                 registers[WhoAmI] = 0x6a;
                 registers[Ctrl3C] = 4; // IF_INC reset value.
@@ -90,6 +162,9 @@ namespace Antmicro.Renode.Peripherals.SPIKEPrime
                         Reset();
                         return;
                     }
+                    if((address == Ctrl1XL || address == Ctrl2G) &&
+                       (registers[address] >> 4) != (data[i] >> 4))
+                        StopFixtureFeed();
                     if(address != WhoAmI && address != Status &&
                        !(address >= OutGyro && address < OutGyro + 12))
                         registers[address] = data[i];
@@ -156,6 +231,11 @@ namespace Antmicro.Renode.Peripherals.SPIKEPrime
         private const byte Ctrl3C = 0x12;
         private const byte Status = 0x1e;
         private const byte OutGyro = 0x22;
+        private static readonly int[] OdrHz = { 0, 13, 26, 52, 104, 208, 416, 833, 1660, 3330, 6660 };
+        private readonly LimitTimer fixtureTimer;
+        private bool fixtureActive;
+        private int[] fixtureValues;
+        private int fixtureFrequency, fixtureAttempts, fixtureAccepted, fixtureSkipped, fixtureRemaining;
         private readonly object sync = new object();
         private readonly byte[] registers = new byte[256];
         private byte pointer;

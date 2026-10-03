@@ -280,4 +280,125 @@ class FusionLifecycleTests(unittest.IsolatedAsyncioTestCase):
 
 
 
+class StationaryLifecycleTests(unittest.IsolatedAsyncioTestCase):
+    async def exercise(self, *, wrong_ready=False, unlearned_bias=False,
+                       skipped_feed=False, silent=False, cancel=False):
+        received = asyncio.Queue(); requests = []; actions = []
+        started = asyncio.Event()
+        state = {'on': False, 'sequence': 0, 'time': 1000000,
+                 'stamp': 0, 'feed': [0, 104, 0, 0, 0, 0], 'odr': 833}
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'renode.log'; log.write_text('')
+            class DLC:
+                def write(self, data):
+                    command = data.decode().strip(); requests.append(command)
+                    if command == 'FUSION START':
+                        state.update(on=True, sequence=0, stamp=0)
+                        reply = 'OK'
+                    elif command == 'FUSION STOP':
+                        state['on'] = False; reply = 'OK'
+                    elif command == 'FUSION STATUS':
+                        reply = 'FUSION STATUS 0 '+str(int(state['on']))+' 0'
+                    elif command == 'FUSION GET':
+                        if not state['on'] or not state['sequence']:
+                            reply = 'ERR errno=11'
+                        else:
+                            calibrated = state['sequence'] >= 229
+                            gyro = (0, 0, 0) if calibrated and not unlearned_bias else (.7, 1.05, 1.4)
+                            words = fusion_line(state['sequence'], state['stamp'], gyro=gyro).split()
+                            words[4] = str(int(calibrated and not wrong_ready))
+                            reply = ' '.join(words)
+                    elif command.startswith('SET '):
+                        _, field, value = command.split()
+                        if field == 'ODR': state['odr'] = int(value)
+                        reply = 'OK'
+                    else:
+                        raise AssertionError(command)
+                    # Deliberately fragment the response at an arbitrary boundary.
+                    encoded = (reply+'\n').encode()
+                    received.put_nowait(encoded[:7]); received.put_nowait(encoded[7:])
+            class Input:
+                def write(self, data):
+                    args = shlex.split(data.decode()); action, tag = args[1:3]
+                    actions.append(action)
+                    if action == 'inject':
+                        if not cancel: started.set()
+                        if silent and not cancel: return
+                        state['time'] += 10000
+                        state['sequence'] += 1; state['stamp'] = state['time']
+                        accepted = state['on']
+                    elif action == 'feed':
+                        ticks = int(args[-1])
+                        state['time'] += math.ceil(ticks * 1000000 / state['odr'])
+                        state['sequence'] += ticks; state['stamp'] = state['time']
+                        state['feed'] = [0, state['odr'], ticks,
+                                         ticks - int(skipped_feed), int(skipped_feed), 0]
+                        accepted = state['on']
+                        if cancel:
+                            state['feed'][0] = 1
+                            started.set()
+                            return
+                    elif action == 'feed_stop':
+                        state['feed'][0] = 0; accepted = None
+                    elif action == 'state': accepted = None
+                    else: raise AssertionError(action)
+                    # The feed admission receipt marks the beginning of its
+                    # configured guest-time interval; state marks completion.
+                    virtual_us = state['time']
+                    if action == 'feed':
+                        virtual_us -= math.ceil(ticks * 1000000 / state['odr'])
+                    receipt = {'accepted': accepted,
+                               'controls': [0x50, 0x58] if state['on'] else [0, 8],
+                               'status': 0, 'virtual_us': virtual_us,
+                               'feed': state['feed']}
+                    with log.open('a') as out:
+                        out.write('IMU_FIXTURE '+tag+' '+json.dumps(receipt)+'\n')
+                async def drain(self): pass
+            class Process:
+                returncode = None
+                stdin = Input()
+            result = {}
+            task = asyncio.create_task(probe.stationary_round_trip(
+                DLC(), received, Process(), result, renode_log=log,
+                timeout=.05 if silent else 3))
+            if cancel:
+                await started.wait(); task.cancel()
+                with self.assertRaises(asyncio.CancelledError): await task
+            elif silent:
+                with self.assertRaises(TimeoutError): await task
+            elif wrong_ready or unlearned_bias or skipped_feed:
+                with self.assertRaises(ValueError): await task
+            else: await task
+            self.assertFalse(state['on'], 'Stationary probe left producer enabled')
+            self.assertFalse(state['feed'][0], 'Stationary probe left feeder enabled')
+            self.assertEqual(actions[-1], 'feed_stop')
+            return result, requests, actions
+
+    async def test_configured_rate_ready_bias_and_reopen(self):
+        result, requests, actions = await self.exercise()
+        record = result['imu_stationary']
+        self.assertEqual(record['status'], 'PASS')
+        self.assertEqual([s['sequence'] for s in record['snapshots']], [1, 101, 261, 1])
+        self.assertEqual([s['ready'] for s in record['snapshots']], [False, False, True, False])
+        self.assertEqual(requests.count('FUSION START'), 2)
+        self.assertEqual(requests.count('FUSION STOP'), 2)
+        self.assertEqual(requests[-1], 'SET ODR 833')
+        self.assertEqual(actions.count('feed'), 2)
+
+    async def test_wrong_readiness_bias_and_skipped_feed_stop(self):
+        for kwargs in [{'wrong_ready': True}, {'unlearned_bias': True},
+                       {'skipped_feed': True}]:
+            with self.subTest(kwargs=kwargs):
+                result, requests, _ = await self.exercise(**kwargs)
+                self.assertTrue(result['imu_stationary']['status'].startswith('FAIL'))
+                self.assertEqual(requests[-1], 'FUSION STOP')
+
+    async def test_missing_receipt_and_cancellation_cleanup(self):
+        for cancel in [False, True]:
+            with self.subTest(cancel=cancel):
+                result, requests, _ = await self.exercise(silent=True, cancel=cancel)
+                self.assertTrue(result['imu_stationary']['status'].startswith('FAIL'))
+                self.assertEqual(requests[-1], 'FUSION STOP')
+
+
 if __name__=='__main__':unittest.main()

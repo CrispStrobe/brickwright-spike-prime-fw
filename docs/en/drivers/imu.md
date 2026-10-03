@@ -51,8 +51,12 @@ unread pair at a time and has no autonomous ODR sampling or physical pulse
 timing. The fusion peer probe additionally drives `FUSION START/STOP/GET`
 through Classic and checks physical units, source-time integration, live
 configuration, freshness and reopening. These synthetic checks do not qualify
-physical sensor accuracy or stationary calibration readiness. Startup still
-does not launch the fusion daemon. The full
+physical sensor accuracy. The separate `--classic --imu-readiness` test arms
+a bounded synthetic fixture at the configured 104 Hz guest-time rate. It
+checks not-ready snapshots before the baseline/window completes, then live
+readiness and removal of a fixed gyro bias, followed by stop/reopen resetting
+unsaved state. This is a digital driver/producer check, not physical calibration
+or a durable calibration save. Startup still does not launch the fusion daemon. The full
 modern IMU wire record requires separate orientation, unit and enum mappings.
 
 ## 2. Device Specifications
@@ -332,9 +336,16 @@ a warning and skips cal application until the FSRs match again.
 
 1. Compute a slow moving average of 125 samples as the baseline
 2. Compare each sample against gyro and accel thresholds
-3. When determined to be stationary for approximately 1 second continuously:
+3. After one configured ODR's worth of bounded samples (nominally one second):
    - Call the bias estimation callback
    - Measure the actual sample time
+
+The first completed window sets fusion readiness and updates the live bias in
+the same sample. Three completed windows make the initial gyro bias eligible
+for export; saving it remains explicit. Readiness expires ten minutes after
+the last stationary callback. The detector counts samples rather than enforcing
+a one-second elapsed-time minimum, so test fixtures must preserve sample
+cadence. Stop/reopen clears unsaved live bias and stationarity state.
 
 ## 10. Axis Sign Correction
 
@@ -342,12 +353,13 @@ Axis signs are corrected to match the Hub PCB mounting orientation:
 
 | Axis | Sign |
 |---|---|
-| X | -1 |
-| Y | +1 |
+| X | +1 |
+| Y | -1 |
 | Z | -1 |
 
-!!! note
-    Axis sign correction is not yet applied. Raw data is output as-is.
+The board driver applies these chip-to-body signs before uORB publication.
+BUNDLE contains those signed raw body counts; fusion additionally applies
+the configured ranges and calibration to report physical body units.
 
 ## 11. IMU Processing Library (apps/imu/)
 

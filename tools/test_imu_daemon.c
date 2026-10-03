@@ -46,7 +46,7 @@ static int fake_printf(const char *, ...);
 #undef printf
 
 enum scenario { STOP_PENDING, OPEN_FAIL, TASK_FAIL, INTERRUPTED, STOP_DRAIN,
-                POLL_FAULT, LIVE_TIMING };
+                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN };
 static enum scenario scenario;
 static int create_count;
 static int open_count;
@@ -75,6 +75,14 @@ static const float steps[] = {0, 1.0f / 833, .01f, 1.0f / 104, 0,
                              1.0f / 104, 0, 1.0f / 104, 0, 1.0f / 52, .01f};
 static float integrated_time;
 static unsigned valid_count;
+static float stationary_heading;
+
+/* All three compiled modules must observe the same synthetic monotonic clock,
+ * rather than measuring real wall time while samples are supplied instantly. */
+int clock_gettime(clockid_t clock_id, struct timespec *out)
+{
+  return fake_clock_gettime(clock_id, out);
+}
 
 static int fake_printf(const char *format, ...)
 {
@@ -125,7 +133,7 @@ static int fake_close(int fd)
 
 static int fake_clock_gettime(clockid_t clock_id, struct timespec *out)
 {
-  assert(clock_id == CLOCK_BOOTTIME);
+  assert(clock_id == CLOCK_BOOTTIME || clock_id == CLOCK_MONOTONIC);
   out->tv_sec = fake_now / 1000000;
   out->tv_nsec = (fake_now % 1000000) * 1000;
   return 0;
@@ -135,12 +143,14 @@ static ssize_t fake_read(int fd, void *out, size_t len)
 {
   assert(fd == 42 && len == sizeof(struct sensor_imu));
   read_count++;
-  if (scenario == LIVE_TIMING && !sample_pending)
+  bool streaming = scenario == LIVE_TIMING || scenario == STATIONARY_BIAS ||
+                   scenario == STATIONARY_REOPEN;
+  if (streaming && !sample_pending)
     {
       errno = EAGAIN;
       return -1;
     }
-  if (scenario != LIVE_TIMING && read_count > 1)
+  if (!streaming && read_count > 1)
     {
       assert(scenario != STOP_DRAIN);
       errno = EAGAIN;
@@ -162,6 +172,16 @@ static ssize_t fake_read(int fd, void *out, size_t len)
       fake_now = (uint64_t)sample.timestamp + 10;
       sample_pending = false;
     }
+  if (scenario == STATIONARY_BIAS || scenario == STATIONARY_REOPEN)
+    {
+      sample.timestamp = 1000000 + sample_index * 1000000 / 13;
+      sample.odr_idx = 1;
+      sample.gx = 20;
+      sample.gy = -30;
+      sample.gz = 40;
+      fake_now = (uint64_t)sample.timestamp + 10;
+      sample_pending = false;
+    }
   memcpy(out, &sample, sizeof(sample));
   if (scenario == STOP_DRAIN)
     {
@@ -175,6 +195,58 @@ static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
   assert(count == 1 && fds[0].fd == 42 && timeout == IMU_POLL_TIMEOUT);
   poll_count++;
   assert(scenario != STOP_PENDING);
+  if (scenario == STATIONARY_BIAS || scenario == STATIONARY_REOPEN)
+    {
+      if (poll_count > 1)
+        {
+          unsigned frames = sample_index + 1;
+          imu_fusion_snapshot_t snapshot;
+          imu_settings_t settings;
+          assert(imu_service_snapshot(&snapshot) == 0);
+          assert(snapshot.sequence == frames);
+          assert(imu_fusion_get_settings(&settings));
+          if (frames < 125 + 13)
+            {
+              assert(!snapshot.ready);
+              assert(!imu_stationary_is_stationary());
+              assert(fabsf(snapshot.gyro_dps.x - .7f) < .00001f);
+              assert(fabsf(snapshot.gyro_dps.y + 1.05f) < .00001f);
+              assert(fabsf(snapshot.gyro_dps.z - 1.4f) < .00001f);
+              stationary_heading = snapshot.heading_1d;
+            }
+          else
+            {
+              assert(snapshot.ready && imu_stationary_is_stationary());
+              uint64_t restore = fake_now;
+              fake_now += UINT64_C(600000000);
+              assert(!imu_fusion_is_ready());
+              fake_now = restore;
+              assert(imu_fusion_is_ready());
+              for (size_t i = 0; i < 3; i++)
+                assert(fabsf(snapshot.gyro_dps.values[i]) < .00001f);
+              assert(fabsf(snapshot.heading_1d - stationary_heading) < .00001f);
+              assert(fabsf(imu_stationary_get_sample_time() - 1.0f / 13) < .00001f);
+            }
+          bool saved_initial_bias = frames >= 125 + 3 * 13;
+          assert(!!(settings.flags & IMU_FLAG_GYRO_BIAS) == saved_initial_bias);
+          if (saved_initial_bias)
+            {
+              assert(fabsf(settings.angular_velocity_bias_start.x - .7f) < .00001f);
+              assert(fabsf(settings.angular_velocity_bias_start.y + 1.05f) < .00001f);
+              assert(fabsf(settings.angular_velocity_bias_start.z - 1.4f) < .00001f);
+            }
+          sample_index++;
+        }
+      size_t count = scenario == STATIONARY_REOPEN ? 1 : 125 + 3 * 13;
+      if (sample_index == count)
+        {
+          assert(imu_service_stop() == 0);
+          return 0;
+        }
+      sample_pending = true;
+      fds[0].revents = POLLIN;
+      return 1;
+    }
   if (scenario == LIVE_TIMING)
     {
       if (poll_count > 1)
@@ -337,6 +409,15 @@ int main(void)
   assert(run_task() == 0);
   assert(valid_count == 9 && close_count == 1);
   assert(imu_service_stop() == 0);
-  puts("IMU daemon lifecycle, freshness and source timing checks passed");
+  reset(STATIONARY_BIAS);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0);
+  assert(sample_index == 164 && close_count == 1);
+  assert(!imu_fusion_is_ready() && !imu_stationary_is_stationary());
+  reset(STATIONARY_REOPEN);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0);
+  assert(sample_index == 1 && close_count == 1);
+  puts("IMU daemon lifecycle, source timing, stationarity bias and reopen checks passed");
   return 0;
 }

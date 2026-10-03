@@ -39,20 +39,22 @@ printf 'include @%s\nmach create "air-cache"\nmachine LoadPlatformDescription @%
 timeout 120s "$renode_dir/renode" --disable-gui --console --plain \
     "$prepare_dir/prepare.resc" </dev/null > "$prepare_dir/prepare.log" 2>&1
 grep -q 'BW_AIR_PLATFORM_PREPARED' "$prepare_dir/prepare.log"
-# Renode's terminal API binds IPAddress.Any. Keep all three peer runs in
+# Renode's terminal API binds IPAddress.Any. Keep all peer runs in
 # ephemeral namespaces with only loopback, without altering the host network.
 runner_user=$(id -un)
 net_launcher=(unshare --net)
 if [[ $(id -u) != 0 ]]; then
     net_launcher=(sudo --non-interactive unshare --net)
 fi
-for mode in le scratch classic; do
+for mode in le scratch classic stationary; do
+    run_limit=900s
     case "$mode" in
         le) options=(--reconnect --periodic) ;;
         scratch) options=(--scratch-link 20131) ;;
         classic) options=(--classic --skip-le --imu-probe) ;;
+        stationary) options=(--classic --skip-le --imu-readiness); run_limit=1200s ;;
     esac
-    timeout 900s "${net_launcher[@]}" /bin/bash -c '
+    timeout "$run_limit" "${net_launcher[@]}" /bin/bash -c '
         set -euo pipefail
         ip link set lo up
         air_user=$1

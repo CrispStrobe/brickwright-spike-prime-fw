@@ -413,7 +413,8 @@ async def microbit_check(air, results: dict, timeout: float) -> None:
 
 async def classic_round_trip(central, results: dict,
                              legacy_extension: Path | None = None, *,
-                             imu_renode=None, renode_log: Path | None = None) -> None:
+                             imu_renode=None, renode_log: Path | None = None,
+                             imu_readiness: bool = False) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -453,11 +454,15 @@ async def classic_round_trip(central, results: dict,
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
         if imu_renode is not None:
-            from imu_probe import imu_round_trip, fusion_round_trip
-            await imu_round_trip(dlc, received, imu_renode, results,
-                                 renode_log=renode_log)
-            await fusion_round_trip(dlc, received, imu_renode, results,
-                                    renode_log=renode_log)
+            from imu_probe import imu_round_trip, fusion_round_trip, stationary_round_trip
+            if imu_readiness:
+                await stationary_round_trip(dlc, received, imu_renode, results,
+                                            renode_log=renode_log)
+            else:
+                await imu_round_trip(dlc, received, imu_renode, results,
+                                     renode_log=renode_log)
+                await fusion_round_trip(dlc, received, imu_renode, results,
+                                        renode_log=renode_log)
         if legacy_extension is not None:
             await legacy_round_trips(dlc, received, legacy_extension, results)
     finally:
@@ -661,6 +666,8 @@ async def main() -> int:
     parser.add_argument("--classic", action="store_true")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
+    parser.add_argument("--imu-readiness", action="store_true",
+                        help="with --classic, qualify stationary readiness using a configured-rate guest-time fixture")
     parser.add_argument("--serve-scratch-link", type=int, default=20111,
                         metavar="PORT", help="Scratch Link port for --then")
     parser.add_argument("--then", metavar="COMMAND",
@@ -696,6 +703,8 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     if arguments.imu_probe and not arguments.classic:
         parser.error("--imu-probe requires --classic")
+    if arguments.imu_readiness and (not arguments.classic or arguments.imu_probe):
+        parser.error("--imu-readiness requires --classic and is separate from --imu-probe")
     if arguments.reconnect and (arguments.skip_le or arguments.scratch_link or arguments.then):
         parser.error("--reconnect requires the direct LE path")
     if arguments.periodic and not arguments.reconnect:
@@ -717,7 +726,7 @@ async def main() -> int:
             from renode_load_littlefs_fixture import validate_fixture
             _, results["fixture_receipt"] = validate_fixture(str(arguments.existing_filesystem))
             results["storage"] = "explicit-existing-filesystem"
-        async with asyncio.timeout(arguments.timeout + 600):
+        async with asyncio.timeout(arguments.timeout + (1200 if arguments.imu_readiness else 600)):
             air_hub = subprocess.Popen(
                 [sys.executable, str(AIR_TOOLS / "airhub.py"), "--tcp",
                  f"127.0.0.1:{arguments.hub_port}", "--ws", "", "--log",
@@ -732,7 +741,7 @@ async def main() -> int:
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
             imu_fixture = None
-            if arguments.imu_probe:
+            if arguments.imu_probe or arguments.imu_readiness:
                 from imu_probe import RENODE_IMU_HELPER
                 imu_fixture = workdir / "imu-fixture.py"
                 imu_fixture.write_text(RENODE_IMU_HELPER)
@@ -787,8 +796,10 @@ async def main() -> int:
                 peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
                 await asyncio.wait_for(
                     classic_round_trip(peer, results, arguments.lite_extension,
-                                       imu_renode=renode if arguments.imu_probe else None,
-                                       renode_log=workdir / "renode.log"), 240)
+                                       imu_renode=renode if arguments.imu_probe or arguments.imu_readiness else None,
+                                       renode_log=workdir / "renode.log",
+                                       imu_readiness=arguments.imu_readiness),
+                    1020 if arguments.imu_readiness else 240)
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"
