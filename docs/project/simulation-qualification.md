@@ -120,14 +120,31 @@ allows the hook to stop execution first. If the initial log flush misses a
 still-delayed message, the waiter can see emulation stopped and start it again.
 Its buffered-message fast path also returns without awaiting stop. This is a
 source-supported explanation of the public mismatch; the log alone does not
-prove that exact scheduling interleaving.
+prove that exact scheduling interleaving. A controlled actual Cortex-M fixture
+subsequently reproduced the restart mechanism: the old startup order captured
+R0=0 at the synthetic stop site, then advanced to R0=7 while waiting for a
+delayed notification. The new helper retained zero at the same site. The
+notification carries values captured from the CPU; its producer is joined
+before teardown. These synthetic cases are a durable `brickwright-milestone-wait`
+regression, not a claim to reproduce every detail of the original host schedule.
 
 `Wait For Paused Milestone` now synchronously stops emulation before the wait,
 lets the waiter arm before its internal start, and synchronously stops again
 after the wait to cover buffered matches. Milestone hooks request pause before
 publishing their logs. Flash observation additionally requires the stopped CPU
 to be at the actual initializer entry before reading LR, and retains both
-atomic and stopped return-value/PC assertions. No guest register is changed.
+atomic and stopped return-value/PC assertions. No firmware guest register is
+changed. The synthetic instruction fixture is separate from the firmware.
+
+The exact final helper passed 15 fresh-machine flash checks on .NET 8.0.31:
+every stopped initializer entry, atomic/stopped return R0 and return PC matched
+the required values. A full unchanged HCI boot passed in 97.65 host seconds.
+Six local regression cases passed: display, ADC, EXTI, tickless timer, isolated
+protected userspace and default existing-filesystem milestones. A corrupted
+metadata boot retained the actual `-14` return at the correct PC; the zero
+assertion rejected it, and the checked 8 KiB region remained byte-identical.
+These additional checks use the freshly source-built pinned runtime with an
+isolated .NET 8.0.31 runtime; they do not claim identical host scheduling.
 
 ## Digital display gate
 

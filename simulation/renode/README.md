@@ -142,6 +142,16 @@ unchanged. See the
 for tag names, lifecycle and limits. Generating this fixture alone provides no
 guest-boot qualification.
 
+The protected suite's milestone waiter synchronously stops emulation, arms its
+log predicate before allowing the waiter's internal start, and stops again
+before inspecting registers. An explicit start followed by a log wait could
+restart an already stopped CPU when the notification was delayed. The
+`brickwright-milestone-wait` regression uses separate synthetic Cortex-M
+instructions and controlled host-delayed logging to demonstrate the old
+restart and verify that the shared helper retains the actual captured state.
+It also joins its log producer before resetting the test machine. This fixture
+contains no firmware image or extracted implementation.
+
 ## Virtual HCI boundary
 
 `tools/test_renode_virtual_hci_bridge.sh` builds and tests a small Apache-2.0

@@ -155,7 +155,46 @@ Boot Simulation HCI Through Modeled Board Devices
     Should Contain    ${trace}    command=0x0c03
     Should Not Match Regexp    ${trace}    command=0xf[c-f]
 
+Prepare Synthetic Milestone CPU
+    Execute Command    include @${CURDIR}/../../tools/renode_check_milestone_wait.py
+    Execute Command    prepare_milestone_wait_fixture
+    Create Log Tester    5
+
+Synthetic Milestone Hook Has Stopped
+    ${paused}=    Execute Command    milestone_wait_fixture_stopped
+    Should Contain    ${paused}    True
+
+Finish Synthetic Milestone CPU
+    Execute Command    finish_milestone_wait_fixture
+    Reset SPIKE Test
+
 *** Test Cases ***
+Old start-before-wait resumes the stopped synthetic CPU on late log delivery
+    [Tags]    brickwright-milestone-wait
+    [Teardown]    Finish Synthetic Milestone CPU
+    Prepare Synthetic Milestone CPU
+    Start Emulation
+    Wait Until Keyword Succeeds    1 second    10 milliseconds    Synthetic Milestone Hook Has Stopped
+    Execute Command    emulation PauseAll
+    ${entry}=    Wait For Log Entry    SYNTHETIC return    timeout=5    pauseEmulation=${True}
+    Execute Command    emulation PauseAll
+    Should Contain    ${entry}    R0=0 PC=134217986
+    ${pc}=    Execute Command    cpu GetRegister 15
+    ${r0}=    Execute Command    cpu GetRegister 0
+    Should Not Be Equal As Integers    ${pc.strip()}    0x08000102
+    Should Be Equal As Integers    ${r0.strip()}    7
+
+Paused milestone helper arms its waiter before starting the synthetic CPU
+    [Tags]    brickwright-milestone-wait
+    [Teardown]    Finish Synthetic Milestone CPU
+    Prepare Synthetic Milestone CPU
+    ${entry}=    Wait For Paused Milestone    SYNTHETIC return    5
+    Should Contain    ${entry}    R0=0 PC=134217986
+    ${pc}=    Execute Command    cpu GetRegister 15
+    ${r0}=    Execute Command    cpu GetRegister 0
+    Should Be Equal As Integers    ${pc.strip()}    0x08000102
+    Should Be Equal As Integers    ${r0.strip()}    0
+
 SPI display latches data through the selected GPIO pin
     [Tags]    brickwright-display-latch
     Execute Command    include @${CURDIR}/../../tools/renode_check_tlc5955.py
