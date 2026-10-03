@@ -87,7 +87,8 @@ log = logging.getLogger("spike-air-test")
 
 
 def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
-                  dumps=(), existing_filesystem: Path | None = None) -> str:
+                  dumps=(), existing_filesystem: Path | None = None,
+                  imu_fixture: Path | None = None) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
     lines = [
@@ -109,6 +110,8 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
         f"emulation CreateServerSocketTerminal {port} \"hci\" false",
         "connector Connect sysbus.usart2 hci",
     ])
+    if imu_fixture is not None:
+        lines.append(f"include @{imu_fixture}")
     # Milestones are logged to renode.log (no pause), for diagnosis.
     for symbol in (*MILESTONES, *trace):
         lines.append(f"cpu AddHook `sysbus GetSymbolAddress \"{symbol}\"` "
@@ -147,10 +150,11 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
 
 async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        trace=(), callers=(), watches=(), dumps=(),
-                       existing_filesystem: Path | None = None):
+                       existing_filesystem: Path | None = None,
+                       imu_fixture: Path | None = None):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem))
+                                    existing_filesystem, imu_fixture))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -408,7 +412,8 @@ async def microbit_check(air, results: dict, timeout: float) -> None:
 
 
 async def classic_round_trip(central, results: dict,
-                             legacy_extension: Path | None = None) -> None:
+                             legacy_extension: Path | None = None, *,
+                             imu_renode=None, renode_log: Path | None = None) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -447,6 +452,10 @@ async def classic_round_trip(central, results: dict,
         results["spp_request"] = request.decode().strip()
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
+        if imu_renode is not None:
+            from imu_probe import imu_round_trip
+            await imu_round_trip(dlc, received, imu_renode, results,
+                                 renode_log=renode_log)
         if legacy_extension is not None:
             await legacy_round_trips(dlc, received, legacy_extension, results)
     finally:
@@ -648,6 +657,8 @@ async def main() -> int:
                         help="explicit validated synthetic LittleFS fixture directory; default is erased flash")
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
+    parser.add_argument("--imu-probe", action="store_true",
+                        help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
     parser.add_argument("--serve-scratch-link", type=int, default=20111,
                         metavar="PORT", help="Scratch Link port for --then")
     parser.add_argument("--then", metavar="COMMAND",
@@ -681,6 +692,8 @@ async def main() -> int:
         parser.error("Bluetooth-air tests require Python 3.11 or later")
     if arguments.timeout <= 0:
         parser.error("--timeout must be positive")
+    if arguments.imu_probe and not arguments.classic:
+        parser.error("--imu-probe requires --classic")
     if arguments.reconnect and (arguments.skip_le or arguments.scratch_link or arguments.then):
         parser.error("--reconnect requires the direct LE path")
     if arguments.periodic and not arguments.reconnect:
@@ -716,10 +729,16 @@ async def main() -> int:
                      "--secs", str(int(arguments.timeout) + 120)]
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
+            imu_fixture = None
+            if arguments.imu_probe:
+                from imu_probe import RENODE_IMU_HELPER
+                imu_fixture = workdir / "imu-fixture.py"
+                imu_fixture.write_text(RENODE_IMU_HELPER)
             renode = await start_renode(arguments.renode, arguments.images,
                                         arguments.port, workdir, arguments.trace_symbol,
                                         arguments.trace_caller, arguments.watch,
-                                        arguments.dump, arguments.existing_filesystem)
+                                        arguments.dump, arguments.existing_filesystem,
+                                        imu_fixture)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             # Reconnection is a separate full discovery and request on a new peer.
@@ -765,7 +784,9 @@ async def main() -> int:
                 await asyncio.sleep(2)
                 peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
                 await asyncio.wait_for(
-                    classic_round_trip(peer, results, arguments.lite_extension), 240)
+                    classic_round_trip(peer, results, arguments.lite_extension,
+                                       imu_renode=renode if arguments.imu_probe else None,
+                                       renode_log=workdir / "renode.log"), 240)
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"

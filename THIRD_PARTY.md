@@ -29,7 +29,7 @@ user-supplied local files and are never CI artifacts.
 expressions and pinned embedded-interpreter inputs during CI and builds.
 The configured simulation builds are separately recorded in
 `policy/simulation-firmware-inputs.json` and
-`policy/simulation-hci-firmware-inputs.json`: each records 3,245 conservative
+`policy/simulation-hci-firmware-inputs.json`: each records 3,246 conservative
 source/header/linker inputs, its selected archive-member sets and the direct
 startup object. The
 superset includes compiled or inventoried inputs whose code may not survive

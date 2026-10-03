@@ -50,7 +50,7 @@ for mode in le scratch classic; do
     case "$mode" in
         le) options=(--reconnect --periodic) ;;
         scratch) options=(--scratch-link 20131) ;;
-        classic) options=(--classic --skip-le) ;;
+        classic) options=(--classic --skip-le --imu-probe) ;;
     esac
     timeout 900s "${net_launcher[@]}" /bin/bash -c '
         set -euo pipefail

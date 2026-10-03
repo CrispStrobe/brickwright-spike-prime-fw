@@ -80,6 +80,7 @@ externalFlash: Memory.MappedMemory @ sysbus 0x10000000
     size: 0x2000000
 
 imu: SPIKEPrime.LSM6DS3TRC @ i2c2 0x6a
+    INT1 -> gpioPortB@4
 
 display: SPIKEPrime.TLC5955 @ spi1
 

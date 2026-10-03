@@ -12,6 +12,7 @@
  ****************************************************************************/
 
 #include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -59,8 +60,18 @@ void imu_calibration_init(imu_settings_t *settings)
 
 int imu_calibration_save(const char *path)
 {
+  return imu_calibration_save_copy(path, &g_settings);
+}
+
+int imu_calibration_save_copy(const char *path, const imu_settings_t *settings)
+{
   int fd;
   ssize_t ret;
+  if (path == NULL || settings == NULL)
+    {
+      errno = EINVAL;
+      return -1;
+    }
 
   fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (fd < 0)
@@ -68,10 +79,10 @@ int imu_calibration_save(const char *path)
       return -1;
     }
 
-  ret = write(fd, &g_settings, sizeof(g_settings));
-  close(fd);
+  ret = write(fd, settings, sizeof(*settings));
+  int close_result = close(fd);
 
-  if (ret != (ssize_t)sizeof(g_settings))
+  if (ret != (ssize_t)sizeof(*settings) || close_result < 0)
     {
       return -1;
     }

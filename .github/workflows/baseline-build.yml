@@ -136,6 +136,12 @@ jobs:
           python3 tools/stage_nuttx_image.py brickwright nuttx
           python3 tools/stage_nuttx_image.py brickwright-simulation nuttx
 
+      - name: Check synthetic IMU register transactions and INT1 routing
+        run: |
+          PATH="$RENODE_TEST_VENV/bin:$PATH" "$RENODE_DIR/renode-test" \
+            --results-dir .local/renode-imu-model-results --stop-on-error \
+            simulation/renode/imu-model.robot
+
       - name: Check milestone waits, display latch, ADC DMA and GPIO routing
         run: |
           tools/test_renode_protected_images.sh \

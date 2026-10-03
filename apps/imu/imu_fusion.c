@@ -12,6 +12,7 @@
  ****************************************************************************/
 
 #include <math.h>
+#include <pthread.h>
 #include <string.h>
 #include <time.h>
 
@@ -74,7 +75,15 @@ static imu_xyz_t g_gyro_bias;
 
 /* Settings */
 
+static imu_settings_t g_settings_copy;
 static imu_settings_t *g_settings;
+
+/* Serialize publication and all legacy access to the fusion state. */
+
+static pthread_mutex_t g_fusion_lock = PTHREAD_MUTEX_INITIALIZER;
+static uint64_t g_timestamp_us;
+static uint64_t g_sequence;
+static bool g_sample_valid;
 
 /* Stationary readiness */
 
@@ -84,6 +93,10 @@ static uint32_t g_stationary_time_last;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static float imu_fusion_get_heading_unlocked(imu_heading_type_t type);
+static void imu_fusion_set_heading_unlocked(float desired);
+static bool imu_fusion_is_ready_unlocked(void);
 
 static uint32_t get_time_ms(void)
 {
@@ -131,7 +144,7 @@ static void update_heading_projection(void)
  * Public Functions
  ****************************************************************************/
 
-void imu_fusion_init(void)
+static void imu_fusion_init_unlocked(void)
 {
   g_quaternion.q1 = 0.0f;
   g_quaternion.q2 = 0.0f;
@@ -163,13 +176,26 @@ void imu_fusion_init(void)
   g_heading_offset_3d = 0.0f;
 
   g_settings = NULL;
+  g_timestamp_us = 0;
+  g_sequence = 0;
+  g_sample_valid = false;
   g_stationary_counter = 0;
   g_stationary_time_last = 0;
 }
 
-void imu_fusion_set_settings(imu_settings_t *settings)
+static void imu_fusion_set_settings_unlocked(imu_settings_t *settings)
 {
-  g_settings = settings;
+  g_sample_valid = false;
+  if (settings == NULL)
+    {
+      g_settings = NULL;
+      memset(&g_gyro_bias, 0, sizeof(g_gyro_bias));
+      return;
+    }
+
+  g_settings_copy = *settings;
+  g_settings = &g_settings_copy;
+  settings = g_settings;
 
   /* Load initial gyro bias from saved settings */
 
@@ -178,18 +204,30 @@ void imu_fusion_set_settings(imu_settings_t *settings)
   g_gyro_bias.z = settings->angular_velocity_bias_start.z;
 }
 
-void imu_fusion_set_base_orientation(imu_xyz_t *front, imu_xyz_t *top)
+static void imu_fusion_set_base_orientation_unlocked(imu_xyz_t *front, imu_xyz_t *top)
 {
-  if (imu_map_from_base_axes(front, top, &g_base_orientation) < 0)
+  imu_matrix_3x3_t base;
+  unsigned int i;
+  if (front == NULL || top == NULL ||
+      imu_map_from_base_axes(front, top, &base) < 0)
     {
       return;
     }
 
+  for (i = 0; i < 9; i++)
+    {
+      if (!isfinite(base.values[i]))
+        {
+          return;
+        }
+    }
+
+  g_base_orientation = base;
   update_heading_projection();
-  imu_fusion_set_heading(0.0f);
+  imu_fusion_set_heading_unlocked(0.0f);
 }
 
-void imu_fusion_update(imu_xyz_t *gyro_dps, imu_xyz_t *accel_mms2,
+static void imu_fusion_update_unlocked(imu_xyz_t *gyro_dps, imu_xyz_t *accel_mms2,
                        float sample_time)
 {
   uint8_t i;
@@ -214,9 +252,7 @@ void imu_fusion_update(imu_xyz_t *gyro_dps, imu_xyz_t *accel_mms2,
 
   imu_quaternion_to_rotation_matrix(&g_quaternion, &g_rotation);
 
-  /* Update heading projection */
 
-  update_heading_projection();
 
   /* Cache uncalibrated values */
 
@@ -303,23 +339,32 @@ void imu_fusion_update(imu_xyz_t *gyro_dps, imu_xyz_t *accel_mms2,
     }
 
   imu_quaternion_normalize(&g_quaternion);
+
+  /* Publish the orientation after integrating this sample, not the previous
+   * sample's matrix.  Heading and acceleration now belong to one step.
+   */
+
+  imu_quaternion_to_rotation_matrix(&g_quaternion, &g_rotation);
+  update_heading_projection();
 }
 
-void imu_fusion_stationary_update(const int32_t *gyro_sum,
+static void imu_fusion_stationary_update_unlocked(const int32_t *gyro_sum,
                                   const int32_t *accel_sum,
                                   uint32_t num_samples,
                                   float gyro_scale)
 {
   uint8_t i;
 
-  if (!imu_stationary_is_stationary())
+  (void)accel_sum;
+  if (gyro_sum == NULL || num_samples == 0 || !isfinite(gyro_scale) ||
+      !imu_stationary_is_stationary())
     {
       return;
     }
 
   /* Reset counter if not recently stationary */
 
-  if (!imu_fusion_is_ready())
+  if (!imu_fusion_is_ready_unlocked())
     {
       g_stationary_counter = 0;
     }
@@ -355,19 +400,19 @@ void imu_fusion_stationary_update(const int32_t *gyro_sum,
     }
 }
 
-void imu_fusion_get_accel(imu_xyz_t *out, bool calibrated)
+static void imu_fusion_get_accel_unlocked(imu_xyz_t *out, bool calibrated)
 {
   imu_xyz_t *src = calibrated ? &g_accel_cal : &g_accel_uncal;
   imu_vector_map(&g_base_orientation, src, out);
 }
 
-void imu_fusion_get_gyro(imu_xyz_t *out, bool calibrated)
+static void imu_fusion_get_gyro_unlocked(imu_xyz_t *out, bool calibrated)
 {
   imu_xyz_t *src = calibrated ? &g_angvel_cal : &g_angvel_uncal;
   imu_vector_map(&g_base_orientation, src, out);
 }
 
-void imu_fusion_get_tilt(imu_xyz_t *out)
+static void imu_fusion_get_tilt_unlocked(imu_xyz_t *out)
 {
   imu_xyz_t direction =
   {
@@ -379,7 +424,7 @@ void imu_fusion_get_tilt(imu_xyz_t *out)
   imu_vector_map(&g_base_orientation, &direction, out);
 }
 
-imu_side_t imu_fusion_get_up_side(bool calibrated)
+static imu_side_t imu_fusion_get_up_side_unlocked(bool calibrated)
 {
   imu_xyz_t up;
 
@@ -397,7 +442,7 @@ imu_side_t imu_fusion_get_up_side(bool calibrated)
   return imu_side_from_vector(&up);
 }
 
-int imu_fusion_get_single_axis_rotation(imu_xyz_t *axis, float *angle,
+static int imu_fusion_get_single_axis_rotation_unlocked(imu_xyz_t *axis, float *angle,
                                         bool calibrated)
 {
   imu_xyz_t axis_rot = g_single_axis_rotation;
@@ -419,7 +464,7 @@ int imu_fusion_get_single_axis_rotation(imu_xyz_t *axis, float *angle,
   return imu_vector_project(axis, &rot_user, angle);
 }
 
-float imu_fusion_get_heading(imu_heading_type_t type)
+static float imu_fusion_get_heading_unlocked(imu_heading_type_t type)
 {
   float correction = 1.0f;
 
@@ -443,24 +488,297 @@ float imu_fusion_get_heading(imu_heading_type_t type)
   return -heading_mapped.z * correction - g_heading_offset_1d;
 }
 
-void imu_fusion_set_heading(float desired)
+static void imu_fusion_set_heading_unlocked(float desired)
 {
+  if (!isfinite(desired))
+    {
+      return;
+    }
+
   g_heading_rotations = 0;
   g_heading_offset_3d =
-    imu_fusion_get_heading(IMU_HEADING_3D) +
+    imu_fusion_get_heading_unlocked(IMU_HEADING_3D) +
     g_heading_offset_3d - desired;
   g_heading_offset_1d =
-    imu_fusion_get_heading(IMU_HEADING_1D) +
+    imu_fusion_get_heading_unlocked(IMU_HEADING_1D) +
     g_heading_offset_1d - desired;
 }
 
-void imu_fusion_get_orientation(imu_matrix_3x3_t *out)
+static void imu_fusion_get_orientation_unlocked(imu_matrix_3x3_t *out)
 {
   *out = g_rotation;
 }
 
-bool imu_fusion_is_ready(void)
+static bool imu_fusion_is_ready_unlocked(void)
 {
   return g_stationary_counter > 0 &&
          get_time_ms() - g_stationary_time_last < 10u * 60u * 1000u;
+}
+
+/****************************************************************************
+ * Synchronized Public Interface
+ ****************************************************************************/
+
+static bool finite_vector(const imu_xyz_t *v)
+{
+  return v != NULL && isfinite(v->x) && isfinite(v->y) && isfinite(v->z);
+}
+
+static bool calibration_valid(void)
+{
+  unsigned int i;
+  if (g_settings == NULL)
+    {
+      return true;
+    }
+
+  for (i = 0; i < 3; i++)
+    {
+      float span = g_settings->gravity_pos.values[i] -
+                   g_settings->gravity_neg.values[i];
+      if (!isfinite(span) || fabsf(span) < 1.0e-6f ||
+          !isfinite(g_settings->angular_velocity_scale.values[i]) ||
+          fabsf(g_settings->angular_velocity_scale.values[i]) < 1.0e-6f ||
+          !isfinite(g_gyro_bias.values[i]))
+        {
+          return false;
+        }
+    }
+
+  return !(g_settings->flags & IMU_FLAG_HEADING_1D) ||
+         (isfinite(g_settings->heading_correction_1d) &&
+          fabsf(g_settings->heading_correction_1d) >= 1.0e-6f);
+}
+
+bool imu_fusion_update_timestamped(const imu_xyz_t *gyro_dps,
+                                 const imu_xyz_t *accel_mms2,
+                                 float sample_time, uint64_t timestamp_us)
+{
+  unsigned int i;
+  bool valid;
+  pthread_mutex_lock(&g_fusion_lock);
+  g_sample_valid = false;
+  valid = finite_vector(gyro_dps) && finite_vector(accel_mms2) &&
+          isfinite(sample_time) && sample_time > 0.0f &&
+          timestamp_us != 0 && timestamp_us > g_timestamp_us &&
+          calibration_valid();
+  if (valid)
+    {
+      imu_quaternion_t quaternion = g_quaternion;
+      imu_matrix_3x3_t rotation = g_rotation;
+      imu_xyz_t single_axis = g_single_axis_rotation;
+      imu_xyz_t angvel_uncal = g_angvel_uncal;
+      imu_xyz_t angvel_cal = g_angvel_cal;
+      imu_xyz_t accel_uncal = g_accel_uncal;
+      imu_xyz_t accel_cal = g_accel_cal;
+      float heading_projection = g_heading_projection;
+      int32_t heading_rotations = g_heading_rotations;
+      bool quaternion_init = g_quaternion_init;
+      imu_xyz_t gyro = *gyro_dps;
+      imu_xyz_t accel = *accel_mms2;
+      imu_fusion_update_unlocked(&gyro, &accel, sample_time);
+      float quaternion_norm_squared =
+        g_quaternion.q1 * g_quaternion.q1 +
+        g_quaternion.q2 * g_quaternion.q2 +
+        g_quaternion.q3 * g_quaternion.q3 +
+        g_quaternion.q4 * g_quaternion.q4;
+      valid = g_quaternion_init && finite_vector(&g_angvel_cal) &&
+              finite_vector(&g_accel_cal) &&
+              isfinite(quaternion_norm_squared) &&
+              fabsf(quaternion_norm_squared - 1.0f) < 0.001f;
+      for (i = 0; i < 9 && valid; i++)
+        {
+          valid = isfinite(g_rotation.values[i]);
+        }
+
+      valid = valid && isfinite(imu_fusion_get_heading_unlocked(IMU_HEADING_1D)) &&
+              isfinite(imu_fusion_get_heading_unlocked(IMU_HEADING_3D));
+      if (valid)
+        {
+          g_timestamp_us = timestamp_us;
+          g_sequence++;
+          g_sample_valid = true;
+        }
+      else
+        {
+          /* Failed arithmetic must not poison the next valid step. */
+          g_quaternion = quaternion;
+          g_rotation = rotation;
+          g_single_axis_rotation = single_axis;
+          g_angvel_uncal = angvel_uncal;
+          g_angvel_cal = angvel_cal;
+          g_accel_uncal = accel_uncal;
+          g_accel_cal = accel_cal;
+          g_heading_projection = heading_projection;
+          g_heading_rotations = heading_rotations;
+          g_quaternion_init = quaternion_init;
+        }
+    }
+
+  pthread_mutex_unlock(&g_fusion_lock);
+  return valid;
+}
+
+bool imu_fusion_get_snapshot(imu_fusion_snapshot_t *out, uint64_t now_us,
+                             uint64_t max_age_us)
+{
+  bool valid;
+  if (out == NULL)
+    {
+      return false;
+    }
+
+  pthread_mutex_lock(&g_fusion_lock);
+  memset(out, 0, sizeof(*out));
+  valid = g_sample_valid && now_us >= g_timestamp_us &&
+          now_us - g_timestamp_us <= max_age_us;
+  if (valid)
+    {
+      out->timestamp_us = g_timestamp_us;
+      out->sequence = g_sequence;
+      out->valid = true;
+      out->ready = imu_fusion_is_ready_unlocked();
+      imu_fusion_get_accel_unlocked(&out->accel_mms2, true);
+      imu_fusion_get_gyro_unlocked(&out->gyro_dps, true);
+      imu_fusion_get_orientation_unlocked(&out->orientation);
+      out->heading_1d = imu_fusion_get_heading_unlocked(IMU_HEADING_1D);
+      out->heading_3d = imu_fusion_get_heading_unlocked(IMU_HEADING_3D);
+      out->up_side = imu_fusion_get_up_side_unlocked(true);
+    }
+
+  pthread_mutex_unlock(&g_fusion_lock);
+  return valid;
+}
+
+void imu_fusion_update(imu_xyz_t *gyro_dps, imu_xyz_t *accel_mms2,
+                       float sample_time)
+{
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+    {
+      imu_fusion_update_timestamped(gyro_dps, accel_mms2, sample_time,
+        (uint64_t)ts.tv_sec * 1000000U + (uint64_t)ts.tv_nsec / 1000U);
+    }
+}
+
+void imu_fusion_init(void)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_init_unlocked();
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+void imu_fusion_set_settings(imu_settings_t *settings)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_set_settings_unlocked(settings);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+bool imu_fusion_get_settings(imu_settings_t *out)
+{
+  bool available;
+  if (out == NULL)
+    {
+      return false;
+    }
+
+  pthread_mutex_lock(&g_fusion_lock);
+  available = g_settings != NULL;
+  if (available)
+    {
+      *out = *g_settings;
+    }
+  else
+    {
+      memset(out, 0, sizeof(*out));
+    }
+
+  pthread_mutex_unlock(&g_fusion_lock);
+  return available;
+}
+
+void imu_fusion_set_base_orientation(imu_xyz_t *front, imu_xyz_t *top)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_set_base_orientation_unlocked(front, top);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+void imu_fusion_stationary_update(const int32_t *gyro_sum,
+                                  const int32_t *accel_sum,
+                                  uint32_t num_samples,
+                                  float gyro_scale)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_stationary_update_unlocked(gyro_sum, accel_sum, num_samples, gyro_scale);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+void imu_fusion_get_accel(imu_xyz_t *out, bool calibrated)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_get_accel_unlocked(out, calibrated);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+void imu_fusion_get_gyro(imu_xyz_t *out, bool calibrated)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_get_gyro_unlocked(out, calibrated);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+void imu_fusion_get_tilt(imu_xyz_t *out)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_get_tilt_unlocked(out);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+imu_side_t imu_fusion_get_up_side(bool calibrated)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_side_t result = imu_fusion_get_up_side_unlocked(calibrated);
+  pthread_mutex_unlock(&g_fusion_lock);
+  return result;
+}
+
+int imu_fusion_get_single_axis_rotation(imu_xyz_t *axis, float *angle,
+                                        bool calibrated)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  int result = imu_fusion_get_single_axis_rotation_unlocked(axis, angle, calibrated);
+  pthread_mutex_unlock(&g_fusion_lock);
+  return result;
+}
+
+float imu_fusion_get_heading(imu_heading_type_t type)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  float result = imu_fusion_get_heading_unlocked(type);
+  pthread_mutex_unlock(&g_fusion_lock);
+  return result;
+}
+
+void imu_fusion_set_heading(float desired)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_set_heading_unlocked(desired);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+void imu_fusion_get_orientation(imu_matrix_3x3_t *out)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  imu_fusion_get_orientation_unlocked(out);
+  pthread_mutex_unlock(&g_fusion_lock);
+}
+
+bool imu_fusion_is_ready(void)
+{
+  pthread_mutex_lock(&g_fusion_lock);
+  bool result = imu_fusion_is_ready_unlocked();
+  pthread_mutex_unlock(&g_fusion_lock);
+  return result;
 }
