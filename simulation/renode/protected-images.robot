@@ -70,7 +70,9 @@ Complete Modeled Flash Initialization Successfully
     ${status}=    Execute Command    cpu GetRegister 0
     ${paused_pc}=    Execute Command    cpu GetRegister 15
     Log To Console    Flash initializer observation: R0=${status.strip()} PC=${paused_pc.strip()} expected return site=${return_site}
+    Should Match Regexp    ${return_log}    MILESTONE flash initialized R0=0 PC=${return_site}(?![0-9])
     Should Be Equal As Integers    ${status.strip()}    0    Flash initializer must return zero
+    Should Be Equal As Integers    ${paused_pc.strip()}    ${return_site}    CPU must remain at the observed flash return site
     Execute Command    cpu RemoveHooksAt ${return_site}
 
 Load Explicit Existing LittleFS Fixture

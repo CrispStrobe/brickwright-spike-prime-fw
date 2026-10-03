@@ -129,6 +129,7 @@ at this experimental stage. Use the explicit simulation command above.
 - [Getting started](docs/en/development/getting-started.md)
 - [Driver architecture](docs/en/drivers/architecture.md)
 - [Firmware source reuse](docs/en/development/licence-reuse.md)
+- [Simulation qualification and open work](docs/project/simulation-qualification.md)
 - [Simulator/hub contract](docs/project/hub-contract.md)
 - [Development plan and recorded milestones](PLAN.md)
 - [Japanese documentation](docs/ja/index.md)
