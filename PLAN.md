@@ -350,11 +350,14 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 | 2026-10-03 | C8.5 (paired raw IMU acquisition and coherent snapshots) | Complete within recorded scope | Candidate `883508623eab0e6fca9966cfea06cc2b311e4e03` passes both clean firmware profiles in public matrix `37124347755` and source/docs CI `37124350118`. Three injected paired samples cross INT1/PB4/EXTI4, the actual STM32F4 driver, uORB and Classic BUNDLE with validated body axes, source timestamps, sequence, rate and ranges; OFF rejects injection with both ODRs disabled, reopening delivers a fresh sample, and final OFF powers down again. Infrastructure PR26/runtime PR33 correct the two-byte receive pipeline and BTF-only final-three-byte handoff; 24 byte/halfword STOP/repeated-START cases and full runtime CI `37122790295` pass. Firmware watch stop now drains its poll round before descriptor close; its regression fails on the old code and passes locally and in CI. Host snapshot concurrency/validity/recovery, source timestamp wrap and calibration persistence checks pass. Original notices and historical audit/image/archive hashes remain intact; inventories identify their old byte hashes as reference evidence and check the 3,246 current compiler inputs. Fusion snapshots are qualified by host tests, not an end-to-end guest producer test; full modern IMU wire mapping and physical hardware remain open. |
 
+| 2026-10-03 | C8.5 (fusion producer lifecycle preparation) | Host-qualified; guest fusion open | The actual imu application now reserves one producer before task creation, preserves stop during startup, checks stop while draining samples, retries EINTR and clears stationarity without a zero-rate initialization. Status reports starting separately. A synthetic task/device harness links the real fusion, geometry, stationarity and calibration code; the old application fails the duplicate-start assertion. Modern IMU layout and explicit six-face conversion are documented from pinned LEGO definitions; units/Euler conventions remain unqualified and the 21-byte record has no temperature field. Boot activation, guest fusion readiness and live ODR integration timing remain open. |
+
 ## Current next action
 
 Qualify the fusion producer through the actual guest before enabling it at boot.
-Define full modern protocol orientation mappings, wire units, temperature and up-side conversion rules
-before emitting full modern IMU records. The paired raw INT1/driver/uORB/Classic
+Define full modern protocol orientation mappings, wire units and up-side conversion rules
+before emitting full modern IMU records. The 21-byte modern record has no temperature field;
+any temperature transport needs a separate contract. The paired raw INT1/driver/uORB/Classic
 path and coherent non-consuming snapshot API now have the recorded qualification;
 they do not establish the full modern wire contract or guest fusion readiness.
 Encoder-completed degree moves, stall/capability policy and cold-restart bond reuse

@@ -139,6 +139,54 @@ all record bounds or the complete declared payload length. These are extension
 defects. Our codec must use the published lengths and signedness and reject a
 malformed entire notification atomically.
 
+### IMU layout and remaining mapping decisions
+
+The pinned LEGO [DeviceImuValues definition](https://github.com/LEGO/spike-prime-docs/blob/446549146df626f5d7f332b0ea3cd0205ce23711/docs/source/messages.rst)
+defines the following offsets within a 21-byte record. Signed 16-bit fields
+are little-endian; this table describes the layout, not a qualified encoder.
+
+| Offset | Width | Field |
+|---:|---:|---|
+| 0 | 1 | Record type `0x01` |
+| 1 | 1 | Physical hub face pointing up |
+| 2 | 1 | Configured yaw face |
+| 3, 5, 7 | 2 each | Yaw, pitch, roll relative to the configured yaw face |
+| 9, 11, 13 | 2 each | Accelerometer X, Y, Z |
+| 15, 17, 19 | 2 each | Gyroscope X, Y, Z |
+
+The pinned [Hub Face enumeration](https://github.com/LEGO/spike-prime-docs/blob/446549146df626f5d7f332b0ea3cd0205ce23711/docs/source/enums.rst)
+uses different numbers from the legacy fusion enum. Convert explicitly:
+
+| Fusion side | Modern Hub Face |
+|---|---:|
+| `IMU_SIDE_TOP` | 0 |
+| `IMU_SIDE_FRONT` | 1 |
+| `IMU_SIDE_RIGHT` | 2 |
+| `IMU_SIDE_BOTTOM` | 3 |
+| `IMU_SIDE_BACK` | 4 |
+| `IMU_SIDE_LEFT` | 5 |
+
+The published enumeration defines no unknown value. An unavailable or invalid
+fusion snapshot must not be represented by a fabricated face value. The
+fusion snapshot's up-side and orientation matrix describe the physical hub;
+its acceleration and gyro vectors use the configured base axes. A base-axis
+change must therefore not silently change the physical face enumeration.
+
+These pinned protocol definitions do not specify the angle scale, acceleration
+or gyro units, axis signs, Euler rotation order, angle ranges, or the transform
+for each yaw face. The neutral hub contract's milli-g and degrees/s units do
+not establish these wire units. The fusion acceleration in mm/s² requires an
+explicit conversion for the neutral milli-g contract, but that conversion
+alone does not qualify the modern record. A complete modern mapping also needs
+rounding/range handling and yaw-reset semantics verified against callers and
+independent reference observations before emission is enabled.
+
+There is no temperature field in this record. Temperature support, if added,
+needs its own documented source and transport contract. Current firmware
+publishes battery and supported distance records; it does not emit modern IMU
+records. Guest fusion qualification and modern wire compatibility are separate
+checks.
+
 ## Tunnel payloads and extension operations
 
 The authoritative source is

@@ -39,6 +39,7 @@ jobs:
           python3 tools/test_imu_probe.py
           tools/check_imu_snapshot.sh
           tools/check_imu_source.sh
+          tools/check_imu_daemon.sh
           python3 tools/test_recursive_mutex_config.py --config-only
           python3 tools/check_source_policy.py
           python3 tools/check_reuse_licenses.py

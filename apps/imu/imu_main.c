@@ -14,6 +14,9 @@
 #include <poll.h>
 #include <unistd.h>
 #include <math.h>
+#include <errno.h>
+#include <pthread.h>
+#include <sched.h>
 
 #include <nuttx/sensors/sensor.h>
 
@@ -78,9 +81,10 @@ static inline float gyro_lsb_to_dps_from_idx(uint8_t idx)
  * Private Data
  ****************************************************************************/
 
-static volatile bool g_daemon_running = false;
-static volatile bool g_daemon_stop = false;
-static int g_daemon_pid = -1;
+static pthread_mutex_t g_daemon_lock = PTHREAD_MUTEX_INITIALIZER;
+static bool g_daemon_running;
+static bool g_daemon_starting;
+static bool g_daemon_stop;
 
 /****************************************************************************
  * Private Functions
@@ -97,6 +101,31 @@ static int g_daemon_pid = -1;
 static float g_accel_mms2_per_lsb;
 static float g_gyro_dps_per_lsb;
 
+static bool daemon_should_stop(void)
+{
+  pthread_mutex_lock(&g_daemon_lock);
+  bool stop = g_daemon_stop;
+  pthread_mutex_unlock(&g_daemon_lock);
+  return stop;
+}
+
+static bool daemon_is_running(void)
+{
+  pthread_mutex_lock(&g_daemon_lock);
+  bool running = g_daemon_running;
+  pthread_mutex_unlock(&g_daemon_lock);
+  return running;
+}
+
+static void daemon_finished(void)
+{
+  pthread_mutex_lock(&g_daemon_lock);
+  g_daemon_running = false;
+  g_daemon_starting = false;
+  g_daemon_stop = false;
+  pthread_mutex_unlock(&g_daemon_lock);
+}
+
 static void stationary_callback(const int32_t *gyro_sum,
                                 const int32_t *accel_sum,
                                 uint32_t num_samples)
@@ -107,6 +136,8 @@ static void stationary_callback(const int32_t *gyro_sum,
 
 static int imu_daemon(int argc, char *argv[])
 {
+  (void)argc;
+  (void)argv;
   struct pollfd fds[1];
   struct sensor_imu imu_data;
   int imu_fd;
@@ -118,7 +149,7 @@ static int imu_daemon(int argc, char *argv[])
   if (imu_fd < 0)
     {
       fprintf(stderr, "imu: cannot open sensor_imu0\n");
-      g_daemon_running = false;
+      daemon_finished();
       return -1;
     }
 
@@ -143,14 +174,16 @@ static int imu_daemon(int argc, char *argv[])
   uint8_t cur_fsr_xl_idx = IMU_FSR_IDX_UNKNOWN;
   uint8_t cur_fsr_gy_idx = IMU_FSR_IDX_UNKNOWN;
 
+  pthread_mutex_lock(&g_daemon_lock);
   g_daemon_running = true;
-  g_daemon_stop = false;
+  g_daemon_starting = false;
+  pthread_mutex_unlock(&g_daemon_lock);
 
   printf("imu: daemon started\n");
 
   /* Poll loop */
 
-  while (!g_daemon_stop)
+  while (!daemon_should_stop())
     {
       fds[0].fd = imu_fd;
       fds[0].events = POLLIN;
@@ -158,6 +191,11 @@ static int imu_daemon(int argc, char *argv[])
       ret = poll(fds, 1, IMU_POLL_TIMEOUT);
       if (ret < 0)
         {
+          if (errno == EINTR)
+            {
+              continue;
+            }
+
           break;
         }
 
@@ -166,12 +204,18 @@ static int imu_daemon(int argc, char *argv[])
           continue;
         }
 
+      if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))
+        {
+          break;
+        }
+
       if (!(fds[0].revents & POLLIN))
         {
           continue;
         }
 
-      while (read(imu_fd, &imu_data, sizeof(imu_data)) ==
+      while (!daemon_should_stop() &&
+             read(imu_fd, &imu_data, sizeof(imu_data)) ==
              sizeof(imu_data))
         {
           /* Issue #139: detect FSR change before any conversion or
@@ -265,45 +309,63 @@ static int imu_daemon(int argc, char *argv[])
 
   /* Reset module state so status reports clean after stop */
 
-  imu_stationary_init(0, 0, 0, NULL);
+  imu_stationary_reset();
   imu_fusion_init();
 
-  g_daemon_running = false;
+  daemon_finished();
   printf("imu: daemon stopped\n");
   return 0;
 }
 
 static void cmd_start(void)
 {
-  if (g_daemon_running)
+  pthread_mutex_lock(&g_daemon_lock);
+  if (g_daemon_running || g_daemon_starting)
     {
+      pthread_mutex_unlock(&g_daemon_lock);
       printf("imu: already running\n");
       return;
     }
 
-  g_daemon_pid = task_create(IMU_DAEMON_NAME, 100,
-                             4096,
-                             imu_daemon, NULL);
-  if (g_daemon_pid < 0)
+  /* Reserve the producer before task_create can schedule the child.  A
+   * stop received during initialization belongs to this reservation and
+   * must not be cleared by the child when it becomes running.
+   */
+
+  g_daemon_starting = true;
+  g_daemon_stop = false;
+  pthread_mutex_unlock(&g_daemon_lock);
+
+  int pid = task_create(IMU_DAEMON_NAME, 100, 4096, imu_daemon, NULL);
+  if (pid < 0)
     {
+      daemon_finished();
       fprintf(stderr, "imu: failed to start daemon\n");
     }
 }
 
 static void cmd_stop(void)
 {
-  if (!g_daemon_running)
+  pthread_mutex_lock(&g_daemon_lock);
+  if (!g_daemon_running && !g_daemon_starting)
     {
+      pthread_mutex_unlock(&g_daemon_lock);
       printf("imu: not running\n");
       return;
     }
 
   g_daemon_stop = true;
+  pthread_mutex_unlock(&g_daemon_lock);
 }
 
 static void cmd_status(void)
 {
-  printf("running:    %s\n", g_daemon_running ? "yes" : "no");
+  pthread_mutex_lock(&g_daemon_lock);
+  bool running = g_daemon_running;
+  bool starting = g_daemon_starting;
+  pthread_mutex_unlock(&g_daemon_lock);
+  printf("running:    %s\n", running ? "yes" : "no");
+  printf("starting:   %s\n", starting ? "yes" : "no");
   printf("stationary: %s\n",
          imu_stationary_is_stationary() ? "yes" : "no");
   printf("ready:      %s\n", imu_fusion_is_ready() ? "yes" : "no");
@@ -334,7 +396,7 @@ static void cmd_gyro(bool raw)
 
 static void cmd_dump(char which, bool raw, uint32_t duration_ms)
 {
-  if (!g_daemon_running)
+  if (!daemon_is_running())
     {
       fprintf(stderr, "imu: daemon not running; run 'imu start' first\n");
       return;
