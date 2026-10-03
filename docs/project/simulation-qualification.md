@@ -55,26 +55,41 @@ and retain their selected grants and notices. Properly attributed permitted
 Pybricks-derived sources remain. Licensed adaptations are not claimed to be
 cleanroom rewrites. The [third-party record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/THIRD_PARTY.md)
 and [provenance record](provenance.md) control component scope.
-A final reachable-history audit examined 100 commits and 1,258 blobs with zero
+The integration's reachable-history audit examined 100 commits and 1,258 blobs with zero
 findings. That does not establish every historical line's authorship or inspect
 all server caches and other clones. Build paths affect image hashes; complete
 byte reproducibility across paths is not claimed. No firmware artifacts were
 published by these jobs.
 
-## Open reliability question
+## Flash-return observation race
 
 [An earlier public matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37101144091)
 passed its default job but failed in the HCI job at the observed flash-initializer
-return value, before Bluetooth startup. The old log did not print the value.
-Its cause remains unexplained. Preserved, freshly rebuilt and CI-path-layout
-pairs subsequently passed locally; a synthetic CPU probe did not reproduce a
-suspected pause/return-register discrepancy.
+return value, before Bluetooth startup. That log did not print the value.
+Preserved, freshly rebuilt and CI-path-layout pairs subsequently passed locally;
+a small synthetic CPU probe also failed to reproduce the observation mismatch.
 
-Diagnostic logging was added without bypassing the mount, scan or zero-return
-criterion. The final public HCI job records R0=0 inside the return hook and after
-pausing at the same return address. Passing reruns are evidence of those runs,
-not a claim that the earlier failure was causally fixed. Bounded repetitions
-using a fully rebuilt final runtime are the next investigation step.
+[Enhanced public diagnostics](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37104037545)
+then reproduced the failure with decisive evidence: the return hook captured
+R0=0 at PC `0x080095b0`, but the subsequent register read saw R0=`0x6590` and
+PC=`0x080127de`. Flash initialization succeeded in this run; the test read a
+later CPU state. The original uninstrumented failure lacks the values needed
+to independently identify its exact state.
+
+The hook published its milestone before requesting pause. Renode's log tester
+could wake Robot immediately, allowing register reads before the hook's pause
+completed. The corrected hooks capture return state first, request pause before
+publishing the milestone, and explicitly await emulation pause. The test
+requires both captured and paused R0 to be zero and both PCs to equal the
+expected return site. It changes no guest registers and bypasses no mounting,
+scan or formatting path. Precise pause is requested where supported; the
+ordering and stop wait are essential, rather than an assumption that precision
+alone is sufficient.
+
+A fully source-built final runtime, ten consecutive fresh-machine HCI boots,
+a corrupted-metadata rejection check and a new complete two-profile public
+matrix are being qualified before merging this correction. These results must
+remain distinct from universal reliability or physical-hardware approval.
 
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not

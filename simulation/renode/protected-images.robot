@@ -61,11 +61,13 @@ Boot Protected Pair And Prove Progress
 Complete Modeled Flash Initialization Successfully
     # Called at the paused initializer entry: observe its actual return value
     # without changing guest registers or skipping the mount and blank scan.
+    # Publish snapshots after requesting the pause, and wait for global stop:
+    # a log notification alone can wake Robot before the hook has paused.
     ${link_register}=    Execute Command    cpu GetRegister 14
     ${return_site}=    Evaluate    int($link_register.strip(), 0) & ~1
-    Execute Command    cpu AddHook ${return_site} "monitor.Parse('log \\"MILESTONE flash initialized R0=%d PC=%d\\"' % (int(self.GetRegister(0).RawValue), int(self.GetRegister(15).RawValue))); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${return_site} "flash_return_r0=int(self.GetRegister(0).RawValue); flash_return_pc=int(self.GetRegister(15).RawValue); machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash initialized R0=%d PC=%d\\"' % (flash_return_r0, flash_return_pc))"
     Start Emulation
-    ${return_log}=    Wait For Log Entry    MILESTONE flash initialized    timeout=15
+    ${return_log}=    Wait For Log Entry    MILESTONE flash initialized    timeout=15    pauseEmulation=${True}
     Log To Console    ${return_log}
     ${status}=    Execute Command    cpu GetRegister 0
     ${paused_pc}=    Execute Command    cpu GetRegister 15
@@ -89,12 +91,12 @@ Boot Through Modeled Board Devices
     ${flash_init}=    Execute Command    sysbus GetSymbolAddress "stm32_w25q256_initialize"
     ${display_init}=    Execute Command    sysbus GetSymbolAddress "tlc5955_initialize"
     Execute Command    cpu AddHook ${imu_init.strip()} "monitor.Parse('log \\"MILESTONE imu bus-model\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${flash_init.strip()} "monitor.Parse('log \\"MILESTONE flash bus-model\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${flash_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash bus-model\\"')"
     Execute Command    cpu AddHook ${display_init.strip()} "monitor.Parse('log \\"MILESTONE display bus-model\\"'); machine.PauseAndRequestEmulationPause()"
     Start Emulation
     Wait For Log Entry    MILESTONE imu bus-model    timeout=10
     Start Emulation
-    Wait For Log Entry    MILESTONE flash bus-model    timeout=10
+    Wait For Log Entry    MILESTONE flash bus-model    timeout=10    pauseEmulation=${True}
     Complete Modeled Flash Initialization Successfully
     Start Emulation
     Wait For Log Entry    MILESTONE display bus-model    timeout=15
@@ -123,7 +125,7 @@ Boot Simulation HCI Through Modeled Board Devices
     # The IMU and flash initializers run against the bus models; only the
     # TLC5955 display functions are isolated, as in the existing HCI gate.
     Execute Command    cpu AddHook ${imu_init.strip()} "monitor.Parse('log \\"MILESTONE imu bus-model\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${flash_init.strip()} "monitor.Parse('log \\"MILESTONE flash bus-model\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${flash_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash bus-model\\"')"
     Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
@@ -137,7 +139,7 @@ Boot Simulation HCI Through Modeled Board Devices
     Start Emulation
     Wait For Log Entry    MILESTONE imu bus-model    timeout=15
     Start Emulation
-    Wait For Log Entry    MILESTONE flash bus-model    timeout=15
+    Wait For Log Entry    MILESTONE flash bus-model    timeout=15    pauseEmulation=${True}
     Complete Modeled Flash Initialization Successfully
     Start Emulation
     Wait For Log Entry    MILESTONE bt_enable    timeout=30

@@ -341,16 +341,16 @@ machine-readable and cannot be confused with physical-hardware evidence.
 | 2026-09-07 | C8.5 (decoded virtual-HCI diagnostics) | Complete | The external Apache-2.0 bridge's opt-in trace now records every socket chunk in hexadecimal and decodes complete H4 command/event headers, including opcode and status for Command Complete/Status events. Tracing occurs before controller dispatch so request/response order is unambiguous. The socket regression covers fragmented vendor bootstrap acknowledgement, Reset, and Read BD_ADDR and asserts the decoded trace without interpreting vendor parameters. |
 | 2026-09-07 | C4.3/C8.5 (daemon-ready emulation gate) | Complete | Refactored the daemon's blocking stop wait into the named `daemon_wait_for_stop` boundary, preserving EINTR behavior and providing a stable semantic milestone only reached after services start and `btsensor_transport_start()` succeeds. The real-payload custom-Renode gate now crosses the opaque TI stream, host enable, settings load, hub-transport registration, and this daemon-ready boundary. The protected ARM rebuild, resource/layout gate, neutral ARM compile, standalone HCI bridge test, and extended Renode test pass. Simulated peer connect/data/disconnect remains separate from daemon readiness. |
 | 2026-09-07 | C8.6 (stock/custom platform split) | Complete | Remote baseline run `34089427905` passed the protected build, linker/resource checks, and host harness but correctly failed when stock Renode parsed custom-only UART `DMATransmit` wiring. The shared stock-compatible platform now retains memory and board-device models, while `spike-prime-custom-dma.repl` layers the fork-only request lines for the HCI gate. Locally, all five protected stock-Renode cases pass or intentionally skip HCI, and the custom-fork real-payload gate reaches daemon-ready. |
-
-| 2026-10-03 | Targeted NuttX and simulation integration | Complete within recorded scope | Firmware merge `37c6e47583336c661ce9b6a0e2984158586de00c` retains the reviewed upstream backports, non-destructive storage handling, separate default/HCI profiles, recursive-mutex configuration, host synchronization fixes and exact input/notice gates. Runtime merge `e0166acb028b162e972458f31d76cdb7dcdc518d` passed 225 model tests and guest/debugger/persistence/throughput gates. Both firmware jobs in run `37102784250` passed, including erased first boot and standard-controller HCI startup. An earlier nonzero flash-return observation remains unexplained; diagnostic logging and bounded reliability investigation are separate from this passing qualification. |
+| 2026-10-03 | Targeted NuttX and simulation integration | Complete within recorded scope | Firmware merge `37c6e47583336c661ce9b6a0e2984158586de00c` retains the reviewed upstream backports, non-destructive storage handling, separate default/HCI profiles, recursive-mutex configuration, host synchronization fixes and exact input/notice gates. Runtime merge `e0166acb028b162e972458f31d76cdb7dcdc518d` passed 225 model tests and guest/debugger/persistence/throughput gates. Both firmware jobs in run `37102784250` passed, including erased first boot and standard-controller HCI startup. A later diagnostic run identified a flash-return observation race: the initializer returned zero, but the test read registers before pause completed. Its correction and bounded reliability checks are separate from this passing integration qualification. |
 
 ## Current next action
 
-Investigate the earlier unexplained flash-return observation using the fully
+Qualify the diagnosed flash-return observation-race correction using the fully
 source-built final runtime, fresh machines and bounded repeated HCI boots.
 Require agreement between the value captured at the function return and the
-paused CPU state. Preserve both successful and failed evidence; passing repeats
-do not establish a causal fix.
+paused CPU state. Preserve both successful and failed evidence. The captured public failure
+establishes the observation mismatch; passing repeats bound the corrected test
+behavior and do not prove universal reliability.
 
 Then continue C8.4/C8.5 by replacing the remaining display-function hooks with
 bus-level models and extending daemon readiness to actual peer link events.
