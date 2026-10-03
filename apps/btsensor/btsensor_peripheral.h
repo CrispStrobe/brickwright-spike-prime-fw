@@ -42,6 +42,7 @@ struct btsensor_peripheral_ops {
   int (*fusion_stop)(void *);
   int (*fusion_status)(void *, bool *, bool *, bool *);
   int (*fusion_snapshot)(void *, imu_fusion_snapshot_t *);
+  int (*fusion_set_base_axes)(void *, const imu_xyz_t *, const imu_xyz_t *);
 };
 
 /* The backend object must remain valid until it is replaced or cleared. */

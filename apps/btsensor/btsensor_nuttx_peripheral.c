@@ -159,6 +159,13 @@ static int fusion_status(void *context, bool *starting, bool *running,
   return 0;
 }
 
+static int fusion_set_base_axes(void *context, const imu_xyz_t *front,
+                                const imu_xyz_t *top)
+{
+  (void)context;
+  return imu_service_set_base_axes(front, top);
+}
+
 static int fusion_snapshot(void *context, imu_fusion_snapshot_t *out)
 {
   (void)context;
@@ -187,6 +194,7 @@ static const struct btsensor_peripheral_ops g_ops =
   .fusion_stop = fusion_stop,
   .fusion_status = fusion_status,
   .fusion_snapshot = fusion_snapshot,
+  .fusion_set_base_axes = fusion_set_base_axes,
 #endif
 };
 

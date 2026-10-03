@@ -80,7 +80,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_cmd_neutral.c",
-      "sha256": "b087706eba779b2c8e95955409f12e7948b4afd972559bd1ba7463f0e0b873b6",
+      "sha256": "919dcb5b3ea2ca3e21fa35e5f181255af8bdcae61f34105cea83c7b1255dedfb",
       "spdx": [
         "Apache-2.0"
       ],
@@ -190,7 +190,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_peripheral.h",
-      "sha256": "17e16a3c25439126cb21785746550ca97137e5539260540bb185661b79320571",
+      "sha256": "788f018be0075ddcb93604068c5e15029f6f099fa050b7a555e148cfff9c53d7",
       "spdx": [
         "Apache-2.0"
       ],
@@ -949,7 +949,7 @@
     },
     {
       "path": "apps/imu/imu_fusion.c",
-      "sha256": "fea1253b286d90847f798c8c7d17677392d0622f39af182f1158f96462d9ff8e",
+      "sha256": "db084ce7182bbb8e15fea8d2f17f032f95b6a26f9b825b39361a2a80baa85484",
       "spdx": [
         "MIT"
       ],
@@ -993,7 +993,7 @@
     },
     {
       "path": "apps/imu/imu_main.c",
-      "sha256": "b008836d91cf438a005bab89c46ec3dae72dcc460aeab27fc775e629b1fb19f5",
+      "sha256": "1b51f5409bc74210d2232c25442eed145aaccce71f5add2ba300acc3c1150222",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1002,7 +1002,7 @@
     },
     {
       "path": "apps/imu/imu_service.h",
-      "sha256": "69404b3fe7555ec79020493f559f0d9c0a77ec350695644d586d5424ce761b20",
+      "sha256": "6d97d67a35d4a53093c95bf5799b0a9f794543f36753e977633e6d7755329868",
       "spdx": [
         "Apache-2.0"
       ],

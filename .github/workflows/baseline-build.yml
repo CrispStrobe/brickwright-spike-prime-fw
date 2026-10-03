@@ -174,7 +174,7 @@ jobs:
           BRICKWRIGHT_RENODE_TAG: brickwright-simulation-hci-existing-filesystem
         run: tools/test_renode_virtual_hci_bridge.sh
 
-      - name: Execute LE reconnect, Scratch Link, Classic and stationary IMU peers through Bluetooth air
+      - name: Execute LE reconnect, Scratch Link, Classic, stationary and pose IMU peers through Bluetooth air
         if: matrix.profile == 'simulation-hci'
         run: tools/test_bluetooth_air.sh
 

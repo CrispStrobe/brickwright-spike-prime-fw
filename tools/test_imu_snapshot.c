@@ -122,7 +122,7 @@ static void calibration_base_heading(void)
   assert(imu_fusion_get_snapshot(&snap, 1, 0));
   imu_fusion_get_gyro(&legacy, true);
   assert(near(legacy.x, snap.gyro_dps.x));
-  assert(near(snap.gyro_dps.y, 16));
+  assert(near(snap.gyro_dps.y, -16));
   imu_fusion_get_tilt(&legacy);
   assert(isfinite(legacy.x));
   int32_t sum[3] = {0};
@@ -193,10 +193,53 @@ static void *reader(void *arg)
   return NULL;
 }
 
+static void cardinal_bases(void)
+{
+  imu_xyz_t axes[] = {{.x=1}, {.x=-1}, {.y=1}, {.y=-1}, {.z=1}, {.z=-1}};
+  imu_xyz_t gyro = {.x=2, .y=3, .z=5};
+  imu_xyz_t accel = {.x=2000, .y=3000, .z=9000};
+  imu_settings_t s = settings();
+  unsigned checked = 0;
+  for (unsigned f=0; f<6; f++)
+    for (unsigned t=0; t<6; t++)
+      {
+        imu_xyz_t front=axes[f], top=axes[t];
+        float dot=front.x*top.x+front.y*top.y+front.z*top.z;
+        if (dot != 0) continue;
+        imu_xyz_t right = {.x=top.y*front.z-top.z*front.y,
+                          .y=top.z*front.x-top.x*front.z,
+                          .z=top.x*front.y-top.y*front.x};
+        imu_xyz_t basis[] = {front,right,top};
+        imu_fusion_snapshot_t before, after;
+        imu_fusion_init();
+        imu_fusion_set_settings(&s);
+        assert(imu_fusion_update_timestamped(&gyro,&accel,.001f,100));
+        assert(imu_fusion_get_snapshot(&before,100,0));
+        imu_fusion_set_base_orientation(&front,&top);
+        assert(imu_fusion_get_snapshot(&after,100,0));
+        for (unsigned i=0; i<3; i++)
+          {
+            assert(near(after.accel_mms2.values[i],
+              basis[i].x*before.accel_mms2.x+basis[i].y*before.accel_mms2.y+
+              basis[i].z*before.accel_mms2.z));
+            assert(near(after.gyro_dps.values[i],
+              basis[i].x*before.gyro_dps.x+basis[i].y*before.gyro_dps.y+
+              basis[i].z*before.gyro_dps.z));
+          }
+        assert(!memcmp(&before.orientation,&after.orientation,sizeof(before.orientation)));
+        assert(after.sequence==before.sequence && after.timestamp_us==before.timestamp_us);
+        assert(after.up_side==before.up_side && after.ready==before.ready);
+        assert(near(after.heading_1d,0) && near(after.heading_3d,0));
+        checked++;
+      }
+  assert(checked==24);
+}
+
 int main(void)
 {
   validity_and_recovery();
   calibration_base_heading();
+  cardinal_bases();
   imu_fusion_init();
   pthread_t threads[4];
   atomic_init(&writer_done, false);
