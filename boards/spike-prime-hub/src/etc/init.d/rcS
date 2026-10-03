@@ -21,7 +21,10 @@
 hubprogram serve
 #endif
 
-#ifdef CONFIG_APP_BTSENSOR
+#if defined(CONFIG_APP_BTSENSOR) && \
+    (!defined(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK) || \
+     defined(CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI))
+/* A TI-free simulation has no controller unless explicitly configured. */
 btsensor start
 #endif
 

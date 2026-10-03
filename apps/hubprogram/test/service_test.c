@@ -25,8 +25,33 @@ int bw_program_restore(struct bw_program *p,uint32_t id,const char *path) {
   assert(p==&g_program && id==42 && !strcmp(path,"/mnt/flash/brickwright.program"));
   loads++;p->state=BW_PROGRAM_READY;return 0;
 }
+static int fixture_motor(void *ctx,unsigned port,int32_t speed) {
+  (void)ctx;assert(port<6 && speed==300);return port==3 ? -ENODEV : 0;
+}
+static int fixture_position(void *ctx,unsigned port,int32_t degrees,int32_t speed) {
+  (void)ctx;assert(port<6 && degrees==90 && speed==300);return port==4 ? -ENOENT : 0;
+}
+static int fixture_done(void *ctx,unsigned port) {(void)ctx;assert(port<6);return 1;}
+static void six_port_wrappers(void) {
+  g_program.state=BW_PROGRAM_RUNNING;g_program.owned=0;
+  g_program.io.motor=fixture_motor;g_program.io.position=fixture_position;g_program.io.done=fixture_done;
+  assert(g_bw_program_storage_abi==1u && g_bw_program_debug.version==1);
+  for(unsigned port=0;port<6;port++) {
+    assert(bw_program_service_motor(port,300)==(port==3 ? -ENODEV : 0));
+    assert(bw_program_service_position(port,90,300)==(port==4 ? -ENOENT : 0));
+    assert(bw_program_service_done(port)==1);
+  }
+  assert(g_program.owned==63);
+  assert(bw_program_service_motor(6,300)==-EINVAL);
+  assert(bw_program_service_position((unsigned)-1,90,300)==-EINVAL);
+  assert(bw_program_service_done(6)==-EINVAL);
+  g_program.state=BW_PROGRAM_READY;
+  assert(bw_program_service_motor(5,300)==-EINVAL && bw_program_service_position(5,90,300)==-EINVAL);
+  memset(&g_program.io,0,sizeof(g_program.io));g_program.owned=0;
+}
 int main(void) {
   uint8_t packet[20]={0x70,1,8,0,42,0,0,0},reply[20];unsigned i;
+  six_port_wrappers();
   g_initialized=1;g_program.state=BW_PROGRAM_READY;g_program.id=42;
   assert(bw_program_service_request(1,packet,8,reply)==0 && saves==1);
   assert(reply[2]==8 && reply[3]==BW_PROGRAM_READY && reply[4]==42);

@@ -195,14 +195,14 @@ Brickwright reaches protected userspace with board boundary isolated
     [Tags]    brickwright-userspace
     Boot Protected Pair And Prove Progress    brickwright
     ${nsh_main}=    Execute Command    sysbus GetSymbolAddress "nsh_main"
-    ${btsensor_main}=    Execute Command    sysbus GetSymbolAddress "btsensor_main"
+    ${hubprogram_main}=    Execute Command    sysbus GetSymbolAddress "hubprogram_main"
     Execute Command    cpu AddHook ${nsh_main.strip()} "monitor.Parse('log \\"MILESTONE nsh_main\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${btsensor_main.strip()} "monitor.Parse('log \\"MILESTONE btsensor_main\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${hubprogram_main.strip()} "monitor.Parse('log \\"MILESTONE hubprogram_main\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu PC `cpu LR`
     Start Emulation
     Wait For Log Entry    MILESTONE nsh_main    timeout=10
     Start Emulation
-    Wait For Log Entry    MILESTONE btsensor_main    timeout=10
+    Wait For Log Entry    MILESTONE hubprogram_main    timeout=10
 
 Brickwright formats initially erased flash and reaches TLC5955
     [Tags]    brickwright-board-models    brickwright-erased-first-boot
@@ -225,18 +225,18 @@ Brickwright reaches userspace with synchronous board functions isolated
     ${display_update}=    Execute Command    sysbus GetSymbolAddress "tlc5955_update_sync"
     ${display_set}=    Execute Command    sysbus GetSymbolAddress "tlc5955_set_duty"
     ${nsh_main}=    Execute Command    sysbus GetSymbolAddress "nsh_main"
-    ${btsensor_main}=    Execute Command    sysbus GetSymbolAddress "btsensor_main"
+    ${hubprogram_main}=    Execute Command    sysbus GetSymbolAddress "hubprogram_main"
     Execute Command    cpu AddHook ${imu_init.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${flash_init.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${nsh_main.strip()} "monitor.Parse('log \\"MILESTONE nsh_main bus-stubs\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${btsensor_main.strip()} "monitor.Parse('log \\"MILESTONE btsensor_main bus-stubs\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${hubprogram_main.strip()} "monitor.Parse('log \\"MILESTONE hubprogram_main bus-stubs\\"'); machine.PauseAndRequestEmulationPause()"
     Start Emulation
     Wait For Log Entry    MILESTONE nsh_main bus-stubs    timeout=10
     Start Emulation
-    Wait For Log Entry    MILESTONE btsensor_main bus-stubs    timeout=10
+    Wait For Log Entry    MILESTONE hubprogram_main bus-stubs    timeout=10
 
 Brickwright crosses the protected UART HCI bootstrap boundary
     [Tags]    brickwright-hci

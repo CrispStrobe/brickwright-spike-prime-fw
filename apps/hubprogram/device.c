@@ -13,20 +13,24 @@
 #include <unistd.h>
 struct port_state {
   int fd,mode,braking,valid,deferred;
+  unsigned type;
   int32_t delta,velocity;
   int64_t position,previous;
   int32_t speed,value;
   uint64_t sampled,previous_sampled;
   struct bw_motor_control control;
 };
-static struct port_state g_ports[6];
+static struct port_state g_ports[BW_PROGRAM_PORT_COUNT];
 static uint64_t g_now;
 static int call(int fd,int op,unsigned long arg) { return ioctl(fd,op,arg)<0 ? -errno : 0; }
+static int is_motor(unsigned type) {
+  return type==48 || type==49 || type==46 || type==65;
+}
 static int open_port(unsigned port,unsigned type,int mode) {
   struct lump_device_info_s info;
   struct port_state *p;
   char path[24]; int rc;
-  if(port>=6)return -EINVAL;
+  if(port>=BW_PROGRAM_PORT_COUNT)return -EINVAL;
   p=g_ports+port;
   if(p->fd<0) {
     snprintf(path,sizeof(path),"/dev/legoport%u",port);
@@ -37,13 +41,19 @@ static int open_port(unsigned port,unsigned type,int mode) {
   if(rc<0)return rc;
   if(!(info.flags&LUMP_FLAG_SYNCED))return -EAGAIN;
   if(type==48) {
-    if(info.type_id!=48 && info.type_id!=49 && info.type_id!=46 && info.type_id!=65)return -ENODEV;
+    if(!is_motor(info.type_id))return -ENODEV;
   } else if(info.type_id!=type)return -ENODEV;
+  if(p->type!=info.type_id) {
+    /* A newly attached device must not reuse samples or a prior demand. */
+    p->valid=0; p->mode=-1; p->speed=0; p->deferred=0;
+    memset(&p->control,0,sizeof(p->control));
+  }
   if(p->mode!=mode) {
     rc=call(p->fd,LEGOPORT_LUMP_SELECT,(unsigned long)mode);
     if(rc<0)return rc;
     p->mode=mode; p->valid=0;
   }
+  p->type=info.type_id;
   return 0;
 }
 static int poll_port(unsigned port) {
@@ -55,7 +65,7 @@ static int poll_port(unsigned port) {
     if(rc==-EAGAIN)break;
     if(rc<0)return rc;
     if(frame.mode!=p->mode)continue;
-    if(port<2) {
+    if(is_motor(p->type)) {
       uint32_t raw; int32_t degrees;
       if(frame.len<4)return -EPROTO;
       raw=(uint32_t)frame.data[0]|((uint32_t)frame.data[1]<<8)|((uint32_t)frame.data[2]<<16)|((uint32_t)frame.data[3]<<24);
@@ -67,7 +77,7 @@ static int poll_port(unsigned port) {
         p->previous_sampled=p->valid ? p->sampled : g_now;
       }
       p->position=(int64_t)degrees*1000;
-    } else if(port==3) {
+    } else if(p->type==62) {
       if(frame.len<2)return -EPROTO;
       uint16_t raw=(uint16_t)frame.data[0]|((uint16_t)frame.data[1]<<8);
       p->value=raw==UINT16_MAX ? -1 : raw;
@@ -78,7 +88,7 @@ static int poll_port(unsigned port) {
     updated=1;
   }
   if(updated) {
-    if(port<2 && p->valid && g_now>p->previous_sampled) {
+    if(is_motor(p->type) && p->valid && g_now>p->previous_sampled) {
       uint64_t elapsed=g_now-p->previous_sampled;
       int64_t measured=elapsed>INT64_MAX ? 0 :
         (p->position-p->previous)/(int64_t)elapsed;
@@ -90,13 +100,13 @@ static int poll_port(unsigned port) {
 }
 static int speed(void *ctx,unsigned port,int32_t value) {
   int rc; (void)ctx;
-  if(port>=2 || value < -1110 || value>1110)return -EINVAL;
+  if(port>=BW_PROGRAM_PORT_COUNT || value < -1110 || value>1110)return -EINVAL;
   rc=open_port(port,48,2); if(rc<0)return rc;
   g_ports[port].braking=0; g_ports[port].deferred=0; bw_motor_speed(&g_ports[port].control,value); return 0;
 }
 static int position(void *ctx,unsigned port,int32_t degrees,int32_t velocity) {
   int rc; (void)ctx;
-  if(port>=2 || degrees < -36000 || degrees>36000 || velocity<1 || velocity>1110)return -EINVAL;
+  if(port>=BW_PROGRAM_PORT_COUNT || degrees < -36000 || degrees>36000 || velocity<1 || velocity>1110)return -EINVAL;
   rc=open_port(port,48,2); if(rc<0)return rc;
   rc=poll_port(port); if(rc<0 && rc!=-EAGAIN)return rc;
   g_ports[port].braking=0;
@@ -108,14 +118,16 @@ static int position(void *ctx,unsigned port,int32_t degrees,int32_t velocity) {
 }
 static int brake(void *ctx,unsigned port) {
   struct port_state *p; (void)ctx;
-  if(port>=2)return -EINVAL;
-  p=g_ports+port; if(p->fd<0)return 0;
+  if(port>=BW_PROGRAM_PORT_COUNT)return -EINVAL;
+  p=g_ports+port; if(p->fd<0 || !is_motor(p->type))return 0;
+  { int rc=open_port(port,48,2); if(rc<0)return rc; }
   memset(&p->control,0,sizeof(p->control)); p->deferred=0; p->braking=1;
   return call(p->fd,LEGOPORT_PWM_BRAKE,0);
 }
 static int done(void *ctx,unsigned port) {
   struct port_state *p; (void)ctx;
-  if(port>=2)return -EINVAL;
+  if(port>=BW_PROGRAM_PORT_COUNT)return -EINVAL;
+  { int rc=open_port(port,48,2); if(rc<0)return rc; }
   p=g_ports+port;
   if(p->deferred || !p->valid)return 0;
   if(g_now<p->sampled || g_now-p->sampled>100)return -EIO;
@@ -134,16 +146,18 @@ static int sensor(void *ctx,unsigned predicate,int32_t *value) {
 }
 void bw_device_init(struct bw_program_io *io) {
   unsigned i; g_now=0; memset(g_ports,0,sizeof(g_ports));
-  for(i=0;i<6;i++) {g_ports[i].fd=-1;g_ports[i].mode=-1;}
+  for(i=0;i<BW_PROGRAM_PORT_COUNT;i++) {g_ports[i].fd=-1;g_ports[i].mode=-1;}
   *io=(struct bw_program_io){speed,position,done,brake,sensor,NULL};
 }
 int bw_device_tick(uint64_t now) {
   unsigned i;
   if(now<g_now)return -EINVAL;
   g_now=now;
-  for(i=0;i<2;i++) if(g_ports[i].fd>=0) {
+  for(i=0;i<BW_PROGRAM_PORT_COUNT;i++) if(g_ports[i].fd>=0 && is_motor(g_ports[i].type)) {
     struct port_state *p=g_ports+i;
-    int rc=poll_port(i);
+    int rc=open_port(i,48,2);
+    if(rc<0)return rc;
+    rc=poll_port(i);
     if(rc==-EAGAIN && !p->valid)continue; /* initial mode negotiation */
     if(rc<0)return rc;
     if(p->deferred) {
@@ -159,9 +173,9 @@ int bw_device_tick(uint64_t now) {
 }
 void bw_device_release(void) {
   unsigned i;
-  for(i=0;i<6;i++) {
+  for(i=0;i<BW_PROGRAM_PORT_COUNT;i++) {
     if(g_ports[i].fd>=0) {
-      if(i<2)(void)brake(NULL,i);
+      if(is_motor(g_ports[i].type))(void)brake(NULL,i);
       (void)close(g_ports[i].fd);
     }
     memset(g_ports+i,0,sizeof(g_ports[i]));

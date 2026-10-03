@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-work=$(mktemp -d /tmp/brickwright-renode-hci.XXXXXX)
+work=$(mktemp -d "${TMPDIR:-/tmp}/brickwright-renode-hci.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
 cc -std=c11 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L \
@@ -17,6 +17,10 @@ python3 "$root/tools/test_renode_virtual_hci_bridge.py" \
   "$work/renode-virtual-hci"
 
 if [[ "${BRICKWRIGHT_RENODE_FIRMWARE_TEST:-0}" == 1 ]]; then
+  if ! grep -qx 'CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI=y' "$root/nuttx/.config"; then
+    echo "virtual HCI firmware test requires explicit CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI=y and a rebuilt simulation image" >&2
+    exit 2
+  fi
   renode_dir=${RENODE_DIR:-"$root/.local/tools/renode-1.16.1"}
   venv_dir=${RENODE_TEST_VENV:-"$root/.local/tools/renode-test-venv"}
   renode_test=${RENODE_TEST:-"$renode_dir/renode-test"}

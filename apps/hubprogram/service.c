@@ -11,6 +11,8 @@
 #include <time.h>
 #include <string.h>
 #include "debug.h"
+/* Fixed-slot SAVE/LOAD feature discovery; debug transport version stays 1. */
+const uint32_t g_bw_program_storage_abi=1u;
 volatile struct bw_program_debug g_bw_program_debug={.magic=0x42574e50u,.version=1};
 static struct bw_program g_program;
 static struct bw_program_upload g_upload;
@@ -34,6 +36,8 @@ static int request_locked(uint32_t owner,uint64_t now,const uint8_t *data,size_t
     (void)bw_program_request(&g_program,&g_upload,owner,now,status,8,reply);
     if(data && n>=8)for(i=0;i<4;i++)id|=(uint32_t)data[4+i]<<(8*i);
     if(g_python_active)rc=-EBUSY;
+    /* Root the read-only feature marker even with section garbage collection. */
+    else if(*(const volatile uint32_t *)&g_bw_program_storage_abi!=1u)rc=-ENOSYS;
     else if(owner && n==8 && data[0]==BW_PROGRAM_REQUEST && data[1]==1 && !data[3] && id) {
       if(g_upload.active || g_program.state==BW_PROGRAM_RUNNING)rc=-EBUSY;
       else if(op==8)rc=bw_program_save(&g_program,id,"/mnt/flash/brickwright.program");
@@ -154,20 +158,20 @@ int bw_program_service_poll(void) {
 int bw_program_service_motor(unsigned port,int32_t speed) {
   int rc;
   pthread_mutex_lock(&g_lock);
-  if(g_program.state!=BW_PROGRAM_RUNNING || port>=2)rc=-EINVAL;
+  if(g_program.state!=BW_PROGRAM_RUNNING || port>=BW_PROGRAM_PORT_COUNT)rc=-EINVAL;
   else {g_program.owned|=1u<<port;rc=g_program.io.motor(NULL,port,speed);}
   pthread_mutex_unlock(&g_lock);return rc;
 }
 int bw_program_service_position(unsigned port,int32_t degrees,int32_t speed) {
   int rc;
   pthread_mutex_lock(&g_lock);
-  if(g_program.state!=BW_PROGRAM_RUNNING || port>=2)rc=-EINVAL;
+  if(g_program.state!=BW_PROGRAM_RUNNING || port>=BW_PROGRAM_PORT_COUNT)rc=-EINVAL;
   else {g_program.owned|=1u<<port;rc=g_program.io.position(NULL,port,degrees,speed);}
   pthread_mutex_unlock(&g_lock);return rc;
 }
 int bw_program_service_done(unsigned port) {
   int rc;
-  pthread_mutex_lock(&g_lock);rc=port>=2 ? -EINVAL : g_program.io.done(NULL,port);
+  pthread_mutex_lock(&g_lock);rc=port>=BW_PROGRAM_PORT_COUNT ? -EINVAL : g_program.io.done(NULL,port);
   pthread_mutex_unlock(&g_lock);return rc;
 }
 int bw_program_service_sensor(unsigned predicate,int32_t *value) {

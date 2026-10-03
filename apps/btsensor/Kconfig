@@ -22,15 +22,27 @@ config APP_BTSENSOR_SIM_NO_SERVICE_PACK
 		CC2564C needs its service pack; never use this option for
 		hardware.
 
+config APP_BTSENSOR_SIM_VIRTUAL_HCI
+	bool "Simulation: autostart Bluetooth with an attached virtual HCI controller"
+	depends on APP_BTSENSOR_SIM_NO_SERVICE_PACK
+	default n
+	---help---
+		Explicitly opt in to Bluetooth daemon startup in the TI-free
+		simulation profile.  Enable only when the simulator has a virtual
+		HCI controller connected to the firmware UART before boot.
+		Without that controller, HCI command timeouts can assert and
+		reset the complete firmware.  Local hub programs run without it.
+		This option does not create a controller or qualify radio support.
+
 config APP_BTSENSOR_START_VISIBLE
 	bool "Become visible (advertise, page and inquiry scan) at boot"
 	default n
 	---help---
 		The daemon makes the hub visible as soon as the Bluetooth host
 		is up, with the same effect as `btsensor bt on` at the console.
-		The simulation profile enables this because Renode does not
-		model the USB console, so a simulated peer can find the hub
-		without console input.
+		A simulation with an explicitly enabled, attached virtual HCI
+		controller can use this so a peer can find the hub without console
+		input.  It does not enable simulation Bluetooth daemon startup.
 
 config APP_BTSENSOR_PROGNAME
 	string "Program name"

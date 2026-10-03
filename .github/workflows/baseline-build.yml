@@ -141,6 +141,9 @@ jobs:
             --include brickwright-existing-filesystem-board \
             --include brickwright-board-stubs
 
+      - name: Validate the source-generated empty LittleFS seed
+        run: python3 tools/test_simulation_littlefs_seed.py
+
       - name: Test the transport-neutral virtual HCI bridge
         env:
           BRICKWRIGHT_RENODE_FIRMWARE_TEST: "1"
