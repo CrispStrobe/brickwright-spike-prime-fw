@@ -4,6 +4,7 @@ set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 python3 "$root/tools/test_virtual_hci_wakeups.py"
+python3 "$root/tools/test_slist_concurrency.py"
 work=$(mktemp -d /tmp/brickwright-host-link.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 "$root/tools/fetch_mbedtls.sh" "$work/mbedtls"
