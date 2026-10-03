@@ -348,14 +348,15 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 | 2026-10-03 | C8.5 (periodic battery peer records) | Complete within recorded scope | Added strict complete battery/acknowledgement validation, subscribe/unsubscribe quiet checks, and a second-central reset check after an active subscription is disconnected. The selected ADC fixture derives 62% through the actual gauge. Exact candidate `9478efd059f85c817b29faf3dda113a7cb8030a2` passes the full isolated wrapper on the VPS and both clean profiles in public run `37116690724`: nine complete battery records, two unsubscribe silence checks, active-subscription disconnect and a new central with no inherited stream. Measured host-time budgets preserve four observed intervals; 13 framing, seven periodic and four lifecycle regressions pass. No guest/model changes. IMU and mixed-mode records remain separate. |
 
+| 2026-10-03 | C8.5 (paired raw IMU acquisition and coherent snapshots) | Complete within recorded scope | Candidate `883508623eab0e6fca9966cfea06cc2b311e4e03` passes both clean firmware profiles in public matrix `37124347755` and source/docs CI `37124350118`. Three injected paired samples cross INT1/PB4/EXTI4, the actual STM32F4 driver, uORB and Classic BUNDLE with validated body axes, source timestamps, sequence, rate and ranges; OFF rejects injection with both ODRs disabled, reopening delivers a fresh sample, and final OFF powers down again. Infrastructure PR26/runtime PR33 correct the two-byte receive pipeline and BTF-only final-three-byte handoff; 24 byte/halfword STOP/repeated-START cases and full runtime CI `37122790295` pass. Firmware watch stop now drains its poll round before descriptor close; its regression fails on the old code and passes locally and in CI. Host snapshot concurrency/validity/recovery, source timestamp wrap and calibration persistence checks pass. Original notices and historical audit/image/archive hashes remain intact; inventories identify their old byte hashes as reference evidence and check the 3,246 current compiler inputs. Fusion snapshots are qualified by host tests, not an end-to-end guest producer test; full modern IMU wire mapping and physical hardware remain open. |
+
 ## Current next action
 
-Prove synthetic paired IMU samples through INT1/EXTI4 and uORB, preserving
-source timestamps, before adding a synchronized non-destructive fusion snapshot.
-Establish orientation mappings, wire units and conversion rules before emitting
-full IMU records; the current snapshot deliberately omits them, fusion state has
-no shared snapshot lock, and startup does not launch its producer daemon.
-Encoder-completed
-degree moves, stall/capability policy and cold-restart bond reuse also need
-separate evidence. Physical C5/C6.4 validation remains open and
-cannot be closed by simulation.
+Qualify the fusion producer through the actual guest before enabling it at boot.
+Define full modern protocol orientation mappings, wire units, temperature and up-side conversion rules
+before emitting full modern IMU records. The paired raw INT1/driver/uORB/Classic
+path and coherent non-consuming snapshot API now have the recorded qualification;
+they do not establish the full modern wire contract or guest fusion readiness.
+Encoder-completed degree moves, stall/capability policy and cold-restart bond reuse
+also need separate evidence. Physical C5/C6.4 validation remains open and cannot
+be closed by simulation.

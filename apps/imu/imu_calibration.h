@@ -19,6 +19,7 @@
 void imu_calibration_init(imu_settings_t *settings);
 void imu_calibration_set_defaults(imu_settings_t *settings);
 int imu_calibration_save(const char *path);
+int imu_calibration_save_copy(const char *path, const imu_settings_t *settings);
 int imu_calibration_load(const char *path);
 imu_settings_t *imu_calibration_get_settings(void);
 

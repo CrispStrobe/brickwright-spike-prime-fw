@@ -201,7 +201,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_scheduler.c",
-      "sha256": "647ee547c662ac10424e35537591750c31c4b900d40469ae6577ea310d4184c1",
+      "sha256": "7aa0bf266436f283165c53d68adc72a8aa67739bdd24cfac3076975308cca370",
       "spdx": [
         "Apache-2.0"
       ],
@@ -212,7 +212,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_scheduler.h",
-      "sha256": "b5365ccdaf1c274ca8134426e9924443dc3f074d4da98c376a304c8763b7bb72",
+      "sha256": "c49351f9d0d506c215299f9a07578b241f63cbad01e586db99b182c7ba403a97",
       "spdx": [
         "Apache-2.0"
       ],
@@ -927,7 +927,7 @@
     },
     {
       "path": "apps/imu/imu_calibration.c",
-      "sha256": "eac34bf7c25ac6e2f3b873609ecb194bdcb937070dfbbcb24ad92c32d8d65ccb",
+      "sha256": "f124ab85ffc2cb087b53ab9cab42b8b391802eef671f6676c96b27491aa2e929",
       "spdx": [
         "MIT"
       ],
@@ -938,7 +938,7 @@
     },
     {
       "path": "apps/imu/imu_calibration.h",
-      "sha256": "e96e8df76ce4ceff8818e2aeace2fc19e910ea425713305df8f74879818958f9",
+      "sha256": "fd39d6355057c358b001efa360228a38fbbb55b66afaab39553533c672dcc967",
       "spdx": [
         "MIT"
       ],
@@ -949,7 +949,7 @@
     },
     {
       "path": "apps/imu/imu_fusion.c",
-      "sha256": "a34025ccc26f3bf98f2f6d8f6516ed63df0965b1cb75c652b78f8318d5d68af2",
+      "sha256": "fea1253b286d90847f798c8c7d17677392d0622f39af182f1158f96462d9ff8e",
       "spdx": [
         "MIT"
       ],
@@ -960,7 +960,7 @@
     },
     {
       "path": "apps/imu/imu_fusion.h",
-      "sha256": "2e997c1613e3c5d8340131ae4d683ed12a85911905d89b403efa5332d347ed7c",
+      "sha256": "9ee8259ba3917c56a7a4f6f72a11593426f7e744d9ff958d7185bd131a4b782f",
       "spdx": [
         "MIT"
       ],
@@ -993,7 +993,7 @@
     },
     {
       "path": "apps/imu/imu_main.c",
-      "sha256": "81bd87484a553c3df5bb058d46096e335973f6851e01dc7bb416b9d63df1fd54",
+      "sha256": "b8585ad5a02fbd9e0f65c4149b3f6b654ea46ea45fd56776cc947ea51d728f78",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1021,6 +1021,17 @@
         "MIT"
       ],
       "basis": "Explicit per-file SPDX; select the permitted OR branch."
+    },
+    {
+      "path": "apps/imu/imu_timestamp.h",
+      "sha256": "0180edcf0720ee28e170f8d6ee5e778953531da76f3a6d42ab77e3a19dcdb3ff",
+      "spdx": [
+        "Apache-2.0"
+      ],
+      "selected_licences": [
+        "Apache-2.0"
+      ],
+      "basis": "New local timestamp expansion helper with explicit Apache-2.0 notice."
     },
     {
       "path": "apps/imu/imu_types.h",
@@ -35032,5 +35043,6 @@
   "build_revision_note": "2026-10-03 actual clean ARM qualification of the simulation-hci profile. All 3245 reviewed source paths and attribution selections retained. Five reviewed source fixes cover exhaustive flash scan batching, HCI condition broadcasts, locked singly-linked lists, and PSA pthread synchronization plus a NuttX recursive-mutex compile guard. Both configurations enable CONFIG_PTHREAD_MUTEX_TYPES for the required recursive IRQ mutex ABI. The sole added selected member is existing Apache-2.0 mbedTLS threading.c.obj. Default configuration replaces temporary simulation-dirty provenance with the committed profile and enables CONFIG_PTHREAD_MUTEX_TYPES for the reviewed recursive mutex ABI; simulation-hci additionally enables CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI. Generated config header is reconstructed against the measured main header; other source and ROMFS inputs remain exact. Archive/member and image hashes come from the actual build; compiler debug paths prevent a whole-build reproducibility claim. The HCI generated ROMFS is additionally reproduced byte for byte with the pinned writer and xxd from the preprocessed committed startup tree; startup enables the explicit virtual-controller flag.",
   "capabilities": {
     "motorPorts": 6
-  }
+  },
+  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical."
 }

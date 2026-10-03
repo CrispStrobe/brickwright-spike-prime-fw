@@ -7,49 +7,159 @@ using Antmicro.Renode.Peripherals.SPI;
 
 namespace Antmicro.Renode.Peripherals.SPIKEPrime
 {
-    // Deterministic LSM6DS3TR-C subset used by the SPIKE board driver.
+    // Synthetic paired acquisition subset. Register/routing semantics follow ST
+    // AN5130 sections 4.2-4.4; no FIFO, physical motion or autonomous ODR clock.
     public sealed class LSM6DS3TRC : II2CPeripheral
     {
         public LSM6DS3TRC()
         {
-            registers = new byte[256];
+            INT1 = new GPIO();
             Reset();
+        }
+
+        public GPIO INT1 { get; private set; }
+
+        // Nonmutating atomic observation for synthetic fixture receipts. Unlike
+        // I2C pointer selection, this cannot interrupt a guest bus transaction.
+        public byte[] GetFixtureState()
+        {
+            lock(sync)
+            {
+                return new[] { registers[Ctrl1XL], registers[Ctrl2G], registers[Status] };
+            }
+        }
+
+        // Explicit fixture command, gyro XYZ then accel XYZ, signed raw counts.
+        // Returns false while powered down or while an earlier paired sample is
+        // unread. This bounded fixture admission policy preserves pair identity;
+        // it does not claim to reproduce silicon overrun/BDU timing.
+        public bool InjectSample(int gx, int gy, int gz, int ax, int ay, int az)
+        {
+            var values = new[] { gx, gy, gz, ax, ay, az };
+            foreach(var value in values)
+            {
+                if(value < short.MinValue || value > short.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Raw sample must fit signed 16 bits");
+            }
+            lock(sync)
+            {
+                if(!PairEnabled || unreadOutputs != 0) return false;
+                for(var i = 0; i < values.Length; ++i)
+                {
+                    registers[OutGyro + 2 * i] = (byte)values[i];
+                    registers[OutGyro + 2 * i + 1] = (byte)(values[i] >> 8);
+                }
+                registers[Status] = 3;
+                unreadOutputs = 0xfff;
+                if((registers[PulseConfig] & 0x80) != 0)
+                {
+                    // Digital edge only: the silicon's 75 us pulse width is
+                    // deliberately not simulated by this explicit fixture.
+                    if((registers[Int1Control] & 3) != 0) INT1.Blink();
+                }
+                else UpdateInterrupt();
+                return true;
+            }
         }
 
         public void Reset()
         {
-            Array.Clear(registers, 0, registers.Length);
-            registers[WhoAmI] = 0x6a;
-            pointer = 0;
+            lock(sync)
+            {
+                Array.Clear(registers, 0, registers.Length);
+                registers[WhoAmI] = 0x6a;
+                registers[Ctrl3C] = 4; // IF_INC reset value.
+                pointer = 0;
+                unreadOutputs = 0;
+                INT1.Unset();
+            }
         }
 
         public void Write(byte[] data)
         {
-            if(data.Length == 0) return;
-            pointer = data[0];
-            for(var i = 1; i < data.Length; ++i)
+            if(data == null) throw new ArgumentNullException(nameof(data));
+            lock(sync)
             {
-                var address = pointer++;
-                // SW_RESET completes immediately, as it may on real silicon
-                // before the driver's first 1 ms poll.
-                registers[address] = address == Ctrl3C && (data[i] & 1) != 0
-                    ? (byte)0 : data[i];
+                if(data.Length == 0) return;
+                pointer = data[0];
+                for(var i = 1; i < data.Length; ++i)
+                {
+                    var address = pointer;
+                    if(address == Ctrl3C && (data[i] & 1) != 0)
+                    {
+                        Reset();
+                        return;
+                    }
+                    if(address != WhoAmI && address != Status &&
+                       !(address >= OutGyro && address < OutGyro + 12))
+                        registers[address] = data[i];
+                    if(!PairEnabled)
+                    {
+                        registers[Status] = 0;
+                        unreadOutputs = 0;
+                    }
+                    UpdateInterrupt();
+                    if((registers[Ctrl3C] & 4) != 0) pointer++;
+                }
             }
         }
 
         public byte[] Read(int count)
         {
-            var result = new byte[count];
-            for(var i = 0; i < count; ++i) result[i] = registers[pointer++];
-            return result;
+            if(count < 0 || count > 256) throw new ArgumentOutOfRangeException(nameof(count));
+            lock(sync)
+            {
+                var result = new byte[count];
+                for(var i = 0; i < count; ++i)
+                {
+                    var address = pointer;
+                    result[i] = registers[address];
+                    if(address >= OutGyro && address < OutGyro + 12)
+                        unreadOutputs &= (ushort)~(1 << (address - OutGyro));
+                    // Reading any output high byte acknowledges that sensor's
+                    // latched DRDY, as specified by AN5130 section 4.3.
+                    if(address == 0x23 || address == 0x25 || address == 0x27)
+                        registers[Status] &= 0xfd;
+                    if(address == 0x29 || address == 0x2b || address == 0x2d)
+                        registers[Status] &= 0xfe;
+                    if((registers[Ctrl3C] & 4) != 0) pointer++;
+                }
+                UpdateInterrupt();
+                return result;
+            }
         }
 
         public void FinishTransmission() { }
 
+        private bool PairEnabled
+        {
+            get { return ValidOdr(registers[Ctrl1XL]) && ValidOdr(registers[Ctrl2G]); }
+        }
+
+        private static bool ValidOdr(byte control)
+        {
+            var odr = control >> 4;
+            return odr >= 1 && odr <= 10;
+        }
+
+        private void UpdateInterrupt()
+        {
+            INT1.Set(PairEnabled && (registers[PulseConfig] & 0x80) == 0 &&
+                     (registers[Status] & registers[Int1Control] & 3) != 0);
+        }
+
+        private const byte PulseConfig = 0x0b;
+        private const byte Int1Control = 0x0d;
         private const byte WhoAmI = 0x0f;
+        private const byte Ctrl1XL = 0x10;
+        private const byte Ctrl2G = 0x11;
         private const byte Ctrl3C = 0x12;
-        private readonly byte[] registers;
+        private const byte Status = 0x1e;
+        private const byte OutGyro = 0x22;
+        private readonly object sync = new object();
+        private readonly byte[] registers = new byte[256];
         private byte pointer;
+        private ushort unreadOutputs;
     }
 
     // TLC5955 digital SPI/LAT subset, following TI SBVS237 sections 8.3.2.1-7.

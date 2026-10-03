@@ -16,4 +16,12 @@ cc -std=gnu11 -Wall -Wextra -Werror -pthread \
   -o "$build_dir/test_scheduler"
 
 "$build_dir/test_scheduler"
+cc -std=gnu11 -Wall -Wextra -Werror -pthread -Dpoll=controlled_poll \
+  -I"$build_dir/include" -I"$root/apps/btsensor" \
+  -c "$root/apps/btsensor/btsensor_scheduler.c" -o "$build_dir/scheduler_poll.o"
+cc -std=gnu11 -Wall -Wextra -Werror -pthread \
+  -I"$root/apps/btsensor" "$build_dir/scheduler_poll.o" \
+  "$root/apps/btsensor/test/test_scheduler_poll_stop.c" \
+  -o "$build_dir/test_scheduler_poll_stop"
+"$build_dir/test_scheduler_poll_stop"
 echo "btsensor scheduler checks passed"

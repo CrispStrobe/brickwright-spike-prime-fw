@@ -6,6 +6,41 @@ The onboard LSM6DS3TR-C (6-axis IMU) on the SPIKE Prime Hub is driven using the 
 
 The IMU processing library (`apps/imu/`) is sensor-agnostic and consumes data via uORB topics.
 
+### Coherent fusion snapshots
+
+`imu_fusion_update_timestamped()` accepts physical acceleration in mm/s²,
+angular velocity in degrees/s, a positive sample interval, and a strictly
+increasing source timestamp in microseconds. The daemon expands the driver's
+low 32-bit `CLOCK_BOOTTIME` timestamp against the same clock, including a
+consumer started after a wrap. It rejects samples older than 30 seconds and
+invalid FSR indices rather than reusing an earlier conversion scale.
+
+`imu_fusion_get_snapshot(out, now_us, max_age_us)` copies one synchronized
+view without consuming it. It includes the sample timestamp and sequence,
+calibrated acceleration/gyro in the configured base axes, the existing
+hub-to-inertial orientation matrix, both legacy headings and up-side enum.
+Validity and stationary calibration readiness are separate. Failed, stale
+or future reads clear the output. Rejected sample updates invalidate the
+publication; arithmetic failure restores the previous integration state.
+The matrix is calculated after integrating the current sample.
+
+Fusion now owns its calibration copy. `imu_fusion_get_settings()` exports
+that copy, including learned gyro bias, for `imu cal save`. Original MIT
+Pybricks attribution remains in the adapted source and
+[reuse inventory](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/pybricks-reuse.json); this is a modification
+of credited code, with no clean-room claim.
+
+Run `tools/check_imu_snapshot.sh` and `tools/check_imu_source.sh` for the
+host coherence, validity, timestamp-wrap and persistence checks. The Renode
+`imu-model.robot` tests check manually injected paired signed samples,
+register acknowledgements, reset and INT1/EXTI4 routing. The Bluetooth-air
+`--classic --imu-probe` test observes the existing raw BUNDLE stream through
+the guest driver and uORB, including OFF/ON reopening. The model admits one
+unread pair at a time and has no autonomous ODR sampling or physical pulse
+timing. These checks do not qualify physical sensor accuracy or fusion
+through the guest. Startup still does not launch the fusion daemon. The full
+modern IMU wire record requires separate orientation, unit and enum mappings.
+
 ## 2. Device Specifications
 
 The LSM6DS3TR-C is a single-die 6-axis IMU integrating a 3-axis accelerometer and 3-axis gyroscope.

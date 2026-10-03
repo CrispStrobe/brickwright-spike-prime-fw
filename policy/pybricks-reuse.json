@@ -601,7 +601,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "eac34bf7c25ac6e2f3b873609ecb194bdcb937070dfbbcb24ad92c32d8d65ccb"
+      "sha256": "f124ab85ffc2cb087b53ab9cab42b8b391802eef671f6676c96b27491aa2e929"
     },
     {
       "path": "apps/imu/imu_calibration.h",
@@ -612,7 +612,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "e96e8df76ce4ceff8818e2aeace2fc19e910ea425713305df8f74879818958f9"
+      "sha256": "fd39d6355057c358b001efa360228a38fbbb55b66afaab39553533c672dcc967"
     },
     {
       "path": "apps/imu/imu_fusion.c",
@@ -623,7 +623,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "a34025ccc26f3bf98f2f6d8f6516ed63df0965b1cb75c652b78f8318d5d68af2"
+      "sha256": "fea1253b286d90847f798c8c7d17677392d0622f39af182f1158f96462d9ff8e"
     },
     {
       "path": "apps/imu/imu_fusion.h",
@@ -634,7 +634,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "2e997c1613e3c5d8340131ae4d683ed12a85911905d89b403efa5332d347ed7c"
+      "sha256": "9ee8259ba3917c56a7a4f6f72a11593426f7e744d9ff958d7185bd131a4b782f"
     },
     {
       "path": "apps/imu/imu_geometry.c",
@@ -1287,5 +1287,6 @@
     "licenses/LEGO-BSD-3-Clause.txt": "41e867a7d5d60746bf1b8c676505a59278532ca4f680d948a1a50d99afdb11e2",
     "licenses/Brickwright-BSD-3-Clause.txt": "e0be31379ef4d9655ffcc922df438bc0e8287d469a34b9d0bcf277c91399429b",
     "licenses/LEGO-UART-MIT.txt": "06e9c467eba8633b8b677525e4ee51466b67cd2d651463eb4fa5d419ba45ca7d"
-  }
+  },
+  "local_modification_note": "2026-10-03: credited MIT apps/imu fusion adds serialized timestamped snapshots, owned calibration settings, same-step orientation publication and invalid-update recovery. Calibration persistence accepts an explicit settings copy so learned bias remains saveable. Historical inherited_from hashes and reference notices remain unchanged; current files hashes reflect these local modifications. No new upstream source or clean-room claim."
 }

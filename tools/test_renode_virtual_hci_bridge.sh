@@ -33,8 +33,17 @@ if [[ "${BRICKWRIGHT_RENODE_FIRMWARE_TEST:-0}" == 1 ]]; then
     brickwright-simulation-hci|brickwright-erased-simulation-hci) renode_timeout=960s ;;
     *) renode_timeout=300s ;;
   esac
+  # Choose an available endpoint after the host bridge checks have closed
+  # their sockets. A fixed port can collide with a previous ephemeral peer.
+  hci_port=$(python3 - <<'PORT'
+import socket
+with socket.socket() as listener:
+    listener.bind(("0.0.0.0", 0))
+    print(listener.getsockname()[1])
+PORT
+  )
   timeout "$renode_timeout" "$renode_test" --variable "HCI_BRIDGE:$work/renode-virtual-hci" \
-    --variable "HCI_PORT:34561" \
+    --variable "HCI_PORT:$hci_port" \
     --variable "PLATFORM:@$root/simulation/renode/spike-prime-custom-dma.repl" \
     --include "$renode_tag" \
     --results-dir "$root/.local/renode-results" \

@@ -29,7 +29,7 @@ user-supplied local files and are never CI artifacts.
 expressions and pinned embedded-interpreter inputs during CI and builds.
 The configured simulation builds are separately recorded in
 `policy/simulation-firmware-inputs.json` and
-`policy/simulation-hci-firmware-inputs.json`: each records 3,245 conservative
+`policy/simulation-hci-firmware-inputs.json`: each records 3,246 conservative
 source/header/linker inputs, its selected archive-member sets and the direct
 startup object. The
 superset includes compiled or inventoried inputs whose code may not survive
@@ -50,7 +50,7 @@ licence claim is made for those images.
 ## Host-only simulated Bluetooth air
 
 The peer tests use the existing Renode fork's
-[`tools/bw-air` at the qualified runtime pin](https://github.com/CrispStrobe/renode-spike-prime/tree/e0166acb028b162e972458f31d76cdb7dcdc518d/tools/bw-air),
+[`tools/bw-air` at the qualified runtime pin](https://github.com/CrispStrobe/renode-spike-prime/tree/9958f8ed3d07c2a8fd447320962c61065d157fce/tools/bw-air),
 retaining its MIT/Apache-2.0 grants and author notices. This repository does
 not vendor a second copy. `tools/bluetooth-air-requirements.txt` fixes the 17
 Python dependencies used by the host test environment; these packages enter

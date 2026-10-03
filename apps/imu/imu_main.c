@@ -23,6 +23,7 @@
 #include "imu_stationary.h"
 #include "imu_fusion.h"
 #include "imu_calibration.h"
+#include "imu_timestamp.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -40,9 +41,8 @@
 /* Issue #139: physical-scale tables, indexed by the driver enum value
  * the LSM6DSL driver embeds per-sample in struct sensor_imu.  Mirrors
  * boards/spike-prime-hub/src/lsm6dsl_uorb.c:124-154 (sparse for the
- * gyro / xl FSR enums — invalid idx slots return 0 and the daemon
- * leaves the conversion factor at the previous good value, which
- * preserves output continuity until a valid sample arrives).
+ * gyro / xl FSR enums — invalid idx slots return 0 and invalidate the
+ * current publication until a valid sample arrives).
  *
  *   accel sensitivity: fsr_g * 1000 / 32768 mg/LSB -> mm/s^2 via 9.80665
  *   gyro  sensitivity: fsr_dps * 0.035 / 1000 dps/LSB (Table 3 headroom)
@@ -180,6 +180,21 @@ static int imu_daemon(int argc, char *argv[])
            * fresh under the new sensitivity.
            */
 
+          struct timespec received_at;
+          uint64_t source_timestamp = 0;
+          if (clock_gettime(CLOCK_BOOTTIME, &received_at) < 0)
+            {
+              (void)imu_fusion_update_timestamped(NULL, NULL, 0, 0);
+              continue;
+            }
+          uint64_t now_us = (uint64_t)received_at.tv_sec * 1000000ULL +
+                            (uint64_t)received_at.tv_nsec / 1000ULL;
+          if (!imu_timestamp_expand(imu_data.timestamp, now_us, &source_timestamp))
+            {
+              (void)imu_fusion_update_timestamped(NULL, NULL, 0, 0);
+              continue;
+            }
+
           if (imu_data.fsr_xl_idx != cur_fsr_xl_idx
               || imu_data.fsr_gy_idx != cur_fsr_gy_idx)
             {
@@ -194,11 +209,13 @@ static int imu_daemon(int argc, char *argv[])
                * resumes once a valid sample arrives.
                */
 
+              /* Clear both scales on an invalid pair: retaining the old
+               * positive scales would process unknown units after a valid
+               * sample and publish a falsely valid snapshot. */
+              g_accel_mms2_per_lsb = new_accel;
+              g_gyro_dps_per_lsb = new_gyro;
               if (new_accel > 0.0f && new_gyro > 0.0f)
                 {
-                  g_accel_mms2_per_lsb = new_accel;
-                  g_gyro_dps_per_lsb   = new_gyro;
-
                   imu_stationary_set_thresholds(
                       settings->gyro_stationary_threshold /
                           g_gyro_dps_per_lsb,
@@ -210,6 +227,7 @@ static int imu_daemon(int argc, char *argv[])
 
           if (g_accel_mms2_per_lsb == 0.0f || g_gyro_dps_per_lsb == 0.0f)
             {
+              (void)imu_fusion_update_timestamped(NULL, NULL, 0, source_timestamp);
               continue;       /* awaiting a sample with a valid FSR idx */
             }
 
@@ -238,7 +256,8 @@ static int imu_daemon(int argc, char *argv[])
           };
 
           float st = imu_stationary_get_sample_time();
-          imu_fusion_update(&gyro_dps, &accel_mms2, st);
+          (void)imu_fusion_update_timestamped(&gyro_dps, &accel_mms2, st,
+                                               source_timestamp);
         }
     }
 
@@ -641,7 +660,9 @@ int main(int argc, FAR char *argv[])
         }
       else if (strcmp(argv[2], "save") == 0)
         {
-          if (imu_calibration_save(IMU_CAL_PATH) == 0)
+          imu_settings_t coherent_settings;
+          if (imu_fusion_get_settings(&coherent_settings) &&
+              imu_calibration_save_copy(IMU_CAL_PATH, &coherent_settings) == 0)
             {
               printf("calibration saved\n");
             }
