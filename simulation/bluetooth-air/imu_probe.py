@@ -27,7 +27,7 @@ def mc_imu_fixture(action, tag, gx=0, gy=0, gz=0, ax=0, ay=0, az=0):
     accepted = None
     if action == 'inject':
         accepted = bool(imu.InjectSample(gx, gy, gz, ax, ay, az))
-    state = list(imu.GetFixtureState())
+    state = [int(value) for value in imu.GetFixtureState()]
     controls = state[:2]
     status = int(state[2])
     receipt = json.dumps({'accepted': accepted, 'controls': controls,
