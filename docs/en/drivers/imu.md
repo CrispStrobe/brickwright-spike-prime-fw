@@ -12,8 +12,14 @@ The IMU processing library (`apps/imu/`) is sensor-agnostic and consumes data vi
 angular velocity in degrees/s, a positive sample interval, and a strictly
 increasing source timestamp in microseconds. The daemon expands the driver's
 low 32-bit `CLOCK_BOOTTIME` timestamp against the same clock, including a
-consumer started after a wrap. It rejects samples older than 30 seconds and
-invalid FSR indices rather than reusing an earlier conversion scale.
+consumer started after a wrap. Epoch expansion rejects ambiguous samples older than 30 seconds; the producer
+then enforces a stricter 300 ms age bound. Invalid ODR/FSR indices invalidate
+publication rather than reusing an earlier conversion scale. Integration uses
+the source timestamp difference between consecutive samples. The first sample
+and the first sample after an ODR/FSR change use the new nominal interval.
+Nonadvancing timestamps and gaps over 300 ms invalidate publication and reset
+timing/stationarity; a later valid sample restarts with its nominal interval.
+Stationarity windows follow the per-sample ODR and never mix configurations.
 
 `imu_fusion_get_snapshot(out, now_us, max_age_us)` copies one synchronized
 view without consuming it. It includes the sample timestamp and sequence,
@@ -42,8 +48,11 @@ register acknowledgements, reset and INT1/EXTI4 routing. The Bluetooth-air
 `--classic --imu-probe` test observes the existing raw BUNDLE stream through
 the guest driver and uORB, including OFF/ON reopening. The model admits one
 unread pair at a time and has no autonomous ODR sampling or physical pulse
-timing. These checks do not qualify physical sensor accuracy or fusion
-through the guest. Startup still does not launch the fusion daemon. The full
+timing. The fusion peer probe additionally drives `FUSION START/STOP/GET`
+through Classic and checks physical units, source-time integration, live
+configuration, freshness and reopening. These synthetic checks do not qualify
+physical sensor accuracy or stationary calibration readiness. Startup still
+does not launch the fusion daemon. The full
 modern IMU wire record requires separate orientation, unit and enum mappings.
 
 ## 2. Device Specifications
@@ -563,3 +572,32 @@ SSOT lock-step.
   forward-axis projection) is the sole gyro heading mode
 - Evaluation of the I-term spike on IMU-stale → encoder fallback — bench
   acceptance assumes no stalls; this is a follow-up Issue
+
+## Fusion service controls
+
+`imu_service_start/stop/status/snapshot` provides the same producer lifecycle
+for NSH and the Classic diagnostics. Start and stop are asynchronous and
+idempotent; starting during a pending stop returns `-EBUSY`. A snapshot is
+nonconsuming, clears its output on failure and returns `-EAGAIN` unless the
+producer is running without a pending stop and the sample is at most 300 ms old.
+
+The Classic ASCII adapter accepts `FUSION START`, `FUSION STOP`,
+`FUSION STATUS` and `FUSION GET`, each without arguments. START/STOP return
+`OK`; STATUS returns three booleans in starting/running/stopping order. GET
+returns one coherent `FUSION SNAP` line with 21 numeric fields:
+
+1. Sequence, source timestamp in microseconds, calibration-ready flag and
+   legacy up-side enum.
+2. Acceleration X/Y/Z in mm/s², gyro X/Y/Z in degrees/s, legacy 1D/3D
+   headings in degrees.
+3. Hub-to-inertial matrix in row order m11 through m33.
+
+Vectors use configured base axes; the matrix and up-side retain physical hub
+conventions. This diagnostic line is separate from the modern binary IMU
+record. Lines including their newline are limited to 256 bytes; an oversized
+finite snapshot returns an error. BLE does not accept these commands.
+
+The producer is global, like the raw sampler: peer disconnection does not stop
+it. Send `FUSION STOP` explicitly and wait for all three STATUS flags to be zero.
+Backend teardown requests stop. Hardware powers down only after both fusion
+and raw sampling have released their sensor subscriptions.

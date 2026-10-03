@@ -46,7 +46,7 @@ static int fake_printf(const char *, ...);
 #undef printf
 
 enum scenario { STOP_PENDING, OPEN_FAIL, TASK_FAIL, INTERRUPTED, STOP_DRAIN,
-                POLL_FAULT };
+                POLL_FAULT, LIVE_TIMING };
 static enum scenario scenario;
 static int create_count;
 static int open_count;
@@ -56,6 +56,25 @@ static int poll_count;
 static int (*pending_task)(int, char **);
 static char printed[4096];
 static size_t printed_size;
+static uint64_t fake_now = 1000000;
+static size_t sample_index;
+static bool sample_pending;
+/* The zero-gravity startup step fails inside the real fusion algorithm.
+ * The older frame at a live ODR change must not seed the following interval. */
+static const uint32_t timestamps[] =
+  {989000, 999000, 1009000, 1019000, 1029000, 1039000, 1400000,
+   1410000, 1420000, 1430000, 1430000, 1440000, 1435000,
+   1450000, 1460000};
+static const uint8_t odrs[] = {7, 7, 7, 4, 0, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3};
+static const uint8_t gyro_fsrs[] = {4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4};
+static const bool valid_samples[] =
+  {false, true, true, true, false, true, false, true, false, true, false,
+   true, false, true, true};
+static const float steps[] = {0, 1.0f / 833, .01f, 1.0f / 104, 0,
+                             1.0f / 104, 0, 1.0f / 104, 0,
+                             1.0f / 104, 0, 1.0f / 104, 0, 1.0f / 52, .01f};
+static float integrated_time;
+static unsigned valid_count;
 
 static int fake_printf(const char *format, ...)
 {
@@ -107,8 +126,8 @@ static int fake_close(int fd)
 static int fake_clock_gettime(clockid_t clock_id, struct timespec *out)
 {
   assert(clock_id == CLOCK_BOOTTIME);
-  out->tv_sec = 1;
-  out->tv_nsec = 0;
+  out->tv_sec = fake_now / 1000000;
+  out->tv_nsec = (fake_now % 1000000) * 1000;
   return 0;
 }
 
@@ -116,7 +135,12 @@ static ssize_t fake_read(int fd, void *out, size_t len)
 {
   assert(fd == 42 && len == sizeof(struct sensor_imu));
   read_count++;
-  if (read_count > 1)
+  if (scenario == LIVE_TIMING && !sample_pending)
+    {
+      errno = EAGAIN;
+      return -1;
+    }
+  if (scenario != LIVE_TIMING && read_count > 1)
     {
       assert(scenario != STOP_DRAIN);
       errno = EAGAIN;
@@ -129,6 +153,15 @@ static ssize_t fake_read(int fd, void *out, size_t len)
   sample.fsr_xl_idx = 0;
   sample.fsr_gy_idx = 4;
   sample.odr_idx = 7;
+  if (scenario == LIVE_TIMING)
+    {
+      sample.timestamp = timestamps[sample_index];
+      if (sample_index == 0) sample.az = 0;
+      sample.odr_idx = odrs[sample_index];
+      sample.fsr_gy_idx = gyro_fsrs[sample_index];
+      fake_now = (uint64_t)sample.timestamp + 10;
+      sample_pending = false;
+    }
   memcpy(out, &sample, sizeof(sample));
   if (scenario == STOP_DRAIN)
     {
@@ -142,6 +175,48 @@ static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
   assert(count == 1 && fds[0].fd == 42 && timeout == IMU_POLL_TIMEOUT);
   poll_count++;
   assert(scenario != STOP_PENDING);
+  if (scenario == LIVE_TIMING)
+    {
+      if (poll_count > 1)
+        {
+          imu_fusion_snapshot_t snapshot;
+          integrated_time += steps[sample_index];
+          if (valid_samples[sample_index])
+            {
+              valid_count++;
+              assert(imu_service_snapshot(&snapshot) == 0);
+              assert(snapshot.sequence == valid_count);
+              assert(snapshot.timestamp_us == timestamps[sample_index]);
+              assert(fabsf(snapshot.heading_1d + 17.5f * integrated_time) < .001f);
+              assert(fabsf(imu_stationary_get_sample_time() -
+                           1.0f / g_odr_hz_table[odrs[sample_index]]) < .000001f);
+              uint64_t restore = fake_now;
+              fake_now = snapshot.timestamp_us + IMU_MAX_AGE_US + 1;
+              memset(&snapshot, 0xff, sizeof(snapshot));
+              assert(imu_service_snapshot(&snapshot) == -EAGAIN);
+              assert(!snapshot.valid && snapshot.timestamp_us == 0);
+              fake_now = restore;
+            }
+          else
+            {
+              memset(&snapshot, 0xff, sizeof(snapshot));
+              assert(imu_service_snapshot(&snapshot) == -EAGAIN);
+              assert(!snapshot.valid && snapshot.timestamp_us == 0);
+            }
+          sample_index++;
+        }
+      if (sample_index == sizeof(odrs))
+        {
+          imu_fusion_snapshot_t snapshot;
+          assert(imu_service_stop() == 0);
+          assert(imu_service_start() == -EBUSY);
+          assert(imu_service_snapshot(&snapshot) == -EAGAIN);
+          return 0;
+        }
+      sample_pending = true;
+      fds[0].revents = POLLIN;
+      return 1;
+    }
   if (scenario == POLL_FAULT)
     {
       fds[0].revents = POLLHUP;
@@ -174,6 +249,11 @@ static void reset(enum scenario next)
   pending_task = NULL;
   printed_size = 0;
   printed[0] = '\0';
+  fake_now = 1000000;
+  sample_index = 0;
+  sample_pending = false;
+  integrated_time = 0;
+  valid_count = 0;
 }
 
 static int run_task(void)
@@ -205,6 +285,15 @@ int main(void)
   cmd_status();
   assert(strstr(printed, "running:    no\nstarting:   yes\n"));
   cmd_stop();
+  assert(imu_service_start() == -EBUSY);
+  bool starting, running, stopping;
+  imu_service_status(&starting, &running, &stopping);
+  assert(starting && !running && stopping);
+  imu_fusion_snapshot_t unavailable;
+  memset(&unavailable, 0xff, sizeof(unavailable));
+  assert(imu_service_snapshot(&unavailable) == -EAGAIN);
+  assert(!unavailable.valid && unavailable.timestamp_us == 0);
+  assert(imu_service_snapshot(NULL) == -EINVAL);
   assert(run_task() == 0);
   assert(open_count == 1 && close_count == 1 && poll_count == 0);
 
@@ -220,7 +309,7 @@ int main(void)
   assert(run_task() == 0);
 
   reset(TASK_FAIL);
-  cmd_start();
+  assert(imu_service_start() == -EAGAIN);
   assert(create_count == 1 && !g_daemon_running);
   cmd_status();
   assert(strstr(printed, "running:    no\nstarting:   no\n"));
@@ -242,6 +331,12 @@ int main(void)
   cmd_start();
   assert(run_task() == 0);
   assert(poll_count == 1 && read_count == 0 && close_count == 1);
-  puts("IMU daemon lifecycle checks passed");
+  reset(LIVE_TIMING);
+  assert(imu_service_start() == 0);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0);
+  assert(valid_count == 9 && close_count == 1);
+  assert(imu_service_stop() == 0);
+  puts("IMU daemon lifecycle, freshness and source timing checks passed");
   return 0;
 }

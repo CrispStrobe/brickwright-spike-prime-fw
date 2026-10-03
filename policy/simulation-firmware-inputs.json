@@ -80,7 +80,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_cmd_neutral.c",
-      "sha256": "423f13bb19c1d8194c7239f15dc5d39b9fc5e93510deb795cc7776464e4214e7",
+      "sha256": "b087706eba779b2c8e95955409f12e7948b4afd972559bd1ba7463f0e0b873b6",
       "spdx": [
         "Apache-2.0"
       ],
@@ -190,7 +190,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_peripheral.h",
-      "sha256": "8160157ca7e461904b4f7868d3ad344997ac261d90c955f31d9b0d69891f3b03",
+      "sha256": "17e16a3c25439126cb21785746550ca97137e5539260540bb185661b79320571",
       "spdx": [
         "Apache-2.0"
       ],
@@ -278,7 +278,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.h",
-      "sha256": "ca605bda223ef661d1931d4c4962b274db8f4cc55d50271891f115874d24b000",
+      "sha256": "4452e94983e273fd3e3a903f639202c57377254b8939f059671710d61d6078a3",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -993,12 +993,23 @@
     },
     {
       "path": "apps/imu/imu_main.c",
-      "sha256": "783e33268ae2db2e86f231e1d0f89bf4d80b77efc549279c32596c105b0b731e",
+      "sha256": "b008836d91cf438a005bab89c46ec3dae72dcc460aeab27fc775e629b1fb19f5",
       "spdx": [],
       "selected_licences": [
         "MIT"
       ],
       "basis": "Inherited spike-nx root MIT grant or inventoried MIT interpreter; generated ROMFS retains init-script origins."
+    },
+    {
+      "path": "apps/imu/imu_service.h",
+      "sha256": "69404b3fe7555ec79020493f559f0d9c0a77ec350695644d586d5424ce761b20",
+      "spdx": [
+        "Apache-2.0"
+      ],
+      "selected_licences": [
+        "Apache-2.0"
+      ],
+      "basis": "Original 2026 Christian Strobele service interface; includes credited MIT fusion types without replacing their notices."
     },
     {
       "path": "apps/imu/imu_stationary.c",
@@ -35044,5 +35055,5 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged."
+  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately."
 }

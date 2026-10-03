@@ -6,6 +6,8 @@
 #include "btsensor_tx.h"
 #include <ctype.h>
 #include <errno.h>
+#include <inttypes.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -215,6 +217,91 @@ static void sensor(enum brickwright_hub_link link, char *verb, char **save) {
   reply_rc(link, rc, !strcasecmp(verb, "MODE") ? "SENSOR MODE" : "SENSOR SEND");
 }
 
+/* Diagnostic service controls do not emit a modern protocol IMU record. */
+static void fusion(enum brickwright_hub_link link, char *verb, char **save) {
+  int rc;
+  if (!verb || has_trailing_token(save)) {
+    reply(link, "ERR invalid FUSION\n");
+    return;
+  }
+  if (link != BRICKWRIGHT_HUB_LINK_CLASSIC) {
+    reply_rc(link, -ENOTSUP, "FUSION");
+    return;
+  }
+  if (!strcmp(verb, "START") || !strcmp(verb, "STOP")) {
+    rc = -ENOTSUP;
+    if (g_ops) {
+      if (!strcmp(verb, "START") && g_ops->fusion_start)
+        rc = g_ops->fusion_start(g_ops->context);
+      else if (!strcmp(verb, "STOP") && g_ops->fusion_stop)
+        rc = g_ops->fusion_stop(g_ops->context);
+    }
+    reply_rc(link, rc, "FUSION");
+    return;
+  }
+  if (!strcmp(verb, "STATUS")) {
+    bool starting = false, running = false, stopping = false;
+    char line[BTSENSOR_CMD_REPLY_MAX];
+    rc = g_ops && g_ops->fusion_status
+             ? g_ops->fusion_status(g_ops->context, &starting, &running, &stopping)
+             : -ENOTSUP;
+    if (rc) {
+      reply_rc(link, rc, "FUSION");
+      return;
+    }
+    snprintf(line, sizeof(line), "FUSION STATUS %u %u %u\n",
+             (unsigned)starting, (unsigned)running, (unsigned)stopping);
+    reply(link, line);
+    return;
+  }
+  if (!strcmp(verb, "GET")) {
+    imu_fusion_snapshot_t snap = {0};
+    char line[BTSENSOR_TX_RESPONSE_MAX_LEN + 1];
+    rc = g_ops && g_ops->fusion_snapshot
+             ? g_ops->fusion_snapshot(g_ops->context, &snap) : -ENOTSUP;
+    if (rc) {
+      reply_rc(link, rc, "FUSION");
+      return;
+    }
+    if (!snap.valid || !snap.timestamp_us ||
+        (snap.up_side != IMU_SIDE_FRONT && snap.up_side != IMU_SIDE_LEFT &&
+         snap.up_side != IMU_SIDE_TOP && snap.up_side != IMU_SIDE_BACK &&
+         snap.up_side != IMU_SIDE_RIGHT && snap.up_side != IMU_SIDE_BOTTOM) ||
+        !isfinite(snap.heading_1d) || !isfinite(snap.heading_3d))
+      rc = -EIO;
+    for (size_t i = 0; i < 3; i++)
+      if (!isfinite(snap.accel_mms2.values[i]) ||
+          !isfinite(snap.gyro_dps.values[i])) rc = -EIO;
+    for (size_t i = 0; i < 9; i++)
+      if (!isfinite(snap.orientation.values[i])) rc = -EIO;
+    if (rc) {
+      reply_rc(link, rc, "FUSION");
+      return;
+    }
+    int length = snprintf(line, sizeof(line),
+        "FUSION SNAP %" PRIu64 " %" PRIu64 " %u %u"
+        " %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g"
+        " %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g\n",
+        snap.sequence, snap.timestamp_us, (unsigned)snap.ready,
+        (unsigned)snap.up_side,
+        (double)snap.accel_mms2.x, (double)snap.accel_mms2.y,
+        (double)snap.accel_mms2.z, (double)snap.gyro_dps.x,
+        (double)snap.gyro_dps.y, (double)snap.gyro_dps.z,
+        (double)snap.heading_1d, (double)snap.heading_3d,
+        (double)snap.orientation.m11, (double)snap.orientation.m12,
+        (double)snap.orientation.m13, (double)snap.orientation.m21,
+        (double)snap.orientation.m22, (double)snap.orientation.m23,
+        (double)snap.orientation.m31, (double)snap.orientation.m32,
+        (double)snap.orientation.m33);
+    if (length < 0 || (size_t)length >= sizeof(line))
+      reply_rc(link, -E2BIG, "FUSION");
+    else
+      reply(link, line);
+    return;
+  }
+  reply(link, "ERR invalid FUSION\n");
+}
+
 static void process(enum brickwright_hub_link link, char *line) {
   char *save = NULL, *cmd = strtok_r(line, " ", &save), *arg;
   char s[BTSENSOR_CMD_REPLY_MAX];
@@ -225,6 +312,10 @@ static void process(enum brickwright_hub_link link, char *line) {
     return;
   if (!strcasecmp(cmd, "PING")) {
     reply(link, has_trailing_token(&save) ? "ERR invalid PING\n" : "OK PONG\n");
+    return;
+  }
+  if (!strcmp(cmd, "FUSION")) {
+    fusion(link, strtok_r(NULL, " ", &save), &save);
     return;
   }
   if (!strcmp(cmd, "IMU")) {

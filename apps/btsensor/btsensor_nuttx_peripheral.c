@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#ifdef __NuttX__
+#include <nuttx/config.h>
+#endif
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,6 +13,9 @@
 #include "btsensor_peripheral.h"
 #include "bundle_emitter.h"
 #include "sensor_sampler.h"
+#ifdef CONFIG_APP_IMU
+#include "imu_service.h"
+#endif
 
 /* Keep this adapter independent of the board-only sensor_imu layout exposed
  * by imu_sampler.h; these control functions are its complete dependency. */
@@ -132,6 +138,34 @@ static int imu_capture_unavailable_stop(void *context)
   return -ENOTSUP;
 }
 
+#ifdef CONFIG_APP_IMU
+static int fusion_start(void *context)
+{
+  (void)context;
+  return imu_service_start();
+}
+
+static int fusion_stop(void *context)
+{
+  (void)context;
+  return imu_service_stop();
+}
+
+static int fusion_status(void *context, bool *starting, bool *running,
+                         bool *stopping)
+{
+  (void)context;
+  imu_service_status(starting, running, stopping);
+  return 0;
+}
+
+static int fusion_snapshot(void *context, imu_fusion_snapshot_t *out)
+{
+  (void)context;
+  return imu_service_snapshot(out);
+}
+#endif
+
 static const struct btsensor_peripheral_ops g_ops =
 {
   .context = NULL,
@@ -148,6 +182,12 @@ static const struct btsensor_peripheral_ops g_ops =
   .sensor_set_pwm = sensor_set_pwm,
   .imu_capture_start = imu_capture_unavailable_start,
   .imu_capture_stop = imu_capture_unavailable_stop,
+#ifdef CONFIG_APP_IMU
+  .fusion_start = fusion_start,
+  .fusion_stop = fusion_stop,
+  .fusion_status = fusion_status,
+  .fusion_snapshot = fusion_snapshot,
+#endif
 };
 
 int btsensor_nuttx_peripheral_start(void)
@@ -193,6 +233,9 @@ void btsensor_nuttx_peripheral_stop(void)
     }
 
   btsensor_cmd_set_peripheral_ops(NULL);
+#ifdef CONFIG_APP_IMU
+  (void)imu_service_stop();
+#endif
   bundle_emitter_deinit();
   sensor_sampler_deinit();
   imu_sampler_deinit();
