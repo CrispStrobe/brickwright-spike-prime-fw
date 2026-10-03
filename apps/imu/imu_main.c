@@ -181,6 +181,7 @@ static int imu_daemon(int argc, char *argv[])
   uint8_t cur_fsr_gy_idx = IMU_FSR_IDX_UNKNOWN;
   uint8_t cur_odr_idx = IMU_FSR_IDX_UNKNOWN;
   uint64_t previous_timestamp = 0;
+  uint64_t accepted_timestamp = 0;
 
   pthread_mutex_lock(&g_daemon_lock);
   g_daemon_running = true;
@@ -256,6 +257,17 @@ static int imu_daemon(int argc, char *argv[])
           uint16_t odr = imu_data.odr_idx <
               sizeof(g_odr_hz_table) / sizeof(g_odr_hz_table[0]) ?
               g_odr_hz_table[imu_data.odr_idx] : 0;
+          /* Keep accepted source ordering independently of the nominal-step
+           * reset at configuration changes. Rejected frames never enter the
+           * stationary window or become an integration-time reference. */
+          if (source_timestamp <= accepted_timestamp)
+            {
+              previous_timestamp = 0;
+              imu_stationary_reset();
+              (void)imu_fusion_update_timestamped(NULL, NULL, 0, source_timestamp);
+              continue;
+            }
+
           bool changed = imu_data.fsr_xl_idx != cur_fsr_xl_idx ||
                          imu_data.fsr_gy_idx != cur_fsr_gy_idx ||
                          imu_data.odr_idx != cur_odr_idx;
@@ -296,7 +308,6 @@ static int imu_daemon(int argc, char *argv[])
 
           float sample_time = previous_timestamp == 0 ? 1.0f / odr :
               (float)(source_timestamp - previous_timestamp) / 1000000.0f;
-          previous_timestamp = source_timestamp;
 
           int16_t raw[6];
           raw[0] = imu_data.gx;
@@ -322,8 +333,17 @@ static int imu_daemon(int argc, char *argv[])
             .z = (float)imu_data.gz * g_gyro_dps_per_lsb,
           };
 
-          (void)imu_fusion_update_timestamped(&gyro_dps, &accel_mms2, sample_time,
-                                               source_timestamp);
+          if (imu_fusion_update_timestamped(&gyro_dps, &accel_mms2,
+                                            sample_time, source_timestamp))
+            {
+              accepted_timestamp = source_timestamp;
+              previous_timestamp = source_timestamp;
+            }
+          else
+            {
+              previous_timestamp = 0;
+              imu_stationary_reset();
+            }
         }
     }
 

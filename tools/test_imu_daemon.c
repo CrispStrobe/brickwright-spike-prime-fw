@@ -59,16 +59,20 @@ static size_t printed_size;
 static uint64_t fake_now = 1000000;
 static size_t sample_index;
 static bool sample_pending;
+/* The zero-gravity startup step fails inside the real fusion algorithm.
+ * The older frame at a live ODR change must not seed the following interval. */
 static const uint32_t timestamps[] =
-  {999000, 1009000, 1019000, 1029000, 1039000, 1400000, 1410000,
-   1420000, 1430000, 1430000, 1440000};
-static const uint8_t odrs[] = {7, 7, 4, 0, 4, 4, 4, 4, 4, 4, 4};
-static const uint8_t gyro_fsrs[] = {4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4};
+  {989000, 999000, 1009000, 1019000, 1029000, 1039000, 1400000,
+   1410000, 1420000, 1430000, 1430000, 1440000, 1435000,
+   1450000, 1460000};
+static const uint8_t odrs[] = {7, 7, 7, 4, 0, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3};
+static const uint8_t gyro_fsrs[] = {4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4};
 static const bool valid_samples[] =
-  {true, true, true, false, true, false, true, false, true, false, true};
-static const float steps[] = {1.0f / 833, .01f, 1.0f / 104, 0,
+  {false, true, true, true, false, true, false, true, false, true, false,
+   true, false, true, true};
+static const float steps[] = {0, 1.0f / 833, .01f, 1.0f / 104, 0,
                              1.0f / 104, 0, 1.0f / 104, 0,
-                             1.0f / 104, 0, 1.0f / 104};
+                             1.0f / 104, 0, 1.0f / 104, 0, 1.0f / 52, .01f};
 static float integrated_time;
 static unsigned valid_count;
 
@@ -152,6 +156,7 @@ static ssize_t fake_read(int fd, void *out, size_t len)
   if (scenario == LIVE_TIMING)
     {
       sample.timestamp = timestamps[sample_index];
+      if (sample_index == 0) sample.az = 0;
       sample.odr_idx = odrs[sample_index];
       sample.fsr_gy_idx = gyro_fsrs[sample_index];
       fake_now = (uint64_t)sample.timestamp + 10;
@@ -330,7 +335,7 @@ int main(void)
   assert(imu_service_start() == 0);
   assert(imu_service_start() == 0);
   assert(run_task() == 0);
-  assert(valid_count == 7 && close_count == 1);
+  assert(valid_count == 9 && close_count == 1);
   assert(imu_service_stop() == 0);
   puts("IMU daemon lifecycle, freshness and source timing checks passed");
   return 0;

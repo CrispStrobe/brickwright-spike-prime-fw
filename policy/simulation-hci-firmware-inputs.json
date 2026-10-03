@@ -993,7 +993,7 @@
     },
     {
       "path": "apps/imu/imu_main.c",
-      "sha256": "74482830ebafbfbf89e36a09dabfc7b84abffb678d292f488170b0c23880286e",
+      "sha256": "b008836d91cf438a005bab89c46ec3dae72dcc460aeab27fc775e629b1fb19f5",
       "spdx": [],
       "selected_licences": [
         "MIT"
