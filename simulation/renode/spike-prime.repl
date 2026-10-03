@@ -15,6 +15,23 @@ using "platforms/cpus/stm32f4.repl"
 timer9:
     frequency: 96000000
 
+// The firmware samples six ADC ranks from TIM2 TRGO at 1 kHz. Supply
+// synthetic stable analog inputs through the ADC model; rank 5/6 are
+// released button ladders. Zero defaults decode as a hardware fault with
+// the center-button bit set and eventually request shutdown.
+timer2:
+    frequency: 96000000
+    TriggerOutput -> adc1@6
+
+adc1:
+    init:
+        SetChannelValue 10 0
+        SetChannelValue 11 3100
+        SetChannelValue 8 2048
+        SetChannelValue 3 0
+        SetChannelValue 14 4095
+        SetChannelValue 1 4095
+
 // GPIO external interrupts select one port per pin through SYSCFG EXTICR.
 // The generic F4 platform connects every port directly to EXTI, which lets
 // PC9's Bluetooth slow clock spuriously trigger PA9's VBUS interrupt.
