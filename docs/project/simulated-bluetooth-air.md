@@ -187,5 +187,27 @@ quiet window. It then subscribes, receives three records, unsubscribes and passe
 another quiet check. Receipts include requests, acknowledgements, complete records,
 observed host times and quiet-window results. Synthetic regressions exercise the
 actual helper's rejection of continued/inherited notifications and callback errors.
-Actual guest qualification for this extension is in progress. IMU/mixed-mode
-sensor records, bonds and physical behavior remain separate.
+Firmware commit
+[`9478efd059f85c817b29faf3dda113a7cb8030a2`](https://github.com/CrispStrobe/brickwright-spike-prime-fw/commit/9478efd059f85c817b29faf3dda113a7cb8030a2)
+passed the exact isolated wrapper on the VPS and both clean profiles in
+[public run `37116690724`](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37116690724).
+Both runs delivered all nine exact battery records, passed both unsubscribe
+checks, disconnected the first central while subscribed, and observed no
+inherited record before the new central's own subscription. Scratch Link and
+Classic also passed, with zero vendor/unsupported HCI commands and no final
+wrapper cleanup errors. Thirteen framing/contract, seven actual-helper periodic
+and four lifecycle regressions passed, as did source, attribution and safety
+checks.
+
+The VPS used the source-built runtime with .NET 8.0.31 and
+`DOTNET_PROCESSOR_COUNT=2`; two earlier paused-startup attempts timed out under
+host load before guest execution. Its final unsubscribe windows were 74.552 and
+70.056 host seconds; the reconnect window was 74.552 seconds, all with no frames.
+The public run's corresponding windows were 16.121, 15.845 and 16.121 seconds.
+The initial host budgets proved insufficient at the observed emulation pace:
+the earlier public run received three valid records but exceeded the quiet cap,
+and the VPS initially exceeded the per-record deadline. The corrected budgets
+retain the same record/count/silence assertions and change no guest code.
+Raw receipts and failed-attempt evidence remain local; no firmware/test artifact
+is published. IMU/mixed-mode sensor records, bonds and physical behavior remain
+separate.

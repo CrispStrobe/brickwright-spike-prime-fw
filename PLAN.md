@@ -346,14 +346,16 @@ machine-readable and cannot be confused with physical-hardware evidence.
 | 2026-10-03 | C8.4/C8.5 (digital display latch) | Complete within recorded scope | Replaced the SPI1 TLC5955 sink with an MIT digital shift/LAT model and preserved PA15 SYSCFG routing. Actual SPI/GPIO synthetic cases pass; the unchanged TI-free HCI guest passes through daemon readiness with its three display substitutions removed, retaining five 97-byte transfers, two control and three grayscale latches, expected control values and no invalid command. Both profiles in public matrix `37109488565` pass, including the new observer/display regressions, erased first boot and real-display HCI startup. GSCLK/PWM timing, analog output and SOUT/status remain outside this model; legacy stub diagnostics and the separate Bluetooth-air helper are still isolated. |
 | 2026-10-03 | C8.4/C8.5 (Bluetooth-air peers) | Complete within recorded scope | Removed the separate helper's display substitutions; local actual firmware tests pass direct LE FD02 discovery/full InfoResponse/disconnect/new-central reconnect, Scratch Link, and Classic SDP/authentication/modeled encryption/RFCOMM PING/PONG on channel 1. Manifest/fixture validation, bounded framing/lifecycle and zero-vendor/unsupported-command gates are explicit. Exact isolated wrapper `dc7bfcb1a18250f649c761e550bb508b5cf9a297` passes all three paths on the VPS with only loopback, no host HCI listener, exited owned processes and unchanged host networking. Both clean build/runtime profiles pass public run `37113214090`; the unchanged HCI job passed after retrying an unreachable TI reference server. Six framing and four lifecycle regressions plus source/attribution/workflow/safety gates pass. Controller encryption is status simulation only; no cipher, RF or physical-board qualification is claimed. |
 
-| 2026-10-03 | C8.5 (periodic battery peer records) | In progress | Added strict complete battery/acknowledgement validation, subscribe/unsubscribe quiet checks, and a second-central reset check after an active subscription is disconnected. The selected ADC fixture derives 62% through the actual gauge; qualification receipts are pending. IMU and mixed-mode records remain separate. |
+| 2026-10-03 | C8.5 (periodic battery peer records) | Complete within recorded scope | Added strict complete battery/acknowledgement validation, subscribe/unsubscribe quiet checks, and a second-central reset check after an active subscription is disconnected. The selected ADC fixture derives 62% through the actual gauge. Exact candidate `9478efd059f85c817b29faf3dda113a7cb8030a2` passes the full isolated wrapper on the VPS and both clean profiles in public run `37116690724`: nine complete battery records, two unsubscribe silence checks, active-subscription disconnect and a new central with no inherited stream. Measured host-time budgets preserve four observed intervals; 13 framing, seven periodic and four lifecycle regressions pass. No guest/model changes. IMU and mixed-mode records remain separate. |
 
 ## Current next action
 
-Qualify actual periodic battery notifications, unsubscribe and subscription
-reset after reconnect through the peer harness. Full IMU/sensor records require
-a coherent non-destructive snapshot contract and synthetic data-ready model
-inputs; the current snapshot deliberately omits IMU records. Encoder-completed
+Prove synthetic paired IMU samples through INT1/EXTI4 and uORB, preserving
+source timestamps, before adding a synchronized non-destructive fusion snapshot.
+Establish orientation mappings, wire units and conversion rules before emitting
+full IMU records; the current snapshot deliberately omits them, fusion state has
+no shared snapshot lock, and startup does not launch its producer daemon.
+Encoder-completed
 degree moves, stall/capability policy and cold-restart bond reuse also need
 separate evidence. Physical C5/C6.4 validation remains open and
 cannot be closed by simulation.
