@@ -2,6 +2,7 @@ DOCKER_IMAGE  := nuttx-builder
 MAKEOPTS      := -j$(shell nproc 2>/dev/null || echo 2)
 BOARD         ?= spike-prime-hub
 BOARD_CONFIG  ?= simulation
+SIMULATION_PROFILE := $(filter simulation simulation-hci,$(BOARD_CONFIG))
 
 # out-of-tree board: if boards/<BOARD> exists, use path-based configure
 ifneq ($(wildcard $(CURDIR)/boards/$(BOARD)),)
@@ -31,12 +32,16 @@ DOCKER_RUN_IT := docker run --rm -it \
 
 build: docker-build link-apps configure
 	python3 tools/check_reuse_licenses.py
-ifeq ($(BOARD):$(BOARD_CONFIG),spike-prime-hub:simulation)
-	python3 tools/check_firmware_inputs.py --config-only --config nuttx/.config
+ifeq ($(BOARD),spike-prime-hub)
+ifneq ($(SIMULATION_PROFILE),)
+	python3 tools/check_firmware_inputs.py --inventory policy/$(BOARD_CONFIG)-firmware-inputs.json --config-only --config nuttx/.config
+endif
 endif
 	$(DOCKER_RUN) make $(MAKEOPTS)
-ifeq ($(BOARD):$(BOARD_CONFIG),spike-prime-hub:simulation)
-	$(DOCKER_RUN) bash ../tools/check_simulation_firmware.sh
+ifeq ($(BOARD),spike-prime-hub)
+ifneq ($(SIMULATION_PROFILE),)
+	$(DOCKER_RUN) bash ../tools/check_simulation_firmware.sh $(BOARD_CONFIG)
+endif
 endif
 
 # Symlink project-local apps/ into nuttx-apps/external for build integration

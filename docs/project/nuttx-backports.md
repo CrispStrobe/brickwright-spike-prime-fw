@@ -47,8 +47,10 @@ Run the focused tests after initializing and patching dependencies:
 python3 tools/apply_nuttx_backports.py
 python3 tools/test_nuttx_backports.py
 python3 tools/test_make_romfs.py
+python3 tools/test_nuttx_romfs.py --nuttx nuttx
 python3 tools/test_upstream_hardening.py --nuttx nuttx
 python3 tools/test_upstream_arm_hardening.py --nuttx nuttx
+python3 tools/test_usb_wakeup.py --nuttx nuttx
 python3 tools/check_nuttx_apps_hardening.py --apps nuttx-apps --baseline 55f0bc216565ccab8dee600a88f4485c7693bf8b
 ```
 
@@ -59,6 +61,15 @@ packets test buffer bounds, not CRC correctness or a complete protocol session.
 Target compilation and the existing source/linker/licence/TI gates are separate
 checks. Physical USB suspend/resume, DMA operation and interrupted flash writes
 remain hardware qualification work; host tests do not establish those results.
+
+The USB harness compiles the actual interrupt initialization, dispatcher and
+suspend/resume functions against register and class-driver mocks. It checks
+masked wakeup deferral, one resume callback per event, write-one-to-clear
+acknowledgement, remote-wakeup signal clearing and an unbound class driver.
+It also rejects a mutation removing the wakeup mask. This covers the selected
+profile without `CONFIG_USBDEV_LOWPOWER`; other configurations are not qualified
+by this test. Saved-program durability is additionally checked through
+[real LittleFS crash/restart tests](upstream-storage-hardening.md).
 
 Use a clean build after configuration changes. The broad upstream stale-archive
 build-system migration remains separate; neither an incremental build nor this
@@ -71,3 +82,19 @@ masked interrupts and rollover. Twelve register regressions passed on the
 combined model. Stock portable Renode 1.16.1 is unchanged; its timer does not
 model these compare-generation bits. Startup-only tests on that runtime do not
 qualify the new timer behavior.
+
+The firmware workflow builds our [pinned runtime fork](https://github.com/CrispStrobe/renode-spike-prime/pull/21)
+with `tools/install_renode_fork.sh`. Runtime, Infrastructure and support-library
+revisions are fixed; native translators and the headless managed runtime are
+built from source. Standard NuGet and pinned support-library binaries remain
+build dependencies. The build receipt records revisions, tool versions and
+output hashes under ignored `.local/tools` storage.
+
+The SPIKE platform sets TIM9's input to the board's 96 MHz APB2 timer clock;
+the generic platform's 10 MHz default made elapsed time 9.6 times too slow.
+The `brickwright-tickless` ARM fixture observes repeated timer-overflow and
+scheduler callbacks over two consecutive two-second windows. It isolates
+board initialization and leaves the actual timer and interrupt handlers
+running. Full board startup and the TI-free HCI bootstrap use separate
+fixtures; the firmware workflow enables the actual guest HCI test as well as
+the host bridge test. No firmware artifacts are uploaded.

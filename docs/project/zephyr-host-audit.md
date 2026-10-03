@@ -66,13 +66,19 @@ The following were checked at the pinned commit:
 - the host crypto implementation calls PSA Crypto; it does not make the crypto
   provider disappear from the dependency graph.
 
-The crypto provider is intentionally a fail-closed open item. C4.2 must pin
-Mbed TLS under Apache-2.0 before enabling SMP. TinyCrypt and any provider outside
-the project's MIT/Apache-only rule are forbidden.
+The selected PSA provider is Mbed TLS 3.6.2 at
+`107ea89daaefb9867ea9121002fbbdf926780e98`, with Apache-2.0 selected from its
+offered dual licence and the original grant retained. SMP is enabled. The
+configured firmware and host harness enable Mbed TLS pthread locking for
+concurrent PSA key-slot access; firmware also requires NuttX recursive mutex
+support for the compat IRQ lock. Source hashes, selected members and notices
+are checked by the configured-build inventories. A different crypto provider
+or configuration requires a new review.
 
 Apache-2.0 compatibility here is a source-policy result, not a claim that the
 Bluetooth implementation is qualified or that use of Bluetooth trademarks is
-licensed. Those questions remain C7.4.
+licensed. Physical radio, pairing, security and long-duration qualifications
+remain open.
 
 ## TI controller boundary
 
@@ -81,8 +87,8 @@ the CC2564C service pack. On real SPIKE hardware, the controller still needs an
 unmodified, separately installed, allowlisted TI service pack loaded as vendor HCI
 commands. No TI bytes enter this source set or host-side simulation.
 
-Zephyr's H:4 driver does not implement TI eHCILL. C5.2 remains a separate
-NuttX-side power-management transport extension. C4 host tests use plain H:4 and
+Zephyr's H:4 driver does not implement TI eHCILL. The NuttX compatibility layer supplies the separate
+eHCILL transport extension. C4 host tests use plain H:4 and
 a virtual controller, so passing them is not evidence of CC2564C hardware
 operation.
 
@@ -118,3 +124,39 @@ That NuttX revision emits pre-existing `stdatomic.h` macro-redefinition warnings
 with GCC 13.2, so the cross gate does not promote dependency-header warnings to
 errors. Project compatibility code is still built with `-Wall -Wextra`, and the
 host behavioral tests retain `-Werror`.
+
+## Preemptive host-port synchronization
+
+The compatibility layer runs HCI receive and work queues as preemptive pthreads.
+Its intrusive-list primitives therefore use the existing recursive IRQ mutex for
+short head/tail and node updates. This prevents a completion handler removing a
+TX context while the transmitter appends the next context, which previously
+could lose that next node and trigger a packets-count mismatch. Individual
+operations are serialized; callers still need external serialization for
+compound operations, iteration and changes in node ownership. No primitive
+holds this lock across allocation, callbacks or condition waits.
+
+The virtual HCI slot has producers, a receiver and completion waiters sharing
+one condition variable. Both filling and draining the slot broadcast changes;
+a single signal can wake a waiter whose predicate remains false and strand the
+other threads. The slot remains bounded and applies producer backpressure.
+
+`tools/check_zephyr_host_link.sh` runs actual-function wakeup and list regressions
+before exercising the full host. The list regression forces the TX-context
+interleaving and checks 30000 ordered nodes transferred by concurrent threads;
+the wakeup regression models adversarial waiter selection. Both reject mutants
+that remove the required synchronization. These checks can also run directly:
+
+```sh
+python3 tools/test_virtual_hci_wakeups.py
+python3 tools/test_slist_concurrency.py
+```
+
+The Mbed TLS build also enables `MBEDTLS_THREADING_C` and
+`MBEDTLS_THREADING_PTHREAD` in both the host helper and the NuttX configuration.
+PSA key slots are shared by these preemptive callers; the unthreaded library
+could concurrently import or destroy the same slot, producing invalid-handle
+or corruption errors during pairing. The library's own pthread locks protect
+its shared key management. The upstream crypto implementation is unchanged.
+The host helper additionally runs eight callers through 320000 actual
+`bt_encrypt_le`/`bt_encrypt_be` operations and checks two AES known vectors.

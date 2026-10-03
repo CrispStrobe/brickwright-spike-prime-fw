@@ -33,10 +33,12 @@ jobs:
           python3 tools/test_nuttx_backports.py
           python3 tools/test_make_romfs.py
           python3 tools/test_simulation_startup.py
+          python3 tools/test_recursive_mutex_config.py --config-only
           python3 tools/check_source_policy.py
           python3 tools/check_reuse_licenses.py
           python3 tools/test_reuse_licenses.py
           python3 tools/check_firmware_inputs.py --notices-only
+          python3 tools/check_firmware_inputs.py --inventory policy/simulation-hci-firmware-inputs.json --notices-only
           python3 tools/test_firmware_inputs.py
           python3 tools/check_source_origin_review.py --require-clearance
           python3 tools/audit_repository_history.py --output /tmp/firmware-history-review.json --require-clean
@@ -73,10 +75,13 @@ jobs:
       - name: Validate pinned Zephyr host source selection
         run: |
           python3 tools/check_zephyr_host_manifest.py
-          cc -std=gnu11 -Wall -Wextra -Werror \
-            -Ibluetooth/zephyr_compat/include \
+          python3 tools/test_virtual_hci_wakeups.py
+          python3 tools/test_slist_concurrency.py
+          cc -std=gnu11 -Wall -Wextra -Werror -pthread \
+            -include zephyr/autoconf.h -Ibluetooth/zephyr_compat/include \
             bluetooth/zephyr_compat/src/uuid.c \
             bluetooth/zephyr_compat/src/hex.c \
+            bluetooth/zephyr_compat/src/work.c \
             bluetooth/zephyr_compat/test/test_core.c \
             -o /tmp/test-zephyr-compat-core
           /tmp/test-zephyr-compat-core
@@ -158,6 +163,7 @@ jobs:
             -Ibluetooth/zephyr_compat/include \
             -Ithird_party/zephyr-host/upstream/include \
             -Ithird_party/zephyr-host/upstream/subsys/bluetooth \
+            bluetooth/zephyr_compat/src/work.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
             third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c \
@@ -179,6 +185,7 @@ jobs:
             -include zephyr/autoconf.h -pthread \
             -Ibluetooth/zephyr_compat/include \
             -Ithird_party/zephyr-host/upstream/include \
+            bluetooth/zephyr_compat/src/work.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
             bluetooth/zephyr_compat/src/log.c \
@@ -190,6 +197,7 @@ jobs:
             -Ibluetooth/zephyr_compat/include \
             -Ithird_party/zephyr-host/upstream/include \
             -Ithird_party/zephyr-host/upstream/subsys/bluetooth \
+            bluetooth/zephyr_compat/src/work.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
             third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c \

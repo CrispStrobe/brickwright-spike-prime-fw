@@ -26,10 +26,17 @@ if [[ "${BRICKWRIGHT_RENODE_FIRMWARE_TEST:-0}" == 1 ]]; then
   renode_test=${RENODE_TEST:-"$renode_dir/renode-test"}
   PATH="$venv_dir/bin:$PATH"
   export PATH
-  timeout 300s "$renode_test" --variable "HCI_BRIDGE:$work/renode-virtual-hci" \
+  renode_tag=${BRICKWRIGHT_RENODE_TAG:-brickwright-simulation-hci}
+  # Keep enough host time for the measured full erased-media scan. Explicit
+  # existing-filesystem HCI scenarios retain the shorter bound.
+  case "$renode_tag" in
+    brickwright-simulation-hci|brickwright-erased-simulation-hci) renode_timeout=960s ;;
+    *) renode_timeout=300s ;;
+  esac
+  timeout "$renode_timeout" "$renode_test" --variable "HCI_BRIDGE:$work/renode-virtual-hci" \
     --variable "HCI_PORT:34561" \
     --variable "PLATFORM:@$root/simulation/renode/spike-prime-custom-dma.repl" \
-    --include "${BRICKWRIGHT_RENODE_TAG:-brickwright-simulation-hci}" \
+    --include "$renode_tag" \
     --results-dir "$root/.local/renode-results" \
     "$root/simulation/renode/protected-images.robot"
 fi

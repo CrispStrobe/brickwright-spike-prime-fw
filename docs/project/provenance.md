@@ -123,18 +123,22 @@ component; the record includes its immutable origin and hash.
 
 Source checks verify hashes, licence expressions, attribution and file-set
 drift during builds and CI. External NuttX sources, toolchain runtime and
-linked image contents are covered for the simulation profile by the configured-build record below. Hardware
+linked image contents are covered for both TI-free simulation profiles by the
+configured-build records below. Hardware
 images containing the TI service pack have restricted TI terms even though
-that payload is absent from Git. The simulation profile excludes it.
+that payload is absent from Git. Both simulation profiles exclude it.
 
 
 ## Configured simulation build audit
 
-The default build profile is now `simulation`; `usbnsh` must be selected
-explicitly and retains the restricted TI dependency. Hardware approval and
+The default build profile is `simulation`, with Bluetooth autostart disabled.
+`simulation-hci` explicitly enables Bluetooth startup for an attached modeled
+controller. `usbnsh` must be selected explicitly and retains the restricted TI
+dependency. Hardware approval and
 physical validation remain open.
 
-`policy/simulation-firmware-inputs.json` records 3,244 conservative compiler
+`policy/simulation-firmware-inputs.json` and
+`policy/simulation-hci-firmware-inputs.json` each record 3,245 conservative compiler
 inputs including headers, generated NuttX interfaces, the complete inventoried
 embedded interpreter selection and original linker scripts. Explicit per-file
 grants control where available; unmarked project files use their recorded
@@ -142,9 +146,10 @@ root grants. Legacy grants and public-domain declarations retain their original
 notices. This records declared licence evidence, not reconstructed authorship
 of every historical line. NuttX newlib patches and hashes are recorded too.
 
-GNU maps identify 669 kernel and 579 userspace archive-member selections,
-plus the directly linked userspace startup object. The userspace link replay
-with a map reproduced the ELF byte for byte. Maps include members whose
+GNU maps identify the kernel and userspace archive-member sets recorded in
+each inventory, plus the directly linked userspace startup object. An earlier
+recorded userspace link replay with a map reproduced its ELF byte for byte; this
+is not a claim that complete builds in different paths are reproducible. Maps include members whose
 individual sections can later be discarded, so these are conservative
 selection counts, not line or byte attribution. Archive/member hashes and
 kernel/userspace image hashes identify the audited build; builds in different
@@ -156,8 +161,8 @@ compiler headers explicitly use GPLv3 with GCC Runtime Library Exception 3.1;
 recorded explicitly, with full GPL and exception texts, rather than labelled
 MIT/BSD. Newlib libm and toolchain header notices are retained separately.
 
-The full ARM build passed using one job after an earlier build was killed.
-Both final binaries contain zero of the 40 TI service-pack fingerprint chunks;
+Both profiles have recorded clean ARM builds. Their recorded binaries contain
+zero of the 40 TI service-pack fingerprint chunks;
 the verbose build references and dependency files contain no service-pack
 references, and neither ELF defines the payload symbol.
 

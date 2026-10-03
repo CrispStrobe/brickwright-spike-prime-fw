@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "profile": "simulation",
+  "profile": "simulation-hci",
   "scope": "Reviewed conservative compiler input closure plus the GNU linker-selected archive members for one ARM protected build. Includes extra unlinked interpreter/library inputs; not an exact linked-line count, hardware approval or history/clean-room claim.",
   "source_reference_commit": "738275abcaa87e2b53b90af0faee9a43d33742e7",
   "external_components": {
@@ -1941,7 +1941,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/etctmp.c",
-      "sha256": "4ca1a0d6857dcdea015a25d2662605b85f75e937ee59b91f562e2f40cdd76490",
+      "sha256": "8dad665f8b373912d647708c6f54d4103040bd167de27ae18578ee3b1e6de897",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -9624,7 +9624,7 @@
     },
     {
       "path": "nuttx/include/nuttx/config.h",
-      "sha256": "cce3e4774cfb51b83d3dd513790ed7dfe5d53ca890e83bed05e9025fa16e2445",
+      "sha256": "d82175e516fcf1630de35f196707d2165a40705056f46b20e4c072b4eb4c8b59",
       "spdx": [],
       "selected_licences": [
         "Apache-2.0"
@@ -33535,9 +33535,9 @@
   ],
   "images": {
     "kernel": {
-      "elf_sha256": "4b7d38b454429b612ee760058196f39194ba507b14a6800a96763ccb197ac95a",
-      "binary_sha256": "2227a4660ad362aaffb90dc4c84212704b8f954e0ae24e4d5929f1b7359354e0",
-      "binary_bytes": 220260,
+      "elf_sha256": "a7aca824fa69013ea889ee608c5a80691c5bd55d7919dd0259c69f6d8995e01c",
+      "binary_sha256": "478e70ca82ccaebb960c62e302a0cafe7521578eb564d9d77beb4fa76f64b6aa",
+      "binary_bytes": 220268,
       "selected_archive_members": 668,
       "archive_counts": {
         "libkarch.a": 56,
@@ -33555,8 +33555,8 @@
       }
     },
     "userspace": {
-      "elf_sha256": "ff6ea22d67a69906bb0e19d3499adde777a7ecbe7a0af3081284b3cdc2aa30e9",
-      "binary_sha256": "06f9c60b1eb276a585950ff587fc5d8dbd564ca5f45391c0fee3295321434a6e",
+      "elf_sha256": "66e851958a15a98d07c87b744df75c10cba48269b620b3a7e501694b0f1a1d6f",
+      "binary_sha256": "9b88a79cf81e46b9d01303af28a4438074d5a433de800bbc7c7f871f81424e90",
       "binary_bytes": 584716,
       "selected_archive_members": 581,
       "archive_counts": {
@@ -33634,9 +33634,9 @@
       }
     },
     "libboard.a": {
-      "sha256": "b7bc74aea3bc5707be15cc93b90fe06e2a7dd278434b444a2a69ca31aac0f352",
+      "sha256": "20224f240b1b44e635168a2ad314096ce82a1ebc242592e72c7fa9a8ec66ad29",
       "members": {
-        "etctmp.o": "221406102d74b434c8e5ba8d552c928a2c6facf3e54ba3e6c7d4c04e05b70deb",
+        "etctmp.o": "7468fb396a6fe53b1091179d9dc9eedced22c4fb3dca978e001999cafc32c0ca",
         "legosensor_uorb.o": "f015f164d42ec921414b46119842d050df393d55cbfe58d1bafb5ff578bd3a3e",
         "lsm6dsl_uorb.o": "d5a491c02ed1887eddb68e6b2b1598a71ec0c5d5a04bd8c77d0c96fff389b619",
         "stm32_adc_dma.o": "d82ff4f724de916edb2a49d4c9cb1e44382294f82c5a61ae8c6ec1cd54174599",
@@ -34072,7 +34072,7 @@
       }
     },
     "libkc.a": {
-      "sha256": "c27eb34ac32c65f85ef3c02ac98daeb0c5748c90bb6778c40d201acc9e739178",
+      "sha256": "114630084b7f3f358f7b223b6d48286b7dbdc18499d7a2fd3f3e4ca80940d699",
       "members": {
         "lib_abort.o": "f7518dc93e3900dc8e314738387cbe543c71da8ffd1f9460cd74e95aed002730",
         "lib_asprintf.o": "d648ef53bc5fe5a462b6923e28e224b3ce5baf25f0b1942488dda3bd2e41cae2",
@@ -34137,7 +34137,7 @@
         "lib_time.o": "1174a0a71d80cedf69f0a1e704d8b0d3f257fe0e9c838d201909f9930335ecd0",
         "lib_ultoa_invert.o": "e3f289ec49fbe628e0529aa11853193e3125ccd1625893c20a051c1968291b3f",
         "lib_umask.o": "d8a9f5b612e0640a88c116f530fbab604d311bfde7979f6ebfb8dcdd0f34acdb",
-        "lib_utsname.o": "0b7e9ddd1fae4152a51a587d809d64187e90295e769012824626e885c3793793",
+        "lib_utsname.o": "747be9a80c722333a8ef5a65d644e43c7cff166aba55660b30738467ac03057d",
         "lib_vasprintf.o": "0135508113b2fd6967408bb647b517c438a9dc29232658a67330c1f577820d0b",
         "lib_vsnprintf.o": "7c14d9ee59fbf389a3a17e2fae16d1e52dc915fae72acfe1def3c060ffd28fb7",
         "pthread_exit.o": "28f74e279e67064b3792694b4762503e376b3499395ff0a6e0644771ee71021a",
@@ -34203,7 +34203,7 @@
       }
     },
     "libfs.a": {
-      "sha256": "6b6cbbfcb871d7da512648e49e3c4e937bbece85cf170fe5def3f794b098d8f3",
+      "sha256": "0142e68c699815e0b0b1fb961b90c398251c103e8bc6479190b45335e43befa4",
       "members": {
         "fs_anonmap.o": "757a1a539acbb23f411b3030555956540e9891d44ff1ae2a1bab4b931d76a48a",
         "fs_chstat.o": "be5966d2760034ecbb121c73139ea56563be94120adb387cd2c55d4c90b06fba",
@@ -34255,7 +34255,7 @@
         "fs_procfstcbinfo.o": "98033bbb3da8fdde8e7c9f2797edec4603542ad957d649ec13125f45530200ff",
         "fs_procfsuptime.o": "792c9df3bd5c5c90e82b93690ce1d447f37c50a65eb8db841922ffa343208606",
         "fs_procfsutil.o": "488b9f65c56f5f2cc07c64b979d6854b43dd286fe43548ff1e2477bd6ce25f4e",
-        "fs_procfsversion.o": "94f1ddbf6934d54bd27f7e63184509319873676b9e811d9ab349f223276d78a8",
+        "fs_procfsversion.o": "25411dff27c779f4c4d76aaacfdc9231fd6c9aa58f71baadefbc4d060cfd1d31",
         "fs_pwrite.o": "c33280a68d9eed198c6522f53f60cebf9ad491194f687840690e39e7c55ace81",
         "fs_read.o": "13250e969d95314c8cf06b025ba190099cc8de890f967911ba3724a86c56eb44",
         "fs_registerblockdriver.o": "d742db219b49f8bda87681615557aff2118882e14686b063afa95d5db6fa9b36",
@@ -34306,7 +34306,7 @@
       }
     },
     "libc.a": {
-      "sha256": "aac08b5a4cb3a05bfe2efb5a51db8137beabf5a7344df51f084458ab71690d21",
+      "sha256": "5779e80405788f63782826e59e5dd92b87615047d0646acffbc4a1dea7436aef",
       "members": {
         "lib_abort.o": "f7518dc93e3900dc8e314738387cbe543c71da8ffd1f9460cd74e95aed002730",
         "lib_asprintf.o": "e9b271b3b9a17348ab22f5ce42113d03e12b71249517787ccaa839c27bfa6cf7",
@@ -34449,7 +34449,7 @@
         "lib_truncate.o": "fd9df3245fb4cd892ee41979b22677bd3f1c255abcfc2563293e16c488f187ab",
         "lib_ultoa_invert.o": "e3f289ec49fbe628e0529aa11853193e3125ccd1625893c20a051c1968291b3f",
         "lib_usleep.o": "836f44f0772e130b9e2c8ec5b325cc74f390ef1a0418d425bf263f997b62714f",
-        "lib_utsname.o": "e6bec0f6e419781be8d17db583b34a58969a96a4ab5b95d616546b2ef67f4a42",
+        "lib_utsname.o": "922b429458fa25fb6f5dfe80947d5d4ecd2bc97657a10ae26cbb5155e4be20aa",
         "lib_uuid_create_nil.o": "4506f6786712a7e2277bc86177ab4ac7260a4f4c4b5bb1bfb7b1bfda71a15a51",
         "lib_uuid_from_string.o": "33468adca84988adc8d6825f13458c783e5775c574a0910b59a0cc671b83c669",
         "lib_uuid_to_string.o": "f9366f97410d555b7524e8d962e8a2fcc5e214f51ce0aa2021b25a38130103bd",
@@ -34535,7 +34535,7 @@
       }
     },
     "libapps.a": {
-      "sha256": "ecebb0cb2868747f4b8570efaeb2ada1c07a875ec4742acb812f2753355019f1",
+      "sha256": "89c5656bf32fc28aa5580c5bbb7ce36b438ec34b164749556387b5c55dad4af0",
       "members": {
         "argcheck.cROOT.apps.hubprogram_1.o": "48ecb4245f78cd3d6bbdba166226dac6c351db366fbb549318423b29268c8d40",
         "battery_main.cROOT.apps.battery_1.o": "d2c23aab83870b13f64ab8cf0af5d2458d2dbec94161875f4baa032e1bdad096",
@@ -34932,7 +34932,7 @@
     "source_licensing_reference": "https://github.com/gcc-mirror/gcc/tree/releases/gcc-13.2.0/libgcc",
     "basis": "GNU libgcc ARM division, floating-point and unwind sources explicitly carry the GCC Runtime Library Exception 3.1; standard GCC compilation is used."
   },
-  "config_sha256": "f704ea34fcf1590562ef73d781d61579de9044d2c8c7fef2827f492e52bbb85d",
+  "config_sha256": "b39e467ca98a7ffdefeeac5ad7bbc852acda039ae3090dc13450bfd196dd0102",
   "ti_exclusion": {
     "service_pack_chunks_in_kernel": 0,
     "service_pack_chunks_in_userspace": 0,
@@ -35029,7 +35029,7 @@
   "version_metadata_note": "Only literal CONFIG_VERSION_STRING/MAJOR/MINOR/PATCH/BUILD values may vary with Git tag availability. Other version-header content remains hash-pinned.",
   "source_origin_review": "policy/source-origin-review.json",
   "source_origin_review_status": "reviewed-current-source-and-advertised-history",
-  "build_revision_note": "2026-10-03 actual clean ARM qualification of the simulation profile. All 3245 reviewed source paths and attribution selections retained. Five reviewed source fixes cover exhaustive flash scan batching, HCI condition broadcasts, locked singly-linked lists, and PSA pthread synchronization plus a NuttX recursive-mutex compile guard. Both configurations enable CONFIG_PTHREAD_MUTEX_TYPES for the required recursive IRQ mutex ABI. The sole added selected member is existing Apache-2.0 mbedTLS threading.c.obj. Default configuration replaces temporary simulation-dirty provenance with the committed profile and enables CONFIG_PTHREAD_MUTEX_TYPES for the reviewed recursive mutex ABI; simulation-hci additionally enables CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI. Generated config header is reconstructed against the measured main header; other source and ROMFS inputs remain exact. Archive/member and image hashes come from the actual build; compiler debug paths prevent a whole-build reproducibility claim.",
+  "build_revision_note": "2026-10-03 actual clean ARM qualification of the simulation-hci profile. All 3245 reviewed source paths and attribution selections retained. Five reviewed source fixes cover exhaustive flash scan batching, HCI condition broadcasts, locked singly-linked lists, and PSA pthread synchronization plus a NuttX recursive-mutex compile guard. Both configurations enable CONFIG_PTHREAD_MUTEX_TYPES for the required recursive IRQ mutex ABI. The sole added selected member is existing Apache-2.0 mbedTLS threading.c.obj. Default configuration replaces temporary simulation-dirty provenance with the committed profile and enables CONFIG_PTHREAD_MUTEX_TYPES for the reviewed recursive mutex ABI; simulation-hci additionally enables CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI. Generated config header is reconstructed against the measured main header; other source and ROMFS inputs remain exact. Archive/member and image hashes come from the actual build; compiler debug paths prevent a whole-build reproducibility claim. The HCI generated ROMFS is additionally reproduced byte for byte with the pinned writer and xxd from the preprocessed committed startup tree; startup enables the explicit virtual-controller flag.",
   "capabilities": {
     "motorPorts": 6
   }

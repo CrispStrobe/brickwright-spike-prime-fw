@@ -6,6 +6,12 @@
 #include <stddef.h>
 #include <zephyr/sys/util.h>
 
+/* The host port uses preemptive receive/work pthreads. Serialize individual
+ * list operations with the same recursive lock as irq_lock(); callers must
+ * still protect compound operations and traversal across ownership changes. */
+unsigned int brickwright_irq_lock(void);
+void brickwright_irq_unlock(unsigned int key);
+
 typedef struct _sys_snode {
   struct _sys_snode *next;
 } sys_snode_t;
@@ -17,42 +23,69 @@ typedef struct {
 
 #define SYS_SLIST_STATIC_INIT(list) { 0, 0 }
 
-static inline void sys_slist_init(sys_slist_t *list) { list->head = list->tail = 0; }
-static inline bool sys_slist_is_empty(const sys_slist_t *list) { return list->head == 0; }
-static inline sys_snode_t *sys_slist_peek_head(const sys_slist_t *list) { return list->head; }
-static inline sys_snode_t *sys_slist_peek_tail(const sys_slist_t *list) { return list->tail; }
+static inline void sys_slist_init(sys_slist_t *list) {
+  unsigned int key = brickwright_irq_lock();
+  list->head = list->tail = 0;
+  brickwright_irq_unlock(key);
+}
+static inline bool sys_slist_is_empty(const sys_slist_t *list) {
+  unsigned int key = brickwright_irq_lock();
+  bool empty = list->head == NULL;
+  brickwright_irq_unlock(key);
+  return empty;
+}
+static inline sys_snode_t *sys_slist_peek_head(const sys_slist_t *list) {
+  unsigned int key = brickwright_irq_lock();
+  sys_snode_t *node = list->head;
+  brickwright_irq_unlock(key);
+  return node;
+}
+static inline sys_snode_t *sys_slist_peek_tail(const sys_slist_t *list) {
+  unsigned int key = brickwright_irq_lock();
+  sys_snode_t *node = list->tail;
+  brickwright_irq_unlock(key);
+  return node;
+}
 
 static inline void sys_slist_append(sys_slist_t *list, sys_snode_t *node)
 {
+  unsigned int key = brickwright_irq_lock();
   node->next = 0;
   if (list->tail) list->tail->next = node; else list->head = node;
   list->tail = node;
+  brickwright_irq_unlock(key);
 }
 
 static inline void sys_slist_prepend(sys_slist_t *list, sys_snode_t *node)
 {
+  unsigned int key = brickwright_irq_lock();
   node->next = list->head;
   list->head = node;
   if (!list->tail) list->tail = node;
+  brickwright_irq_unlock(key);
 }
 
 static inline void sys_slist_insert(sys_slist_t *list, sys_snode_t *prev,
                                     sys_snode_t *node)
 {
-  if (!prev) { sys_slist_prepend(list, node); return; }
+  unsigned int key = brickwright_irq_lock();
+  if (!prev) { sys_slist_prepend(list, node); brickwright_irq_unlock(key); return; }
   node->next = prev->next;
   prev->next = node;
   if (list->tail == prev) list->tail = node;
+  brickwright_irq_unlock(key);
 }
 
 static inline sys_snode_t *sys_slist_get(sys_slist_t *list)
 {
+  unsigned int key = brickwright_irq_lock();
   sys_snode_t *node = list->head;
   if (node) {
     list->head = node->next;
     if (!list->head) list->tail = 0;
     node->next = 0;
   }
+  brickwright_irq_unlock(key);
   return node;
 }
 
@@ -65,37 +98,45 @@ static inline bool sys_slist_find(const sys_slist_t *list,
                                   const sys_snode_t *node,
                                   sys_snode_t **previous)
 {
+  unsigned int key = brickwright_irq_lock();
   sys_snode_t *prior = 0;
   for (sys_snode_t *it = list->head; it; prior = it, it = it->next)
     if (it == node)
       {
         if (previous) *previous = prior;
+        brickwright_irq_unlock(key);
         return true;
       }
   if (previous) *previous = prior;
+  brickwright_irq_unlock(key);
   return false;
 }
 
 static inline bool sys_slist_find_and_remove(sys_slist_t *list, sys_snode_t *node)
 {
+  unsigned int key = brickwright_irq_lock();
   sys_snode_t *prev = 0;
   for (sys_snode_t *it = list->head; it; prev = it, it = it->next) {
     if (it == node) {
       if (prev) prev->next = it->next; else list->head = it->next;
       if (list->tail == it) list->tail = prev;
       it->next = 0;
+      brickwright_irq_unlock(key);
       return true;
     }
   }
+  brickwright_irq_unlock(key);
   return false;
 }
 
 static inline void sys_slist_remove(sys_slist_t *list, sys_snode_t *prev,
                                     sys_snode_t *node)
 {
+  unsigned int key = brickwright_irq_lock();
   if (prev) prev->next = node->next; else list->head = node->next;
   if (list->tail == node) list->tail = prev;
   node->next = 0;
+  brickwright_irq_unlock(key);
 }
 
 #define SYS_SLIST_FOR_EACH_NODE(list, node) \

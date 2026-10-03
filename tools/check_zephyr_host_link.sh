@@ -3,11 +3,14 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+python3 "$root/tools/test_virtual_hci_wakeups.py"
+python3 "$root/tools/test_slist_concurrency.py"
 work=$(mktemp -d /tmp/brickwright-host-link.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 "$root/tools/fetch_mbedtls.sh" "$work/mbedtls"
 cmake -S "$work/mbedtls" -B "$work/mbedtls-build" \
   -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF \
+  -DCMAKE_C_FLAGS="-pthread -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD" \
   -DUSE_SHARED_MBEDTLS_LIBRARY=OFF -DUSE_STATIC_MBEDTLS_LIBRARY=ON >/dev/null
 cmake --build "$work/mbedtls-build" --target mbedcrypto -j2 >/dev/null
 
@@ -23,6 +26,7 @@ PY
 objects=()
 flags=(
   -std=gnu11 -w -pthread -DCONFIG_ZTEST=1
+  -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD
   -DMBEDTLS_CONFIG_FILE='"mbedtls/mbedtls_config.h"'
   -include stdbool.h -include zephyr/autoconf.h
   -I"$root/bluetooth/zephyr_compat/include"
@@ -52,5 +56,10 @@ cc "${flags[@]}" -c "$root/bluetooth/zephyr_compat/test/test_host_link.c" \
   -o "$work/test-host-link.o"
 cc -pthread -Wl,--gc-sections "${objects[@]}" "$work/test-host-link.o" \
   "$work/mbedtls-build/library/libmbedcrypto.a" -o "$work/host-link"
+cc "${flags[@]}" \
+  "$root/bluetooth/zephyr_compat/test/test_crypto_concurrency.c" \
+  "$work/subsys-bluetooth-host-crypto_psa.c.o" "$work/compat-log.o" \
+  "$work/mbedtls-build/library/libmbedcrypto.a" -o "$work/crypto-concurrency"
+timeout 30 "$work/crypto-concurrency"
 timeout 30 "$work/host-link"
 size "$work/host-link"

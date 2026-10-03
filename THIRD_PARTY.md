@@ -6,7 +6,7 @@ component.
 | Component | Pin | Licence in this distribution | Treatment |
 |---|---|---|---|
 | spike-nx baseline | `owhinata/spike-nx@00524ea5464bddb46c852967e382f8f6b073abe6` | MIT | Project baseline; root `LICENSE`. |
-| NuttX | `owhinata/nuttx@a67efb31cf4f236e456882589b91862f04594528` | Primarily Apache-2.0; optional files vary | External gitlink. Optional BSD components are disabled in the target configuration. Its own licence/NOTICE controls. |
+| NuttX | `owhinata/nuttx@a67efb31cf4f236e456882589b91862f04594528` | Primarily Apache-2.0; optional files vary | External gitlink. Selected inputs include Apache-2.0 and BSD-3-Clause files, including the tickless timer. Its own licence/NOTICE and per-file grants control. |
 | NuttX Apps | `owhinata/nuttx-apps@55f0bc216565ccab8dee600a88f4485c7693bf8b` | Primarily Apache-2.0; optional files vary | External gitlink. Only the configured application closure is linked. Its own licence/NOTICE controls. |
 | Reviewed NuttX/NuttX Apps backports | Source SHAs, authors and adaptations in [policy/nuttx-backports.json](policy/nuttx-backports.json) | Apache-2.0 and BSD-3-Clause, per file | Hash-checked patches on the existing dependency pins; original ASF headers/NOTICE preserved. Full grants in `licenses/Apache-2.0.txt` and `licenses/NuttX-Tickless-BSD-3-Clause.txt`. |
 | Zephyr Bluetooth host selection | Zephyr `v4.4.1`, exact commit in `third_party/zephyr-host/manifest.json` | Apache-2.0 | Vendored, hash-pinned selection; upstream licence retained and local patch recorded. |
@@ -16,7 +16,7 @@ component.
 | Mbed TLS crypto | `107ea89daaefb9867ea9121002fbbdf926780e98` (3.6.2), fetched archives hash-pinned | Apache-2.0 selected from Apache-2.0 OR GPL-2.0-or-later | Compiled into the Zephyr host archive. Source/header evidence survives temporary-source cleanup; grant retained in `licenses/MbedTLS-3.6.2-LICENSE.txt`. |
 | newlib maths and toolchain headers | libm 4.3.0.20230120 plus NuttX patches; toolchain headers from libnewlib-dev 4.4.0.20231231-2 | File-level BSD/permissive/public-domain grants; NuttX integration changes Apache-2.0 | Inputs, original grants and default notices recorded in the simulation inventory and notice bundle. Other target-specific notices in the aggregate do not imply those targets are linked. |
 | GNU compiler runtime | gcc-arm-none-eabi `15:13.2.rel1-2`; runtime archive hash and 20 selected member names in the simulation inventory | GPL-3.0-or-later WITH GCC-exception-3.1 | Explicit runtime exception, with ordinary GCC compilation. Full GPL and exception texts retained; no plain-GPL or MIT reclassification. |
-| TI CC2564C service pack 1.5 | TI commit `3aa1d75f3c2ae77f6e4d36194e3d281b899ab149`; SHA-256 `646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e` | TI Text File License | **Absent from the current tree and reviewed advertised history; retained only in private historical evidence.** The hardware profile fetches it from TI's git at build time into ignored `.local/ti/`, verified by SHA-256; a mismatch is refused. The simulation profile never references it, and `tools/check_ti_free_image.py` proves its images contain none of its bytes. |
+| TI CC2564C service pack 1.5 | TI commit `3aa1d75f3c2ae77f6e4d36194e3d281b899ab149`; SHA-256 `646723c01de351eaf9c6b6b33f4f0dac9567b948a2e93daed9da7a896b6e1b0e` | TI Text File License | **Absent from the current tree and reviewed advertised history; retained only in private historical evidence.** The hardware profile fetches it from TI's git at build time into ignored `.local/ti/`, verified by SHA-256; a mismatch is refused. Both TI-free simulation profiles exclude it from the build graph. `tools/check_ti_free_image.py` rejects known payload fingerprints and service-pack build references; it does not prove the absence of arbitrary transformed fragments. |
 
 The current tree includes no TI service pack, LEGO firmware dump, official
 SPIKE firmware image, BTstack source or BTstack binary. This statement does
@@ -27,14 +27,16 @@ user-supplied local files and are never CI artifacts.
 
 `tools/check_reuse_licenses.py` verifies tracked reuse notices, allowed SPDX
 expressions and pinned embedded-interpreter inputs during CI and builds.
-The configured simulation build is separately recorded in
-`policy/simulation-firmware-inputs.json`: 3,244 conservative source/header/linker
-inputs, 1,248 archive-member selections and the direct startup object. The
+The configured simulation builds are separately recorded in
+`policy/simulation-firmware-inputs.json` and
+`policy/simulation-hci-firmware-inputs.json`: each records 3,245 conservative
+source/header/linker inputs, its selected archive-member sets and the direct
+startup object. The
 superset includes compiled or inventoried inputs whose code may not survive
 linking. `licenses/Simulation-Firmware-NOTICES.txt` bundles their grants and
 attribution. `tools/check_simulation_firmware.sh` checks source/config/runtime
 hashes, linker-selected member sets and TI exclusion after simulation builds.
-This review covers that profile/toolchain; other configurations and changes
+These reviews cover the two simulation profiles and recorded toolchain; other configurations and changes
 require review. These checks verify declared grants and hashes; the broader
 source-origin review identified unresolved inherited filter provenance. Both
 current implementations and the recorded build have now been replaced and tested;

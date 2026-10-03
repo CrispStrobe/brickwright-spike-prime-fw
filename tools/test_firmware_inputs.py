@@ -10,7 +10,7 @@ from collect_build_inputs import collect, version_metadata_digest
 from check_firmware_inputs import check, notices, check_links
 
 with tempfile.TemporaryDirectory() as directory:
-    root = Path(directory)
+    root = Path(directory).resolve()
     (root/'init.d').mkdir()
     (root/'fixture.c').write_text('// SPDX-License-Identifier: MIT\n#include "fixture.h"\n')
     (root/'fixture.h').write_text('// SPDX-License-Identifier: MIT\n')

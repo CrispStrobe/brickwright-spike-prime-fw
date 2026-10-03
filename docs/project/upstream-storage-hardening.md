@@ -1,7 +1,9 @@
 # Storage recovery and NuttX hardening
 
 The SPIKE firmware is experimental. The following targeted fixes retain the
-Apache-2.0 notices in NuttX and the existing MIT notices in the board driver.
+Apache-2.0 and BSD-3-Clause notices in the affected NuttX files, including
+the original tickless-driver notices, and the existing MIT notices in the
+board driver.
 
 The NuttX descriptor limit correction comes from
 [20752312eaac24994487891207c81fa22c02f7b5](https://github.com/apache/nuttx/commit/20752312eaac24994487891207c81fa22c02f7b5)
@@ -24,6 +26,20 @@ formatted by this recovery path. A corrupt, nonblank partition is preserved;
 read failures and short reads do not authorize formatting. The partition
 remains registered even if its filesystem cannot be mounted.
 
+The scan reads 4096-byte blocks through one bounded kernel-heap allocation,
+so the boot task does not need a 4 KB stack buffer. It frees that allocation
+on every exit path. Allocation failure returns `-ENOMEM` and does not permit
+formatting. A full blank scan makes 7936 read calls instead of 126976; this
+reduces transfer setup overhead while still reading and checking every byte.
+The simulator's byte-level DMA pacing remains intact, so fewer calls do not
+imply the same factor of improvement in elapsed time.
+
+Simulator coverage keeps erased-media first boot separate from an explicit
+synthetic already-formatted filesystem for normal boot. The latter exercises
+mounting existing media and cannot replace the full blank-scan gate. Fixture
+provenance, loading lifecycle and selected tags are documented in
+[the synthetic filesystem fixture record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/docs/project/synthetic-littlefs-fixture.md).
+
 To recover existing data, inspect or back up `/dev/mtdblock0` first. An operator
 who chooses to discard the filesystem can explicitly run:
 
@@ -45,8 +61,38 @@ They compile the changed implementation paths with mocked boundary conditions
 and AddressSanitizer/UndefinedBehaviorSanitizer. They cover descriptor limits,
 static and dynamic task-group failure cleanup, task-name buffer guards, SPI
 wake ordering, blank and nonblank partitions, end-of-partition data, short or
-failed reads, and mount/format errors. Hardware reset during programming or
-metadata updates still requires physical or faithful simulator testing.
+failed reads, allocation failure and cleanup, dirty bytes throughout the
+first scan block and across 4 KB/64 KB boundaries, and mount/format errors.
+
+For crash/restart qualification using the actual build's patched LittleFS
+v2.5.1 sources, run:
+
+```sh
+python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
+```
+
+The test does not download or vendor LittleFS; its existing BSD-3-Clause
+copyright and licence remain in the supplied source directory. The runner
+prints hashes of the five source/licence inputs. It links the unchanged program
+save/restore code through a host POSIX-to-LittleFS shim, uses the simulation
+build's 31 MB partition, 256-byte NOR pages, 4096-byte erase blocks and configured
+LittleFS cache/transfer sizes, and terminates a separate process at each flash
+program, erase or sync operation. Cuts occur before, partway through and after
+the operation; partial programming stops midway through a physical page.
+Restart discards all process/file/cache state and remounts the persistent bytes.
+
+The qualified-source run passed 426 cuts: maximum-size native and Python
+replacement combinations, the same combinations after 64 prior replacements,
+and first saves without an existing program. A replacement recovers exactly
+the old or new program in READY state; a first save may also recover no file.
+Every recovered filesystem accepts another complete replacement. Extracted,
+unchanged board mount functions additionally preserve flash byte-for-byte
+when both superblock metadata blocks are destroyed or a dirty byte appears
+at either partition edge. A wholly erased partition is still formatted.
+
+This models interrupted writes and erase operations; it does not emulate
+brownout electrical behavior, arbitrary bit faults, timing, or the complete
+NuttX VFS/driver stack. Physical reset/power-loss qualification remains pending.
 
 Use a **clean NuttX build after changing Kconfig**. The broader upstream
 [archive rebuild correction](https://github.com/apache/nuttx/commit/c027e7c3e4c803a4bc59ae94eaebba4948ed2514)
@@ -74,6 +120,25 @@ independence, serialized checksums, directory link targets, exact file data,
 execute bits, symbolic links, empty files and rejected input types. The actual
 preprocessed board init tree was also compared semantically with system
 `genromfs` and the resulting image mounted read-only using the Linux kernel
-ROMFS driver; script bytes and execute modes matched. Exact input hashing
+ROMFS driver; script bytes and execute modes matched.
+
+Linux mounting alone did not catch a root-directory layout bug: NuttX starts
+its root traversal at the first header and follows sibling links, while Linux
+follows the root's directory pointer. An isolated root header made NuttX see
+an empty directory and prevented the startup scripts from running. The root
+now also links to its directory entries. `python3 tools/test_nuttx_romfs.py
+--nuttx nuttx` compiles the actual pinned NuttX parser with directory caching
+both enabled and disabled. It reads exact startup-script bytes and tests
+nested/sibling paths, long names, empty and missing files; the previous layout
+fails both parser configurations. Linux read-only mounting remains valid.
+
+Exact input hashing
 remains enabled and the ARM image must be rebuilt for the new deterministic
 filesystem layout.
+
+Both the crash/restart harness and synthetic fixture compiler use the qualified
+NuttX persistent limits: `LFS_NAME_MAX=32`, `LFS_FILE_MAX=2147483647` and
+`LFS_ATTR_MAX=1022`. Matching block geometry alone is insufficient: LittleFS
+rejects superblocks with a filename limit larger than the mount implementation.
+The fixture regression reproduces the former host-default 255 / guest 32
+mismatch with separate actual-library builds and verifies the corrected mount.

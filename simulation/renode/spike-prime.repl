@@ -3,11 +3,73 @@
 //
 // The F413VG exposes 320 KiB as a contiguous Cortex-M SRAM address range.
 // Renode's common F4 model supplies the first 256 KiB; this supplies the
-// remaining 64 KiB without overlapping it.  The external W25Q256 is initially
-// represented as memory so opaque images can execute against a deterministic
-// snapshot while the command-level SPI model is developed.
+// remaining 64 KiB without overlapping it. NuttX accesses the external W25Q256
+// through the command-level SPI model below. The separate externalFlash memory
+// region is retained for synthetic snapshots; it is not SPI NOR storage.
 
 using "platforms/cpus/stm32f4.repl"
+
+// The F413 board feeds TIM9 from its 96 MHz APB2 timer clock. The generic
+// F4 platform's 10 MHz value makes the firmware's 100 kHz tickless counter
+// run 9.6 times too slowly despite the board's correct prescaler.
+timer9:
+    frequency: 96000000
+
+// The firmware samples six ADC ranks from TIM2 TRGO at 1 kHz. Supply
+// synthetic stable analog inputs through the ADC model; rank 5/6 are
+// released button ladders. Zero defaults decode as a hardware fault with
+// the center-button bit set and eventually request shutdown.
+timer2:
+    frequency: 96000000
+    TriggerOutput -> adc1@6
+
+adc1:
+    init:
+        SetChannelValue 10 0
+        SetChannelValue 11 3100
+        SetChannelValue 8 2048
+        SetChannelValue 3 0
+        SetChannelValue 14 4095
+        SetChannelValue 1 4095
+
+// GPIO external interrupts select one port per pin through SYSCFG EXTICR.
+// The generic F4 platform connects every port directly to EXTI, which lets
+// PC9's Bluetooth slow clock spuriously trigger PA9's VBUS interrupt.
+syscfg: Miscellaneous.STM32_SYSCFG @ sysbus 0x40013800
+    [0-15] -> exti@[0-15]
+
+gpioPortA:
+    [0-15] -> syscfg#0@[0-15]
+
+gpioPortB:
+    [0-15] -> syscfg#1@[0-15]
+
+gpioPortC:
+    [0-15] -> syscfg#2@[0-15]
+
+gpioPortD:
+    [0-15] -> syscfg#3@[0-15]
+
+gpioPortE:
+    [0-15] -> syscfg#4@[0-15]
+
+gpioPortF:
+    [0-15] -> syscfg#5@[0-15]
+
+gpioPortG:
+    [0-15] -> syscfg#6@[0-15]
+
+gpioPortH:
+    [0-15] -> syscfg#7@[0-15]
+
+gpioPortI:
+    [0-15] -> syscfg#8@[0-15]
+
+gpioPortJ:
+    [0-15] -> syscfg#9@[0-15]
+
+gpioPortK:
+    [0-15] -> syscfg#10@[0-15]
 
 sramUpper: Memory.MappedMemory @ sysbus 0x20040000
     size: 0x10000
@@ -26,4 +88,4 @@ flashMux: SPI.SPIMultiplexer @ spi2
 norFlash: SPIKEPrime.W25Q256JV @ flashMux 0
 
 gpioPortB:
-    12 -> flashMux@0
+    12 -> syscfg#1@12 | flashMux@0

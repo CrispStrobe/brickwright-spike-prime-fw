@@ -17,7 +17,7 @@ table at `0x08008000`.
 | `lego-v3` | user-supplied official modern image | raw at `0x08008000` | valid vectors and PC leaves reset handler |
 | `spike-nx` | rebuilt from upstream commit `00524ea5464bddb46c852967e382f8f6b073abe6` | protected kernel and user images | symbol milestones |
 | `brickwright` | rebuilt from this branch | protected kernel and user images | symbol milestones through daemon start |
-| `brickwright-simulation` | rebuilt with `BOARD_CONFIG=simulation` | protected kernel and user images | daemon ready with no service pack |
+| `brickwright-simulation` | rebuilt with the selected clean simulation profile | protected kernel and user images | local program startup; explicit HCI profile also tests Bluetooth startup |
 
 ## Image classes
 
@@ -28,8 +28,17 @@ table at `0x08008000`.
 | `lego-v2`, `lego-v3` | user-supplied proprietary | the whole image is LEGO's; not inspected here, so treat any CC2564C initialization it carries as unknown and restricted | never CI; user-staged under `.local/` |
 | `spike-nx` (rebuilt upstream) | chip-restricted | `apps/btsensor/chipset/cc256x_init_script.c`, copied from Pybricks (TI service pack 1.4), plus BTstack | never CI; local only |
 
-CI stages only the simulation profile, under both `brickwright` and
-`brickwright-simulation`. The `brickwright-simulation-hci` gate runs that image
+CI builds two TI-free profiles in separate jobs and stages each under
+`brickwright` and `brickwright-simulation`. `BOARD_CONFIG=simulation` keeps
+Bluetooth autostart disabled and starts local program service independently.
+`BOARD_CONFIG=simulation-hci` differs only by explicitly enabling
+`CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI`; use it only with an attached virtual
+controller. Each profile requires its own exact configured compiler/linker
+inventory, checked before and after compilation. Profile switching requires a
+clean build; an existing `.config` is never silently accepted as the other
+profile.
+
+The `brickwright-simulation-hci` gate tests the explicit HCI profile
 against the virtual controller with `--reject-vendor`: no vendor command may
 arrive, and the image still reaches `physical_load_firmware` (a no-op in this
 profile), `physical_start_host`, `bt_enable`, `settings_load`, transport
@@ -67,9 +76,30 @@ and enters `tlc5955_initialize`. The private MIT Renode fork supplies the
 request-paced SPI/UART DMA behavior needed for those transfers. This remains a
 board-bring-up milestone, not yet an unchanged userspace boot proof.
 
+GPIO interrupt routing uses Renode's existing MIT `STM32_SYSCFG` model at
+`0x40013800`. Each GPIO port feeds its own mux input, and the firmware's
+EXTICR fields select the port forwarded to each EXTI line. The common F4
+platform's direct fanout allowed PC9 Bluetooth-clock edges to trigger the PA9
+VBUS handler. The `brickwright-exti-routing` regression exercises real model
+connections: unselected-port edges are rejected, PA9 and PC9 can each be
+selected, and write-one-to-clear removes both pending status and interrupt
+output. This is a routing proof; complete Bluetooth startup is a separate gate.
+
+TIM2's 96 MHz input and update TRGO drive ADC selector 6, matching the actual
+board driver. Six stable synthetic inputs feed the model: battery current
+0, battery voltage 3100, thermistor 2048, USB current 0, and both button
+ladders 4095. These are 12-bit test inputs, not calibrated physical measurements.
+Released buttons must be sampled through the configured ADC sequence and
+DMA2 stream 0; a zero-filled buffer decodes as a ladder fault with the center
+button flag and can trigger shutdown. The `brickwright-adc-dma` regression
+uses scratch SRAM without loading firmware and checks actual timer-triggered
+rank order, halfword writes, circular reload, completion clearing and voltage
+changes representing button press/release. Guest buffer writes and power-button
+function stubs are not used for this model proof.
+
 The retained board-stub gate runs all of `stm32_bringup` while isolating the
 same five synchronous initialization/update functions, then requires both
-`nsh_main` and `btsensor_main`. It remains explicitly labeled as a stubbed
+`nsh_main` and `hubprogram_main`. It remains explicitly labeled as a stubbed
 diagnostic and must not be presented as peripheral-fidelity simulation.
 
 The rebuilt original `spike-nx` protected pair also passes its unchanged reset,
@@ -84,6 +114,16 @@ synchronous board bring-up, LPF2 devices, and USB are tracked in `PLAN.md` C8. A
 passing emulator run is never evidence for RF behavior, TI service-pack
 semantics, electrical behavior, or physical timing.
 
+Flash scenarios distinguish erased-media first boot from explicitly loaded,
+synthetic existing filesystems. CI retains the erased-media board gate and
+selects separate normal-boot board/HCI tags. The fixture is generated from the
+exact qualified LittleFS sources, validated and programmed through public NOR
+SPI commands while paused before guest execution; default reset remains
+unchanged. See the
+[fixture provenance and coverage record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/docs/project/synthetic-littlefs-fixture.md)
+for tag names, lifecycle and limits. Generating this fixture alone provides no
+guest-boot qualification.
+
 ## Virtual HCI boundary
 
 `tools/test_renode_virtual_hci_bridge.sh` builds and tests a small Apache-2.0
@@ -96,11 +136,13 @@ controller boundary without making the bridge an implementation of TI
 firmware.
 
 Set `BRICKWRIGHT_RENODE_FIRMWARE_TEST=1` to run the protected-image boundary
-test after the standalone socket test. With the custom Renode fork it crosses
-`physical_open`, streams the opaque service pack through the external lawful
-responder, and reaches `physical_start_host`. The fork models RX/TX request
-routing, request persistence across stream setup, circular NDTR reload, and
-USART IDLE behavior. The gate now continues through `bt_enable()`,
+test after the standalone socket test. Build the explicit TI-free
+`simulation-hci` profile and use the source-built custom Renode fork. The test
+crosses `physical_open`, `physical_load_firmware` (a no-op in this profile),
+and `physical_start_host`; it sends standard HCI commands to a controller
+configured with `--reject-vendor` and streams no TI service pack. The fork
+models RX/TX request routing, request persistence across stream setup, circular
+NDTR reload, and USART IDLE behavior. The gate continues through `bt_enable()`,
 `settings_load()`, hub-transport registration, and the daemon's ready-to-wait
 boundary. A linker regression check ensures that the Zephyr net-buffer pool
 table remains inside NuttX's protected initialized-data range.
@@ -116,9 +158,30 @@ tools/test_renode_protected_images.sh
 tools/test_renode_virtual_hci_bridge.sh
 ```
 
-To exercise the custom fork, set `RENODE_DIR` for the test commands, for
-example `RENODE_DIR=/path/to/renode-spike-prime`. The fork source and model
-tests live in the public repositories `CrispStrobe/renode-spike-prime` and
+For the custom qualification gates, build the pinned fork from source and
+export both paths reported by its installer:
+
+```sh
+tools/install_renode_fork.sh
+export RENODE_DIR="$(tools/install_renode_fork.sh --print-runtime)"
+export RENODE_TEST_VENV="$(tools/install_renode_fork.sh --print-venv)"
+# After staging the corresponding clean protected pairs and generating
+# .local/firmware-images/existing-filesystem with tools/make_littlefs_fixture.py:
+tools/test_renode_protected_images.sh \
+  --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
+  --include brickwright-existing-filesystem-board
+BRICKWRIGHT_RENODE_FIRMWARE_TEST=1 \
+BRICKWRIGHT_RENODE_TAG=brickwright-simulation-hci-existing-filesystem \
+  tools/test_renode_virtual_hci_bridge.sh
+```
+
+The board command uses the default `simulation` pair staged as `brickwright`;
+the HCI command uses the separately built `simulation-hci` pair staged as
+`brickwright-simulation`. The existing-filesystem tags explicitly load the
+synthetic fixture and do not replace the erased-media first-boot gate.
+
+The fork source and model tests live in the public repositories
+`CrispStrobe/renode-spike-prime` and
 `CrispStrobe/renode-infrastructure-spike-prime`. The HCI script selects
 `spike-prime-custom-dma.repl`; the default `spike-prime.repl` deliberately
 remains loadable by pinned stock Renode for the bounded public-model gates.

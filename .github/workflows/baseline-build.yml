@@ -12,9 +12,13 @@ concurrency:
 
 jobs:
   firmware:
-    name: Build without publishing artifacts
+    name: Build ${{ matrix.profile }} without publishing artifacts
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [simulation, simulation-hci]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -30,6 +34,9 @@ jobs:
           python3 tools/apply_nuttx_backports.py
           python3 tools/test_upstream_hardening.py --nuttx nuttx
           python3 tools/test_upstream_arm_hardening.py --nuttx nuttx
+          python3 tools/test_usb_wakeup.py --nuttx nuttx
+          python3 tools/test_recursive_mutex_config.py --nuttx nuttx
+          python3 tools/test_nuttx_romfs.py --nuttx nuttx
           python3 tools/check_nuttx_apps_hardening.py --apps nuttx-apps --baseline 55f0bc216565ccab8dee600a88f4485c7693bf8b
 
       - name: Build the pinned tool container
@@ -42,13 +49,25 @@ jobs:
           docker run --rm nuttx-builder python3 --version
           docker run --rm nuttx-builder make --version | head -n 1
 
-      # CI builds and runs only the clean simulation profile. The hardware
+      # CI builds and runs only the two TI-free simulation profiles. The hardware
       # profile embeds TI's chip-restricted service pack and is never built,
       # simulated, or published here.
-      - name: Build protected NuttX firmware (simulation profile)
+      - name: Build protected NuttX firmware (selected simulation profile)
         run: |
           set -o pipefail
-          make nuttx BOARD_CONFIG=simulation V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
+          make nuttx BOARD_CONFIG=${{ matrix.profile }} V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Test saved programs through real LittleFS interrupted writes
+        if: matrix.profile == 'simulation'
+        run: python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
+
+      - name: Prepare an explicit existing-filesystem simulation fixture
+        run: |
+          python3 tools/test_littlefs_fixture.py --littlefs nuttx/fs/littlefs/littlefs
+          python3 tools/test_renode_load_littlefs_fixture.py --littlefs nuttx/fs/littlefs/littlefs
+          python3 tools/make_littlefs_fixture.py \
+            --littlefs nuttx/fs/littlefs/littlefs \
+            --output .local/firmware-images/existing-filesystem
 
       - name: Verify the TI-free fingerprint against TI's pinned service pack
         run: |
@@ -101,26 +120,50 @@ jobs:
           wc -c nuttx/nuttx.bin nuttx/nuttx_user.bin
           sha256sum nuttx/nuttx.bin nuttx/nuttx_user.bin
 
-      - name: Install pinned Renode
-        run: tools/install_renode.sh
+      - name: Set up the reviewed Renode build SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build the pinned Renode fork from source
+        run: |
+          tools/install_renode_fork.sh
+          echo "RENODE_DIR=$(tools/install_renode_fork.sh --print-runtime)" >> "$GITHUB_ENV"
+          echo "RENODE_TEST_VENV=$(tools/install_renode_fork.sh --print-venv)" >> "$GITHUB_ENV"
 
       - name: Stage the clean simulation pair
         run: |
           python3 tools/stage_nuttx_image.py brickwright nuttx
           python3 tools/stage_nuttx_image.py brickwright-simulation nuttx
 
-      - name: Execute protected firmware in Renode
+      - name: Check ADC scan DMA and GPIO external interrupt port selection
         run: |
           tools/test_renode_protected_images.sh \
+            --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
+            --include brickwright-exti-routing \
+            --include brickwright-adc-dma
+
+      - name: Execute protected firmware in Renode
+        if: matrix.profile == 'simulation'
+        run: |
+          tools/test_renode_protected_images.sh \
+            --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
             --include brickwright \
+            --include brickwright-tickless \
             --include brickwright-userspace \
             --include brickwright-board-models \
+            --include brickwright-existing-filesystem-board \
             --include brickwright-board-stubs
 
       - name: Validate the source-generated empty LittleFS seed
+        if: matrix.profile == 'simulation'
         run: python3 tools/test_simulation_littlefs_seed.py
 
       - name: Test the transport-neutral virtual HCI bridge
+        if: matrix.profile == 'simulation-hci'
+        env:
+          BRICKWRIGHT_RENODE_FIRMWARE_TEST: "1"
+          BRICKWRIGHT_RENODE_TAG: brickwright-simulation-hci-existing-filesystem
         run: tools/test_renode_virtual_hci_bridge.sh
 
       # Deliberately no artifact upload. The firmware is simulation-only until
