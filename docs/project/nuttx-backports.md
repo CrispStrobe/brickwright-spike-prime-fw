@@ -83,7 +83,7 @@ combined model. Stock portable Renode 1.16.1 is unchanged; its timer does not
 model these compare-generation bits. Startup-only tests on that runtime do not
 qualify the new timer behavior.
 
-The firmware workflow builds our [pinned runtime fork](https://github.com/CrispStrobe/renode-spike-prime/pull/21)
+The firmware workflow builds our [pinned runtime fork](https://github.com/CrispStrobe/renode-spike-prime/pull/27)
 with `tools/install_renode_fork.sh`. Runtime, Infrastructure and support-library
 revisions are fixed; native translators and the headless managed runtime are
 built from source. Standard NuGet and pinned support-library binaries remain
@@ -98,3 +98,6 @@ board initialization and leaves the actual timer and interrupt handlers
 running. Full board startup and the TI-free HCI bootstrap use separate
 fixtures; the firmware workflow enables the actual guest HCI test as well as
 the host bridge test. No firmware artifacts are uploaded.
+
+The merged integration, profile-specific qualification and open reliability
+question are recorded in the [simulation qualification record](simulation-qualification.md).

@@ -59,6 +59,7 @@ nav:
       - project/classic-protocol.md
       - project/ble-protocol.md
       - project/hub-contract.md
+      - project/simulation-qualification.md
       - project/nuttx-backports.md
       - project/upstream-storage-hardening.md
   - ハードウェア:
