@@ -29,13 +29,39 @@ fi
 "$venv_dir/bin/python" "$root/tools/check_bluetooth_air_inputs.py" --air-tools "$air_tools"
 mkdir -p "$root/.local/bluetooth-air-results"
 "$venv_dir/bin/python" -m pip freeze > "$root/.local/bluetooth-air-results/packages.txt"
+# Load the board while paused as this caller before network isolation. Renode
+# fetches/caches the platform's SVD in its normal per-user cache; Robot's CI
+# mode may disable that cache. No firmware or network terminal is loaded here.
+prepare_dir="$root/.local/bluetooth-air-results"
+printf 'include @%s\nmach create "air-cache"\nmachine LoadPlatformDescription @%s\nlog "BW_AIR_PLATFORM_PREPARED"\nquit\n' \
+    "$root/simulation/renode/SpikePrimeDevices.cs" \
+    "$root/simulation/renode/spike-prime-custom-dma.repl" > "$prepare_dir/prepare.resc"
+timeout 120s "$renode_dir/renode" --disable-gui --console --plain \
+    "$prepare_dir/prepare.resc" </dev/null > "$prepare_dir/prepare.log" 2>&1
+grep -q 'BW_AIR_PLATFORM_PREPARED' "$prepare_dir/prepare.log"
+# Renode's terminal API binds IPAddress.Any. Keep all three peer runs in
+# ephemeral namespaces with only loopback, without altering the host network.
+runner_user=$(id -un)
+net_launcher=(unshare --net)
+if [[ $(id -u) != 0 ]]; then
+    net_launcher=(sudo --non-interactive unshare --net)
+fi
 for mode in le scratch classic; do
     case "$mode" in
         le) options=(--reconnect) ;;
         scratch) options=(--scratch-link 20131) ;;
         classic) options=(--classic --skip-le) ;;
     esac
-    timeout 900s "$venv_dir/bin/python" "$root/simulation/bluetooth-air/test_spike_air.py" \
+    timeout 900s "${net_launcher[@]}" /bin/bash -c '
+        set -euo pipefail
+        ip link set lo up
+        air_user=$1
+        air_path=$2
+        air_dotnet=$3
+        shift 3
+        exec runuser -u "$air_user" -- env "PATH=$air_path" "DOTNET_ROOT=$air_dotnet" "$@"
+    ' bw-air-netns "$runner_user" "$PATH" "${DOTNET_ROOT:-}" \
+        "$venv_dir/bin/python" "$root/simulation/bluetooth-air/test_spike_air.py" \
         --renode "$renode_dir" --air-tools "$air_tools" --images "$images" \
         --existing-filesystem "$fixture" \
         --workdir "$root/.local/bluetooth-air-results/$mode" "${options[@]}"

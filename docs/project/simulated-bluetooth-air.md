@@ -109,16 +109,24 @@ No cipher or RF behavior is qualified by that controller status.
 The selected public runtime is `e0166acb028b162e972458f31d76cdb7dcdc518d`.
 The host environment pins Bumble 0.0.235, websockets 15.0.1 and their dependencies
 in `tools/bluetooth-air-requirements.txt`. `policy/bluetooth-air-host-inputs.json`
-records the air source, package and installed-notice hashes; the peer wrapper
+records air source hashes, package versions and installed-notice hashes; the peer wrapper
 checks them before execution. These are host-only dependencies; see
 [the third-party notice](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/THIRD_PARTY.md#host-only-simulated-bluetooth-air).
 
-Use Python 3.11 or later. After building/staging `simulation-hci`, installing
+Use Python 3.11 or later. The wrapper runs on Linux with `unshare`, `ip` and
+`runuser`; a non-root caller needs noninteractive sudo for namespace creation.
+After building/staging `simulation-hci`, installing
 the pinned source-built runtime and generating the explicit filesystem fixture,
 `tools/test_bluetooth_air.sh` runs three separate fresh machines: direct LE
 with reconnect, Scratch Link, and Classic. The HCI CI profile selects this gate.
 Results, traces and package versions remain under ignored `.local` storage;
-CI publishes no firmware or test artifacts.
+CI publishes no firmware or test artifacts. The wrapper creates an ephemeral
+network namespace for each peer run, enables only its loopback interface, and
+runs the test as the original caller. Renode's HCI terminal otherwise binds all
+interfaces; a standalone Python invocation keeps that underlying behavior.
+Before isolation, a bounded paused platform load prepares Renode's per-user
+SVD cache; it loads no firmware and creates no terminal. Namespace setup changes
+no host interface, route or firewall rule.
 
 `--existing-filesystem` is an explicit fixture choice, validated and programmed
 through the existing NOR SPI loader before guest execution. Omitting it retains
