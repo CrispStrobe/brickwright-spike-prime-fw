@@ -163,6 +163,7 @@ jobs:
             -Ibluetooth/zephyr_compat/include \
             -Ithird_party/zephyr-host/upstream/include \
             -Ithird_party/zephyr-host/upstream/subsys/bluetooth \
+            bluetooth/zephyr_compat/src/work.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
             third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c \
@@ -184,6 +185,7 @@ jobs:
             -include zephyr/autoconf.h -pthread \
             -Ibluetooth/zephyr_compat/include \
             -Ithird_party/zephyr-host/upstream/include \
+            bluetooth/zephyr_compat/src/work.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
             bluetooth/zephyr_compat/src/log.c \
@@ -195,6 +197,7 @@ jobs:
             -Ibluetooth/zephyr_compat/include \
             -Ithird_party/zephyr-host/upstream/include \
             -Ithird_party/zephyr-host/upstream/subsys/bluetooth \
+            bluetooth/zephyr_compat/src/work.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf.c \
             third_party/zephyr-host/upstream/lib/net_buf/buf_simple.c \
             third_party/zephyr-host/upstream/subsys/bluetooth/host/buf.c \
