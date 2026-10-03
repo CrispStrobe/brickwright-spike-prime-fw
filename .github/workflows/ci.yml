@@ -37,6 +37,7 @@ jobs:
           python3 tools/check_reuse_licenses.py
           python3 tools/test_reuse_licenses.py
           python3 tools/check_firmware_inputs.py --notices-only
+          python3 tools/check_firmware_inputs.py --inventory policy/simulation-hci-firmware-inputs.json --notices-only
           python3 tools/test_firmware_inputs.py
           python3 tools/check_source_origin_review.py --require-clearance
           python3 tools/audit_repository_history.py --output /tmp/firmware-history-review.json --require-clean
