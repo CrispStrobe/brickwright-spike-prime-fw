@@ -435,6 +435,40 @@ int imu_service_snapshot(imu_fusion_snapshot_t *out)
   return result;
 }
 
+static bool cardinal_axis(const imu_xyz_t *axis)
+{
+  unsigned int nonzero = 0;
+  for (unsigned int i = 0; i < 3; i++)
+    {
+      float value = axis->values[i];
+      if (value != -1.0f && value != 0.0f && value != 1.0f)
+        return false;
+      if (value != 0.0f) nonzero++;
+    }
+  return nonzero == 1;
+}
+
+int imu_service_set_base_axes(const imu_xyz_t *front, const imu_xyz_t *top)
+{
+  if (front == NULL || top == NULL) return -EINVAL;
+  imu_xyz_t front_copy = *front;
+  imu_xyz_t top_copy = *top;
+  if (!cardinal_axis(&front_copy) || !cardinal_axis(&top_copy) ||
+      front_copy.x * top_copy.x + front_copy.y * top_copy.y +
+      front_copy.z * top_copy.z != 0.0f)
+    return -EINVAL;
+
+  pthread_mutex_lock(&g_daemon_lock);
+  int result = -EAGAIN;
+  if (g_daemon_running && !g_daemon_stop)
+    {
+      imu_fusion_set_base_orientation(&front_copy, &top_copy);
+      result = 0;
+    }
+  pthread_mutex_unlock(&g_daemon_lock);
+  return result;
+}
+
 static void cmd_start(void)
 {
   int result = imu_service_start();

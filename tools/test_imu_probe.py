@@ -401,4 +401,135 @@ class StationaryLifecycleTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(requests[-1], 'FUSION STOP')
 
 
+class PoseLifecycleTests(unittest.IsolatedAsyncioTestCase):
+    async def exercise(self, *, wrong_face=False, wrong_base=False,
+                       mutated_matrix=False, invalid_mutation=False,
+                       silent=False, cancel=False):
+        received = asyncio.Queue(); requests = []; started = asyncio.Event()
+        state = {'on': False, 'stamp': 1000000, 'snapshot': None, 'base': False}
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'renode.log'; log.write_text('')
+
+            def reply_snapshot():
+                physical = state['snapshot']
+                accel, gyro = physical['accel'], physical['gyro']
+                matrix = physical['matrix'][:]
+                heading = physical['heading']
+                if state['base']:
+                    project = lambda v: (v[1], v[0] if wrong_base else -v[0], v[2])
+                    accel, gyro = project(accel), project(gyro)
+                    heading = 0
+                    if mutated_matrix:
+                        # Rotate two matrix rows while retaining a proper
+                        # orthonormal rotation, so the parser alone accepts it.
+                        matrix = matrix[3:6] + [-v for v in matrix[:3]] + matrix[6:]
+                values = [1, state['stamp'], 0, physical['face'], *accel, *gyro,
+                          heading, heading, *matrix]
+                return 'FUSION SNAP ' + ' '.join(str(v) for v in values)
+
+            class DLC:
+                def write(self, data):
+                    command = data.decode().strip(); requests.append(command)
+                    if command == 'FUSION START':
+                        state.update(on=True, snapshot=None, base=False)
+                        reply = 'OK'
+                    elif command == 'FUSION STOP':
+                        state['on'] = False; reply = 'OK'
+                    elif command == 'FUSION STATUS':
+                        reply = 'FUSION STATUS 0 '+str(int(state['on']))+' 0'
+                    elif command == 'FUSION GET':
+                        reply = reply_snapshot() if state['on'] and state['snapshot'] else 'ERR errno=11'
+                    elif command == 'FUSION BASE 1 0 0 1 0 0':
+                        if invalid_mutation: state['snapshot']['gyro'] = (1, 2, 3)
+                        reply = 'ERR invalid FUSION BASE'
+                    elif command.startswith('FUSION BASE '):
+                        if not state['on']: reply = 'ERR errno=11'
+                        else:
+                            state['base'] = command == 'FUSION BASE 0 1 0 0 0 1'
+                            reply = 'OK'
+                    elif command.startswith('SET '): reply = 'OK'
+                    else: raise AssertionError(command)
+                    encoded = (reply+'\n').encode()
+                    received.put_nowait(encoded[:9]); received.put_nowait(encoded[9:])
+
+            class Input:
+                def write(self, data):
+                    args = shlex.split(data.decode()); action, tag = args[1:3]
+                    accepted = None
+                    if action == 'inject':
+                        started.set()
+                        if silent: return
+                        gx, gy, gz, ax, ay, az = map(int, args[3:])
+                        accel = tuple(v * 9806.65 / 16384 for v in (ax, -ay, -az))
+                        gravity = tuple(v / 9806.65 for v in accel)
+                        row1 = (0, 1, 0) if gravity[0] else (1, 0, 0)
+                        # row2 = gravity cross row1 gives determinant +1.
+                        row2 = (gravity[1]*row1[2]-gravity[2]*row1[1],
+                                gravity[2]*row1[0]-gravity[0]*row1[2],
+                                gravity[0]*row1[1]-gravity[1]*row1[0])
+                        face = {(0, 0, -16384): 2, (16384, 0, 0): 0,
+                                (0, 16384, 0): 5, (0, 0, 16384): 6,
+                                (-16384, 0, 0): 4, (0, -16384, 0): 1}[(ax, ay, az)]
+                        state['stamp'] += 10000
+                        state['snapshot'] = {
+                            'accel': accel, 'gyro': (gx*.035, -gy*.035, -gz*.035),
+                            'matrix': [*row1, *row2, *gravity],
+                            'face': 6 if wrong_face else face,
+                            'heading': .2 if gx or gy or gz else 0}
+                        accepted = state['on']
+                    elif action != 'state': raise AssertionError(action)
+                    receipt = {'accepted': accepted,
+                               'controls': [0x70, 0x78] if state['on'] else [0, 8],
+                               'status': 0, 'virtual_us': state['stamp']}
+                    with log.open('a') as out:
+                        out.write('IMU_FIXTURE '+tag+' '+json.dumps(receipt)+'\n')
+                async def drain(self): pass
+
+            class Process:
+                returncode = None
+                stdin = Input()
+            result = {}
+            task = asyncio.create_task(probe.pose_round_trip(
+                DLC(), received, Process(), result, renode_log=log,
+                timeout=.05 if silent else 3))
+            if cancel:
+                await started.wait(); task.cancel()
+                with self.assertRaises(asyncio.CancelledError): await task
+            elif silent:
+                with self.assertRaises(TimeoutError): await task
+            elif wrong_face or wrong_base or mutated_matrix or invalid_mutation:
+                with self.assertRaises(ValueError): await task
+            else: await task
+            self.assertFalse(state['on'], 'Pose probe left producer enabled')
+            return result, requests
+
+    async def test_six_faces_base_projection_identity_and_stop(self):
+        result, requests = await self.exercise()
+        record = result['imu_poses']
+        self.assertEqual(record['status'], 'PASS')
+        self.assertEqual([item['pose'] for item in record['snapshots']],
+                         ['top', 'front', 'right', 'bottom', 'back', 'left', 'gyro'])
+        self.assertEqual([item['physical']['up_side'] for item in record['snapshots']],
+                         [2, 0, 5, 6, 4, 1, 2])
+        self.assertEqual(requests.count('FUSION START'), 7)
+        self.assertEqual(requests.count('FUSION STOP'), 7)
+        for actual, wanted in zip(record['snapshots'][-1]['mapped']['gyro_dps'], (1.05, -.7, 1.4)):
+            self.assertAlmostEqual(actual, wanted)
+
+    async def test_wrong_face_base_sign_matrix_and_invalid_mutation_cleanup(self):
+        for kwargs in [{'wrong_face': True}, {'wrong_base': True},
+                       {'mutated_matrix': True}, {'invalid_mutation': True}]:
+            with self.subTest(kwargs=kwargs):
+                result, requests = await self.exercise(**kwargs)
+                self.assertTrue(result['imu_poses']['status'].startswith('FAIL'))
+                self.assertEqual(requests[-1], 'FUSION STOP')
+
+    async def test_missing_receipt_and_cancellation_cleanup(self):
+        for cancel in [False, True]:
+            with self.subTest(cancel=cancel):
+                result, requests = await self.exercise(silent=True, cancel=cancel)
+                self.assertTrue(result['imu_poses']['status'].startswith('FAIL'))
+                self.assertEqual(requests[-1], 'FUSION STOP')
+
+
 if __name__=='__main__':unittest.main()

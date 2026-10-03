@@ -181,6 +181,13 @@ alone does not qualify the modern record. A complete modern mapping also needs
 rounding/range handling and yaw-reset semantics verified against callers and
 independent reference observations before emission is enabled.
 
+The pinned official [Python decoder](https://github.com/LEGO/spike-prime-docs/blob/446549146df626f5d7f332b0ea3cd0205ce23711/examples/python/messages.py#L206)
+unpacks the IMU tuple without scaling; its [example application](https://github.com/LEGO/spike-prime-docs/blob/446549146df626f5d7f332b0ea3cd0205ce23711/examples/python/app.py#L135)
+prints those raw values. These examples therefore do not resolve the missing
+units or orientation conventions. Six-pose synthetic guest checks establish
+our physical face/matrix behavior and declared base projections, but cannot
+establish modern wire compatibility or yaw about gravity.
+
 There is no temperature field in this record. Temperature support, if added,
 needs its own documented source and transport contract. Current firmware
 publishes battery and supported distance records; it does not emit modern IMU

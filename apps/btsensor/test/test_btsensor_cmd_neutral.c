@@ -15,6 +15,7 @@ struct fixture {
   imu_fusion_snapshot_t snapshot;
   bool starting, running, stopping;
   unsigned fusion_calls;
+  imu_xyz_t base_front, base_top;
   int nr;
   enum brickwright_hub_link link;
   char op[16];
@@ -112,6 +113,12 @@ static int fusion_snapshot(void *p, imu_fusion_snapshot_t *out) {
   *out = x->snapshot;
   return x->result;
 }
+static int fusion_set_base_axes(void *p, const imu_xyz_t *front, const imu_xyz_t *top) {
+  struct fixture *x = p;
+  x->fusion_calls++;
+  x->base_front = *front; x->base_top = *top;
+  return x->result;
+}
 static struct btsensor_peripheral_ops ops = {.context = &f,
                                              .set_imu_enabled = toggle,
                                              .set_sensor_enabled = toggle,
@@ -129,7 +136,8 @@ static struct btsensor_peripheral_ops ops = {.context = &f,
                                              .fusion_start = fusion_start,
                                              .fusion_stop = fusion_stop,
                                              .fusion_status = fusion_status,
-                                             .fusion_snapshot = fusion_snapshot};
+                                             .fusion_snapshot = fusion_snapshot,
+                                             .fusion_set_base_axes = fusion_set_base_axes};
 static void reset(void) {
   memset(&f, 0, sizeof(f));
   btsensor_cmd_init();
@@ -301,7 +309,42 @@ static void test_fusion(void) {
   send(0, "FUSION STATUS\n"); expect_errno(ENOTSUP);
   send(0, "FUSION START\n"); expect_errno(ENOTSUP);
 }
+static void test_fusion_base(void) {
+  reset();
+  send(0, "FUSION BASE 1 0 0 0 0 1\n");
+  expect("OK\n");
+  assert(f.fusion_calls == 1 && f.base_front.x == 1 && f.base_top.z == 1);
+  send(0, "FUSION BASE 0 -1 0 1 0 0\n");
+  expect("OK\n");
+  assert(f.fusion_calls == 2 && f.base_front.y == -1 && f.base_top.x == 1);
+  send(1, "FUSION BASE 1 0 0 0 0 1\n");
+  expect_errno(ENOTSUP);
+  assert(f.fusion_calls == 2 && f.link == 1);
+  const char *bad[] = {
+    "FUSION BASE\n", "FUSION BASE 1 0 0 0 1\n",
+    "FUSION BASE 1 0 0 0 0 1 extra\n", "FUSION BASE 0 0 0 0 0 1\n",
+    "FUSION BASE 1 1 0 0 0 1\n", "FUSION BASE 1 0 0 -1 0 0\n",
+    "FUSION BASE 1 0 0 1 0 0\n", "FUSION BASE 2 0 0 0 0 1\n",
+    "FUSION BASE 1.0 0 0 0 0 1\n", "FUSION BASE 1e0 0 0 0 0 1\n",
+    "FUSION BASE +1 0 0 0 0 1\n", "FUSION BASE 01 0 0 0 0 1\n",
+    "FUSION BASE 1 -0 0 0 0 1\n", "FUSION BASE nan 0 0 0 0 1\n"
+  };
+  for (size_t i = 0; i < sizeof(bad) / sizeof(*bad); i++) {
+    send(0, bad[i]); expect("ERR invalid FUSION BASE\n");
+  }
+  assert(f.fusion_calls == 2);
+  f.result = -EBUSY;
+  send(0, "FUSION BASE 1 0 0 0 0 1\n"); expect("ERR busy\n");
+  f.result = -EAGAIN;
+  send(0, "FUSION BASE 1 0 0 0 0 1\n"); expect_errno(EAGAIN);
+  btsensor_cmd_set_peripheral_ops(NULL);
+  send(0, "FUSION BASE 1 0 0 0 0 1\n"); expect_errno(ENOTSUP);
+  struct btsensor_peripheral_ops absent = {.context = &f};
+  btsensor_cmd_set_peripheral_ops(&absent);
+  send(0, "FUSION BASE 1 0 0 0 0 1\n"); expect_errno(ENOTSUP);
+}
 int main(void) {
+  test_fusion_base();
   test_fusion();
   test_operations();
   test_errors();

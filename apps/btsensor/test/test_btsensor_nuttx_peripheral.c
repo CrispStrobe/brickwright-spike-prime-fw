@@ -61,6 +61,9 @@ void btsensor_modern_backend_set_motor_owner(enum brickwright_hub_link link,
 
 #ifdef CONFIG_APP_IMU
 static unsigned g_fusion_starts, g_fusion_stops;
+static const imu_xyz_t *g_base_front, *g_base_top;
+int imu_service_set_base_axes(const imu_xyz_t *front, const imu_xyz_t *top)
+{ g_base_front = front; g_base_top = top; return g_forward_rc; }
 int imu_service_start(void) { g_fusion_starts++; return g_forward_rc; }
 int imu_service_stop(void) { g_fusion_stops++; return g_forward_rc; }
 void imu_service_status(bool *starting, bool *running, bool *stopping)
@@ -165,9 +168,13 @@ static void test_forwarding_and_bounds(void)
   assert(g_installed->fusion_status(NULL, &starting, &running, &stopping) == 0);
   assert(!starting && running && !stopping);
   assert(g_installed->fusion_snapshot(NULL, &snap) == -EAGAIN && snap.sequence == 42);
+  imu_xyz_t front = {.x = 1}, top = {.z = 1};
+  assert(g_installed->fusion_set_base_axes(NULL, &front, &top) == -EAGAIN);
+  assert(g_base_front == &front && g_base_top == &top);
 #else
   assert(!g_installed->fusion_start && !g_installed->fusion_stop &&
-         !g_installed->fusion_status && !g_installed->fusion_snapshot);
+         !g_installed->fusion_status && !g_installed->fusion_snapshot &&
+         !g_installed->fusion_set_base_axes);
 #endif
   btsensor_nuttx_peripheral_stop();
 }

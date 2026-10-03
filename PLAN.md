@@ -356,15 +356,16 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 | 2026-10-03 | C8.5 (stationary fusion readiness) | Complete within recorded synthetic scope | Candidate `170f2604cf1f62106562c6be51dfad8409b9aac0` passes source/docs CI `37143026283` and both clean firmware/runtime profiles in matrix `37142992259`. A separately armed, bounded 104 Hz guest-time fixture sends 261 paired samples through the actual driver/uORB/producer with zero skipped ticks. Classic snapshots report not-ready with the expected fixed gyro rates at sequences 1/101, then ready with residual rates below 0.001 deg/s at 261. Nonconsuming reads, final sensor powerdown and fresh not-ready reopening with unsaved bias cleared pass. Four actual IMU model tests verify cadence, unread-pair admission, reset and ODR/powerdown stops; 17 parser/lifecycle tests cover wrong readiness, retained bias, skipped ticks, timeout and cancellation cleanup. The real producer host harness separately proves first readiness at sample 138 at 13 Hz, same-sample correction, initial bias export after the third window at 164, ten-minute expiry and reopening. No production firmware source, startup behavior, inherited attribution or compiler-input inventory changes. This establishes digital stationary readiness and live bias behavior, not durable calibration saving, physical accuracy or modern wire mappings. Fusion remains off at boot. |
 
+| 2026-10-03 | C8.5 (physical poses and declared base axes) | Complete within recorded synthetic scope | Candidate `2f7a7476b543acdd6e9f8df5b1528bf8b32bf054` passes source/docs CI `37146101891` and both clean firmware/runtime profiles in matrix `37146055599`. Six fresh zero-gyro guest fixtures establish physical signed gravity, all legacy faces and gravity-to-inertial matrix coherence; a seventh fixture verifies distinct nonzero gyro axes. Rotated front=+Y/top=+Z and restored identity bases remap vectors while retaining physical matrix/face and source sequence/time; headings reset, parallel axes cannot mutate state and each stop powers the sensor down. The prior base setter applied physical basis columns directly and returned (-Y,X,Z); storing their transpose now produces declared projections (Y,-X,Z). Direction regressions fail before this correction. Host coverage checks all 24 cardinal bases, producer lifecycle, rejected axes and immutable physical/source fields; 20 parser/probe cases include wrong faces/signs, matrix mutation and timeout/cancel cleanup. Current input and credited MIT modification hashes are updated without changing original grants, inherited evidence or geometry helper semantics. Fusion remains off at boot; modern Euler/unit/yaw-face conventions, durable calibration and physical accuracy remain separate. |
+
 ## Current next action
 
-Qualify six physical poses and configured base-axis transformations through the
-actual guest, then define modern IMU wire units, orientation and yaw-face/reset
-mappings from an explicit contract and independent evidence. Stationary fusion
-readiness and live gyro bias now have configured-rate synthetic guest evidence;
-durable calibration saving and physical calibration remain separate. Keep fusion
-explicitly controlled while integrating the modern stream. The 21-byte record
-has no temperature field; any temperature transport needs a separate contract.
-Encoder-completed degree moves, stall/capability policy and cold-restart bond
-reuse also need separate evidence. Physical C5/C6.4 validation remains open and
-cannot be closed by simulation.
+Define modern IMU wire units, Euler conventions, yaw-face transformations and
+reset semantics from an explicit contract and independent evidence before
+emitting the modern record. Six physical poses and declared base projections
+now have synthetic guest evidence; zero-gyro poses cannot determine yaw about
+gravity. Keep fusion explicitly controlled while integrating the modern stream.
+The 21-byte record has no temperature field; any temperature transport needs a
+separate contract. Durable calibration saving, encoder-completed degree moves,
+stall/capability policy and cold-restart bond reuse need separate evidence.
+Physical C5/C6.4 validation remains open and cannot be closed by simulation.

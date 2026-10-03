@@ -414,7 +414,7 @@ async def microbit_check(air, results: dict, timeout: float) -> None:
 async def classic_round_trip(central, results: dict,
                              legacy_extension: Path | None = None, *,
                              imu_renode=None, renode_log: Path | None = None,
-                             imu_readiness: bool = False) -> None:
+                             imu_readiness: bool = False, imu_poses: bool = False) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -454,8 +454,11 @@ async def classic_round_trip(central, results: dict,
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
         if imu_renode is not None:
-            from imu_probe import imu_round_trip, fusion_round_trip, stationary_round_trip
-            if imu_readiness:
+            from imu_probe import imu_round_trip, fusion_round_trip, stationary_round_trip, pose_round_trip
+            if imu_poses:
+                await pose_round_trip(dlc, received, imu_renode, results,
+                                      renode_log=renode_log)
+            elif imu_readiness:
                 await stationary_round_trip(dlc, received, imu_renode, results,
                                             renode_log=renode_log)
             else:
@@ -666,6 +669,8 @@ async def main() -> int:
     parser.add_argument("--classic", action="store_true")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
+    parser.add_argument("--imu-poses", action="store_true",
+                        help="with --classic, verify six physical faces and declared base axes")
     parser.add_argument("--imu-readiness", action="store_true",
                         help="with --classic, qualify stationary readiness using a configured-rate guest-time fixture")
     parser.add_argument("--serve-scratch-link", type=int, default=20111,
@@ -703,6 +708,8 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     if arguments.imu_probe and not arguments.classic:
         parser.error("--imu-probe requires --classic")
+    if arguments.imu_poses and (not arguments.classic or arguments.imu_probe or arguments.imu_readiness):
+        parser.error("--imu-poses requires --classic and is separate from other IMU probes")
     if arguments.imu_readiness and (not arguments.classic or arguments.imu_probe):
         parser.error("--imu-readiness requires --classic and is separate from --imu-probe")
     if arguments.reconnect and (arguments.skip_le or arguments.scratch_link or arguments.then):
@@ -741,7 +748,7 @@ async def main() -> int:
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
             imu_fixture = None
-            if arguments.imu_probe or arguments.imu_readiness:
+            if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses:
                 from imu_probe import RENODE_IMU_HELPER
                 imu_fixture = workdir / "imu-fixture.py"
                 imu_fixture.write_text(RENODE_IMU_HELPER)
@@ -796,10 +803,10 @@ async def main() -> int:
                 peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
                 await asyncio.wait_for(
                     classic_round_trip(peer, results, arguments.lite_extension,
-                                       imu_renode=renode if arguments.imu_probe or arguments.imu_readiness else None,
+                                       imu_renode=renode if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses else None,
                                        renode_log=workdir / "renode.log",
-                                       imu_readiness=arguments.imu_readiness),
-                    1020 if arguments.imu_readiness else 240)
+                                       imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses),
+                    1020 if arguments.imu_readiness else (360 if arguments.imu_poses else 240))
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"

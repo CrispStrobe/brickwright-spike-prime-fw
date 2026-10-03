@@ -19,4 +19,10 @@ void imu_service_status(bool *starting, bool *running, bool *stopping);
  * Units and orientation convention are those of imu_fusion_snapshot_t. */
 int imu_service_snapshot(imu_fusion_snapshot_t *out);
 
+/* Declare application front/top as orthogonal signed cardinal unit axes in
+ * physical hub coordinates. Requires running without a pending stop; resets
+ * application heading while retaining physical orientation/face and source
+ * timestamp. Returns -EINVAL for invalid axes, -EAGAIN if unavailable. */
+int imu_service_set_base_axes(const imu_xyz_t *front, const imu_xyz_t *top);
+
 #endif

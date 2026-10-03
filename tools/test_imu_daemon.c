@@ -46,7 +46,7 @@ static int fake_printf(const char *, ...);
 #undef printf
 
 enum scenario { STOP_PENDING, OPEN_FAIL, TASK_FAIL, INTERRUPTED, STOP_DRAIN,
-                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN };
+                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN, LIVE_BASE };
 static enum scenario scenario;
 static int create_count;
 static int open_count;
@@ -160,6 +160,11 @@ static ssize_t fake_read(int fd, void *out, size_t len)
   sample.timestamp = 999990;
   sample.az = 16384;
   sample.gz = 500;
+  if (scenario == LIVE_BASE)
+    {
+      sample.ax = 1000; sample.ay = 2000;
+      sample.gx = 20; sample.gy = -30; sample.gz = 40;
+    }
   sample.fsr_xl_idx = 0;
   sample.fsr_gy_idx = 4;
   sample.odr_idx = 7;
@@ -188,6 +193,43 @@ static ssize_t fake_read(int fd, void *out, size_t len)
       cmd_stop();
     }
   return sizeof(sample);
+}
+
+static void check_live_base(void)
+{
+  imu_fusion_snapshot_t physical, changed, preserved;
+  imu_xyz_t front = {.y = 1}, top = {.z = 1};
+  assert(imu_service_snapshot(&physical) == 0);
+  assert(imu_service_set_base_axes(&front, &top) == 0);
+  assert(imu_service_snapshot(&changed) == 0);
+  assert(changed.sequence == physical.sequence);
+  assert(changed.timestamp_us == physical.timestamp_us);
+  assert(changed.ready == physical.ready && changed.up_side == physical.up_side);
+  assert(memcmp(&changed.orientation, &physical.orientation,
+                sizeof(changed.orientation)) == 0);
+  assert(fabsf(changed.accel_mms2.x - physical.accel_mms2.y) < .0001f);
+  assert(fabsf(changed.accel_mms2.y + physical.accel_mms2.x) < .0001f);
+  assert(changed.accel_mms2.z == physical.accel_mms2.z);
+  assert(fabsf(changed.gyro_dps.x - physical.gyro_dps.y) < .0001f);
+  assert(fabsf(changed.gyro_dps.y + physical.gyro_dps.x) < .0001f);
+  assert(changed.gyro_dps.z == physical.gyro_dps.z);
+  assert(fabsf(changed.heading_1d) < .0001f);
+  assert(fabsf(changed.heading_3d) < .0001f);
+
+  imu_xyz_t invalid[] = {{.x = 0}, {.x = 2}, {.x = .5f}, {.x = NAN},
+                         {.x = INFINITY}, {.x = 1, .y = 1}};
+  assert(imu_service_set_base_axes(NULL, &top) == -EINVAL);
+  assert(imu_service_set_base_axes(&front, NULL) == -EINVAL);
+  assert(imu_service_set_base_axes(&front, &front) == -EINVAL);
+  for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++)
+    {
+      assert(imu_service_set_base_axes(&invalid[i], &top) == -EINVAL);
+      assert(imu_service_set_base_axes(&front, &invalid[i]) == -EINVAL);
+    }
+  assert(imu_service_snapshot(&preserved) == 0);
+  assert(memcmp(&changed, &preserved, sizeof(changed)) == 0);
+  assert(imu_service_stop() == 0);
+  assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
 }
 
 static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
@@ -289,6 +331,11 @@ static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
       fds[0].revents = POLLIN;
       return 1;
     }
+  if (scenario == LIVE_BASE && poll_count == 2)
+    {
+      check_live_base();
+      return 0;
+    }
   if (scenario == POLL_FAULT)
     {
       fds[0].revents = POLLHUP;
@@ -350,14 +397,18 @@ static void *start_thread(void *unused)
 
 int main(void)
 {
+  imu_xyz_t front = {.y = 1}, top = {.z = 1};
+  assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
   reset(STOP_PENDING);
   cmd_start();
+  assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
   cmd_start();
   assert(create_count == 1);
   cmd_status();
   assert(strstr(printed, "running:    no\nstarting:   yes\n"));
   cmd_stop();
   assert(imu_service_start() == -EBUSY);
+  assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
   bool starting, running, stopping;
   imu_service_status(&starting, &running, &stopping);
   assert(starting && !running && stopping);
@@ -418,6 +469,11 @@ int main(void)
   assert(imu_service_start() == 0);
   assert(run_task() == 0);
   assert(sample_index == 1 && close_count == 1);
-  puts("IMU daemon lifecycle, source timing, stationarity bias and reopen checks passed");
+  reset(LIVE_BASE);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0);
+  assert(close_count == 1 && read_count == 2);
+  assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
+  puts("IMU daemon lifecycle, source timing, bias, reopen and base-axis checks passed");
   return 0;
 }

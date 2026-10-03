@@ -222,7 +222,15 @@ static void imu_fusion_set_base_orientation_unlocked(imu_xyz_t *front, imu_xyz_t
         }
     }
 
-  g_base_orientation = base;
+  /* The geometry helper returns the declared basis columns in physical hub
+   * coordinates. Report components along those axes using its transpose. */
+
+  g_base_orientation = (imu_matrix_3x3_t)
+  {
+    .m11 = base.m11, .m12 = base.m21, .m13 = base.m31,
+    .m21 = base.m12, .m22 = base.m22, .m23 = base.m32,
+    .m31 = base.m13, .m32 = base.m23, .m33 = base.m33,
+  };
   update_heading_projection();
   imu_fusion_set_heading_unlocked(0.0f);
 }

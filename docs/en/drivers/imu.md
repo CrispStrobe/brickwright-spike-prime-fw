@@ -59,6 +59,14 @@ unsaved state. This is a digital driver/producer check, not physical calibration
 or a durable calibration save. Startup still does not launch the fusion daemon. The full
 modern IMU wire record requires separate orientation, unit and enum mappings.
 
+The separate `--classic --imu-poses` probe starts a fresh producer for each
+physical face and checks signed gravity, face classification and the physical
+matrix. A seventh fixture supplies distinct nonzero gyro axes. Each snapshot
+is then read with a rotated base and again with the identity base: vectors
+remap, while source sequence/time, physical matrix and physical face remain
+unchanged. These fixtures do not determine yaw about gravity or modern Euler
+and wire conventions.
+
 ## 2. Device Specifications
 
 The LSM6DS3TR-C is a single-die 6-axis IMU integrating a 3-axis accelerometer and 3-axis gyroscope.
@@ -608,6 +616,16 @@ Vectors use configured base axes; the matrix and up-side retain physical hub
 conventions. This diagnostic line is separate from the modern binary IMU
 record. Lines including their newline are limited to 256 bytes; an oversized
 finite snapshot returns an error. BLE does not accept these commands.
+
+`FUSION BASE fx fy fz tx ty tz` selects declared front and top directions in
+physical hub coordinates. Components must be the literal integers `-1`, `0`
+or `1`; both directions must be perpendicular unit cardinal axes. The producer
+must be running without a pending stop. This ephemeral setting resets both
+headings and returns `OK`; invalid input cannot mutate the setting. Reported
+components are projections along front, Y = top × front, and top. For
+example, `FUSION BASE 0 1 0 0 0 1` maps physical `(X,Y,Z)` to `(Y,-X,Z)`.
+Stop/reopen restores the identity base. The physical orientation matrix and
+face classification do not change when the base changes.
 
 The producer is global, like the raw sampler: peer disconnection does not stop
 it. Send `FUSION STOP` explicitly and wait for all three STATUS flags to be zero.

@@ -633,3 +633,156 @@ async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
                 await ok("FUSION STOP")
             except BaseException:
                 pass
+
+
+async def pose_round_trip(dlc, received, renode_proc, results: dict, *,
+                            renode_log: Path, timeout: float = 240) -> None:
+    parser = MixedFrames()
+    pending = deque()
+    record = results.setdefault("imu_poses", {"snapshots": [], "commands": [],
+                                               "model_receipts": []})
+
+    async def request(command):
+        dlc.write((command + "\n").encode("ascii"))
+        async with asyncio.timeout(20):
+            for _ in range(256):
+                while not pending:
+                    pending.extend(parser.feed(await received.get()))
+                kind, value = pending.popleft()
+                if kind == "bundle":
+                    if value["samples"]:
+                        raise ValueError("Raw samples arrived during fusion-only probe")
+                    continue
+                record["commands"].append({"request": command, "reply": value})
+                return value
+            raise ValueError("Too many events before fusion reply")
+
+    async def ok(command):
+        value = await request(command)
+        if value != "OK":
+            raise ValueError("Guest rejected fusion control: " + value)
+
+    async def state(running):
+        async with asyncio.timeout(20):
+            while True:
+                value = await request("FUSION STATUS")
+                if value == ("FUSION STATUS 0 1 0" if running else "FUSION STATUS 0 0 0"):
+                    return
+                if value not in ("FUSION STATUS 1 0 0", "FUSION STATUS 0 1 1", "FUSION STATUS 1 0 1"):
+                    raise ValueError("Invalid fusion lifecycle status: " + value)
+                await asyncio.sleep(.05)
+
+    async def model(action, values=()):
+        if renode_proc.stdin is None or renode_proc.returncode is not None:
+            raise ValueError("Renode monitor input unavailable")
+        tag = uuid.uuid4().hex
+        marker = ("IMU_FIXTURE " + tag + " ").encode()
+        offset = renode_log.stat().st_size
+        command = 'imu_fixture "' + action + '" "' + tag + '"'
+        if values:
+            command += " " + " ".join(str(v) for v in values)
+        renode_proc.stdin.write((command + "\n").encode())
+        await renode_proc.stdin.drain()
+        async with asyncio.timeout(20):
+            while True:
+                if renode_proc.returncode is not None:
+                    raise ValueError("Renode exited during fusion fixture")
+                with renode_log.open("rb") as log:
+                    log.seek(offset)
+                    raw = log.read(65536)
+                if marker in raw and b"\n" in raw.split(marker, 1)[1]:
+                    value, _ = json.JSONDecoder().raw_decode(raw.split(marker, 1)[1].decode())
+                    record["model_receipts"].append({"action": action, **value})
+                    return value
+                if len(raw) == 65536:
+                    raise ValueError("Fusion monitor receipt exceeds log bound")
+                await asyncio.sleep(.05)
+
+    async def get(expected_sequence=1):
+        async with asyncio.timeout(30):
+            while True:
+                line = await request("FUSION GET")
+                if line == "ERR errno=11":
+                    await asyncio.sleep(.05)
+                    continue
+                snap = parse_fusion(line)
+                if snap["sequence"] != expected_sequence or snap["ready"]:
+                    raise ValueError("Pose snapshot sequence/readiness differs")
+                return snap
+
+    poses = [("top", (0,0,-16384), 2), ("front", (16384,0,0), 0),
+             ("right", (0,16384,0), 5), ("bottom", (0,0,16384), 6),
+             ("back", (-16384,0,0), 4), ("left", (0,-16384,0), 1)]
+    active = False
+    try:
+        async with asyncio.timeout(timeout):
+            await state(False)
+            if await request("FUSION BASE 0 1 0 0 0 1") != "ERR errno=11":
+                raise ValueError("Stopped producer accepted base axes")
+            await ok("SET ACCEL_FSR 2")
+            await ok("SET GYRO_FSR 1000")
+            previous_time = 0
+            for name, accel, face in poses + [("gyro", (0,0,-16384), 2)]:
+                active = True
+                await ok("FUSION START")
+                await state(True)
+                gyro = (20,-30,-40) if name == "gyro" else (0,0,0)
+                fixture = (*gyro,*accel)
+                if (await model("inject", fixture))["accepted"] is not True:
+                    raise ValueError("Pose fixture not admitted")
+                physical = await get()
+                expected = [accel[0]*9806.65/16384, -accel[1]*9806.65/16384,
+                            -accel[2]*9806.65/16384]
+                expected_gyro = [gyro[0]*.035,-gyro[1]*.035,-gyro[2]*.035]
+                for actual,wanted in zip(physical["accel_mms2"],expected):
+                    if not math.isclose(actual,wanted,abs_tol=.1):
+                        raise ValueError("Pose gravity axes/units differ")
+                for actual,wanted in zip(physical["gyro_dps"],expected_gyro):
+                    if not math.isclose(actual,wanted,abs_tol=.001):
+                        raise ValueError("Pose gyro axes/units differ")
+                if physical["up_side"] != face or physical["timestamp_us"] <= previous_time:
+                    raise ValueError("Pose physical face/source time differs")
+                if name != "gyro":
+                    for actual,wanted in zip(physical["orientation"][6:9],expected):
+                        if not math.isclose(actual,wanted/9806.65,abs_tol=.001):
+                            raise ValueError("Pose matrix does not map gravity to inertial up")
+                await ok("FUSION BASE 0 1 0 0 0 1")
+                mapped = await get()
+                for field in ("accel_mms2","gyro_dps"):
+                    x,y,z=physical[field]
+                    for actual,wanted in zip(mapped[field],(y,-x,z)):
+                        if not math.isclose(actual,wanted,abs_tol=.001):
+                            raise ValueError("Declared base-axis projection differs")
+                for field in ("sequence","timestamp_us","orientation","up_side","ready"):
+                    if mapped[field] != physical[field]:
+                        raise ValueError("Base axes changed physical/source fields")
+                if abs(mapped["heading_1d_deg"]) > .001 or abs(mapped["heading_3d_deg"]) > .001:
+                    raise ValueError("Base axes did not reset headings")
+                if await request("FUSION BASE 1 0 0 1 0 0") != "ERR invalid FUSION BASE":
+                    raise ValueError("Parallel base axes were accepted")
+                if await request("FUSION GET") != mapped["line"]:
+                    raise ValueError("Invalid base axes mutated snapshot")
+                await ok("FUSION BASE 1 0 0 0 0 1")
+                restored = await get()
+                for field in ("accel_mms2","gyro_dps","orientation","up_side","sequence","timestamp_us"):
+                    if restored[field] != physical[field]:
+                        raise ValueError("Identity base did not restore physical vectors")
+                record["snapshots"].append({"pose":name,"physical":physical,
+                                            "mapped":mapped,"restored":restored})
+                previous_time=physical["timestamp_us"]
+                await ok("FUSION STOP")
+                await state(False)
+                active = False
+                disabled=await model("state")
+                if any(v>>4 for v in disabled["controls"]):
+                    raise ValueError("Pose stop did not power down sensor")
+            record["status"]="PASS"
+    except BaseException as error:
+        record["status"]="FAIL: "+type(error).__name__+": "+str(error)
+        raise
+    finally:
+        if active:
+            try:
+                await ok("FUSION STOP")
+            except BaseException:
+                pass

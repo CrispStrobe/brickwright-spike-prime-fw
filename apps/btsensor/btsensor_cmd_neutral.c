@@ -217,9 +217,51 @@ static void sensor(enum brickwright_hub_link link, char *verb, char **save) {
   reply_rc(link, rc, !strcasecmp(verb, "MODE") ? "SENSOR MODE" : "SENSOR SEND");
 }
 
+/* Canonical cardinal components keep this diagnostic input unambiguous. */
+static bool cardinal_component(const char *token, float *out) {
+  if (!token) return false;
+  if (!strcmp(token, "-1")) *out = -1;
+  else if (!strcmp(token, "0")) *out = 0;
+  else if (!strcmp(token, "1")) *out = 1;
+  else return false;
+  return true;
+}
+
+static void fusion_base(enum brickwright_hub_link link, char **save) {
+  imu_xyz_t front = {0}, top = {0};
+  float front_norm = 0, top_norm = 0, dot = 0;
+  for (size_t i = 0; i < 6; i++) {
+    float *value = i < 3 ? &front.values[i] : &top.values[i - 3];
+    if (!cardinal_component(strtok_r(NULL, " ", save), value)) {
+      reply(link, "ERR invalid FUSION BASE\n");
+      return;
+    }
+  }
+  for (size_t i = 0; i < 3; i++) {
+    front_norm += front.values[i] * front.values[i];
+    top_norm += top.values[i] * top.values[i];
+    dot += front.values[i] * top.values[i];
+  }
+  if (has_trailing_token(save) || front_norm != 1 || top_norm != 1 || dot != 0) {
+    reply(link, "ERR invalid FUSION BASE\n");
+    return;
+  }
+  if (link != BRICKWRIGHT_HUB_LINK_CLASSIC) {
+    reply_rc(link, -ENOTSUP, "FUSION BASE");
+    return;
+  }
+  int rc = g_ops && g_ops->fusion_set_base_axes
+      ? g_ops->fusion_set_base_axes(g_ops->context, &front, &top) : -ENOTSUP;
+  reply_rc(link, rc, "FUSION BASE");
+}
+
 /* Diagnostic service controls do not emit a modern protocol IMU record. */
 static void fusion(enum brickwright_hub_link link, char *verb, char **save) {
   int rc;
+  if (verb && !strcmp(verb, "BASE")) {
+    fusion_base(link, save);
+    return;
+  }
   if (!verb || has_trailing_token(save)) {
     reply(link, "ERR invalid FUSION\n");
     return;
