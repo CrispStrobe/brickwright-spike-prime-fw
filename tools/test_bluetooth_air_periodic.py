@@ -80,6 +80,20 @@ class Subscription(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(ValueError):
                 await set_interval(peer, 4, frames, errors, 0, {})
 
+    async def test_observed_emulation_cadence_keeps_four_interval_silence(self):
+        from types import SimpleNamespace
+        observed = iter((0, 7.7, 15.3, 22.9))
+        original_time = scope['time']
+        scope['time'] = SimpleNamespace(monotonic=lambda: next(observed))
+        try:
+            frames, errors = self.inputs(BATTERY, BATTERY, BATTERY)
+            receipt = {}
+            window = await collect(frames, errors, receipt)
+            self.assertAlmostEqual(window, 30.4)
+            self.assertGreater(window, 30)
+        finally:
+            scope['time'] = original_time
+
     async def test_reconnect_rejects_notification_before_info_response(self):
         import struct
         info = struct.pack('<BBB H BB H HHHH', 1, 1, 0, 0, 0, 1, 0, 20, 1024, 512, 0)

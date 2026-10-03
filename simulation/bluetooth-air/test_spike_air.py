@@ -213,9 +213,9 @@ async def collect_battery_notifications(frames, errors, receipt):
 
     started = time.monotonic()
     samples = receipt["samples"] = []
-    async with asyncio.timeout(30):
+    async with asyncio.timeout(90):
         for _ in range(3):
-            frame, payload = await receive_payload(frames, errors)
+            frame, payload = await receive_payload(frames, errors, timeout=60)
             sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
             sample.update(frame=frame.hex(), payload=payload.hex(),
                           received_after_s=time.monotonic() - started)
@@ -225,7 +225,7 @@ async def collect_battery_notifications(frames, errors, receipt):
     gaps = [b["received_after_s"] - a["received_after_s"]
             for a, b in zip(samples, samples[1:])]
     quiet_seconds = max(3.0, 4 * max(gaps))
-    if quiet_seconds > 30:
+    if quiet_seconds > 120:
         raise TimeoutError("Notification cadence too slow for bounded quiet check")
     receipt["quiet_window_s"] = quiet_seconds
     return quiet_seconds
@@ -274,7 +274,7 @@ async def le_round_trip(central, advertisement, results: dict, *,
 
     connection = None
     try:
-        async with asyncio.timeout(180):
+        async with asyncio.timeout(300 if periodic else 180):
             started = time.monotonic()
             connection = await central.connect(advertisement.address,
                                                transport=PhysicalTransport.LE,

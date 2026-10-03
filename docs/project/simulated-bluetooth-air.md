@@ -175,7 +175,10 @@ successful acknowledgement `2900`, and receives at least three complete records.
 It requests interval zero (`280000`), checks the acknowledgement, and observes a
 quiet window allowing at most one notification already in flight. The window is
 at least three host seconds and four observed inter-record host intervals,
-bounded to 30 seconds; it does not qualify timer accuracy. The central then
+bounded to 120 seconds; it does not qualify timer accuracy. Each three-record
+collection has a 90-second host bound, and the periodic LE round trip has a
+300-second bound. These host budgets accommodate measured emulation throughput;
+the requested guest interval remains 100 ms. The central then
 resubscribes, receives three more records, and disconnects while still subscribed.
 
 A new central discovers the service and completes InfoRequest again. Before
