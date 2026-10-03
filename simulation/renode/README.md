@@ -85,6 +85,18 @@ connections: unselected-port edges are rejected, PA9 and PC9 can each be
 selected, and write-one-to-clear removes both pending status and interrupt
 output. This is a routing proof; complete Bluetooth startup is a separate gate.
 
+TIM2's 96 MHz input and update TRGO drive ADC selector 6, matching the actual
+board driver. Six stable synthetic inputs feed the model: battery current
+0, battery voltage 3100, thermistor 2048, USB current 0, and both button
+ladders 4095. These are 12-bit test inputs, not calibrated physical measurements.
+Released buttons must be sampled through the configured ADC sequence and
+DMA2 stream 0; a zero-filled buffer decodes as a ladder fault with the center
+button flag and can trigger shutdown. The `brickwright-adc-dma` regression
+uses scratch SRAM without loading firmware and checks actual timer-triggered
+rank order, halfword writes, circular reload, completion clearing and voltage
+changes representing button press/release. Guest buffer writes and power-button
+function stubs are not used for this model proof.
+
 The retained board-stub gate runs all of `stm32_bringup` while isolating the
 same five synchronous initialization/update functions, then requires both
 `nsh_main` and `hubprogram_main`. It remains explicitly labeled as a stubbed
