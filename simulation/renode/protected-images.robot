@@ -153,6 +153,12 @@ Boot Simulation HCI Through Modeled Board Devices
     Should Not Match Regexp    ${trace}    command=0xf[c-f]
 
 *** Test Cases ***
+GPIO external interrupts honor the selected port
+    [Tags]    brickwright-exti-routing
+    Execute Command    include @${CURDIR}/../../tools/renode_check_exti_routing.py
+    ${proof}=    Execute Command    check_exti_routing
+    Should Contain    ${proof}    SYSCFG routing passed
+
 Original spike-nx protected pair executes
     [Tags]    spike-nx
     Boot Protected Pair And Prove Progress    spike-nx

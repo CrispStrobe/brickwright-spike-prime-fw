@@ -135,6 +135,12 @@ jobs:
           python3 tools/stage_nuttx_image.py brickwright nuttx
           python3 tools/stage_nuttx_image.py brickwright-simulation nuttx
 
+      - name: Check GPIO external interrupt port selection
+        run: |
+          tools/test_renode_protected_images.sh \
+            --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
+            --include brickwright-exti-routing
+
       - name: Execute protected firmware in Renode
         if: matrix.profile == 'simulation'
         run: |

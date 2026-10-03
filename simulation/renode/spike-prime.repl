@@ -15,6 +15,45 @@ using "platforms/cpus/stm32f4.repl"
 timer9:
     frequency: 96000000
 
+// GPIO external interrupts select one port per pin through SYSCFG EXTICR.
+// The generic F4 platform connects every port directly to EXTI, which lets
+// PC9's Bluetooth slow clock spuriously trigger PA9's VBUS interrupt.
+syscfg: Miscellaneous.STM32_SYSCFG @ sysbus 0x40013800
+    [0-15] -> exti@[0-15]
+
+gpioPortA:
+    [0-15] -> syscfg#0@[0-15]
+
+gpioPortB:
+    [0-15] -> syscfg#1@[0-15]
+
+gpioPortC:
+    [0-15] -> syscfg#2@[0-15]
+
+gpioPortD:
+    [0-15] -> syscfg#3@[0-15]
+
+gpioPortE:
+    [0-15] -> syscfg#4@[0-15]
+
+gpioPortF:
+    [0-15] -> syscfg#5@[0-15]
+
+gpioPortG:
+    [0-15] -> syscfg#6@[0-15]
+
+gpioPortH:
+    [0-15] -> syscfg#7@[0-15]
+
+gpioPortI:
+    [0-15] -> syscfg#8@[0-15]
+
+gpioPortJ:
+    [0-15] -> syscfg#9@[0-15]
+
+gpioPortK:
+    [0-15] -> syscfg#10@[0-15]
+
 sramUpper: Memory.MappedMemory @ sysbus 0x20040000
     size: 0x10000
 
@@ -32,4 +71,4 @@ flashMux: SPI.SPIMultiplexer @ spi2
 norFlash: SPIKEPrime.W25Q256JV @ flashMux 0
 
 gpioPortB:
-    12 -> flashMux@0
+    12 -> syscfg#1@12 | flashMux@0
