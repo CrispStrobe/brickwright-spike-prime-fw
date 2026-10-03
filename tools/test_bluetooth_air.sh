@@ -48,7 +48,7 @@ if [[ $(id -u) != 0 ]]; then
 fi
 for mode in le scratch classic; do
     case "$mode" in
-        le) options=(--reconnect) ;;
+        le) options=(--reconnect --periodic) ;;
         scratch) options=(--scratch-link 20131) ;;
         classic) options=(--classic --skip-le) ;;
     esac

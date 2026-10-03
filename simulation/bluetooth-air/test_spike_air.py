@@ -181,8 +181,96 @@ async def find_hub(device, timeout: float):
                 raise
 
 
-async def le_round_trip(central, advertisement, results: dict) -> None:
-    from spike_frames import FrameBuffer, receive_info
+# The selected board's VBAT ADC=3100 and IBAT=0 give 7492 mV and
+# (7492-6000)*100//2400 = 62 via stm32_battery_gauge.c after boot suppression.
+BATTERY_FIXTURE_PERCENT = 62
+
+
+async def set_notification_interval(peer, rx, frames, errors, interval, receipt):
+    from spike_frames import receive_payload, notification_ack, battery_notification
+
+    request = cobs_encode(bytes((0x28, interval & 255, interval >> 8)))
+    receipt["request_frame"] = request.hex()
+    receipt["interval_ms"] = interval
+    receipt["before_ack"] = []
+    async with asyncio.timeout(30):
+        await peer.write_value(rx, request, with_response=False)
+        while True:
+            frame, payload = await receive_payload(frames, errors)
+            if payload[0] == 0x29:
+                notification_ack(payload)
+                receipt["ack_payload"] = payload.hex()
+                return
+            sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            sample.update(frame=frame.hex(), payload=payload.hex())
+            receipt["before_ack"].append(sample)
+            if len(receipt["before_ack"]) > 64:
+                raise ValueError("Too many notifications before interval acknowledgement")
+
+
+async def collect_battery_notifications(frames, errors, receipt):
+    from spike_frames import receive_payload, battery_notification
+
+    started = time.monotonic()
+    samples = receipt["samples"] = []
+    async with asyncio.timeout(30):
+        for _ in range(3):
+            frame, payload = await receive_payload(frames, errors)
+            sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            sample.update(frame=frame.hex(), payload=payload.hex(),
+                          received_after_s=time.monotonic() - started)
+            samples.append(sample)
+    # Observe several measured host intervals after unsubscribe/reconnect.
+    # This is a bounded silence check, not a claim about RF or timer accuracy.
+    gaps = [b["received_after_s"] - a["received_after_s"]
+            for a, b in zip(samples, samples[1:])]
+    quiet_seconds = max(3.0, 4 * max(gaps))
+    if quiet_seconds > 30:
+        raise TimeoutError("Notification cadence too slow for bounded quiet check")
+    receipt["quiet_window_s"] = quiet_seconds
+    return quiet_seconds
+
+
+async def expect_notification_quiet(frames, errors, window, receipt, allowed=0):
+    from spike_frames import receive_payload, battery_notification
+
+    receipt["window_s"] = window
+    receipt["allowed_in_flight"] = allowed
+    receipt["in_flight"] = []
+    deadline = time.monotonic() + window
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        try:
+            frame, payload = await receive_payload(frames, errors, timeout=remaining)
+        except TimeoutError:
+            if errors.done():
+                raise errors.result()
+            break
+        sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+        sample.update(frame=frame.hex(), payload=payload.hex())
+        receipt["in_flight"].append(sample)
+        if len(receipt["in_flight"]) > allowed:
+            raise AssertionError("Unexpected periodic notification during quiet window")
+    receipt["passed"] = True
+
+
+async def receive_connection_info(frames, errors, strict=False):
+    from spike_frames import receive_info, receive_payload, info_response
+
+    if strict:
+        # A new central has not requested periodic traffic. Do not silently
+        # discard an inherited notification while waiting for its InfoResponse.
+        frame, payload = await receive_payload(frames, errors, timeout=60)
+        return frame, payload, info_response(payload)
+    return await receive_info(frames, errors)
+
+
+async def le_round_trip(central, advertisement, results: dict, *,
+                        periodic=False, leave_subscribed=False,
+                        reconnect_quiet=None) -> None:
+    from spike_frames import FrameBuffer
 
     connection = None
     try:
@@ -219,10 +307,40 @@ async def le_round_trip(central, advertisement, results: dict) -> None:
             request = cobs_encode(b"\x00")
             results["info_request_frame"] = request.hex()
             await peer.write_value(rx, request, with_response=False)
-            frame, payload, fields = await receive_info(frames, errors)
+            frame, payload, fields = await receive_connection_info(
+                frames, errors, strict=reconnect_quiet is not None)
             results["info_response_frame"] = frame.hex()
             results["info_response_payload"] = payload.hex()
             results["info_response_fields"] = fields
+            if periodic:
+                periodic_receipt = results["periodic_battery"] = {}
+                if reconnect_quiet is not None:
+                    # Observe before this new central sends an interval request.
+                    await expect_notification_quiet(
+                        frames, errors, reconnect_quiet,
+                        periodic_receipt.setdefault("reconnect_quiet", {}))
+                await set_notification_interval(
+                    peer, rx, frames, errors, 100,
+                    periodic_receipt.setdefault("subscribe", {}))
+                quiet_window = await collect_battery_notifications(
+                    frames, errors, periodic_receipt)
+                await set_notification_interval(
+                    peer, rx, frames, errors, 0,
+                    periodic_receipt.setdefault("unsubscribe", {}))
+                await expect_notification_quiet(
+                    frames, errors, quiet_window,
+                    periodic_receipt.setdefault("unsubscribe_quiet", {}), allowed=1)
+                if leave_subscribed:
+                    await set_notification_interval(
+                        peer, rx, frames, errors, 100,
+                        periodic_receipt.setdefault("resubscribe_before_disconnect", {}))
+                    # Prove it is active when the disconnect/reset is tested.
+                    active_window = await collect_battery_notifications(
+                        frames, errors,
+                        periodic_receipt.setdefault("active_before_disconnect", {}))
+                    periodic_receipt["disconnect_reset_window_s"] = max(
+                        quiet_window, active_window)
+                periodic_receipt["subscribed_at_disconnect"] = leave_subscribed
     finally:
         if connection is not None:
             active_error = sys.exc_info()[0] is not None
@@ -540,6 +658,8 @@ async def main() -> int:
                              "send every legacy JSON request it emits over SPP")
     parser.add_argument("--reconnect", action="store_true",
                         help="after the first LE round trip, require a second one")
+    parser.add_argument("--periodic", action="store_true",
+                        help="with --reconnect, verify battery notifications, unsubscribe and connection reset")
     parser.add_argument("--skip-le", action="store_true",
                         help="make no LE connection (Classic only)")
     parser.add_argument("--scratch-link", type=int, metavar="PORT",
@@ -563,6 +683,8 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     if arguments.reconnect and (arguments.skip_le or arguments.scratch_link or arguments.then):
         parser.error("--reconnect requires the direct LE path")
+    if arguments.periodic and not arguments.reconnect:
+        parser.error("--periodic requires --reconnect on the direct LE path")
     arguments.images = arguments.images.resolve()
     workdir = arguments.workdir or Path(tempfile.mkdtemp(prefix="spike-air-"))
     workdir.mkdir(parents=True, exist_ok=True)
@@ -614,7 +736,9 @@ async def main() -> int:
                 started = time.monotonic()
                 advertisement = await find_hub(central, arguments.timeout)
                 results["advertisement_after_s"] = round(time.monotonic() - started, 1)
-                await le_round_trip(central, advertisement, results)
+                await le_round_trip(central, advertisement, results,
+                                    periodic=arguments.periodic,
+                                    leave_subscribed=arguments.periodic)
                 if arguments.reconnect:
                     # A second central after the first link ended: the hub must
                     # advertise again and answer again.
@@ -624,8 +748,11 @@ async def main() -> int:
                     advertisement = await find_hub(again, arguments.timeout)
                     results["readvertised_after_s"] = round(time.monotonic() - started, 1)
                     second: dict = {}
-                    await le_round_trip(again, advertisement, second)
                     results["second_le_round_trip"] = second
+                    await le_round_trip(
+                        again, advertisement, second, periodic=arguments.periodic,
+                        reconnect_quiet=(results["periodic_battery"]["disconnect_reset_window_s"]
+                                         if arguments.periodic else None))
                     results["second_info_response_payload"] = second["info_response_payload"]
             if arguments.classic:
                 # Page only once the hub has enabled page scan, as a real

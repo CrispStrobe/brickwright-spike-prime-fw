@@ -32,7 +32,7 @@ python3 simulation/bluetooth-air/test_spike_air.py \
   --renode /path/to/renode-spike-prime \
   --images .local/firmware-images/brickwright-simulation \
   --existing-filesystem .local/firmware-images/existing-filesystem \
-  [--microbit] [--scratch-link 20131] [--classic --skip-le]
+  [--reconnect --periodic] [--microbit] [--scratch-link 20131] [--classic --skip-le]
 ```
 
 - default: a central finds the hub, connects, discovers FD02, writes an
@@ -118,7 +118,8 @@ Use Python 3.11 or later. The wrapper runs on Linux with `unshare`, `ip` and
 After building/staging `simulation-hci`, installing
 the pinned source-built runtime and generating the explicit filesystem fixture,
 `tools/test_bluetooth_air.sh` runs three separate fresh machines: direct LE
-with reconnect, Scratch Link, and Classic. The HCI CI profile selects this gate.
+with reconnect and periodic battery notifications, Scratch Link, and Classic.
+The HCI CI profile selects this gate.
 Results, traces and package versions remain under ignored `.local` storage;
 CI publishes no firmware or test artifacts. The wrapper creates an ephemeral
 network namespace for each peer run, enables only its loopback interface, and
@@ -159,3 +160,29 @@ lifecycle regressions passed, as did source, attribution, workflow and safety
 gates. Evidence is retained locally; no firmware/test artifact is published.
 Browser/legacy-operation, micro:bit coexistence, persisted bonds, RF/security and
 physical hub behavior remain separate from these three peer paths.
+
+## Periodic battery notification gate
+
+`--periodic` requires the direct LE `--reconnect` path. The selected board has
+VBAT ADC input 3100 and IBAT input 0; its actual battery gauge computes 7492 mV
+and 62%. The no-attached-sensor fixture must therefore produce the exact decoded
+DeviceNotification `3c0200003e`: message type `0x3c`, little-endian record length
+2, and one complete type-0 battery record containing 62. This qualifies the
+selected digital fixture and driver path, not a physical state-of-charge estimate.
+
+The first central requests interval 100 ms (`286400`), requires the exact
+successful acknowledgement `2900`, and receives at least three complete records.
+It requests interval zero (`280000`), checks the acknowledgement, and observes a
+quiet window allowing at most one notification already in flight. The window is
+at least three host seconds and four observed inter-record host intervals,
+bounded to 30 seconds; it does not qualify timer accuracy. The central then
+resubscribes, receives three more records, and disconnects while still subscribed.
+
+A new central discovers the service and completes InfoRequest again. Before
+sending any interval request, it must observe no periodic record for the recorded
+quiet window. It then subscribes, receives three records, unsubscribes and passes
+another quiet check. Receipts include requests, acknowledgements, complete records,
+observed host times and quiet-window results. Synthetic regressions exercise the
+actual helper's rejection of continued/inherited notifications and callback errors.
+Actual guest qualification for this extension is in progress. IMU/mixed-mode
+sensor records, bonds and physical behavior remain separate.
