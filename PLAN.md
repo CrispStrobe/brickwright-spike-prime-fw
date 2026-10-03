@@ -352,19 +352,17 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 | 2026-10-03 | C8.5 (fusion producer lifecycle preparation) | Host-qualified; guest fusion open | The actual imu application now reserves one producer before task creation, preserves stop during startup, checks stop while draining samples, retries EINTR and clears stationarity without a zero-rate initialization. Status reports starting separately. A synthetic task/device harness links the real fusion, geometry, stationarity and calibration code; the old application fails the duplicate-start assertion. Candidate `e2dc5a5c3823a82ceb066b1dd58ae80273626cc3` passes macOS/VPS host checks, source/docs CI `37136553321` and both clean firmware/runtime profiles in matrix `37136515166`, including the existing raw IMU OFF/ON peer probe. Modern IMU layout and explicit six-face conversion are documented from pinned LEGO definitions; units/Euler conventions remain unqualified and the 21-byte record has no temperature field. Boot activation, guest fusion readiness and live ODR integration timing remain open. |
 
+| 2026-10-03 | C8.5 (guest fusion snapshots and source timing) | Complete within recorded synthetic scope | Candidate `992c390f4f46f3799b840465ababa61fea2a3311` passes source/docs CI `37139593470` and both clean firmware/runtime profiles in matrix `37139588608`. Explicit Classic START/STOP/STATUS/GET reaches the actual credited MIT producer; four snapshots prove physical body units, source-time heading integration, same-step matrix, nonconsuming reads, live 52 Hz/4 g/500 dps conversion, guest-time expiration beyond 300 ms, final powerdown and fresh reopening. Vectors and matrix/face conventions remain explicit; sparse fixtures report ready=false. Host regressions prove nominal first/config/recovery intervals, invalid ODR/FSR, stale/gap rejection and ordering across configuration changes. Zero-gravity and older-config recovery tests fail on the earlier candidate and pass after success-only timing references and accepted timestamp retention. Stop checks use a 20 ms idle poll; ordinary peer request budgets and 120 s overall fusion bound remain unchanged, while the new expiration test allows measured slow guest-time progress. Classic lines cap at 256 bytes before TX admission; BLE diagnostics remain unavailable. Both profiles enforce 3,247 current compiler inputs, selected members, notices, resource bounds and TI exclusion. Original notices, inherited source hashes and historical binary evidence remain intact. Fusion remains off at boot; stationary calibration readiness, full modern wire mappings and physical accuracy/timing remain separate. |
+
 ## Current next action
 
-Complete actual guest qualification of the explicit Classic fusion service before
-enabling fusion at boot. The service now shares start/stop/status/snapshot with
-NSH, uses source timestamp intervals and validates per-sample ODR/FSR. Guest
-conversion, freshness, stop/reopen and stationary calibration readiness require
-separate recorded evidence; stop both fusion and raw subscriptions before
-asserting sensor powerdown.
-Define full modern protocol orientation mappings, wire units and up-side conversion rules
-before emitting full modern IMU records. The 21-byte modern record has no temperature field;
-any temperature transport needs a separate contract. The paired raw INT1/driver/uORB/Classic
-path and coherent non-consuming snapshot API now have the recorded qualification;
-they do not establish the full modern wire contract or guest fusion readiness.
-Encoder-completed degree moves, stall/capability policy and cold-restart bond reuse
-also need separate evidence. Physical C5/C6.4 validation remains open and cannot
-be closed by simulation.
+Qualify stationary calibration readiness through the actual guest before enabling
+fusion at boot. The explicitly controlled producer now has recorded synthetic
+qualification for physical units, source timing, live ODR/FSR changes, coherent
+snapshots, freshness and stop/reopen; sparse fixtures do not establish readiness.
+Define full modern protocol orientation mappings, wire units and up-side conversion
+rules before emitting modern IMU records. The 21-byte record has no temperature
+field; any temperature transport needs a separate contract. Encoder-completed
+degree moves, stall/capability policy and cold-restart bond reuse also need
+separate evidence. Physical C5/C6.4 validation remains open and cannot be closed
+by simulation.
