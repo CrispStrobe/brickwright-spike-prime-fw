@@ -76,6 +76,15 @@ and enters `tlc5955_initialize`. The private MIT Renode fork supplies the
 request-paced SPI/UART DMA behavior needed for those transfers. This remains a
 board-bring-up milestone, not yet an unchanged userspace boot proof.
 
+GPIO interrupt routing uses Renode's existing MIT `STM32_SYSCFG` model at
+`0x40013800`. Each GPIO port feeds its own mux input, and the firmware's
+EXTICR fields select the port forwarded to each EXTI line. The common F4
+platform's direct fanout allowed PC9 Bluetooth-clock edges to trigger the PA9
+VBUS handler. The `brickwright-exti-routing` regression exercises real model
+connections: unselected-port edges are rejected, PA9 and PC9 can each be
+selected, and write-one-to-clear removes both pending status and interrupt
+output. This is a routing proof; complete Bluetooth startup is a separate gate.
+
 The retained board-stub gate runs all of `stm32_bringup` while isolating the
 same five synchronous initialization/update functions, then requires both
 `nsh_main` and `hubprogram_main`. It remains explicitly labeled as a stubbed
