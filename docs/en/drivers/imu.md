@@ -30,8 +30,13 @@ Pybricks attribution remains in the adapted source and
 [reuse inventory](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/pybricks-reuse.json); this is a modification
 of credited code, with no clean-room claim.
 
-Run `tools/check_imu_snapshot.sh` and `tools/check_imu_source.sh` for the
-host coherence, validity, timestamp-wrap and persistence checks. The Renode
+Run `tools/check_imu_snapshot.sh`, `tools/check_imu_source.sh` and
+`tools/check_imu_daemon.sh` for host coherence, validity, timestamp-wrap,
+persistence and producer lifecycle checks. Starting reserves the producer
+before task creation; a second start cannot launch another writer. Stop
+requests made during startup persist, and the sample drain checks stop
+between reads. Stop remains asynchronous: wait for `imu status` to report
+both `running: no` and `starting: no` before expecting the last sensor subscription to close. The Renode
 `imu-model.robot` tests check manually injected paired signed samples,
 register acknowledgements, reset and INT1/EXTI4 routing. The Bluetooth-air
 `--classic --imu-probe` test observes the existing raw BUNDLE stream through
@@ -368,7 +373,7 @@ nsh> imu stop     # Stop daemon
 | `imu.angular_velocity()` | uORB `sensor_imu0` gx/gy/gz read, converted to deg/s in apps/imu using current FSR | Conversion in apps/imu |
 | `imu.heading()` | `imu_fusion` 3D heading | Z-axis rotation |
 | `imu.rotation()` | `imu_fusion` 1D heading | Per-axis |
-| `imu.orientation()` | `imu_fusion` quaternion -> Euler angles | Yaw/Pitch/Roll |
+| `imu.orientation()` | `imu_fusion` quaternion -> 3×3 rotation matrix | Hub-to-inertial matrix |
 | `imu.settings()` | `imu_calibration` + NSH command | Threshold settings |
 | `imu.stationary()` | `imu_stationary` state query | bool |
 | `imu.reset_heading()` | `imu_fusion` heading reset | Zero integration values |
