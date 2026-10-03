@@ -622,7 +622,7 @@ physical hub coordinates. Components must be the literal integers `-1`, `0`
 or `1`; both directions must be perpendicular unit cardinal axes. The producer
 must be running without a pending stop. This ephemeral setting resets both
 headings and returns `OK`; invalid input cannot mutate the setting. Reported
-components are projections along front, right = top × front, and top. For
+components are projections along front, Y = top × front, and top. For
 example, `FUSION BASE 0 1 0 0 0 1` maps physical `(X,Y,Z)` to `(Y,-X,Z)`.
 Stop/reopen restores the identity base. The physical orientation matrix and
 face classification do not change when the base changes.
