@@ -4,32 +4,35 @@ A physical CC2564C needs TI's initialization service pack after every power
 cycle. TI licenses `TIInit_6.12.26.bts` (service pack 1.5) for use only with
 TI devices and forbids reverse engineering, decompilation, and disassembly.
 
-This repository does not redistribute it. Firmware is built in one of two
-profiles.
+This repository does not redistribute it. Firmware has two TI-free simulation
+profiles and one optional hardware profile.
 
-## Simulation profile (`BOARD_CONFIG=simulation`)
+## TI-free profiles (`BOARD_CONFIG=simulation` or `simulation-hci`)
 
 `CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK=y` removes the service pack from the
-build graph: no provider shim, no include path, no import rule. The firmware
-keeps the complete physical controller path (chip reset, `/dev/ttyBT`, H4 over
-USART2 DMA, the Zephyr host) and skips only the upload step, so the simulated
-controller is addressed exactly as hardware would be, left in its ROM state at
-the boot baud. The simulated controller answers standard HCI and, in this
-profile's Renode gate, rejects vendor commands, so a stray upload would fail
-visibly.
+build graph: no provider shim, no include path, no import rule. Both profiles
+retain the controller transport implementation. The explicit
+`simulation-hci` profile starts Bluetooth with an attached modeled controller;
+default `simulation` keeps Bluetooth autostart disabled and starts local program
+service. The HCI scenario executes the chip-reset, `/dev/ttyBT`, USART2 DMA,
+H4 and Zephyr host paths while omitting service-pack upload. The synthetic
+controller answers standard HCI and rejects vendor commands in the explicit
+HCI profile's Renode gate, so a stray upload would fail visibly.
 
-This profile keeps the boot path closer to hardware than an in-process virtual
-controller would: every UART, DMA, and H4 step still executes. It is the only
-profile that CI builds and runs.
+The explicit HCI scenario executes UART, DMA and H4 against a modeled controller.
+CI builds and tests both TI-free profiles in separate jobs; it does not build or
+run the hardware profile. Simulator results do not qualify physical CC2564C
+operation or radio behavior.
 
-`tools/check_ti_free_image.py` gates it. It scans every 256-byte window of each
-image against `policy/ti-service-pack-fingerprint.json` (digests of the service
+`tools/check_ti_free_image.py` gates both profiles. It scans every 256-byte
+window of each image against `policy/ti-service-pack-fingerprint.json` (digests of the service
 pack's 40 chunks; no service-pack bytes) and reports the chunk count. It also
 fails if the verbose build log or dependency files name the service pack, the
 importer, or `.local/ti/`, if `.config` does not select the profile, or if the
 ELF defines the embedded-payload symbol. On the hardware-profile image it
 reports 40/40 chunks and fails; on the simulation image it reports 0/40 and
-passes.
+passes. This detects the pinned payload fingerprints and build references,
+not a universal guarantee against arbitrary transformed payload fragments.
 
 ## Hardware profile (`BOARD_CONFIG=usbnsh`)
 
