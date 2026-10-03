@@ -303,7 +303,9 @@ static int virtual_send(const uint8_t *frame, size_t length, void *context)
   memcpy(driver->virtual_frame, frame, length);
   driver->virtual_length = length;
   ++driver->virtual_enqueued_generation;
-  pthread_cond_signal(&driver->virtual_changed);
+  /* Slot producers, its receiver and completion waiters share this condition.
+   * A signal may wake the wrong predicate, stranding a full slot forever. */
+  pthread_cond_broadcast(&driver->virtual_changed);
   pthread_mutex_unlock(&driver->virtual_mutex);
   return 0;
 }
@@ -330,7 +332,7 @@ static void *receive_main(void *context)
           size_t length = driver->virtual_length;
           memcpy(frame, driver->virtual_frame, length);
           driver->virtual_length = 0;
-          pthread_cond_signal(&driver->virtual_changed);
+          pthread_cond_broadcast(&driver->virtual_changed);
           pthread_mutex_unlock(&driver->virtual_mutex);
           (void)brickwright_h4_feed(&driver->transport.h4, frame, length);
           pthread_mutex_lock(&driver->virtual_mutex);
