@@ -63,11 +63,14 @@ Complete Modeled Flash Initialization Successfully
     # without changing guest registers or skipping the mount and blank scan.
     ${link_register}=    Execute Command    cpu GetRegister 14
     ${return_site}=    Evaluate    int($link_register.strip(), 0) & ~1
-    Execute Command    cpu AddHook ${return_site} "monitor.Parse('log \\"MILESTONE flash initialized\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${return_site} "monitor.Parse('log \\"MILESTONE flash initialized R0=%d PC=%d\\"' % (int(self.GetRegister(0).RawValue), int(self.GetRegister(15).RawValue))); machine.PauseAndRequestEmulationPause()"
     Start Emulation
-    Wait For Log Entry    MILESTONE flash initialized    timeout=15
+    ${return_log}=    Wait For Log Entry    MILESTONE flash initialized    timeout=15
+    Log To Console    ${return_log}
     ${status}=    Execute Command    cpu GetRegister 0
-    Should Be True    int($status.strip(), 0) == 0
+    ${paused_pc}=    Execute Command    cpu GetRegister 15
+    Log To Console    Flash initializer observation: R0=${status.strip()} PC=${paused_pc.strip()} expected return site=${return_site}
+    Should Be Equal As Integers    ${status.strip()}    0    Flash initializer must return zero
     Execute Command    cpu RemoveHooksAt ${return_site}
 
 Load Explicit Existing LittleFS Fixture
