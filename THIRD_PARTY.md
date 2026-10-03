@@ -50,7 +50,7 @@ licence claim is made for those images.
 ## Host-only simulated Bluetooth air
 
 The peer tests use the existing Renode fork's
-[`tools/bw-air` at the qualified runtime pin](https://github.com/CrispStrobe/renode-spike-prime/tree/e0166acb028b162e972458f31d76cdb7dcdc518d/tools/bw-air),
+[`tools/bw-air` at the qualified runtime pin](https://github.com/CrispStrobe/renode-spike-prime/tree/25f379e17848232f248d0eacbe00b715357ec460/tools/bw-air),
 retaining its MIT/Apache-2.0 grants and author notices. This repository does
 not vendor a second copy. `tools/bluetooth-air-requirements.txt` fixes the 17
 Python dependencies used by the host test environment; these packages enter

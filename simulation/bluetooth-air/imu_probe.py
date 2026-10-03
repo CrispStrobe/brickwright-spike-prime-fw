@@ -216,6 +216,9 @@ async def imu_round_trip(dlc, received, renode_proc, results: dict, *,
                 if kind != "bundle":
                     raise ValueError("Unexpected text while awaiting IMU sample")
                 found = validate_sample(bundle, values)
+                if found is None:
+                    record["empty_bundles"] = record.get("empty_bundles", 0) + 1
+                    record["last_empty_bundle"] = bundle
                 if found:
                     if record["samples"]:
                         prior = record["samples"][-1]
@@ -250,6 +253,12 @@ async def imu_round_trip(dlc, received, renode_proc, results: dict, *,
             record["status"] = "PASS"
     except BaseException as error:
         record["status"] = "FAIL: " + type(error).__name__ + ": " + str(error)
+        if isinstance(error, TimeoutError):
+            try:
+                async with asyncio.timeout(2):
+                    record["timeout_model_state"] = await model("state")
+            except BaseException:
+                pass
         raise
     finally:
         if active:
