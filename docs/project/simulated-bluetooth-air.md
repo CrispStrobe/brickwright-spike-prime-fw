@@ -17,7 +17,7 @@ Renode exports USART2, the CC2564C HCI UART, as a TCP socket
 bumble controller on that byte stream and on the air. The firmware's own
 Zephyr host then advertises, accepts LE and BR/EDR connections, and serves the
 FD02 GATT service and SPP. Only the TI-free simulation profile
-(`BOARD_CONFIG=simulation`) runs here; it sends no vendor commands and the
+(`BOARD_CONFIG=simulation-hci`) runs here; it sends no vendor commands and the
 controller refuses any that arrive. The profile also enables
 `CONFIG_APP_BTSENSOR_START_VISIBLE`, the equivalent of `btsensor bt on`,
 because Renode has no USB console.
@@ -52,8 +52,11 @@ controller firmware.
 
 ## Current reach with the SPIKE firmware
 
-Measured with the unchanged simulation-profile image in Renode, every station
-a separate node on one bw-air/1 hub:
+The following are recorded results from the earlier simulation-profile image
+in Renode, with every station a separate node on one bw-air/1 hub. They are
+not a qualification receipt for a later image. The default `simulation`
+profile now leaves Bluetooth autostart disabled; build the explicit
+`simulation-hci` profile and rerun the test for Bluetooth changes:
 
 | path | status |
 |---|---|
@@ -71,3 +74,19 @@ Classic extension's Linux and macOS Scratch Link backends open channel 1
 directly (`classic-protocol.md`). The SPP line protocol is btsensor's; the
 legacy JSON RPC adapter (`btsensor_classic.c`) is reached only for lines it
 recognises.
+
+## Thread synchronization requirements
+
+The compatibility layer uses a recursive pthread mutex for its IRQ-lock
+interface, including nested intrusive-list operations. All firmware profiles
+enable `CONFIG_PTHREAD_MUTEX_TYPES`; the NuttX build rejects its absence.
+The regression compiles the actual pinned NuttX mutex-attribute implementation
+and verifies that a disabled configuration returns `ENOSYS` instead of
+creating the required recursive lock.
+
+Virtual HCI producers and consumers share a condition variable with different
+wait predicates, so queue changes wake all waiters. PSA cryptography also
+enables Mbed TLS pthread locking for concurrent Bluetooth workers. Focused
+host regressions exercise queue contention, list interleaving and concurrent
+known-vector encryption. Actual protected-firmware HCI startup remains a
+separate required qualification gate.
