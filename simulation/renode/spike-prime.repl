@@ -39,7 +39,9 @@ syscfg: Miscellaneous.STM32_SYSCFG @ sysbus 0x40013800
     [0-15] -> exti@[0-15]
 
 gpioPortA:
-    [0-15] -> syscfg#0@[0-15]
+    [0-14] -> syscfg#0@[0-14]
+    // Keep EXTI port selection while delivering PA15 LAT to the display.
+    15 -> syscfg#0@15 | display@0
 
 gpioPortB:
     [0-15] -> syscfg#1@[0-15]

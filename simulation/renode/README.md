@@ -68,13 +68,31 @@ kernel-to-protected-userspace transition while the board peripherals are being
 modeled. It is labeled as an isolated-boundary test and is not reported as an
 unchanged full boot.
 
-A new MIT-licensed model layer attaches an LSM6DS3TR-C register subset at
-I2C2 address `0x6a`, a command-level W25Q256JV behind the real PB12 chip-select
-path on SPI2, and a TLC5955 byte sink on SPI1. The no-function-hook model gate
-proves that the unchanged firmware completes IMU and SPI2 flash initialization
-and enters `tlc5955_initialize`. The private MIT Renode fork supplies the
-request-paced SPI/UART DMA behavior needed for those transfers. This remains a
-board-bring-up milestone, not yet an unchanged userspace boot proof.
+The MIT model layer attaches an LSM6DS3TR-C register subset at I2C2 address
+`0x6a`, a command-level W25Q256JV behind the real PB12 chip-select path on SPI2,
+and a TLC5955 digital register subset on SPI1 with PA15 as LAT. PA15 also retains
+its SYSCFG connection. The private MIT Renode fork supplies request-paced
+SPI/UART DMA behavior. The early `brickwright-board-models` milestone still
+stops at display initialization; the TI-free existing-filesystem HCI gate runs
+the actual display initialization and update functions through daemon readiness.
+It reads the latched display state without changing guest registers.
+
+The TLC5955 model follows TI's public
+[SBVS237 digital interface](https://www.ti.com/lit/ds/symlink/tlc5955.pdf),
+sections 8.3.2.1–8.3.2.7. Its 769-bit shift register retains bytes across SPI
+transaction boundaries. A rising LAT commits grayscale data or a valid control
+command; maximum-current fields require two matching control writes. Inspectable
+registers distinguish chip output order from the firmware's serialized word
+order. `brickwright-display-latch` tests real SPI1 accesses and GPIO edges with
+synthetic vectors, including rejected commands, current confirmation and reset.
+
+This subset returns zero on SPI reads and uses deterministic zero reset values
+for otherwise unspecified control state. It does not model SOUT/status data,
+analog current, active dot-correction timing or GSCLK/PWM waveforms. TIM12 keeps
+its existing platform frequency; display-register qualification does not imply
+correct grayscale-clock frequency or physical light output. The legacy stubbed
+diagnostics and `simulation/bluetooth-air/test_spike_air.py` retain their explicitly
+isolated display functions and are separate from this HCI qualification gate.
 
 GPIO interrupt routing uses Renode's existing MIT `STM32_SYSCFG` model at
 `0x40013800`. Each GPIO port feeds its own mux input, and the firmware's
@@ -123,6 +141,16 @@ unchanged. See the
 [fixture provenance and coverage record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/docs/project/synthetic-littlefs-fixture.md)
 for tag names, lifecycle and limits. Generating this fixture alone provides no
 guest-boot qualification.
+
+The protected suite's milestone waiter synchronously stops emulation, arms its
+log predicate before allowing the waiter's internal start, and stops again
+before inspecting registers. An explicit start followed by a log wait could
+restart an already stopped CPU when the notification was delayed. The
+`brickwright-milestone-wait` regression uses separate synthetic Cortex-M
+instructions and controlled host-delayed logging to demonstrate the old
+restart and verify that the shared helper retains the actual captured state.
+It also joins its log producer before resetting the test machine. This fixture
+contains no firmware image or extracted implementation.
 
 ## Virtual HCI boundary
 

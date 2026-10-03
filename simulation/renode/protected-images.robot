@@ -22,6 +22,17 @@ Reset SPIKE Test
     Terminate All Processes    kill=True
     Reset Emulation
 
+Wait For Paused Milestone
+    [Arguments]    ${pattern}    ${timeout}
+    # StartAll before installing LogTester's predicate can race with the hook:
+    # a late log delivery makes WaitForEntry restart the just-paused guest.
+    # Stop synchronously, then let the waiter arm before its internal start.
+    Execute Command    emulation PauseAll
+    ${entry}=    Wait For Log Entry    ${pattern}    timeout=${timeout}    pauseEmulation=${True}
+    # Buffered matches return without WaitForEntry's stop wait.
+    Execute Command    emulation PauseAll
+    RETURN    ${entry}
+
 Boot Protected Pair And Prove Progress
     [Arguments]    ${target}
     File Should Exist    ${IMAGES}/${target}/nuttx
@@ -44,15 +55,12 @@ Boot Protected Pair And Prove Progress
     Should Not Be Equal As Numbers    0xffffffff    ${userspace.strip()}
     ${before}=    Execute Command    cpu GetRegister "PC"
     Create Log Tester    1
-    Execute Command    cpu AddHook ${nx_start.strip()} "monitor.Parse('log \\"MILESTONE nx_start\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${board_late.strip()} "monitor.Parse('log \\"MILESTONE board_late_initialize\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${bringup.strip()} "monitor.Parse('log \\"MILESTONE stm32_bringup\\"'); machine.PauseAndRequestEmulationPause()"
-    Start Emulation
-    Wait For Log Entry    MILESTONE nx_start    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE board_late_initialize    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE stm32_bringup    timeout=10
+    Execute Command    cpu AddHook ${nx_start.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE nx_start\\"')"
+    Execute Command    cpu AddHook ${board_late.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE board_late_initialize\\"')"
+    Execute Command    cpu AddHook ${bringup.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE stm32_bringup\\"')"
+    Wait For Paused Milestone    MILESTONE nx_start    10
+    Wait For Paused Milestone    MILESTONE board_late_initialize    10
+    Wait For Paused Milestone    MILESTONE stm32_bringup    10
     ${after}=    Execute Command    cpu GetRegister "PC"
     Should Not Be Equal As Numbers    ${before.strip()}    ${after.strip()}
     ${after_value}=    Convert To Integer    ${after.strip()}
@@ -63,11 +71,15 @@ Complete Modeled Flash Initialization Successfully
     # without changing guest registers or skipping the mount and blank scan.
     # Publish snapshots after requesting the pause, and wait for global stop:
     # a log notification alone can wake Robot before the hook has paused.
+    Execute Command    emulation PauseAll
+    ${flash_entry}=    Execute Command    sysbus GetSymbolAddress "stm32_w25q256_initialize"
+    ${flash_entry_pc}=    Evaluate    int($flash_entry.strip(), 0) & ~1
+    ${entry_pc}=    Execute Command    cpu GetRegister 15
+    Should Be Equal As Integers    ${entry_pc.strip()}    ${flash_entry_pc}    CPU must be stopped at the flash initializer entry
     ${link_register}=    Execute Command    cpu GetRegister 14
     ${return_site}=    Evaluate    int($link_register.strip(), 0) & ~1
     Execute Command    cpu AddHook ${return_site} "flash_return_r0=int(self.GetRegister(0).RawValue); flash_return_pc=int(self.GetRegister(15).RawValue); machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash initialized R0=%d PC=%d\\"' % (flash_return_r0, flash_return_pc))"
-    Start Emulation
-    ${return_log}=    Wait For Log Entry    MILESTONE flash initialized    timeout=15    pauseEmulation=${True}
+    ${return_log}=    Wait For Paused Milestone    MILESTONE flash initialized    15
     Log To Console    ${return_log}
     ${status}=    Execute Command    cpu GetRegister 0
     ${paused_pc}=    Execute Command    cpu GetRegister 15
@@ -90,16 +102,13 @@ Boot Through Modeled Board Devices
     ${imu_init}=    Execute Command    sysbus GetSymbolAddress "stm32_lsm6dsl_initialize"
     ${flash_init}=    Execute Command    sysbus GetSymbolAddress "stm32_w25q256_initialize"
     ${display_init}=    Execute Command    sysbus GetSymbolAddress "tlc5955_initialize"
-    Execute Command    cpu AddHook ${imu_init.strip()} "monitor.Parse('log \\"MILESTONE imu bus-model\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${imu_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE imu bus-model\\"')"
     Execute Command    cpu AddHook ${flash_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash bus-model\\"')"
-    Execute Command    cpu AddHook ${display_init.strip()} "monitor.Parse('log \\"MILESTONE display bus-model\\"'); machine.PauseAndRequestEmulationPause()"
-    Start Emulation
-    Wait For Log Entry    MILESTONE imu bus-model    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE flash bus-model    timeout=10    pauseEmulation=${True}
+    Execute Command    cpu AddHook ${display_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE display bus-model\\"')"
+    Wait For Paused Milestone    MILESTONE imu bus-model    10
+    Wait For Paused Milestone    MILESTONE flash bus-model    10
     Complete Modeled Flash Initialization Successfully
-    Start Emulation
-    Wait For Log Entry    MILESTONE display bus-model    timeout=15
+    Wait For Paused Milestone    MILESTONE display bus-model    15
 
 Boot Simulation HCI Through Modeled Board Devices
     Skip If    '${HCI_BRIDGE}' == ''    HCI bridge executable was not supplied
@@ -112,9 +121,6 @@ Boot Simulation HCI Through Modeled Board Devices
     Start Process    ${HCI_BRIDGE}    --trace    --reject-vendor    127.0.0.1    ${HCI_PORT}    alias=hci    stdout=${bridge_log}    stderr=STDOUT
     ${imu_init}=    Execute Command    sysbus GetSymbolAddress "stm32_lsm6dsl_initialize"
     ${flash_init}=    Execute Command    sysbus GetSymbolAddress "stm32_w25q256_initialize"
-    ${display_init}=    Execute Command    sysbus GetSymbolAddress "tlc5955_initialize"
-    ${display_update}=    Execute Command    sysbus GetSymbolAddress "tlc5955_update_sync"
-    ${display_set}=    Execute Command    sysbus GetSymbolAddress "tlc5955_set_duty"
     ${physical_open}=    Execute Command    sysbus GetSymbolAddress "physical_open"
     ${load_firmware}=    Execute Command    sysbus GetSymbolAddress "physical_load_firmware"
     ${physical_start}=    Execute Command    sysbus GetSymbolAddress "physical_start_host"
@@ -122,44 +128,79 @@ Boot Simulation HCI Through Modeled Board Devices
     ${settings_load}=    Execute Command    sysbus GetSymbolAddress "settings_load"
     ${transport_register}=    Execute Command    sysbus GetSymbolAddress "brickwright_hub_transport_register"
     ${daemon_ready}=    Execute Command    sysbus GetSymbolAddress "daemon_wait_for_stop"
-    # The IMU and flash initializers run against the bus models; only the
-    # TLC5955 display functions are isolated, as in the existing HCI gate.
-    Execute Command    cpu AddHook ${imu_init.strip()} "monitor.Parse('log \\"MILESTONE imu bus-model\\"'); machine.PauseAndRequestEmulationPause()"
+    # IMU, flash and display functions run against the bus models.
+    Execute Command    cpu AddHook ${imu_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE imu bus-model\\"')"
     Execute Command    cpu AddHook ${flash_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash bus-model\\"')"
-    Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${physical_open.strip()} "monitor.Parse('log \\"MILESTONE physical_open\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${load_firmware.strip()} "monitor.Parse('log \\"MILESTONE physical_load_firmware\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${physical_start.strip()} "monitor.Parse('log \\"MILESTONE physical_start_host\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${bt_enable.strip()} "monitor.Parse('log \\"MILESTONE bt_enable\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${settings_load.strip()} "monitor.Parse('log \\"MILESTONE settings_load\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${transport_register.strip()} "monitor.Parse('log \\"MILESTONE transport_register\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${daemon_ready.strip()} "monitor.Parse('log \\"MILESTONE daemon_ready\\"'); machine.PauseAndRequestEmulationPause()"
-    Start Emulation
-    Wait For Log Entry    MILESTONE imu bus-model    timeout=15
-    Start Emulation
-    Wait For Log Entry    MILESTONE flash bus-model    timeout=15    pauseEmulation=${True}
+    Execute Command    cpu AddHook ${physical_open.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE physical_open\\"')"
+    Execute Command    cpu AddHook ${load_firmware.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE physical_load_firmware\\"')"
+    Execute Command    cpu AddHook ${physical_start.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE physical_start_host\\"')"
+    Execute Command    cpu AddHook ${bt_enable.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE bt_enable\\"')"
+    Execute Command    cpu AddHook ${settings_load.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE settings_load\\"')"
+    Execute Command    cpu AddHook ${transport_register.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE transport_register\\"')"
+    Execute Command    cpu AddHook ${daemon_ready.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE daemon_ready\\"')"
+    Wait For Paused Milestone    MILESTONE imu bus-model    15
+    Wait For Paused Milestone    MILESTONE flash bus-model    15
     Complete Modeled Flash Initialization Successfully
-    Start Emulation
-    Wait For Log Entry    MILESTONE bt_enable    timeout=30
-    Start Emulation
-    Wait For Log Entry    MILESTONE physical_open    timeout=15
-    Start Emulation
-    Wait For Log Entry    MILESTONE physical_load_firmware    timeout=15
-    Start Emulation
-    Wait For Log Entry    MILESTONE physical_start_host    timeout=15
-    Start Emulation
-    Wait For Log Entry    MILESTONE settings_load    timeout=45
-    Start Emulation
-    Wait For Log Entry    MILESTONE transport_register    timeout=15
-    Start Emulation
-    Wait For Log Entry    MILESTONE daemon_ready    timeout=15
+    Wait For Paused Milestone    MILESTONE bt_enable    30
+    Wait For Paused Milestone    MILESTONE physical_open    15
+    Wait For Paused Milestone    MILESTONE physical_load_firmware    15
+    Wait For Paused Milestone    MILESTONE physical_start_host    15
+    Wait For Paused Milestone    MILESTONE settings_load    45
+    Wait For Paused Milestone    MILESTONE transport_register    15
+    Wait For Paused Milestone    MILESTONE daemon_ready    15
+    Execute Command    include @${CURDIR}/../../tools/renode_check_tlc5955.py
+    ${display_proof}=    Execute Command    check_tlc5955_guest
+    Should Contain    ${display_proof}    TLC5955 guest passed
     ${trace}=    Get File    ${bridge_log}
     Should Contain    ${trace}    command=0x0c03
     Should Not Match Regexp    ${trace}    command=0xf[c-f]
 
+Prepare Synthetic Milestone CPU
+    Execute Command    include @${CURDIR}/../../tools/renode_check_milestone_wait.py
+    Execute Command    prepare_milestone_wait_fixture
+    Create Log Tester    5
+
+Synthetic Milestone Hook Has Stopped
+    ${paused}=    Execute Command    milestone_wait_fixture_stopped
+    Should Contain    ${paused}    True
+
+Finish Synthetic Milestone CPU
+    Execute Command    finish_milestone_wait_fixture
+    Reset SPIKE Test
+
 *** Test Cases ***
+Old start-before-wait resumes the stopped synthetic CPU on late log delivery
+    [Tags]    brickwright-milestone-wait
+    [Teardown]    Finish Synthetic Milestone CPU
+    Prepare Synthetic Milestone CPU
+    Start Emulation
+    Wait Until Keyword Succeeds    1 second    10 milliseconds    Synthetic Milestone Hook Has Stopped
+    Execute Command    emulation PauseAll
+    ${entry}=    Wait For Log Entry    SYNTHETIC return    timeout=5    pauseEmulation=${True}
+    Execute Command    emulation PauseAll
+    Should Contain    ${entry}    R0=0 PC=134217986
+    ${pc}=    Execute Command    cpu GetRegister 15
+    ${r0}=    Execute Command    cpu GetRegister 0
+    Should Not Be Equal As Integers    ${pc.strip()}    0x08000102
+    Should Be Equal As Integers    ${r0.strip()}    7
+
+Paused milestone helper arms its waiter before starting the synthetic CPU
+    [Tags]    brickwright-milestone-wait
+    [Teardown]    Finish Synthetic Milestone CPU
+    Prepare Synthetic Milestone CPU
+    ${entry}=    Wait For Paused Milestone    SYNTHETIC return    5
+    Should Contain    ${entry}    R0=0 PC=134217986
+    ${pc}=    Execute Command    cpu GetRegister 15
+    ${r0}=    Execute Command    cpu GetRegister 0
+    Should Be Equal As Integers    ${pc.strip()}    0x08000102
+    Should Be Equal As Integers    ${r0.strip()}    0
+
+SPI display latches data through the selected GPIO pin
+    [Tags]    brickwright-display-latch
+    Execute Command    include @${CURDIR}/../../tools/renode_check_tlc5955.py
+    ${proof}=    Execute Command    check_tlc5955
+    Should Contain    ${proof}    TLC5955 passed
+
 Timer-triggered ADC updates the circular DMA buffer
     [Tags]    brickwright-adc-dma
     Execute Command    include @${CURDIR}/../../tools/renode_check_adc_dma.py
@@ -215,13 +256,11 @@ Brickwright reaches protected userspace with board boundary isolated
     Boot Protected Pair And Prove Progress    brickwright
     ${nsh_main}=    Execute Command    sysbus GetSymbolAddress "nsh_main"
     ${hubprogram_main}=    Execute Command    sysbus GetSymbolAddress "hubprogram_main"
-    Execute Command    cpu AddHook ${nsh_main.strip()} "monitor.Parse('log \\"MILESTONE nsh_main\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${hubprogram_main.strip()} "monitor.Parse('log \\"MILESTONE hubprogram_main\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${nsh_main.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE nsh_main\\"')"
+    Execute Command    cpu AddHook ${hubprogram_main.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE hubprogram_main\\"')"
     Execute Command    cpu PC `cpu LR`
-    Start Emulation
-    Wait For Log Entry    MILESTONE nsh_main    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE hubprogram_main    timeout=10
+    Wait For Paused Milestone    MILESTONE nsh_main    10
+    Wait For Paused Milestone    MILESTONE hubprogram_main    10
 
 Brickwright formats initially erased flash and reaches TLC5955
     [Tags]    brickwright-board-models    brickwright-erased-first-boot
@@ -250,12 +289,10 @@ Brickwright reaches userspace with synchronous board functions isolated
     Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${nsh_main.strip()} "monitor.Parse('log \\"MILESTONE nsh_main bus-stubs\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${hubprogram_main.strip()} "monitor.Parse('log \\"MILESTONE hubprogram_main bus-stubs\\"'); machine.PauseAndRequestEmulationPause()"
-    Start Emulation
-    Wait For Log Entry    MILESTONE nsh_main bus-stubs    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE hubprogram_main bus-stubs    timeout=10
+    Execute Command    cpu AddHook ${nsh_main.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE nsh_main bus-stubs\\"')"
+    Execute Command    cpu AddHook ${hubprogram_main.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE hubprogram_main bus-stubs\\"')"
+    Wait For Paused Milestone    MILESTONE nsh_main bus-stubs    10
+    Wait For Paused Milestone    MILESTONE hubprogram_main bus-stubs    10
 
 Brickwright crosses the protected UART HCI bootstrap boundary
     [Tags]    brickwright-hci
@@ -283,31 +320,23 @@ Brickwright crosses the protected UART HCI bootstrap boundary
     Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${physical_open.strip()} "monitor.Parse('log \\"MILESTONE physical_open\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${load_firmware.strip()} "monitor.Parse('log \\"MILESTONE physical_load_firmware\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${bts_execute.strip()} "monitor.Parse('log \\"MILESTONE ti_bts_execute\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${init_send.strip()} "monitor.Parse('log \\"MILESTONE init_send\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${physical_start.strip()} "monitor.Parse('log \\"MILESTONE physical_start_host\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${settings_load.strip()} "monitor.Parse('log \\"MILESTONE settings_load\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${transport_register.strip()} "monitor.Parse('log \\"MILESTONE transport_register\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${daemon_ready.strip()} "monitor.Parse('log \\"MILESTONE daemon_ready\\"'); machine.PauseAndRequestEmulationPause()"
-    Start Emulation
-    Wait For Log Entry    MILESTONE physical_open    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE physical_load_firmware    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE ti_bts_execute    timeout=10
-    Start Emulation
-    Wait For Log Entry    MILESTONE init_send    timeout=10
+    Execute Command    cpu AddHook ${physical_open.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE physical_open\\"')"
+    Execute Command    cpu AddHook ${load_firmware.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE physical_load_firmware\\"')"
+    Execute Command    cpu AddHook ${bts_execute.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE ti_bts_execute\\"')"
+    Execute Command    cpu AddHook ${init_send.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE init_send\\"')"
+    Execute Command    cpu AddHook ${physical_start.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE physical_start_host\\"')"
+    Execute Command    cpu AddHook ${settings_load.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE settings_load\\"')"
+    Execute Command    cpu AddHook ${transport_register.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE transport_register\\"')"
+    Execute Command    cpu AddHook ${daemon_ready.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE daemon_ready\\"')"
+    Wait For Paused Milestone    MILESTONE physical_open    10
+    Wait For Paused Milestone    MILESTONE physical_load_firmware    10
+    Wait For Paused Milestone    MILESTONE ti_bts_execute    10
+    Wait For Paused Milestone    MILESTONE init_send    10
     Execute Command    cpu RemoveHooksAt ${init_send.strip()}
-    Start Emulation
-    Wait For Log Entry    MILESTONE physical_start_host    timeout=45
-    Start Emulation
-    Wait For Log Entry    MILESTONE settings_load    timeout=30
-    Start Emulation
-    Wait For Log Entry    MILESTONE transport_register    timeout=15
-    Start Emulation
-    Wait For Log Entry    MILESTONE daemon_ready    timeout=15
+    Wait For Paused Milestone    MILESTONE physical_start_host    45
+    Wait For Paused Milestone    MILESTONE settings_load    30
+    Wait For Paused Milestone    MILESTONE transport_register    15
+    Wait For Paused Milestone    MILESTONE daemon_ready    15
 
 Brickwright simulation profile boots from initially erased flash without a TI service pack
     [Tags]    brickwright-simulation-hci    brickwright-erased-simulation-hci

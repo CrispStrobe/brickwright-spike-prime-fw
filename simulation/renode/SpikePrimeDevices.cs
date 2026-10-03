@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 using System;
 using Antmicro.Renode.Core;
+using Antmicro.Renode.Peripherals;
 using Antmicro.Renode.Peripherals.I2C;
 using Antmicro.Renode.Peripherals.SPI;
 
@@ -51,31 +52,127 @@ namespace Antmicro.Renode.Peripherals.SPIKEPrime
         private byte pointer;
     }
 
-    // Write-only TLC5955 sink. Frames are retained for deterministic test
-    // inspection while the firmware drives the real STM32 SPI controller.
-    public sealed class TLC5955 : ISPIPeripheral
+    // TLC5955 digital SPI/LAT subset, following TI SBVS237 sections 8.3.2.1-7.
+    // Reset deterministically clears state that is unspecified at power-on.
+    // No analog current, GSCLK/PWM timing, SID or SOUT behavior is modeled.
+    public sealed class TLC5955 : ISPIPeripheral, IGPIOReceiver
     {
         public TLC5955() { Reset(); }
+
         public byte Transmit(byte data)
         {
-            if(frameLength < lastFrame.Length) lastFrame[frameLength] = data;
-            frameLength++;
+            // SIN enters bit 0, MSB first: one byte shifts the previous data
+            // eight positions towards bit 768, discarding the oldest bits.
+            for(var i = shift.Length - 1; i > 0; --i) shift[i] = shift[i - 1];
+            shift[shift.Length - 1] &= 1;
+            shift[0] = data;
             totalBytes++;
-            return 0;
+            return 0; // SOUT is deliberately outside this digital subset.
         }
-        public void FinishTransmission() { frameLength = 0; frames++; }
+
+        public void FinishTransmission() { }
+
+        public void OnGPIO(int number, bool value)
+        {
+            if(number != 0) throw new ArgumentOutOfRangeException(nameof(number), "Only LAT input 0 is supported");
+            var rising = value && !lat;
+            lat = value;
+            if(!rising) return;
+            if(shift[96] == 0)
+            {
+                Array.Copy(shift, grayscale, grayscale.Length);
+                grayscaleLatches++;
+                return;
+            }
+            if(shift[95] != 0x96)
+            {
+                invalidControlLatches++;
+                return;
+            }
+            Array.Copy(shift, control, control.Length);
+            control[46] &= 7; // Only bits 370:0 belong to the control latch.
+            var incomingMc = GetBits(control, 336, 9);
+            if(hasPreviousMc && incomingMc == previousMc) maximumCurrent = incomingMc;
+            previousMc = incomingMc;
+            hasPreviousMc = true;
+            controlLatches++;
+        }
+
         public void Reset()
         {
-            Array.Clear(lastFrame, 0, lastFrame.Length);
-            frameLength = 0;
-            frames = 0;
-            totalBytes = 0;
+            Array.Clear(shift, 0, shift.Length);
+            Array.Clear(grayscale, 0, grayscale.Length);
+            Array.Clear(control, 0, control.Length);
+            lat = false;
+            hasPreviousMc = false;
+            maximumCurrent = previousMc = 0;
+            grayscaleLatches = controlLatches = invalidControlLatches = totalBytes = 0;
         }
-        public long Frames => frames;
+
+        // Chip output 0 is OUTR0 (bits 15:0); output 47 is OUTB15.
+        public ushort GetGrayscale(int output)
+        {
+            CheckIndex(output, 48);
+            return (ushort)GetBits(grayscale, output * 16, 16);
+        }
+
+        // The first serialized firmware word corresponds to chip output 47.
+        public ushort GetWireWord(int index)
+        {
+            CheckIndex(index, 48);
+            return GetGrayscale(47 - index);
+        }
+
+        // DC is the stored control value, not a modeled analog output level.
+        public byte GetControlDotCorrection(int output)
+        {
+            CheckIndex(output, 48);
+            return (byte)GetBits(control, output * 7, 7);
+        }
+
+        // Color indices 0/1/2 are R/G/B, matching the control bit assignments.
+        public byte GetMaximumCurrent(int color)
+        {
+            CheckIndex(color, 3);
+            return (byte)((maximumCurrent >> (color * 3)) & 7);
+        }
+
+        public byte GetControlBrightness(int color)
+        {
+            CheckIndex(color, 3);
+            return (byte)GetBits(control, 345 + color * 7, 7);
+        }
+
+        public byte ControlFunction => (byte)GetBits(control, 366, 5);
+        public long Frames => grayscaleLatches + controlLatches;
+        public long GrayscaleLatches => grayscaleLatches;
+        public long ControlLatches => controlLatches;
+        public long InvalidControlLatches => invalidControlLatches;
         public long TotalBytes => totalBytes;
-        private readonly byte[] lastFrame = new byte[97];
-        private int frameLength;
-        private long frames;
+
+        private static void CheckIndex(int index, int count)
+        {
+            if(index < 0 || index >= count) throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        private static int GetBits(byte[] data, int offset, int width)
+        {
+            var value = 0;
+            for(var bit = 0; bit < width; ++bit)
+                value |= ((data[(offset + bit) / 8] >> ((offset + bit) % 8)) & 1) << bit;
+            return value;
+        }
+
+        private readonly byte[] shift = new byte[97];
+        private readonly byte[] grayscale = new byte[96];
+        private readonly byte[] control = new byte[47];
+        private bool lat;
+        private bool hasPreviousMc;
+        private int maximumCurrent;
+        private int previousMc;
+        private long grayscaleLatches;
+        private long controlLatches;
+        private long invalidControlLatches;
         private long totalBytes;
     }
 

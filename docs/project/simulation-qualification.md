@@ -41,8 +41,9 @@ passed both clean protected ARM builds and source/configuration/linker, licence,
 TI-exclusion and resource checks. Actual guest tests passed ADC/EXTI behavior,
 tickless rollover, protected userspace, the exhaustive erased-flash first boot,
 existing-filesystem mounting and standard-controller HCI startup through daemon
-readiness. The HCI case retains explicitly documented display-function hooks;
-it is not complete board modeling. Existing-filesystem tests do not replace
+readiness. That matrix used explicitly documented display-function hooks;
+the later display qualification below removes them from this HCI gate.
+Neither result establishes complete board modeling. Existing-filesystem tests do not replace
 erased-media first boot. Actual LittleFS crash/restart qualification separately
 passed [426 interrupted-write cases](upstream-storage-hardening.md).
 [Source and documentation CI on the merge](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37103489088)
@@ -106,6 +107,94 @@ passed on candidate `71e061b66f30adc1ee4be92917c843674bc19a17`, including the
 exhaustive erased-flash boot and standard-controller HCI startup. The subsequent
 record update changes documentation only. These bounded results do not establish
 universal firmware reliability or physical-hardware approval.
+
+A subsequent [display candidate matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37108128568)
+passed its default job and actual SPI/PA15 tests, but reproduced the observation
+failure in HCI: atomic R0 was zero at `0x080095b0`, while the later read saw
+R0=`0xafc8` at `0x080127de`. The earlier passing matrix and local repetitions
+did not establish that the first correction eliminated the race.
+
+Review of Renode's `LogTester.WaitForEntry` identified a remaining restart
+window. An explicit `Start Emulation` before the waiter arms its predicate
+allows the hook to stop execution first. If the initial log flush misses a
+still-delayed message, the waiter can see emulation stopped and start it again.
+Its buffered-message fast path also returns without awaiting stop. This is a
+source-supported explanation of the public mismatch; the log alone does not
+prove that exact scheduling interleaving. A controlled actual Cortex-M fixture
+subsequently reproduced the restart mechanism: the old startup order captured
+R0=0 at the synthetic stop site, then advanced to R0=7 while waiting for a
+delayed notification. The new helper retained zero at the same site. The
+notification carries values captured from the CPU; its producer is joined
+before teardown. These synthetic cases are a durable `brickwright-milestone-wait`
+regression, not a claim to reproduce every detail of the original host schedule.
+
+`Wait For Paused Milestone` now synchronously stops emulation before the wait,
+lets the waiter arm before its internal start, and synchronously stops again
+after the wait to cover buffered matches. Milestone hooks request pause before
+publishing their logs. Flash observation additionally requires the stopped CPU
+to be at the actual initializer entry before reading LR, and retains both
+atomic and stopped return-value/PC assertions. No firmware guest register is
+changed. The synthetic instruction fixture is separate from the firmware.
+
+The exact final helper passed 15 fresh-machine flash checks on .NET 8.0.31:
+every stopped initializer entry, atomic/stopped return R0 and return PC matched
+the required values. A full unchanged HCI boot passed in 97.65 host seconds.
+Six local regression cases passed: display, ADC, EXTI, tickless timer, isolated
+protected userspace and default existing-filesystem milestones. A corrupted
+metadata boot retained the actual `-14` return at the correct PC; the zero
+assertion rejected it, and the checked 8 KiB region remained byte-identical.
+These additional checks use the freshly source-built pinned runtime with an
+isolated .NET 8.0.31 runtime; they do not claim identical host scheduling.
+
+## Digital display gate
+
+The TLC5955 SPI1 byte sink is replaced by a digital shift/latch model. PA15
+feeds both display LAT and its existing SYSCFG input. The
+[model scope and TI interface reference](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/simulation/renode/README.md)
+distinguish stored grayscale/control values from physical light output and
+GSCLK timing. Deterministic reset values and zero SPI responses are explicitly
+limited fixtures; analog current and SOUT/status behavior remain unmodeled.
+
+The new `brickwright-display-latch` gate uses actual SPI1 byte accesses and
+PA15 edges. Synthetic vectors check rolling shift retention, latch edges,
+serialized/chip word order, control fields, matching maximum-current writes,
+replacement confirmation, rejection without state mutation, and reset. Both
+public firmware profiles select this gate alongside ADC/EXTI checks.
+
+The existing-filesystem HCI gate removes its three display function
+substitutions. It runs the unchanged guest driver and reads the display only
+after emulation has paused at daemon readiness. Assertions require two accepted
+control latches, at least one grayscale latch, no invalid command, complete
+97-byte transfers and the board's expected DC/BC/MC/function values. Legacy
+stub diagnostics and the separate Bluetooth-air helper remain explicitly
+isolated; this change does not qualify those as complete board models.
+
+The actual SPI/PA15 regression passed on the freshly built pinned runtime.
+A separate unchanged `simulation-hci` guest boot passed all retained flash,
+IMU and HCI assertions through daemon readiness in 168.74 host seconds. The
+paused display contained five complete transfers (485 bytes): two control
+latches, three grayscale latches and zero invalid commands. All 48 stored DC
+values and all three BC values were 127; confirmed MC values were zero and
+function bits were `0x19`. Serialized words 4, 7 and 14 were 65,535; the other
+words were zero. These are stored register observations, not measured light
+output. A private additional read-only snapshot captured the values after the
+tracked assertions; it changed neither model behavior nor the guest. The
+exact candidate then passed a five-case regression bundle: display, ADC DMA,
+EXTI routing, actual guest tickless timer and default existing-filesystem
+board milestones. The compiled firmware inputs and IMU/NOR model sources
+are unchanged.
+
+[The final two-profile public matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37109488565)
+passed on `f7c7c8f7154ccabd856479405b2152d22ec832a6`. Both jobs passed the
+controlled milestone negative/positive cases and actual display/ADC/EXTI gates.
+The default job also passed protected userspace, tickless rollover, the
+exhaustive initially erased-flash boot and existing-filesystem mounting. The
+HCI job passed through daemon readiness with the real display driver in 36.88
+host seconds; captured and stopped flash R0 were zero at `0x080095b0`.
+[Source CI for the same candidate](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37109490928)
+also passed. The intermediate matrix was superseded when the durable regression
+was added; it is not cited as completed qualification. The final evidence-record
+update changes documentation only.
 
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
