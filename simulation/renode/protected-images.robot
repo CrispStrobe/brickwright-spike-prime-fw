@@ -112,9 +112,6 @@ Boot Simulation HCI Through Modeled Board Devices
     Start Process    ${HCI_BRIDGE}    --trace    --reject-vendor    127.0.0.1    ${HCI_PORT}    alias=hci    stdout=${bridge_log}    stderr=STDOUT
     ${imu_init}=    Execute Command    sysbus GetSymbolAddress "stm32_lsm6dsl_initialize"
     ${flash_init}=    Execute Command    sysbus GetSymbolAddress "stm32_w25q256_initialize"
-    ${display_init}=    Execute Command    sysbus GetSymbolAddress "tlc5955_initialize"
-    ${display_update}=    Execute Command    sysbus GetSymbolAddress "tlc5955_update_sync"
-    ${display_set}=    Execute Command    sysbus GetSymbolAddress "tlc5955_set_duty"
     ${physical_open}=    Execute Command    sysbus GetSymbolAddress "physical_open"
     ${load_firmware}=    Execute Command    sysbus GetSymbolAddress "physical_load_firmware"
     ${physical_start}=    Execute Command    sysbus GetSymbolAddress "physical_start_host"
@@ -122,20 +119,16 @@ Boot Simulation HCI Through Modeled Board Devices
     ${settings_load}=    Execute Command    sysbus GetSymbolAddress "settings_load"
     ${transport_register}=    Execute Command    sysbus GetSymbolAddress "brickwright_hub_transport_register"
     ${daemon_ready}=    Execute Command    sysbus GetSymbolAddress "daemon_wait_for_stop"
-    # The IMU and flash initializers run against the bus models; only the
-    # TLC5955 display functions are isolated, as in the existing HCI gate.
+    # IMU, flash and display functions run against the bus models.
     Execute Command    cpu AddHook ${imu_init.strip()} "monitor.Parse('log \\"MILESTONE imu bus-model\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu AddHook ${flash_init.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE flash bus-model\\"')"
-    Execute Command    cpu AddHook ${display_init.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${display_update.strip()} "self.PC = self.LR"
-    Execute Command    cpu AddHook ${display_set.strip()} "self.PC = self.LR"
     Execute Command    cpu AddHook ${physical_open.strip()} "monitor.Parse('log \\"MILESTONE physical_open\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu AddHook ${load_firmware.strip()} "monitor.Parse('log \\"MILESTONE physical_load_firmware\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu AddHook ${physical_start.strip()} "monitor.Parse('log \\"MILESTONE physical_start_host\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu AddHook ${bt_enable.strip()} "monitor.Parse('log \\"MILESTONE bt_enable\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu AddHook ${settings_load.strip()} "monitor.Parse('log \\"MILESTONE settings_load\\"'); machine.PauseAndRequestEmulationPause()"
     Execute Command    cpu AddHook ${transport_register.strip()} "monitor.Parse('log \\"MILESTONE transport_register\\"'); machine.PauseAndRequestEmulationPause()"
-    Execute Command    cpu AddHook ${daemon_ready.strip()} "monitor.Parse('log \\"MILESTONE daemon_ready\\"'); machine.PauseAndRequestEmulationPause()"
+    Execute Command    cpu AddHook ${daemon_ready.strip()} "machine.PauseAndRequestEmulationPause(True); monitor.Parse('log \\"MILESTONE daemon_ready\\"')"
     Start Emulation
     Wait For Log Entry    MILESTONE imu bus-model    timeout=15
     Start Emulation
@@ -154,12 +147,21 @@ Boot Simulation HCI Through Modeled Board Devices
     Start Emulation
     Wait For Log Entry    MILESTONE transport_register    timeout=15
     Start Emulation
-    Wait For Log Entry    MILESTONE daemon_ready    timeout=15
+    Wait For Log Entry    MILESTONE daemon_ready    timeout=15    pauseEmulation=${True}
+    Execute Command    include @${CURDIR}/../../tools/renode_check_tlc5955.py
+    ${display_proof}=    Execute Command    check_tlc5955_guest
+    Should Contain    ${display_proof}    TLC5955 guest passed
     ${trace}=    Get File    ${bridge_log}
     Should Contain    ${trace}    command=0x0c03
     Should Not Match Regexp    ${trace}    command=0xf[c-f]
 
 *** Test Cases ***
+SPI display latches data through the selected GPIO pin
+    [Tags]    brickwright-display-latch
+    Execute Command    include @${CURDIR}/../../tools/renode_check_tlc5955.py
+    ${proof}=    Execute Command    check_tlc5955
+    Should Contain    ${proof}    TLC5955 passed
+
 Timer-triggered ADC updates the circular DMA buffer
     [Tags]    brickwright-adc-dma
     Execute Command    include @${CURDIR}/../../tools/renode_check_adc_dma.py

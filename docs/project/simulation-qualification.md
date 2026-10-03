@@ -41,8 +41,9 @@ passed both clean protected ARM builds and source/configuration/linker, licence,
 TI-exclusion and resource checks. Actual guest tests passed ADC/EXTI behavior,
 tickless rollover, protected userspace, the exhaustive erased-flash first boot,
 existing-filesystem mounting and standard-controller HCI startup through daemon
-readiness. The HCI case retains explicitly documented display-function hooks;
-it is not complete board modeling. Existing-filesystem tests do not replace
+readiness. That matrix used explicitly documented display-function hooks;
+the later display qualification below removes them from this HCI gate.
+Neither result establishes complete board modeling. Existing-filesystem tests do not replace
 erased-media first boot. Actual LittleFS crash/restart qualification separately
 passed [426 interrupted-write cases](upstream-storage-hardening.md).
 [Source and documentation CI on the merge](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37103489088)
@@ -106,6 +107,29 @@ passed on candidate `71e061b66f30adc1ee4be92917c843674bc19a17`, including the
 exhaustive erased-flash boot and standard-controller HCI startup. The subsequent
 record update changes documentation only. These bounded results do not establish
 universal firmware reliability or physical-hardware approval.
+
+## Digital display gate
+
+The TLC5955 SPI1 byte sink is replaced by a digital shift/latch model. PA15
+feeds both display LAT and its existing SYSCFG input. The
+[model scope and TI interface reference](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/simulation/renode/README.md)
+distinguish stored grayscale/control values from physical light output and
+GSCLK timing. Deterministic reset values and zero SPI responses are explicitly
+limited fixtures; analog current and SOUT/status behavior remain unmodeled.
+
+The new `brickwright-display-latch` gate uses actual SPI1 byte accesses and
+PA15 edges. Synthetic vectors check rolling shift retention, latch edges,
+serialized/chip word order, control fields, matching maximum-current writes,
+replacement confirmation, rejection without state mutation, and reset. Both
+public firmware profiles select this gate alongside ADC/EXTI checks.
+
+The existing-filesystem HCI gate removes its three display function
+substitutions. It runs the unchanged guest driver and reads the display only
+after emulation has paused at daemon readiness. Assertions require two accepted
+control latches, at least one grayscale latch, no invalid command, complete
+97-byte transfers and the board's expected DC/BC/MC/function values. Legacy
+stub diagnostics and the separate Bluetooth-air helper remain explicitly
+isolated; this change does not qualify those as complete board models.
 
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
