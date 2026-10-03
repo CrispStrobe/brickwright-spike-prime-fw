@@ -136,11 +136,13 @@ controller boundary without making the bridge an implementation of TI
 firmware.
 
 Set `BRICKWRIGHT_RENODE_FIRMWARE_TEST=1` to run the protected-image boundary
-test after the standalone socket test. With the custom Renode fork it crosses
-`physical_open`, streams the opaque service pack through the external lawful
-responder, and reaches `physical_start_host`. The fork models RX/TX request
-routing, request persistence across stream setup, circular NDTR reload, and
-USART IDLE behavior. The gate now continues through `bt_enable()`,
+test after the standalone socket test. Build the explicit TI-free
+`simulation-hci` profile and use the source-built custom Renode fork. The test
+crosses `physical_open`, `physical_load_firmware` (a no-op in this profile),
+and `physical_start_host`; it sends standard HCI commands to a controller
+configured with `--reject-vendor` and streams no TI service pack. The fork
+models RX/TX request routing, request persistence across stream setup, circular
+NDTR reload, and USART IDLE behavior. The gate continues through `bt_enable()`,
 `settings_load()`, hub-transport registration, and the daemon's ready-to-wait
 boundary. A linker regression check ensures that the Zephyr net-buffer pool
 table remains inside NuttX's protected initialized-data range.
@@ -156,9 +158,30 @@ tools/test_renode_protected_images.sh
 tools/test_renode_virtual_hci_bridge.sh
 ```
 
-To exercise the custom fork, set `RENODE_DIR` for the test commands, for
-example `RENODE_DIR=/path/to/renode-spike-prime`. The fork source and model
-tests live in the public repositories `CrispStrobe/renode-spike-prime` and
+For the custom qualification gates, build the pinned fork from source and
+export both paths reported by its installer:
+
+```sh
+tools/install_renode_fork.sh
+export RENODE_DIR="$(tools/install_renode_fork.sh --print-runtime)"
+export RENODE_TEST_VENV="$(tools/install_renode_fork.sh --print-venv)"
+# After staging the corresponding clean protected pairs and generating
+# .local/firmware-images/existing-filesystem with tools/make_littlefs_fixture.py:
+tools/test_renode_protected_images.sh \
+  --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
+  --include brickwright-existing-filesystem-board
+BRICKWRIGHT_RENODE_FIRMWARE_TEST=1 \
+BRICKWRIGHT_RENODE_TAG=brickwright-simulation-hci-existing-filesystem \
+  tools/test_renode_virtual_hci_bridge.sh
+```
+
+The board command uses the default `simulation` pair staged as `brickwright`;
+the HCI command uses the separately built `simulation-hci` pair staged as
+`brickwright-simulation`. The existing-filesystem tags explicitly load the
+synthetic fixture and do not replace the erased-media first-boot gate.
+
+The fork source and model tests live in the public repositories
+`CrispStrobe/renode-spike-prime` and
 `CrispStrobe/renode-infrastructure-spike-prime`. The HCI script selects
 `spike-prime-custom-dma.repl`; the default `spike-prime.repl` deliberately
 remains loadable by pinned stock Renode for the bounded public-model gates.
