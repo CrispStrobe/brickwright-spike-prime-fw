@@ -108,6 +108,27 @@ exhaustive erased-flash boot and standard-controller HCI startup. The subsequent
 record update changes documentation only. These bounded results do not establish
 universal firmware reliability or physical-hardware approval.
 
+A subsequent [display candidate matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37108128568)
+passed its default job and actual SPI/PA15 tests, but reproduced the observation
+failure in HCI: atomic R0 was zero at `0x080095b0`, while the later read saw
+R0=`0xafc8` at `0x080127de`. The earlier passing matrix and local repetitions
+did not establish that the first correction eliminated the race.
+
+Review of Renode's `LogTester.WaitForEntry` identified a remaining restart
+window. An explicit `Start Emulation` before the waiter arms its predicate
+allows the hook to stop execution first. If the initial log flush misses a
+still-delayed message, the waiter can see emulation stopped and start it again.
+Its buffered-message fast path also returns without awaiting stop. This is a
+source-supported explanation of the public mismatch; the log alone does not
+prove that exact scheduling interleaving.
+
+`Wait For Paused Milestone` now synchronously stops emulation before the wait,
+lets the waiter arm before its internal start, and synchronously stops again
+after the wait to cover buffered matches. Milestone hooks request pause before
+publishing their logs. Flash observation additionally requires the stopped CPU
+to be at the actual initializer entry before reading LR, and retains both
+atomic and stopped return-value/PC assertions. No guest register is changed.
+
 ## Digital display gate
 
 The TLC5955 SPI1 byte sink is replaced by a digital shift/latch model. PA15
@@ -130,6 +151,21 @@ control latches, at least one grayscale latch, no invalid command, complete
 97-byte transfers and the board's expected DC/BC/MC/function values. Legacy
 stub diagnostics and the separate Bluetooth-air helper remain explicitly
 isolated; this change does not qualify those as complete board models.
+
+The actual SPI/PA15 regression passed on the freshly built pinned runtime.
+A separate unchanged `simulation-hci` guest boot passed all retained flash,
+IMU and HCI assertions through daemon readiness in 168.74 host seconds. The
+paused display contained five complete transfers (485 bytes): two control
+latches, three grayscale latches and zero invalid commands. All 48 stored DC
+values and all three BC values were 127; confirmed MC values were zero and
+function bits were `0x19`. Serialized words 4, 7 and 14 were 65,535; the other
+words were zero. These are stored register observations, not measured light
+output. A private additional read-only snapshot captured the values after the
+tracked assertions; it changed neither model behavior nor the guest. The
+exact candidate then passed a five-case regression bundle: display, ADC DMA,
+EXTI routing, actual guest tickless timer and default existing-filesystem
+board milestones. The compiled firmware inputs and IMU/NOR model sources
+are unchanged.
 
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
