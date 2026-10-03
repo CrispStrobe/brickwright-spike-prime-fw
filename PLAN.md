@@ -343,16 +343,11 @@ machine-readable and cannot be confused with physical-hardware evidence.
 | 2026-09-07 | C8.6 (stock/custom platform split) | Complete | Remote baseline run `34089427905` passed the protected build, linker/resource checks, and host harness but correctly failed when stock Renode parsed custom-only UART `DMATransmit` wiring. The shared stock-compatible platform now retains memory and board-device models, while `spike-prime-custom-dma.repl` layers the fork-only request lines for the HCI gate. Locally, all five protected stock-Renode cases pass or intentionally skip HCI, and the custom-fork real-payload gate reaches daemon-ready. |
 | 2026-10-03 | Targeted NuttX and simulation integration | Complete within recorded scope | Firmware merge `37c6e47583336c661ce9b6a0e2984158586de00c` retains the reviewed upstream backports, non-destructive storage handling, separate default/HCI profiles, recursive-mutex configuration, host synchronization fixes and exact input/notice gates. Runtime merge `e0166acb028b162e972458f31d76cdb7dcdc518d` passed 225 model tests and guest/debugger/persistence/throughput gates. Both firmware jobs in run `37102784250` passed, including erased first boot and standard-controller HCI startup. A later diagnostic run identified a flash-return observation race: the initializer returned zero, but the test read registers before pause completed. Its correction and bounded reliability checks are separate from this passing integration qualification. |
 
+| 2026-10-03 | Flash-return observation race | Complete within recorded scope | Public diagnostics captured initializer R0=0 at the return PC, followed by an advanced live register read. The corrected hook requests pause before publishing its milestone and waits for stopped emulation; atomic and paused R0/PC must agree. Ten fresh-machine HCI boots passed on a fully source-built final runtime, a real corrupted-metadata error was rejected with the checked 8 KiB preserved, and both profiles in run `37104773113` passed. This establishes the corrected observation behavior, not universal firmware reliability or physical qualification. |
+
 ## Current next action
 
-Qualify the diagnosed flash-return observation-race correction using the fully
-source-built final runtime, fresh machines and bounded repeated HCI boots.
-Require agreement between the value captured at the function return and the
-paused CPU state. Preserve both successful and failed evidence. The captured public failure
-establishes the observation mismatch; passing repeats bound the corrected test
-behavior and do not prove universal reliability.
-
-Then continue C8.4/C8.5 by replacing the remaining display-function hooks with
+Continue C8.4/C8.5 by replacing the remaining display-function hooks with
 bus-level models and extending daemon readiness to actual peer link events.
 Full IMU/sensor records, encoder-completed degree moves, stall/capability
 policy and cold-restart bond reuse need separate evidence. Physical C5/C6.4

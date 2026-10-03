@@ -86,10 +86,26 @@ scan or formatting path. Precise pause is requested where supported; the
 ordering and stop wait are essential, rather than an assumption that precision
 alone is sufficient.
 
-A fully source-built final runtime, ten consecutive fresh-machine HCI boots,
-a corrupted-metadata rejection check and a new complete two-profile public
-matrix are being qualified before merging this correction. These results must
-remain distinct from universal reliability or physical-hardware approval.
+The corrected helper passed ten consecutive fresh-machine HCI boots on a
+fully rebuilt final runtime: every captured and paused R0 was zero, and both
+PCs equalled `0x080095b0`. The build used the pinned source and support libraries
+without assembly overlays or reused runtime binaries. The VPS .NET runtime was
+8.0.28; public CI used 8.0.31, so identical operating/JIT environments are not
+claimed.
+
+A separate actual-guest negative check loaded the validated synthetic fixture,
+then corrupted the first 256-byte page of each metadata superblock using public
+SPI operations. The unchanged guest returned `0xfffffff2` (`-14`, EFAULT) at the
+observed return site. The helper correctly rejected this nonzero return. The
+checked 8 KiB region was byte-identical after guest execution to its corrupted
+pre-boot state; this readback is not a claim to have compared every byte of the
+32 MiB chip. No fixture receipt was forged and no guest register was changed.
+
+[The corrected two-profile public matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37104773113)
+passed on candidate `71e061b66f30adc1ee4be92917c843674bc19a17`, including the
+exhaustive erased-flash boot and standard-controller HCI startup. The subsequent
+record update changes documentation only. These bounded results do not establish
+universal firmware reliability or physical-hardware approval.
 
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
