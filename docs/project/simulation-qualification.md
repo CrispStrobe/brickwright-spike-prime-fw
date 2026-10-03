@@ -184,6 +184,18 @@ EXTI routing, actual guest tickless timer and default existing-filesystem
 board milestones. The compiled firmware inputs and IMU/NOR model sources
 are unchanged.
 
+[The final two-profile public matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37109488565)
+passed on `f7c7c8f7154ccabd856479405b2152d22ec832a6`. Both jobs passed the
+controlled milestone negative/positive cases and actual display/ADC/EXTI gates.
+The default job also passed protected userspace, tickless rollover, the
+exhaustive initially erased-flash boot and existing-filesystem mounting. The
+HCI job passed through daemon readiness with the real display driver in 36.88
+host seconds; captured and stopped flash R0 were zero at `0x080095b0`.
+[Source CI for the same candidate](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37109490928)
+also passed. The intermediate matrix was superseded when the durable regression
+was added; it is not cited as completed qualification. The final evidence-record
+update changes documentation only.
+
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
 exercise electrical power loss or the complete NuttX VFS stack. See
