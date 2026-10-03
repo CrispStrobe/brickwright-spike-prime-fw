@@ -27,6 +27,7 @@ test -f "$mbedtls_source/include/psa/crypto.h"
 flags=(
   -std=gnu11 -mcpu=cortex-m4 -mthumb -Wall -Wextra -Wno-unused-parameter
   -D__NuttX__ -DCONFIG_ZTEST=1
+  -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD
   -DMBEDTLS_CONFIG_FILE='"mbedtls/mbedtls_config.h"'
   -include "$root/nuttx/include/nuttx/config.h"
   -include zephyr/autoconf.h

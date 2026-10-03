@@ -145,3 +145,12 @@ that remove the required synchronization. These checks can also run directly:
 python3 tools/test_virtual_hci_wakeups.py
 python3 tools/test_slist_concurrency.py
 ```
+
+The Mbed TLS build also enables `MBEDTLS_THREADING_C` and
+`MBEDTLS_THREADING_PTHREAD` in both the host helper and the NuttX configuration.
+PSA key slots are shared by these preemptive callers; the unthreaded library
+could concurrently import or destroy the same slot, producing invalid-handle
+or corruption errors during pairing. The library's own pthread locks protect
+its shared key management. The upstream crypto implementation is unchanged.
+The host helper additionally runs eight callers through 320000 actual
+`bt_encrypt_le`/`bt_encrypt_be` operations and checks two AES known vectors.

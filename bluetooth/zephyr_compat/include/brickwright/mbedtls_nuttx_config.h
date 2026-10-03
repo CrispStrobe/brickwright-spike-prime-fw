@@ -5,6 +5,10 @@
 /* Minimal PSA surface used by the Zephyr Bluetooth host: AES-128 ECB/CMAC,
  * P-256 ECDH and random bytes.  Do not pull the general TLS/X.509 profile
  * into the hub image. */
+/* PSA key slots are shared by preemptive HCI/work pthreads. Enable Mbed TLS's
+ * own locking for their complete lifetime, including import and destruction. */
+#define MBEDTLS_THREADING_C
+#define MBEDTLS_THREADING_PTHREAD
 #define MBEDTLS_PSA_CRYPTO_C
 #define MBEDTLS_PSA_CRYPTO_CONFIG
 #define MBEDTLS_PSA_CRYPTO_CONFIG_FILE "brickwright/psa_crypto_nuttx_config.h"
