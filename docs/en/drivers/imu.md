@@ -27,7 +27,7 @@ The matrix is calculated after integrating the current sample.
 Fusion now owns its calibration copy. `imu_fusion_get_settings()` exports
 that copy, including learned gyro bias, for `imu cal save`. Original MIT
 Pybricks attribution remains in the adapted source and
-[reuse inventory](../../../policy/pybricks-reuse.json); this is a modification
+[reuse inventory](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/pybricks-reuse.json); this is a modification
 of credited code, with no clean-room claim.
 
 Run `tools/check_imu_snapshot.sh` and `tools/check_imu_source.sh` for the
