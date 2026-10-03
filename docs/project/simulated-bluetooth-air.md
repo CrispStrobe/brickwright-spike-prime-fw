@@ -2,7 +2,7 @@
 
 The emulated SPIKE Prime hub joins the project's one simulated Bluetooth air,
 **bw-air/1**. The air, its contract and its tools live in one place:
-[renode-spike-prime `tools/bw-air/`](https://github.com/CrispStrobe/renode-spike-prime/tree/feat/nrf-softdevice-hle/tools/bw-air)
+[renode-spike-prime `tools/bw-air/`](https://github.com/CrispStrobe/renode-spike-prime/tree/e0166acb028b162e972458f31d76cdb7dcdc518d/tools/bw-air)
 (`AIR.md`, `airhub.py`, `bumble_air.py`, `hci_node.py`,
 `scratch_link_node.py`). This repository does not carry its own air. The same
 air carries emulated micro:bit / Calliope boards (a clean-room SoftDevice API
@@ -31,6 +31,7 @@ simulation image, and the hub's HCI node, then drives peers on the air:
 python3 simulation/bluetooth-air/test_spike_air.py \
   --renode /path/to/renode-spike-prime \
   --images .local/firmware-images/brickwright-simulation \
+  --existing-filesystem .local/firmware-images/existing-filesystem \
   [--microbit] [--scratch-link 20131] [--classic --skip-le]
 ```
 
@@ -69,11 +70,11 @@ profile now leaves Bluetooth autostart disabled; build the explicit
 | Classic encryption | simulated: the air reports AES-CCM on to both hosts; no cipher runs |
 | RFCOMM/SPP: open the channel, `PING` → `OK PONG` | works |
 
-Open: the SPP record advertises RFCOMM channel 5, while the legacy SPIKE
-Classic extension's Linux and macOS Scratch Link backends open channel 1
-directly (`classic-protocol.md`). The SPP line protocol is btsensor's; the
-legacy JSON RPC adapter (`btsensor_classic.c`) is reached only for lines it
-recognises.
+The earlier record used RFCOMM channel 5. The current qualified simulation
+pair reports channel 1 through SDP, matching the legacy extension's direct
+channel selection. The SPP line protocol is btsensor's; the legacy JSON RPC
+adapter is reached only for lines it recognises. The peer PING/PONG test does
+not by itself qualify every legacy extension operation.
 
 ## Thread synchronization requirements
 
@@ -90,3 +91,47 @@ enables Mbed TLS pthread locking for concurrent Bluetooth workers. Focused
 host regressions exercise queue contention, list interleaving and concurrent
 known-vector encryption. Actual protected-firmware HCI startup remains a
 separate required qualification gate.
+
+
+## Current peer qualification — 2026-10-03
+
+The helper now runs actual display functions through the SPI1/PA15 model;
+no display function returns are substituted. It verifies protected-image
+manifest hashes and vectors, requires HCI Reset, zero vendor/unsupported
+commands, and daemon readiness before reporting success. Direct LE tests
+validate the complete 17-byte InfoResponse, disconnect, then require a second
+central to rediscover and complete the same request. Scratch Link uses bounded
+per-frame decoding for fragmented/coalesced notifications and checks the same
+response fields. Classic tests discover SPP through SDP, authenticate, receive
+the controller's modeled encryption status, and exchange `PING` / `OK PONG`.
+No cipher or RF behavior is qualified by that controller status.
+
+The selected public runtime is `e0166acb028b162e972458f31d76cdb7dcdc518d`.
+The host environment pins Bumble 0.0.235, websockets 15.0.1 and their dependencies
+in `tools/bluetooth-air-requirements.txt`. `policy/bluetooth-air-host-inputs.json`
+records the air source, package and installed-notice hashes; the peer wrapper
+checks them before execution. These are host-only dependencies; see
+[the third-party notice](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/THIRD_PARTY.md#host-only-simulated-bluetooth-air).
+
+Use Python 3.11 or later. After building/staging `simulation-hci`, installing
+the pinned source-built runtime and generating the explicit filesystem fixture,
+`tools/test_bluetooth_air.sh` runs three separate fresh machines: direct LE
+with reconnect, Scratch Link, and Classic. The HCI CI profile selects this gate.
+Results, traces and package versions remain under ignored `.local` storage;
+CI publishes no firmware or test artifacts.
+
+`--existing-filesystem` is an explicit fixture choice, validated and programmed
+through the existing NOR SPI loader before guest execution. Omitting it retains
+initially erased flash; the wrapper's peer tests do not qualify first-format
+behavior, which remains a separate exhaustive boot gate. Invalid image/fixture
+hashes fail before subprocesses start. The harness bounds waits, records
+failures, disconnects peers and reaps its owned process groups, including
+background descendants of an exited shell. Synthetic framing and actual-helper
+lifecycle regressions cover fragmentation, coalescing, malformed responses,
+bounds, cancellation, tool selection and process ownership.
+
+The first local runs passed direct LE/reconnect, Scratch Link and Classic with
+zero vendor/unsupported commands and no cleanup errors. The later exact wrapper
+and full public matrix require their own receipts. Browser/legacy-operation,
+micro:bit coexistence, persisted bonds, RF/security and physical hub behavior
+remain separate from these three peer paths.
