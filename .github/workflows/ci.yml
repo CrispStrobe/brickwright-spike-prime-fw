@@ -33,6 +33,7 @@ jobs:
           python3 tools/test_nuttx_backports.py
           python3 tools/test_make_romfs.py
           python3 tools/test_simulation_startup.py
+          python3 tools/test_recursive_mutex_config.py --config-only
           python3 tools/check_source_policy.py
           python3 tools/check_reuse_licenses.py
           python3 tools/test_reuse_licenses.py

@@ -35,6 +35,7 @@ jobs:
           python3 tools/test_upstream_hardening.py --nuttx nuttx
           python3 tools/test_upstream_arm_hardening.py --nuttx nuttx
           python3 tools/test_usb_wakeup.py --nuttx nuttx
+          python3 tools/test_recursive_mutex_config.py --nuttx nuttx
           python3 tools/test_nuttx_romfs.py --nuttx nuttx
           python3 tools/check_nuttx_apps_hardening.py --apps nuttx-apps --baseline 55f0bc216565ccab8dee600a88f4485c7693bf8b
 
