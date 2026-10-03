@@ -178,6 +178,18 @@ table remains inside NuttX's protected initialized-data range.
 
 ## Local run
 
+The IMU model defaults to manual paired-sample injection. Its optional
+`StartFixtureFeed(gx, gy, gz, ax, ay, az, ticks)` schedules a bounded synthetic
+stream at the matching configured accel/gyro ODR in guest time. It skips unread
+pairs rather than overwriting them, and stops on reset, powerdown or ODR change.
+`GetFixtureFeedState()` copies active/rate/attempted/accepted/skipped/remaining
+counters; `StopFixtureFeed()` preserves any unread pair. This fixture does not
+model physical motion, FIFO overrun or autonomous silicon sampling. The
+separate Bluetooth-air `--classic --skip-le --imu-readiness` gate checks the
+actual driver and producer using this stream; ordinary peer budgets are
+unchanged, and the readiness probe has a 900-second host limit because guest
+time can advance much more slowly than host time.
+
 ```sh
 tools/install_renode.sh
 # Stage lawfully obtained images under .local/firmware-images/.

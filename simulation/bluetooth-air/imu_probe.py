@@ -23,19 +23,24 @@ MAX_BUFFER = 4096
 RENODE_IMU_HELPER = '''# SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Brickwright contributors
 import json
-def mc_imu_fixture(action, tag, gx=0, gy=0, gz=0, ax=0, ay=0, az=0):
+def mc_imu_fixture(action, tag, gx=0, gy=0, gz=0, ax=0, ay=0, az=0, ticks=0):
     imu = monitor.Machine['sysbus.i2c2.imu']
-    if action not in ('state', 'inject'):
+    if action not in ('state', 'inject', 'feed', 'feed_stop'):
         raise ValueError('Unsupported IMU fixture action')
     accepted = None
     if action == 'inject':
         accepted = bool(imu.InjectSample(gx, gy, gz, ax, ay, az))
+    if action == 'feed':
+        accepted = bool(imu.StartFixtureFeed(gx, gy, gz, ax, ay, az, ticks))
+    if action == 'feed_stop':
+        imu.StopFixtureFeed()
     state = [int(value) for value in imu.GetFixtureState()]
     controls = state[:2]
     status = int(state[2])
     virtual_us = int(monitor.Machine.ElapsedVirtualTime.TimeElapsed.TotalMicroseconds)
     receipt = json.dumps({'accepted': accepted, 'controls': controls,
-                          'status': status, 'virtual_us': virtual_us}, sort_keys=True)
+                          'status': status, 'virtual_us': virtual_us,
+                          'feed': [int(value) for value in imu.GetFixtureFeedState()]}, sort_keys=True)
     monitor.Parse('log "IMU_FIXTURE ' + tag + ' ' + receipt.replace('"', '\\\\"') + '"')
 '''
 
@@ -460,6 +465,169 @@ async def fusion_round_trip(dlc, received, renode_proc, results: dict, *,
         record["status"] = "FAIL: " + type(error).__name__ + ": " + str(error)
         raise
     finally:
+        if active:
+            try:
+                await ok("FUSION STOP")
+            except BaseException:
+                pass
+
+
+async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
+                                renode_log: Path, timeout: float = 900) -> None:
+    """Configured-rate synthetic stationarity; no firmware/clock substitution.
+
+    The first window qualifies readiness and live bias correction. This does
+    not assert durable calibration, physical motion or autonomous silicon ODR.
+    """
+    parser = MixedFrames()
+    pending = deque()
+    fixture = (20, -30, -40, 0, 0, -16384)
+    record = results.setdefault("imu_stationary", {"snapshots": [], "commands": [],
+                                                  "model_receipts": []})
+
+    async def request(command):
+        dlc.write((command + "\n").encode("ascii"))
+        async with asyncio.timeout(20):
+            for _ in range(256):
+                while not pending:
+                    pending.extend(parser.feed(await received.get()))
+                kind, value = pending.popleft()
+                if kind == "bundle":
+                    if value["samples"]:
+                        raise ValueError("Raw samples arrived during stationary probe")
+                    continue
+                record["commands"].append({"request": command, "reply": value})
+                return value
+            raise ValueError("Too many events before stationary reply")
+
+    async def ok(command):
+        if await request(command) != "OK":
+            raise ValueError("Guest rejected stationary control: " + command)
+
+    async def running(wanted):
+        async with asyncio.timeout(20):
+            while True:
+                value = await request("FUSION STATUS")
+                if value == ("FUSION STATUS 0 1 0" if wanted else "FUSION STATUS 0 0 0"):
+                    return
+                if value not in ("FUSION STATUS 1 0 0", "FUSION STATUS 0 1 1", "FUSION STATUS 1 0 1"):
+                    raise ValueError("Invalid stationary lifecycle status")
+                await asyncio.sleep(.05)
+
+    async def model(action, values=()):
+        if renode_proc.stdin is None or renode_proc.returncode is not None:
+            raise ValueError("Renode monitor input unavailable")
+        tag = uuid.uuid4().hex
+        marker = ("IMU_FIXTURE " + tag + " ").encode()
+        offset = renode_log.stat().st_size
+        command = 'imu_fixture "' + action + '" "' + tag + '"'
+        if values:
+            command += " " + " ".join(str(v) for v in values)
+        renode_proc.stdin.write((command + "\n").encode())
+        await renode_proc.stdin.drain()
+        async with asyncio.timeout(20):
+            while True:
+                if renode_proc.returncode is not None:
+                    raise ValueError("Renode exited during stationary fixture")
+                with renode_log.open("rb") as log:
+                    log.seek(offset)
+                    raw = log.read(65536)
+                if marker in raw and b"\n" in raw.split(marker, 1)[1]:
+                    value, _ = json.JSONDecoder().raw_decode(raw.split(marker, 1)[1].decode())
+                    record["model_receipts"].append({"action": action, **value})
+                    return value
+                if len(raw) == 65536:
+                    raise ValueError("Stationary receipt exceeds log bound")
+                await asyncio.sleep(.05)
+
+    async def snapshot(sequence):
+        async with asyncio.timeout(30):
+            while True:
+                line = await request("FUSION GET")
+                if line == "ERR errno=11":
+                    await asyncio.sleep(.05)
+                    continue
+                snap = parse_fusion(line)
+                if snap["sequence"] < sequence:
+                    await asyncio.sleep(.05)
+                    continue
+                if snap["sequence"] != sequence:
+                    raise ValueError("Stationary producer lost/added samples")
+                record["snapshots"].append(snap)
+                return snap
+
+    async def feed(ticks):
+        initial = await model("feed", (*fixture, ticks))
+        if initial["accepted"] is not True:
+            raise ValueError("Stationary fixture feed was not admitted")
+        while True:
+            receipt = await model("state")
+            active, rate, attempts, accepted, skipped, remaining = receipt["feed"]
+            if rate != 104 or skipped or accepted != attempts or attempts + remaining != ticks:
+                raise ValueError("Stationary fixture cadence/admission differs")
+            if not active:
+                if attempts != ticks or remaining:
+                    raise ValueError("Stationary fixture feed stopped early")
+                if receipt["virtual_us"] - initial["virtual_us"] < ticks * 1000000 / 104 - 1:
+                    raise ValueError("Stationary fixture ran faster than configured ODR")
+                return receipt
+            await asyncio.sleep(2)
+
+    active = False
+    try:
+        async with asyncio.timeout(timeout):
+            await running(False)
+            await ok("SET ODR 104")
+            await ok("SET ACCEL_FSR 2")
+            await ok("SET GYRO_FSR 1000")
+            active = True
+            await ok("FUSION START")
+            await running(True)
+            if (await model("inject", fixture))["accepted"] is not True:
+                raise ValueError("Stationary producer did not activate sensor")
+            first = await snapshot(1)
+            validate_fusion(first, fixture)
+            await feed(100)
+            before = await snapshot(101)
+            validate_fusion(before, fixture)
+            await feed(160)
+            ready = await snapshot(261)
+            if not ready["ready"] or ready["up_side"] != 2:
+                raise ValueError("Stationary window did not establish upright readiness")
+            if any(abs(v) > .001 for v in ready["gyro_dps"]):
+                raise ValueError("Stationary window did not remove fixed gyro bias")
+            if any(abs(v - expected) > .1 for v, expected in zip(ready["accel_mms2"], (0, 0, 9806.65))):
+                raise ValueError("Stationary calibration changed acceleration units")
+            if not first["timestamp_us"] < before["timestamp_us"] < ready["timestamp_us"]:
+                raise ValueError("Stationary source time did not advance")
+            if await request("FUSION GET") != ready["line"]:
+                raise ValueError("Stationary snapshot read changed publication")
+            await ok("FUSION STOP")
+            await running(False)
+            disabled = await model("state")
+            if disabled["feed"][0] or any(v >> 4 for v in disabled["controls"]):
+                raise ValueError("Stationary stop retained feeder/sensor activation")
+            await ok("FUSION START")
+            await running(True)
+            if (await model("inject", fixture))["accepted"] is not True:
+                raise ValueError("Stationary reopen did not activate sensor")
+            reopened = await snapshot(1)
+            validate_fusion(reopened, fixture)
+            if reopened["timestamp_us"] <= ready["timestamp_us"]:
+                raise ValueError("Stationary reopen retained an old source timestamp")
+            await ok("FUSION STOP")
+            await running(False)
+            active = False
+            await ok("SET ODR 833")
+            record["status"] = "PASS"
+    except BaseException as error:
+        record["status"] = "FAIL: " + type(error).__name__ + ": " + str(error)
+        raise
+    finally:
+        try:
+            await model("feed_stop")
+        except BaseException:
+            pass
         if active:
             try:
                 await ok("FUSION STOP")
