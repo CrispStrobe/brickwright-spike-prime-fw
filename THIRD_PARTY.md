@@ -45,3 +45,26 @@ Their private archival preservation does not relicense those revisions.
 See `policy/source-origin-review.json` and `policy/public-history-review.json`. Hardware images containing the fetched
 TI service pack remain subject to TI restrictions; no exclusively permissive
 licence claim is made for those images.
+
+
+## Host-only simulated Bluetooth air
+
+The peer tests use the existing Renode fork's
+[`tools/bw-air` at the qualified runtime pin](https://github.com/CrispStrobe/renode-spike-prime/tree/e0166acb028b162e972458f31d76cdb7dcdc518d/tools/bw-air),
+retaining its MIT/Apache-2.0 grants and author notices. This repository does
+not vendor a second copy. `tools/bluetooth-air-requirements.txt` fixes the 17
+Python dependencies used by the host test environment; these packages enter
+neither ARM firmware nor WASM. Their upstream notices remain in the installed
+packages. The versions, declared grants and installed notice hashes are in
+`policy/bluetooth-air-host-inputs.json` and are checked before the peer gate.
+
+Bumble and importlib-resources use Apache-2.0; websockets, click, pycparser,
+prompt-toolkit, pyusb, pyserial and pyserial-asyncio use BSD-3-Clause;
+platformdirs, pyee and wcwidth use MIT; cffi declares MIT-0; typing-extensions
+uses PSF-2.0. Cryptography offers Apache-2.0 or BSD-3-Clause. The libusb-package
+wrapper uses Apache-2.0 and bundles LGPL libusb; libusb1 uses
+LGPL-2.1-or-later. Its accompanying GPL `COPYING` text is part of the LGPL
+licence distribution. Pyserial 3.5's wheel omits a standalone licence file;
+its source headers and matching source-distribution licence declare BSD-3-Clause.
+This host-only record does not claim an exhaustive audit of every bundled
+binary dependency. Python and pip are supplied by the host runner separately.

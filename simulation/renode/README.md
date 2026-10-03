@@ -90,9 +90,10 @@ This subset returns zero on SPI reads and uses deterministic zero reset values
 for otherwise unspecified control state. It does not model SOUT/status data,
 analog current, active dot-correction timing or GSCLK/PWM waveforms. TIM12 keeps
 its existing platform frequency; display-register qualification does not imply
-correct grayscale-clock frequency or physical light output. The legacy stubbed
-diagnostics and `simulation/bluetooth-air/test_spike_air.py` retain their explicitly
-isolated display functions and are separate from this HCI qualification gate.
+correct grayscale-clock frequency or physical light output. The legacy stubbed diagnostics retain explicitly isolated display functions.
+The separate Bluetooth-air helper now executes the real display functions;
+its peer paths have their own
+[qualification record](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/docs/project/simulated-bluetooth-air.md).
 
 GPIO interrupt routing uses Renode's existing MIT `STM32_SYSCFG` model at
 `0x40013800`. Each GPIO port feeds its own mux input, and the firmware's

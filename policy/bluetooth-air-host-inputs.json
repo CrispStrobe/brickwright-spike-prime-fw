@@ -1,0 +1,221 @@
+{
+  "air_files_sha256": {
+    "tools/bw-air/AIR.md": "0e14d00078a396e390ef27a52a64229db5833d754b62d88b31aae02dc333f70b",
+    "tools/bw-air/airhub.py": "4137a19eb96460c707fa2aae546aaa15d63468d9c77976ae6f8a0e501ad65226",
+    "tools/bw-air/bumble_air.py": "6ae0a07d525102b27ba694d691e27d2f734f406f1f0331f749f2e87213124edf",
+    "tools/bw-air/hci_node.py": "3c2133baa50384c8b630cf6c1e027dd3066004953a3cc4cdf475fe402687ba74",
+    "tools/bw-air/scratch_link_node.py": "38bc5fa04dd648c9157c9e4584cf11193e7bd188215f4aaa7e745c18f5840280",
+    "tools/bw-air/test_air.py": "f4af0737dc10146537ca9c0f51ec61ebb98d4d1376f4002700e2bcfd0a57eba0"
+  },
+  "air_tree": "a4433f41b44a0e3e6e47bddeda0c770dcd83a959",
+  "limits": [
+    "Package grants and installed notice files were reviewed; this is not an exhaustive audit of every binary dependency.",
+    "libusb-package includes LGPL libusb; libusb1 supplies the LGPL grant alongside GPL COPYING text.",
+    "pyserial 3.5 omits a standalone license in its wheel; its source headers and matching upstream source distribution declare BSD-3-Clause.",
+    "Python and pip are host tools, separately supplied by the runner."
+  ],
+  "packages": [
+    {
+      "declared_grant": "Apache-2.0",
+      "installed_license_files": [
+        {
+          "path": "bumble-0.0.235.dist-info/licenses/LICENSE",
+          "sha256": "16f6988783515881a04bf3b0a01b398058240a6020859f836272060593eec3eb"
+        }
+      ],
+      "name": "bumble",
+      "version": "0.0.235"
+    },
+    {
+      "declared_grant": "MIT-0",
+      "installed_license_files": [
+        {
+          "path": "cffi-2.1.1.dist-info/licenses/LICENSE",
+          "sha256": "5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63"
+        }
+      ],
+      "name": "cffi",
+      "version": "2.1.1"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "click-8.5.0.dist-info/licenses/LICENSE.txt",
+          "sha256": "9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d"
+        }
+      ],
+      "name": "click",
+      "version": "8.5.0"
+    },
+    {
+      "declared_grant": "Apache-2.0 OR BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "cryptography-50.0.2.dist-info/licenses/LICENSE",
+          "sha256": "3e0c7c091a948b82533ba98fd7cbb40432d6f1a9acbf85f5922d2f99a93ae6bb"
+        },
+        {
+          "path": "cryptography-50.0.2.dist-info/licenses/LICENSE.APACHE",
+          "sha256": "aac73b3148f6d1d7111dbca32099f68d26c644c6813ae1e4f05f6579aa2663fe"
+        },
+        {
+          "path": "cryptography-50.0.2.dist-info/licenses/LICENSE.BSD",
+          "sha256": "602c4c7482de6479dd2e9793cda275e5e63d773dacd1eca689232ab7008fb4fb"
+        }
+      ],
+      "name": "cryptography",
+      "version": "50.0.2"
+    },
+    {
+      "declared_grant": "Apache-2.0",
+      "installed_license_files": [
+        {
+          "path": "importlib_resources-7.1.0.dist-info/licenses/LICENSE",
+          "sha256": "e2f7bb0557e7a381499f15baa7c1d776d83d6616599179d71d3109b8e39f7b25"
+        }
+      ],
+      "name": "importlib_resources",
+      "version": "7.1.0"
+    },
+    {
+      "declared_grant": "Apache-2.0 AND LGPL-2.1-or-later",
+      "installed_license_files": [
+        {
+          "path": "libusb_package-1.0.26.4.dist-info/licenses/LICENSE",
+          "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+        }
+      ],
+      "name": "libusb-package",
+      "version": "1.0.26.4"
+    },
+    {
+      "declared_grant": "LGPL-2.1-or-later",
+      "installed_license_files": [
+        {
+          "path": "libusb1-3.4.0.dist-info/licenses/COPYING",
+          "sha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6"
+        },
+        {
+          "path": "libusb1-3.4.0.dist-info/licenses/COPYING.LESSER",
+          "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551"
+        }
+      ],
+      "name": "libusb1",
+      "version": "3.4.0"
+    },
+    {
+      "declared_grant": "MIT",
+      "installed_license_files": [
+        {
+          "path": "platformdirs-4.12.2.dist-info/licenses/LICENSE",
+          "sha256": "29e0fd62e929850e86eb28c3fdccf0cefdf4fa94879011cffb3d0d4bed6d4db6"
+        }
+      ],
+      "name": "platformdirs",
+      "version": "4.12.2"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "prompt_toolkit-3.0.53.dist-info/licenses/AUTHORS.rst",
+          "sha256": "d3dc62c6bc8436658495ab89aea37511e7fa9391d282657239c9cfb80dbd42e5"
+        },
+        {
+          "path": "prompt_toolkit-3.0.53.dist-info/licenses/LICENSE",
+          "sha256": "303574d9bdd85c757d6025017942bf17baeedf2778f62bd7f425d07d880f4c4a"
+        }
+      ],
+      "name": "prompt_toolkit",
+      "version": "3.0.53"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "pycparser-3.0.dist-info/licenses/LICENSE",
+          "sha256": "0c846399369ea76ddd7b5c44fe6d16497415fcf015f5cbb508c24bf98b81c5b1"
+        }
+      ],
+      "name": "pycparser",
+      "version": "3.0"
+    },
+    {
+      "declared_grant": "MIT",
+      "installed_license_files": [
+        {
+          "path": "pyee-14.0.0.dist-info/licenses/LICENSE",
+          "sha256": "1ff556ca206b107f10e1c562ae454d3292e0296c3510eb90eb7f114caee32a66"
+        }
+      ],
+      "name": "pyee",
+      "version": "14.0.0"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [],
+      "name": "pyserial",
+      "version": "3.5"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "pyserial_asyncio-0.6.dist-info/LICENSE.txt",
+          "sha256": "64f3e548f0300d43c5af90b667150a9c57a4307c0f75fe741f76d0419905224a"
+        }
+      ],
+      "name": "pyserial-asyncio",
+      "version": "0.6"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "pyusb-1.3.1.dist-info/LICENSE",
+          "sha256": "03e39fdcee9c18f2f9d0c3500a993ddeac050695eb81070ea41347587c76a7fe"
+        }
+      ],
+      "name": "pyusb",
+      "version": "1.3.1"
+    },
+    {
+      "declared_grant": "PSF-2.0",
+      "installed_license_files": [
+        {
+          "path": "typing_extensions-4.16.0.dist-info/licenses/LICENSE",
+          "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf"
+        }
+      ],
+      "name": "typing_extensions",
+      "version": "4.16.0"
+    },
+    {
+      "declared_grant": "MIT",
+      "installed_license_files": [
+        {
+          "path": "wcwidth-0.9.1.dist-info/licenses/LICENSE",
+          "sha256": "70b98a95a2144eb70af8017fa8c6d95ce247e40867436e8bc649e137fe13d21a"
+        }
+      ],
+      "name": "wcwidth",
+      "version": "0.9.1"
+    },
+    {
+      "declared_grant": "BSD-3-Clause",
+      "installed_license_files": [
+        {
+          "path": "websockets-15.0.1.dist-info/LICENSE",
+          "sha256": "3d6a0c050d8bec52fabad502e45fb25bd02bcadbd70dea34d447b6a0ff4e6da8"
+        }
+      ],
+      "name": "websockets",
+      "version": "15.0.1"
+    }
+  ],
+  "requirements_sha256": "b43bcef93a7d0d202be79357b2352f8171e4a4a93b35e3cc2f911df6ebd3472d",
+  "runtime_commit": "e0166acb028b162e972458f31d76cdb7dcdc518d",
+  "schema": 1,
+  "scope": "Host-only Bluetooth-air test dependencies; no ARM or WASM inclusion"
+}
