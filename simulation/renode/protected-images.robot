@@ -153,6 +153,12 @@ Boot Simulation HCI Through Modeled Board Devices
     Should Not Match Regexp    ${trace}    command=0xf[c-f]
 
 *** Test Cases ***
+Timer-triggered ADC updates the circular DMA buffer
+    [Tags]    brickwright-adc-dma
+    Execute Command    include @${CURDIR}/../../tools/renode_check_adc_dma.py
+    ${proof}=    Execute Command    check_adc_dma
+    Should Contain    ${proof}    ADC DMA passed
+
 GPIO external interrupts honor the selected port
     [Tags]    brickwright-exti-routing
     Execute Command    include @${CURDIR}/../../tools/renode_check_exti_routing.py
