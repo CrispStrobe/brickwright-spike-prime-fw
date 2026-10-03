@@ -27,6 +27,7 @@
 #include "imu_fusion.h"
 #include "imu_calibration.h"
 #include "imu_timestamp.h"
+#include "imu_service.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -34,8 +35,10 @@
 
 #define IMU_CAL_PATH      "/data/imu_cal.bin"
 #define IMU_DAEMON_NAME   "imu_daemon"
-#define IMU_POLL_TIMEOUT  1000
+/* Keep stop responsive when the sensor stops delivering samples. */
+#define IMU_POLL_TIMEOUT  20
 #define IMU_ODR           833
+#define IMU_MAX_AGE_US    UINT64_C(300000)
 
 #define IMU_GRAVITY_MS2    9.80665f
 
@@ -50,6 +53,9 @@
  *   accel sensitivity: fsr_g * 1000 / 32768 mg/LSB -> mm/s^2 via 9.80665
  *   gyro  sensitivity: fsr_dps * 0.035 / 1000 dps/LSB (Table 3 headroom)
  */
+
+static const uint16_t g_odr_hz_table[] =
+    {0, 13, 26, 52, 104, 208, 416, 833, 1660, 3330, 6660};
 
 static const uint8_t  g_fsr_xl_g_table[]    = {2, 16, 4, 8};
 static const uint16_t g_fsr_gy_dps_table[]  =
@@ -173,6 +179,8 @@ static int imu_daemon(int argc, char *argv[])
 
   uint8_t cur_fsr_xl_idx = IMU_FSR_IDX_UNKNOWN;
   uint8_t cur_fsr_gy_idx = IMU_FSR_IDX_UNKNOWN;
+  uint8_t cur_odr_idx = IMU_FSR_IDX_UNKNOWN;
+  uint64_t previous_timestamp = 0;
 
   pthread_mutex_lock(&g_daemon_lock);
   g_daemon_running = true;
@@ -228,6 +236,8 @@ static int imu_daemon(int argc, char *argv[])
           uint64_t source_timestamp = 0;
           if (clock_gettime(CLOCK_BOOTTIME, &received_at) < 0)
             {
+              previous_timestamp = 0;
+              imu_stationary_reset();
               (void)imu_fusion_update_timestamped(NULL, NULL, 0, 0);
               continue;
             }
@@ -235,45 +245,58 @@ static int imu_daemon(int argc, char *argv[])
                             (uint64_t)received_at.tv_nsec / 1000ULL;
           if (!imu_timestamp_expand(imu_data.timestamp, now_us, &source_timestamp))
             {
+              previous_timestamp = 0;
+              imu_stationary_reset();
               (void)imu_fusion_update_timestamped(NULL, NULL, 0, 0);
               continue;
             }
 
-          if (imu_data.fsr_xl_idx != cur_fsr_xl_idx
-              || imu_data.fsr_gy_idx != cur_fsr_gy_idx)
+          float new_accel = accel_lsb_to_mms2_from_idx(imu_data.fsr_xl_idx);
+          float new_gyro = gyro_lsb_to_dps_from_idx(imu_data.fsr_gy_idx);
+          uint16_t odr = imu_data.odr_idx <
+              sizeof(g_odr_hz_table) / sizeof(g_odr_hz_table[0]) ?
+              g_odr_hz_table[imu_data.odr_idx] : 0;
+          bool changed = imu_data.fsr_xl_idx != cur_fsr_xl_idx ||
+                         imu_data.fsr_gy_idx != cur_fsr_gy_idx ||
+                         imu_data.odr_idx != cur_odr_idx;
+
+          /* ODR and scales belong to each sample. Never accumulate a
+           * stationary window across source configuration changes. */
+          if (changed)
             {
               cur_fsr_xl_idx = imu_data.fsr_xl_idx;
               cur_fsr_gy_idx = imu_data.fsr_gy_idx;
-
-              float new_accel = accel_lsb_to_mms2_from_idx(cur_fsr_xl_idx);
-              float new_gyro  = gyro_lsb_to_dps_from_idx(cur_fsr_gy_idx);
-
-              /* Skip update if either scale is invalid (unknown idx) so
-               * fusion does not see garbage units; physical conversion
-               * resumes once a valid sample arrives.
-               */
-
-              /* Clear both scales on an invalid pair: retaining the old
-               * positive scales would process unknown units after a valid
-               * sample and publish a falsely valid snapshot. */
+              cur_odr_idx = imu_data.odr_idx;
+              previous_timestamp = 0;
               g_accel_mms2_per_lsb = new_accel;
               g_gyro_dps_per_lsb = new_gyro;
-              if (new_accel > 0.0f && new_gyro > 0.0f)
+              if (new_accel > 0 && new_gyro > 0 && odr > 0)
                 {
-                  imu_stationary_set_thresholds(
-                      settings->gyro_stationary_threshold /
-                          g_gyro_dps_per_lsb,
-                      settings->accel_stationary_threshold /
-                          g_accel_mms2_per_lsb);
-                  imu_stationary_reset();
+                  imu_stationary_init(
+                      settings->gyro_stationary_threshold / new_gyro,
+                      settings->accel_stationary_threshold / new_accel,
+                      odr, stationary_callback);
                 }
             }
 
-          if (g_accel_mms2_per_lsb == 0.0f || g_gyro_dps_per_lsb == 0.0f)
+          /* Reject stale input, stopped/unknown ODR, unknown scales and
+           * discontinuous time. A gap over 300 ms is not integrated blindly;
+           * the next valid frame starts with one nominal ODR interval. */
+          if (odr == 0 || new_accel <= 0 || new_gyro <= 0 ||
+              now_us - source_timestamp > IMU_MAX_AGE_US ||
+              (previous_timestamp != 0 &&
+               (source_timestamp <= previous_timestamp ||
+                source_timestamp - previous_timestamp > IMU_MAX_AGE_US)))
             {
+              previous_timestamp = 0;
+              imu_stationary_reset();
               (void)imu_fusion_update_timestamped(NULL, NULL, 0, source_timestamp);
-              continue;       /* awaiting a sample with a valid FSR idx */
+              continue;
             }
+
+          float sample_time = previous_timestamp == 0 ? 1.0f / odr :
+              (float)(source_timestamp - previous_timestamp) / 1000000.0f;
+          previous_timestamp = source_timestamp;
 
           int16_t raw[6];
           raw[0] = imu_data.gx;
@@ -299,8 +322,7 @@ static int imu_daemon(int argc, char *argv[])
             .z = (float)imu_data.gz * g_gyro_dps_per_lsb,
           };
 
-          float st = imu_stationary_get_sample_time();
-          (void)imu_fusion_update_timestamped(&gyro_dps, &accel_mms2, st,
+          (void)imu_fusion_update_timestamped(&gyro_dps, &accel_mms2, sample_time,
                                                source_timestamp);
         }
     }
@@ -317,14 +339,18 @@ static int imu_daemon(int argc, char *argv[])
   return 0;
 }
 
-static void cmd_start(void)
+int imu_service_start(void)
 {
   pthread_mutex_lock(&g_daemon_lock);
+  if (g_daemon_stop)
+    {
+      pthread_mutex_unlock(&g_daemon_lock);
+      return -EBUSY;
+    }
   if (g_daemon_running || g_daemon_starting)
     {
       pthread_mutex_unlock(&g_daemon_lock);
-      printf("imu: already running\n");
-      return;
+      return 0;
     }
 
   /* Reserve the producer before task_create can schedule the child.  A
@@ -339,31 +365,71 @@ static void cmd_start(void)
   int pid = task_create(IMU_DAEMON_NAME, 100, 4096, imu_daemon, NULL);
   if (pid < 0)
     {
+      int error = errno;
       daemon_finished();
-      fprintf(stderr, "imu: failed to start daemon\n");
+      return -error;
     }
+  return 0;
 }
 
-static void cmd_stop(void)
+int imu_service_stop(void)
 {
   pthread_mutex_lock(&g_daemon_lock);
   if (!g_daemon_running && !g_daemon_starting)
     {
       pthread_mutex_unlock(&g_daemon_lock);
-      printf("imu: not running\n");
-      return;
+      return 0;
     }
 
   g_daemon_stop = true;
   pthread_mutex_unlock(&g_daemon_lock);
+  return 0;
+}
+
+void imu_service_status(bool *starting, bool *running, bool *stopping)
+{
+  pthread_mutex_lock(&g_daemon_lock);
+  if (starting != NULL) *starting = g_daemon_starting;
+  if (running != NULL) *running = g_daemon_running;
+  if (stopping != NULL) *stopping = g_daemon_stop;
+  pthread_mutex_unlock(&g_daemon_lock);
+}
+
+int imu_service_snapshot(imu_fusion_snapshot_t *out)
+{
+  if (out == NULL) return -EINVAL;
+  memset(out, 0, sizeof(*out));
+  pthread_mutex_lock(&g_daemon_lock);
+  int result = -EAGAIN;
+  if (g_daemon_running && !g_daemon_stop)
+    {
+      struct timespec now;
+      if (clock_gettime(CLOCK_BOOTTIME, &now) < 0)
+        result = -errno;
+      else if (imu_fusion_get_snapshot(out,
+                   (uint64_t)now.tv_sec * 1000000ULL + now.tv_nsec / 1000ULL,
+                   IMU_MAX_AGE_US))
+        result = 0;
+    }
+  pthread_mutex_unlock(&g_daemon_lock);
+  return result;
+}
+
+static void cmd_start(void)
+{
+  int result = imu_service_start();
+  if (result < 0) fprintf(stderr, "imu: start failed: %d\n", result);
+}
+
+static void cmd_stop(void)
+{
+  (void)imu_service_stop();
 }
 
 static void cmd_status(void)
 {
-  pthread_mutex_lock(&g_daemon_lock);
-  bool running = g_daemon_running;
-  bool starting = g_daemon_starting;
-  pthread_mutex_unlock(&g_daemon_lock);
+  bool running, starting;
+  imu_service_status(&starting, &running, NULL);
   printf("running:    %s\n", running ? "yes" : "no");
   printf("starting:   %s\n", starting ? "yes" : "no");
   printf("stationary: %s\n",

@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <brickwright/hub_transport.h>
+#include "imu_fusion.h"
 
 enum btsensor_peripheral_class {
   BTSENSOR_PERIPHERAL_COLOR = 0,
@@ -37,6 +38,10 @@ struct btsensor_peripheral_ops {
                         const int16_t *, size_t);
   int (*imu_capture_start)(void *, uint32_t);
   int (*imu_capture_stop)(void *);
+  int (*fusion_start)(void *);
+  int (*fusion_stop)(void *);
+  int (*fusion_status)(void *, bool *, bool *, bool *);
+  int (*fusion_snapshot)(void *, imu_fusion_snapshot_t *);
 };
 
 /* The backend object must remain valid until it is replaced or cleared. */

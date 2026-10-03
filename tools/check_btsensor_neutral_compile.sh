@@ -12,7 +12,7 @@ common=(
   -std=gnu11 -Wall -Wextra
   -I"$work/include"
   -I"$root/apps/btsensor/test/include"
-  -I"$root/apps/btsensor"
+  -I"$root/apps/imu" -I"$root/apps/btsensor"
   -I"$root/bluetooth/daemon"
   -I"$root/bluetooth/zephyr_compat/include"
   -I"$root/protocol/c"
@@ -40,7 +40,7 @@ if command -v "$cross" >/dev/null && [[ -s "$config" ]]; then
     -std=gnu11 -mcpu=cortex-m4 -mthumb -Wall -Wextra -D__NuttX__
     -include "$config" -include zephyr/autoconf.h
     -I"$(dirname "$(dirname "$config")")"
-    -I"$root/apps/btsensor"
+    -I"$root/apps/imu" -I"$root/apps/btsensor"
     -I"$root/bluetooth/daemon"
     -I"$root/bluetooth/zephyr_compat/include"
     -I"$root/protocol/c"

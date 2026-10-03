@@ -8,6 +8,9 @@
 
 #include "btsensor_nuttx_peripheral.h"
 #include "btsensor_peripheral.h"
+#ifdef CONFIG_APP_IMU
+#include "imu_service.h"
+#endif
 
 static const struct btsensor_peripheral_ops *g_installed;
 static int g_imu_init_rc, g_sensor_init_rc, g_bundle_init_rc;
@@ -56,6 +59,16 @@ void btsensor_modern_backend_set_motor_owner(enum brickwright_hub_link link,
                                              uint8_t port, bool running)
 { g_owner_link = link; g_forward_port = port; g_owner_running = running; }
 
+#ifdef CONFIG_APP_IMU
+static unsigned g_fusion_starts, g_fusion_stops;
+int imu_service_start(void) { g_fusion_starts++; return g_forward_rc; }
+int imu_service_stop(void) { g_fusion_stops++; return g_forward_rc; }
+void imu_service_status(bool *starting, bool *running, bool *stopping)
+{ *starting = false; *running = true; *stopping = false; }
+int imu_service_snapshot(imu_fusion_snapshot_t *out)
+{ out->sequence = 42; return g_forward_rc; }
+#endif
+
 static void reset(void)
 {
   btsensor_nuttx_peripheral_stop();
@@ -69,6 +82,9 @@ static void reset(void)
   g_forward_class = g_forward_mode = 0;
   g_owner_link = BRICKWRIGHT_HUB_LINK_CLASSIC;
   g_owner_running = false;
+#ifdef CONFIG_APP_IMU
+  g_fusion_starts = g_fusion_stops = 0;
+#endif
 }
 
 static void test_lifecycle(void)
@@ -78,6 +94,9 @@ static void test_lifecycle(void)
   assert(g_imu_init_calls == 1 && g_sensor_init_calls == 1 && g_bundle_init_calls == 1);
   assert(btsensor_nuttx_peripheral_start() == 0 && g_imu_init_calls == 1);
   btsensor_nuttx_peripheral_stop();
+#ifdef CONFIG_APP_IMU
+  assert(g_fusion_stops == 1);
+#endif
   assert(g_installed == NULL);
   assert(g_bundle_deinit_calls == 1 && g_sensor_deinit_calls == 1 && g_imu_deinit_calls == 1);
   btsensor_nuttx_peripheral_stop();
@@ -137,6 +156,19 @@ static void test_forwarding_and_bounds(void)
   assert(g_installed->sensor_select_mode(NULL, BTSENSOR_PERIPHERAL_CLASS_COUNT, 0) == -EINVAL);
   assert(g_installed->imu_capture_start(NULL, 10) == -ENOTSUP);
   assert(g_installed->imu_capture_stop(NULL) == -ENOTSUP);
+#ifdef CONFIG_APP_IMU
+  bool starting = true, running = false, stopping = true;
+  imu_fusion_snapshot_t snap = {0};
+  g_forward_rc = -EAGAIN;
+  assert(g_installed->fusion_start(NULL) == -EAGAIN && g_fusion_starts == 1);
+  assert(g_installed->fusion_stop(NULL) == -EAGAIN && g_fusion_stops == 1);
+  assert(g_installed->fusion_status(NULL, &starting, &running, &stopping) == 0);
+  assert(!starting && running && !stopping);
+  assert(g_installed->fusion_snapshot(NULL, &snap) == -EAGAIN && snap.sequence == 42);
+#else
+  assert(!g_installed->fusion_start && !g_installed->fusion_stop &&
+         !g_installed->fusion_status && !g_installed->fusion_snapshot);
+#endif
   btsensor_nuttx_peripheral_stop();
 }
 

@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "btsensor_cmd.h"
 #include "btsensor_peripheral.h"
+#include "btsensor_tx.h"
+#include <float.h>
+#include <math.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -8,7 +11,10 @@
 #include <stdio.h>
 #include <string.h>
 struct fixture {
-  char replies[32][64];
+  char replies[32][BTSENSOR_TX_RESPONSE_MAX_LEN + 1];
+  imu_fusion_snapshot_t snapshot;
+  bool starting, running, stopping;
+  unsigned fusion_calls;
   int nr;
   enum brickwright_hub_link link;
   char op[16];
@@ -26,6 +32,7 @@ void btsensor_tx_set_link(enum brickwright_hub_link l, bool selected) {
 }
 int btsensor_tx_enqueue_response(const char *s) {
   assert(f.nr < 32);
+  assert(strlen(s) < sizeof(f.replies[0]));
   strcpy(f.replies[f.nr++], s);
   return 0;
 }
@@ -81,6 +88,30 @@ static int cap_stop(void *p) {
   strcpy(x->op, "cap_stop");
   return x->result;
 }
+static int fusion_start(void *p) {
+  struct fixture *x = p;
+  x->fusion_calls++;
+  strcpy(x->op, "fusion_start");
+  return x->result;
+}
+static int fusion_stop(void *p) {
+  struct fixture *x = p;
+  x->fusion_calls++;
+  strcpy(x->op, "fusion_stop");
+  return x->result;
+}
+static int fusion_status(void *p, bool *starting, bool *running, bool *stopping) {
+  struct fixture *x = p;
+  x->fusion_calls++;
+  *starting = x->starting; *running = x->running; *stopping = x->stopping;
+  return x->result;
+}
+static int fusion_snapshot(void *p, imu_fusion_snapshot_t *out) {
+  struct fixture *x = p;
+  x->fusion_calls++;
+  *out = x->snapshot;
+  return x->result;
+}
 static struct btsensor_peripheral_ops ops = {.context = &f,
                                              .set_imu_enabled = toggle,
                                              .set_sensor_enabled = toggle,
@@ -94,7 +125,11 @@ static struct btsensor_peripheral_ops ops = {.context = &f,
                                              .sensor_send = send_data,
                                              .sensor_set_pwm = pwm,
                                              .imu_capture_start = cap_start,
-                                             .imu_capture_stop = cap_stop};
+                                             .imu_capture_stop = cap_stop,
+                                             .fusion_start = fusion_start,
+                                             .fusion_stop = fusion_stop,
+                                             .fusion_status = fusion_status,
+                                             .fusion_snapshot = fusion_snapshot};
 static void reset(void) {
   memset(&f, 0, sizeof(f));
   btsensor_cmd_init();
@@ -104,7 +139,14 @@ static void send(enum brickwright_hub_link l, const char *s) {
   btsensor_cmd_feed_link(l, (const uint8_t *)s, strlen(s));
 }
 static void expect(const char *s) {
+  if (!f.nr || strcmp(f.replies[f.nr - 1], s))
+    fprintf(stderr, "expected %s got %s", s, f.nr ? f.replies[f.nr - 1] : "<none>");
   assert(f.nr && strcmp(f.replies[f.nr - 1], s) == 0);
+}
+static void expect_errno(int value) {
+  char line[64];
+  snprintf(line, sizeof(line), "ERR errno=%d\n", value);
+  expect(line);
 }
 static void test_operations(void) {
   reset();
@@ -140,7 +182,7 @@ static void test_errors(void) {
   assert(f.link == 1);
   f.result = -ENODEV;
   send(0, "SENSOR MODE force 1\n");
-  expect("ERR errno=19\n");
+  expect_errno(ENODEV);
   f.result = 0;
   send(0, "SET ODR 12junk\n");
   expect("ERR invalid value\n");
@@ -192,13 +234,81 @@ static void test_fixed_arity(void) {
   expect("ERR invalid _IMU_CAP\n");
   assert(f.op[0] == '\0');
 }
+static void test_fusion(void) {
+  reset();
+  send(0, "FUSION START\n");
+  expect("OK\n");
+  assert(!strcmp(f.op, "fusion_start"));
+  send(0, "FUSION STOP\n");
+  expect("OK\n");
+  assert(f.link == 0 && !strcmp(f.op, "fusion_stop"));
+  unsigned initial_calls = f.fusion_calls;
+  const char *ble[] = {"FUSION START\n", "FUSION STOP\n",
+                       "FUSION STATUS\n", "FUSION GET\n"};
+  for (size_t i = 0; i < sizeof(ble) / sizeof(*ble); i++) {
+    send(1, ble[i]); expect_errno(ENOTSUP);
+  }
+  assert(f.fusion_calls == initial_calls);
+  f.starting = true; f.stopping = true;
+  send(0, "FUSION STATUS\n");
+  expect("FUSION STATUS 1 0 1\n");
+  unsigned calls = f.fusion_calls;
+  const char *bad[] = {"FUSION\n", "FUSION START extra\n", "FUSION STOP 0\n",
+                       "FUSION STATUS extra\n", "FUSION GET extra\n", "FUSION start\n"};
+  for (size_t i = 0; i < sizeof(bad) / sizeof(*bad); i++) {
+    send(0, bad[i]);
+    expect("ERR invalid FUSION\n");
+  }
+  assert(f.fusion_calls == calls);
+  f.result = -EAGAIN;
+  send(0, "FUSION GET\n");
+  char error[64];
+  snprintf(error, sizeof(error), "ERR errno=%d\n", EAGAIN);
+  expect(error);
+  f.result = 0;
+  send(0, "FUSION GET\n");
+  expect("ERR errno=5\n");
+  f.snapshot = (imu_fusion_snapshot_t){
+      .valid = true, .ready = true, .sequence = UINT64_MAX,
+      .timestamp_us = UINT64_MAX - 1, .up_side = IMU_SIDE_BOTTOM,
+      .accel_mms2 = {.values = {1, -2, 9806.65f}},
+      .gyro_dps = {.values = {4, 5, -6}}, .heading_1d = 7, .heading_3d = 8,
+      .orientation = {.values = {1, 2, 3, 4, 5, 6, 7, 8, 9}}};
+  send(0, "FUSION GET\n");
+  expect("FUSION SNAP 18446744073709551615 18446744073709551614 1 6 1 -2 9806.65 4 5 -6 7 8 1 2 3 4 5 6 7 8 9\n");
+  assert(f.link == 0);
+  f.snapshot.up_side = (imu_side_t)99;
+  send(0, "FUSION GET\n"); expect_errno(EIO);
+  f.snapshot.up_side = IMU_SIDE_TOP;
+  f.snapshot.gyro_dps.z = NAN;
+  send(0, "FUSION GET\n"); expect("ERR errno=5\n");
+  f.snapshot.gyro_dps.z = 0;
+  f.snapshot.orientation.m33 = INFINITY;
+  send(0, "FUSION GET\n"); expect("ERR errno=5\n");
+  for (size_t i = 0; i < 3; i++) {
+    f.snapshot.accel_mms2.values[i] = -FLT_MAX;
+    f.snapshot.gyro_dps.values[i] = FLT_MIN;
+  }
+  for (size_t i = 0; i < 9; i++) f.snapshot.orientation.values[i] = -FLT_MAX;
+  f.snapshot.heading_1d = -FLT_MAX; f.snapshot.heading_3d = FLT_MIN;
+  send(0, "FUSION GET\n");
+  expect_errno(E2BIG);
+  struct btsensor_peripheral_ops absent = {.context = &f};
+  btsensor_cmd_set_peripheral_ops(&absent);
+  send(0, "FUSION STOP\n"); expect_errno(ENOTSUP);
+  btsensor_cmd_set_peripheral_ops(NULL);
+  send(0, "FUSION GET\n"); expect_errno(ENOTSUP);
+  send(0, "FUSION STATUS\n"); expect_errno(ENOTSUP);
+  send(0, "FUSION START\n"); expect_errno(ENOTSUP);
+}
 int main(void) {
+  test_fusion();
   test_operations();
   test_errors();
   test_fixed_arity();
   reset();
   btsensor_cmd_set_peripheral_ops(NULL);
   send(0, "SET ODR 100\n");
-  expect("ERR errno=95\n");
+  expect_errno(ENOTSUP);
   puts("btsensor neutral legacy command tests passed");
 }

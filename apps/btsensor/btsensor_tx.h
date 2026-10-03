@@ -29,11 +29,11 @@ extern "C" {
 
 #define BTSENSOR_TX_FRAME_MAX_SIZE   1408
 
-/* Maximum size of a single response line (ASCII).  Plenty for the
- * `OK` / `ERR <reason>` style replies introduced in Commit D.
+/* Maximum size of a single response line (ASCII), including the bounded
+ * coherent fusion diagnostic snapshot.
  */
 
-#define BTSENSOR_TX_RESPONSE_MAX_LEN 64
+#define BTSENSOR_TX_RESPONSE_MAX_LEN 256
 
 int  btsensor_tx_init(void);
 void btsensor_tx_deinit(void);

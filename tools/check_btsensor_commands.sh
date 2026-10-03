@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 work=$(mktemp -d /tmp/brickwright-btsensor-command.XXXXXX)
 trap 'rm -rf "$work"' EXIT
-cc -std=gnu11 -Wall -Wextra -Werror -I"$root/apps/btsensor" \
+cc -std=gnu11 -Wall -Wextra -Werror -I"$root/apps/imu" -I"$root/apps/btsensor" \
   -I"$root/bluetooth/zephyr_compat/include" \
   "$root/apps/btsensor/btsensor_classic.c" \
   "$root/apps/btsensor/btsensor_font5.c" \

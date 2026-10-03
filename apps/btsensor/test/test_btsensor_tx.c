@@ -13,7 +13,7 @@
 #  define CONFIG_APP_BTSENSOR_RING_DEPTH 8
 #endif
 
-struct sent_s { enum brickwright_hub_link link; uint8_t data[80]; size_t len; };
+struct sent_s { enum brickwright_hub_link link; uint8_t data[BTSENSOR_TX_FRAME_MAX_SIZE]; size_t len; };
 static struct sent_s sent[16];
 static size_t sent_count;
 static bool connected[2];
@@ -74,8 +74,30 @@ static void *reselect(void *argument)
   return NULL;
 }
 
+static void test_response_capacity(void)
+{
+  char line[BTSENSOR_TX_RESPONSE_MAX_LEN + 2];
+  assert(btsensor_tx_init() == 0);
+  connected[BRICKWRIGHT_HUB_LINK_CLASSIC] = true;
+  send_result = 0;
+  sent_count = 0;
+  btsensor_tx_set_link(BRICKWRIGHT_HUB_LINK_CLASSIC, true);
+  memset(line, 'x', sizeof(line));
+  line[BTSENSOR_TX_RESPONSE_MAX_LEN] = 0;
+  assert(btsensor_tx_enqueue_response(line) == 0);
+  btsensor_tx_on_can_send_now();
+  assert(sent_count == 1 && sent[0].len == BTSENSOR_TX_RESPONSE_MAX_LEN);
+  assert(!memcmp(sent[0].data, line, BTSENSOR_TX_RESPONSE_MAX_LEN));
+  line[BTSENSOR_TX_RESPONSE_MAX_LEN] = 'x';
+  line[BTSENSOR_TX_RESPONSE_MAX_LEN + 1] = 0;
+  assert(btsensor_tx_enqueue_response(line) == -E2BIG);
+  assert(btsensor_tx_response_queue_empty());
+  btsensor_tx_deinit();
+}
 int main(void)
 {
+  test_response_capacity();
+  sent_count = 0;
   assert(btsensor_tx_init() == 0);
   assert(btsensor_tx_try_enqueue_frame(NULL, 1) == -E2BIG);
   assert(btsensor_tx_try_enqueue_frame((const uint8_t *)"x", 0) == -E2BIG);

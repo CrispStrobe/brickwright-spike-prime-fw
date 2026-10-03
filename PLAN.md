@@ -354,11 +354,12 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 ## Current next action
 
-Qualify the fusion producer through the actual guest before enabling it at boot.
-There is no current modeled console or implemented Bluetooth shell route to `imu start`;
-add a narrow shared start/stop/snapshot API through the existing transport. Qualify
-live ODR/time-delta integration and snapshot freshness before claiming guest fusion
-readiness. Stop both fusion and raw subscriptions before asserting sensor powerdown.
+Complete actual guest qualification of the explicit Classic fusion service before
+enabling fusion at boot. The service now shares start/stop/status/snapshot with
+NSH, uses source timestamp intervals and validates per-sample ODR/FSR. Guest
+conversion, freshness, stop/reopen and stationary calibration readiness require
+separate recorded evidence; stop both fusion and raw subscriptions before
+asserting sensor powerdown.
 Define full modern protocol orientation mappings, wire units and up-side conversion rules
 before emitting full modern IMU records. The 21-byte modern record has no temperature field;
 any temperature transport needs a separate contract. The paired raw INT1/driver/uORB/Classic

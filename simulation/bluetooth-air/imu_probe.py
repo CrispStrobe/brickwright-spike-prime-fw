@@ -4,10 +4,13 @@
 
 The local BUNDLE format has no checksum, temperature or per-sample FSR indices.
 These checks cover framing, raw body axes, timestamps and header configuration;
-physical units, autonomous ODR timing and fusion are outside this qualification.
+the separate fusion probe checks timestamped physical-unit snapshots through
+the actual producer. Autonomous ODR timing and physical accuracy remain outside
+this synthetic qualification.
 """
 import asyncio
 import json
+import math
 import struct
 import uuid
 from collections import deque
@@ -30,8 +33,9 @@ def mc_imu_fixture(action, tag, gx=0, gy=0, gz=0, ax=0, ay=0, az=0):
     state = [int(value) for value in imu.GetFixtureState()]
     controls = state[:2]
     status = int(state[2])
+    virtual_us = int(monitor.Machine.ElapsedVirtualTime.TimeElapsed.TotalMicroseconds)
     receipt = json.dumps({'accepted': accepted, 'controls': controls,
-                          'status': status}, sort_keys=True)
+                          'status': status, 'virtual_us': virtual_us}, sort_keys=True)
     monitor.Parse('log "IMU_FIXTURE ' + tag + ' ' + receipt.replace('"', '\\\\"') + '"')
 '''
 
@@ -265,5 +269,199 @@ async def imu_round_trip(dlc, received, renode_proc, results: dict, *,
             # Caller disconnects the peer as well; preserve the original error.
             try:
                 await command("OFF")
+            except BaseException:
+                pass
+
+
+def parse_fusion(line: str) -> dict:
+    """Strict local physical-unit snapshot, distinct from modern IMU records."""
+    tokens = line.split(" ")
+    if len(tokens) != 23 or tokens[:2] != ["FUSION", "SNAP"]:
+        raise ValueError("Invalid fusion snapshot layout")
+    integers = tokens[2:6]
+    if any(not s.isascii() or not s.isdecimal() for s in integers):
+        raise ValueError("Invalid fusion integer")
+    sequence, timestamp, ready, side = map(int, integers)
+    if not 0 < sequence < 2**64 or not 0 < timestamp < 2**64 or ready not in (0, 1) or side not in (0, 1, 2, 4, 5, 6):
+        raise ValueError("Invalid fusion metadata")
+    values = list(map(float, tokens[6:]))
+    if not all(math.isfinite(v) for v in values):
+        raise ValueError("Nonfinite fusion value")
+    matrix = values[8:]
+    for row in range(3):
+        for other in range(3):
+            dot = sum(matrix[row*3+i] * matrix[other*3+i] for i in range(3))
+            if abs(dot - (1 if row == other else 0)) > .001:
+                raise ValueError("Fusion orientation is not orthonormal")
+    determinant = (matrix[0]*(matrix[4]*matrix[8]-matrix[5]*matrix[7]) -
+                   matrix[1]*(matrix[3]*matrix[8]-matrix[5]*matrix[6]) +
+                   matrix[2]*(matrix[3]*matrix[7]-matrix[4]*matrix[6]))
+    if abs(determinant - 1) > .001:
+        raise ValueError("Fusion orientation is not a proper rotation")
+    return {"sequence": sequence, "timestamp_us": timestamp, "ready": bool(ready),
+            "up_side": side, "accel_mms2": values[:3], "gyro_dps": values[3:6],
+            "heading_1d_deg": values[6], "heading_3d_deg": values[7],
+            "orientation": matrix, "line": line}
+
+
+def validate_fusion(snapshot: dict, fixture: tuple, *, accel_g=2, gyro_dps=1000):
+    gx, gy, gz, ax, ay, az = fixture
+    expected_accel = [ax, -ay, -az]
+    expected_gyro = [gx, -gy, -gz]
+    for actual, raw in zip(snapshot["accel_mms2"], expected_accel):
+        if not math.isclose(actual, raw * accel_g * 9806.65 / 32768, abs_tol=.1):
+            raise ValueError("Fusion acceleration units/axes differ")
+    for actual, raw in zip(snapshot["gyro_dps"], expected_gyro):
+        if not math.isclose(actual, raw * gyro_dps * .035 / 1000, abs_tol=.001):
+            raise ValueError("Fusion gyro units/axes differ")
+    if snapshot["ready"] or snapshot["up_side"] != 2:
+        raise ValueError("Sparse upright fixture incorrectly reports readiness/face")
+
+
+async def fusion_round_trip(dlc, received, renode_proc, results: dict, *,
+                            renode_log: Path, timeout: float = 120) -> None:
+    parser = MixedFrames()
+    pending = deque()
+    record = results.setdefault("imu_fusion", {"snapshots": [], "commands": [],
+                                               "model_receipts": []})
+
+    async def request(command):
+        dlc.write((command + "\n").encode("ascii"))
+        async with asyncio.timeout(20):
+            for _ in range(256):
+                while not pending:
+                    pending.extend(parser.feed(await received.get()))
+                kind, value = pending.popleft()
+                if kind == "bundle":
+                    if value["samples"]:
+                        raise ValueError("Raw samples arrived during fusion-only probe")
+                    continue
+                record["commands"].append({"request": command, "reply": value})
+                return value
+            raise ValueError("Too many events before fusion reply")
+
+    async def ok(command):
+        value = await request(command)
+        if value != "OK":
+            raise ValueError("Guest rejected fusion control: " + value)
+
+    async def state(running):
+        async with asyncio.timeout(20):
+            while True:
+                value = await request("FUSION STATUS")
+                if value == ("FUSION STATUS 0 1 0" if running else "FUSION STATUS 0 0 0"):
+                    return
+                if value not in ("FUSION STATUS 1 0 0", "FUSION STATUS 0 1 1", "FUSION STATUS 1 0 1"):
+                    raise ValueError("Invalid fusion lifecycle status: " + value)
+                await asyncio.sleep(.05)
+
+    async def model(action, values=()):
+        if renode_proc.stdin is None or renode_proc.returncode is not None:
+            raise ValueError("Renode monitor input unavailable")
+        tag = uuid.uuid4().hex
+        marker = ("IMU_FIXTURE " + tag + " ").encode()
+        offset = renode_log.stat().st_size
+        command = 'imu_fixture "' + action + '" "' + tag + '"'
+        if values:
+            command += " " + " ".join(str(v) for v in values)
+        renode_proc.stdin.write((command + "\n").encode())
+        await renode_proc.stdin.drain()
+        async with asyncio.timeout(20):
+            while True:
+                if renode_proc.returncode is not None:
+                    raise ValueError("Renode exited during fusion fixture")
+                with renode_log.open("rb") as log:
+                    log.seek(offset)
+                    raw = log.read(65536)
+                if marker in raw and b"\n" in raw.split(marker, 1)[1]:
+                    value, _ = json.JSONDecoder().raw_decode(raw.split(marker, 1)[1].decode())
+                    record["model_receipts"].append({"action": action, **value})
+                    return value
+                if len(raw) == 65536:
+                    raise ValueError("Fusion monitor receipt exceeds log bound")
+                await asyncio.sleep(.05)
+
+    async def snapshot(fixture, *, accel_g=2, gyro_dps=1000, previous=None):
+        if (await model("inject", fixture))["accepted"] is not True:
+            raise ValueError("Fusion producer did not power sensor")
+        async with asyncio.timeout(30):
+            while True:
+                line = await request("FUSION GET")
+                if line == "ERR errno=11":
+                    await asyncio.sleep(.01)
+                    continue
+                snap = parse_fusion(line)
+                if previous and snap["sequence"] == previous["sequence"]:
+                    await asyncio.sleep(.01)
+                    continue
+                validate_fusion(snap, fixture, accel_g=accel_g, gyro_dps=gyro_dps)
+                if previous and (snap["sequence"] <= previous["sequence"] or snap["timestamp_us"] <= previous["timestamp_us"]):
+                    raise ValueError("Fusion source sequence/time did not advance")
+                record["snapshots"].append({"fixture": list(fixture), **snap})
+                return snap
+
+    active = False
+    try:
+        async with asyncio.timeout(timeout):
+            await state(False)
+            if await request("FUSION GET") != "ERR errno=11":
+                raise ValueError("Stopped fusion returned a snapshot")
+            active = True  # Cleanup even when an acknowledgement is lost.
+            await ok("FUSION START")
+            await state(True)
+            first = await snapshot((0, 0, 0, 0, 0, -16384))
+            if await request("FUSION GET") != first["line"]:
+                raise ValueError("Fusion snapshot read consumed/changed publication")
+            second = await snapshot((0, 0, -1000, 0, 0, -16384), previous=first)
+            expected_heading = -35 * (second["timestamp_us"] - first["timestamp_us"]) / 1000000
+            if not math.isclose(second["heading_1d_deg"], expected_heading, abs_tol=.002):
+                raise ValueError("Fusion heading did not integrate source timestamp delta")
+            if abs(second["orientation"][1]) < 1e-6:
+                raise ValueError("Fusion orientation missed current integration step")
+            await ok("SET ODR 52")
+            await ok("SET ACCEL_FSR 4")
+            await ok("SET GYRO_FSR 500")
+            third = await snapshot((0, 0, -1000, 0, 0, -8192), accel_g=4, gyro_dps=500, previous=second)
+            if not math.isclose(third["heading_1d_deg"] - second["heading_1d_deg"], -17.5/52, abs_tol=.002):
+                raise ValueError("Fusion configuration restart did not use new nominal ODR")
+            # Freshness is measured in virtual time, not assumed from host sleep.
+            clock = await model("state")
+            # This is a guest-time expiration test. The diagnostic emulator
+            # advances about 5 ms of guest time per host second; keep the
+            # overall 120 s probe limit and ordinary request budgets unchanged.
+            async with asyncio.timeout(90):
+                while (await model("state"))["virtual_us"] - clock["virtual_us"] <= 310000:
+                    await asyncio.sleep(1)
+            if await request("FUSION GET") != "ERR errno=11":
+                raise ValueError("Stale fusion snapshot remained available")
+            record["stale_rejected"] = True
+            await ok("FUSION STOP")
+            if await request("FUSION GET") != "ERR errno=11":
+                raise ValueError("Stopping fusion returned a snapshot")
+            await state(False)
+            disabled = await model("inject", (1, 2, 3, 4, 5, 6))
+            if disabled["accepted"] is not False or any(v >> 4 for v in disabled["controls"]):
+                raise ValueError("Fusion STOP did not release sensor subscription")
+            await ok("SET ODR 833")
+            await ok("SET ACCEL_FSR 2")
+            await ok("SET GYRO_FSR 1000")
+            await ok("FUSION START")
+            await state(True)
+            reopened = await snapshot((0, 0, 0, 0, 0, -16384))
+            if reopened["sequence"] != 1 or reopened["timestamp_us"] <= third["timestamp_us"]:
+                raise ValueError("Reopened fusion did not publish a fresh initial snapshot")
+            await ok("FUSION STOP")
+            await state(False)
+            active = False
+            if any(v >> 4 for v in (await model("state"))["controls"]):
+                raise ValueError("Final fusion STOP did not power down")
+            record["status"] = "PASS"
+    except BaseException as error:
+        record["status"] = "FAIL: " + type(error).__name__ + ": " + str(error)
+        raise
+    finally:
+        if active:
+            try:
+                await ok("FUSION STOP")
             except BaseException:
                 pass

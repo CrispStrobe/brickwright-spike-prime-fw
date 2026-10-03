@@ -453,9 +453,11 @@ async def classic_round_trip(central, results: dict,
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
         if imu_renode is not None:
-            from imu_probe import imu_round_trip
+            from imu_probe import imu_round_trip, fusion_round_trip
             await imu_round_trip(dlc, received, imu_renode, results,
                                  renode_log=renode_log)
+            await fusion_round_trip(dlc, received, imu_renode, results,
+                                    renode_log=renode_log)
         if legacy_extension is not None:
             await legacy_round_trips(dlc, received, legacy_extension, results)
     finally:
