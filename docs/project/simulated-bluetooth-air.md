@@ -138,8 +138,24 @@ background descendants of an exited shell. Synthetic framing and actual-helper
 lifecycle regressions cover fragmentation, coalescing, malformed responses,
 bounds, cancellation, tool selection and process ownership.
 
-The first local runs passed direct LE/reconnect, Scratch Link and Classic with
-zero vendor/unsupported commands and no cleanup errors. The later exact wrapper
-and full public matrix require their own receipts. Browser/legacy-operation,
-micro:bit coexistence, persisted bonds, RF/security and physical hub behavior
-remain separate from these three peer paths.
+The exact wrapper at firmware commit
+[`dc7bfcb1a18250f649c761e550bb508b5cf9a297`](https://github.com/CrispStrobe/brickwright-spike-prime-fw/commit/dc7bfcb1a18250f649c761e550bb508b5cf9a297)
+passed all three paths on the VPS, with zero vendor/unsupported commands and no
+cleanup errors. The wrapper SHA-256 was
+`d63e406dc5f0d0c06c349803470d50abf9856d7c23af8b7402639f59bcab73a2`.
+Direct LE produced the complete response
+`0101000000000100001400000400020000` twice and readvertised after 1.0 s;
+Scratch Link produced the same response and closed its session; Classic reported
+SPP channel 1 and returned `OK PONG`. Namespace observations confirmed only
+loopback, no host HCI listener, exited owned processes and unchanged host network
+namespace/interface state.
+
+Both clean firmware/runtime profiles passed in
+[public run `37113214090`](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37113214090).
+The initial HCI attempt stopped before peer execution when TI's reference server
+was unreachable; the unchanged HCI job passed on retry. The default profile also
+passed its separate erased-first-boot checks. Six framing and four actual-helper
+lifecycle regressions passed, as did source, attribution, workflow and safety
+gates. Evidence is retained locally; no firmware/test artifact is published.
+Browser/legacy-operation, micro:bit coexistence, persisted bonds, RF/security and
+physical hub behavior remain separate from these three peer paths.
