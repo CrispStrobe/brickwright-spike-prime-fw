@@ -111,8 +111,11 @@ to the exact pinned dependencies and checks their source hashes. Keep the
 patch series when reinitializing submodules. Use a clean build after changing
 configuration; stale archive members in this baseline can survive an incremental build.
 
-The simulation profile excludes the TI service pack. CI builds and runs
-this profile; [the TI exclusion checker](tools/check_ti_free_image.py)
+The default simulation profile starts local program service with Bluetooth
+autostart disabled. `BOARD_CONFIG=simulation-hci` explicitly enables Bluetooth
+startup and requires an attached virtual HCI controller. Both exclude the TI
+service pack and have separate reviewed compiler/linker inventories. CI builds
+and tests them in separate jobs; [the TI exclusion checker](tools/check_ti_free_image.py)
 checks images and build references for service-pack material. No flashable
 firmware is published while the hardware-validation gate remains open.
 
