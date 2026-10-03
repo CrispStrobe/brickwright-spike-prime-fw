@@ -201,7 +201,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_scheduler.c",
-      "sha256": "647ee547c662ac10424e35537591750c31c4b900d40469ae6577ea310d4184c1",
+      "sha256": "7aa0bf266436f283165c53d68adc72a8aa67739bdd24cfac3076975308cca370",
       "spdx": [
         "Apache-2.0"
       ],
@@ -212,7 +212,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_scheduler.h",
-      "sha256": "b5365ccdaf1c274ca8134426e9924443dc3f074d4da98c376a304c8763b7bb72",
+      "sha256": "c49351f9d0d506c215299f9a07578b241f63cbad01e586db99b182c7ba403a97",
       "spdx": [
         "Apache-2.0"
       ],
@@ -35044,5 +35044,5 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged."
+  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical."
 }

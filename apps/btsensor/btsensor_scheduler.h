@@ -25,6 +25,7 @@ struct btsensor_watch_s
   void                  *arg;
   bool                   active;
   bool                   dispatching;
+  bool                   polling;
 };
 
 struct btsensor_timer_s

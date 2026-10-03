@@ -88,6 +88,7 @@ static void *scheduler_worker(void *unused)
               pfds[nfds].events = POLLIN;
               pfds[nfds].revents = 0;
               map[nfds - 1] = watch;
+              watch->polling = true;
               nfds++;
             }
         }
@@ -112,6 +113,13 @@ static void *scheduler_worker(void *unused)
       int ret = poll(pfds, nfds, timeout);
       if (ret < 0 && errno != EINTR)
         {
+          pthread_mutex_lock(&g_lock);
+          for (int i = 1; i < nfds; i++)
+            {
+              map[i - 1]->polling = false;
+            }
+          pthread_cond_broadcast(&g_idle);
+          pthread_mutex_unlock(&g_lock);
           break;
         }
 
@@ -144,6 +152,17 @@ static void *scheduler_worker(void *unused)
 
           pthread_mutex_unlock(&g_lock);
         }
+
+      /* Keep each watch alive until the poll round and its dispatches
+       * finish. NuttX poll holds file references until it returns; stop
+       * must release these before the caller closes the descriptor. */
+      pthread_mutex_lock(&g_lock);
+      for (int i = 1; i < nfds; i++)
+        {
+          map[i - 1]->polling = false;
+        }
+      pthread_cond_broadcast(&g_idle);
+      pthread_mutex_unlock(&g_lock);
 
       now = scheduler_now_ms();
       for (int i = 0; i < BTSENSOR_SCHED_MAX_TIMERS; i++)
@@ -277,6 +296,7 @@ int btsensor_scheduler_watch_start(struct btsensor_watch_s *watch, int fd,
           watch->callback = callback;
           watch->arg = arg;
           watch->dispatching = false;
+          watch->polling = false;
           watch->active = true;
           g_watches[i] = watch;
           scheduler_wake();
@@ -299,7 +319,7 @@ void btsensor_scheduler_watch_stop(struct btsensor_watch_s *watch)
   pthread_mutex_lock(&g_lock);
   watch->active = false;
   scheduler_wake();
-  while (watch->dispatching)
+  while (watch->dispatching || watch->polling)
     {
       pthread_cond_wait(&g_idle, &g_lock);
     }
