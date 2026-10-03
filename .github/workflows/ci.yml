@@ -34,6 +34,7 @@ jobs:
           python3 tools/test_make_romfs.py
           python3 tools/test_simulation_startup.py
           python3 tools/test_bluetooth_air_frames.py
+          python3 tools/test_bluetooth_air_periodic.py
           python3 tools/test_bluetooth_air_lifecycle.py
           python3 tools/test_recursive_mutex_config.py --config-only
           python3 tools/check_source_policy.py
