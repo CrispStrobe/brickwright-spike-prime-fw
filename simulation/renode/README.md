@@ -17,7 +17,7 @@ table at `0x08008000`.
 | `lego-v3` | user-supplied official modern image | raw at `0x08008000` | valid vectors and PC leaves reset handler |
 | `spike-nx` | rebuilt from upstream commit `00524ea5464bddb46c852967e382f8f6b073abe6` | protected kernel and user images | symbol milestones |
 | `brickwright` | rebuilt from this branch | protected kernel and user images | symbol milestones through daemon start |
-| `brickwright-simulation` | rebuilt with `BOARD_CONFIG=simulation` | protected kernel and user images | daemon ready with no service pack |
+| `brickwright-simulation` | rebuilt with the selected clean simulation profile | protected kernel and user images | local program startup; explicit HCI profile also tests Bluetooth startup |
 
 ## Image classes
 
@@ -28,8 +28,17 @@ table at `0x08008000`.
 | `lego-v2`, `lego-v3` | user-supplied proprietary | the whole image is LEGO's; not inspected here, so treat any CC2564C initialization it carries as unknown and restricted | never CI; user-staged under `.local/` |
 | `spike-nx` (rebuilt upstream) | chip-restricted | `apps/btsensor/chipset/cc256x_init_script.c`, copied from Pybricks (TI service pack 1.4), plus BTstack | never CI; local only |
 
-CI stages only the simulation profile, under both `brickwright` and
-`brickwright-simulation`. The `brickwright-simulation-hci` gate runs that image
+CI builds two TI-free profiles in separate jobs and stages each under
+`brickwright` and `brickwright-simulation`. `BOARD_CONFIG=simulation` keeps
+Bluetooth autostart disabled and starts local program service independently.
+`BOARD_CONFIG=simulation-hci` differs only by explicitly enabling
+`CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI`; use it only with an attached virtual
+controller. Each profile requires its own exact configured compiler/linker
+inventory, checked before and after compilation. Profile switching requires a
+clean build; an existing `.config` is never silently accepted as the other
+profile.
+
+The `brickwright-simulation-hci` gate tests the explicit HCI profile
 against the virtual controller with `--reject-vendor`: no vendor command may
 arrive, and the image still reaches `physical_load_firmware` (a no-op in this
 profile), `physical_start_host`, `bt_enable`, `settings_load`, transport
@@ -69,7 +78,7 @@ board-bring-up milestone, not yet an unchanged userspace boot proof.
 
 The retained board-stub gate runs all of `stm32_bringup` while isolating the
 same five synchronous initialization/update functions, then requires both
-`nsh_main` and `btsensor_main`. It remains explicitly labeled as a stubbed
+`nsh_main` and `hubprogram_main`. It remains explicitly labeled as a stubbed
 diagnostic and must not be presented as peripheral-fidelity simulation.
 
 The rebuilt original `spike-nx` protected pair also passes its unchanged reset,

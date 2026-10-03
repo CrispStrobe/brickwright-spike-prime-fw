@@ -73,6 +73,8 @@ jobs:
       - name: Validate pinned Zephyr host source selection
         run: |
           python3 tools/check_zephyr_host_manifest.py
+          python3 tools/test_virtual_hci_wakeups.py
+          python3 tools/test_slist_concurrency.py
           cc -std=gnu11 -Wall -Wextra -Werror -pthread \
             -include zephyr/autoconf.h -Ibluetooth/zephyr_compat/include \
             bluetooth/zephyr_compat/src/uuid.c \

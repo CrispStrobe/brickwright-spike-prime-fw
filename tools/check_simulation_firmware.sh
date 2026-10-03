@@ -3,6 +3,11 @@
 # Copyright (c) 2026 Brickwright contributors
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+profile=${1:-simulation}
+case "$profile" in
+  simulation|simulation-hci) ;;
+  *) echo "Unsupported simulation profile: $profile" >&2; exit 2 ;;
+esac
 python3 "$root/tools/apply_nuttx_backports.py" --check
 compiler=${CROSS_COMPILE:-arm-none-eabi-}gcc
 runtime=$("$compiler" -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard -print-libgcc-file-name)
@@ -15,6 +20,7 @@ python3 "$root/tools/collect_build_inputs.py" --root "$root" \
   --input "$root/boards/spike-prime-hub/scripts/user-space.ld" \
   --output "$root/build/simulation-inputs.json"
 python3 "$root/tools/check_firmware_inputs.py" \
+  --inventory "$root/policy/$profile-firmware-inputs.json" \
   --inputs "$root/build/simulation-inputs.json" \
   --inputs "$root/build/nuttx-bluetooth/libbrickwright_zephyr_host.a.inputs.json" \
   --runtime-archive "$runtime" --config "$root/nuttx/.config" \

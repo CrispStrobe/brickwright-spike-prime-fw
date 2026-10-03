@@ -105,7 +105,7 @@ static inline bool sys_slist_find(const sys_slist_t *list,
       {
         if (previous) *previous = prior;
         brickwright_irq_unlock(key);
-      return true;
+        return true;
       }
   if (previous) *previous = prior;
   brickwright_irq_unlock(key);

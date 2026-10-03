@@ -12,9 +12,13 @@ concurrency:
 
 jobs:
   firmware:
-    name: Build without publishing artifacts
+    name: Build ${{ matrix.profile }} without publishing artifacts
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [simulation, simulation-hci]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -47,12 +51,13 @@ jobs:
       # CI builds and runs only the clean simulation profile. The hardware
       # profile embeds TI's chip-restricted service pack and is never built,
       # simulated, or published here.
-      - name: Build protected NuttX firmware (simulation profile)
+      - name: Build protected NuttX firmware (selected simulation profile)
         run: |
           set -o pipefail
-          make nuttx BOARD_CONFIG=simulation V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
+          make nuttx BOARD_CONFIG=${{ matrix.profile }} V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
 
       - name: Test saved programs through real LittleFS interrupted writes
+        if: matrix.profile == 'simulation'
         run: python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
 
       - name: Prepare an explicit existing-filesystem simulation fixture
@@ -131,6 +136,7 @@ jobs:
           python3 tools/stage_nuttx_image.py brickwright-simulation nuttx
 
       - name: Execute protected firmware in Renode
+        if: matrix.profile == 'simulation'
         run: |
           tools/test_renode_protected_images.sh \
             --variable "PLATFORM:@$PWD/simulation/renode/spike-prime-custom-dma.repl" \
@@ -142,9 +148,11 @@ jobs:
             --include brickwright-board-stubs
 
       - name: Validate the source-generated empty LittleFS seed
+        if: matrix.profile == 'simulation'
         run: python3 tools/test_simulation_littlefs_seed.py
 
       - name: Test the transport-neutral virtual HCI bridge
+        if: matrix.profile == 'simulation-hci'
         env:
           BRICKWRIGHT_RENODE_FIRMWARE_TEST: "1"
           BRICKWRIGHT_RENODE_TAG: brickwright-simulation-hci-existing-filesystem

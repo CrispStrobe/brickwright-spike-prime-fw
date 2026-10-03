@@ -27,6 +27,12 @@ defconfig=(ROOT/'boards/spike-prime-hub/configs/simulation/defconfig').read_text
 assert 'CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK=y' in defconfig
 assert '# CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI is not set' in defconfig
 assert 'CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI=y' not in defconfig
+hci_defconfig=(ROOT/'boards/spike-prime-hub/configs/simulation-hci/defconfig').read_text().splitlines()
+assert hci_defconfig == [
+    'CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI=y'
+    if line == '# CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI is not set' else line
+    for line in defconfig
+], 'HCI qualification profile must differ only by explicit virtual-controller startup'
 kconfig=(ROOT/'apps/btsensor/Kconfig').read_text().split('config APP_BTSENSOR_SIM_VIRTUAL_HCI\n',1)[1].split('\nconfig ',1)[0]
 assert '\tbool ' in kconfig and '\tdefault n\n' in kconfig
 assert '\tdepends on APP_BTSENSOR_SIM_NO_SERVICE_PACK\n' in kconfig
