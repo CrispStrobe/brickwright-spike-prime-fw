@@ -4,6 +4,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 
+#if defined(__NuttX__) && !defined(CONFIG_PTHREAD_MUTEX_TYPES)
+#  error "Brickwright IRQ locks require NuttX recursive pthread mutex support"
+#endif
+
 static pthread_mutex_t irq_lock_mutex;
 static pthread_once_t irq_lock_once = PTHREAD_ONCE_INIT;
 
