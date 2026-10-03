@@ -49,7 +49,7 @@ jobs:
           docker run --rm nuttx-builder python3 --version
           docker run --rm nuttx-builder make --version | head -n 1
 
-      # CI builds and runs only the clean simulation profile. The hardware
+      # CI builds and runs only the two TI-free simulation profiles. The hardware
       # profile embeds TI's chip-restricted service pack and is never built,
       # simulated, or published here.
       - name: Build protected NuttX firmware (selected simulation profile)
