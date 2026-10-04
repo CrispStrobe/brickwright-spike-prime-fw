@@ -196,6 +196,47 @@ also passed. The intermediate matrix was superseded when the durable regression
 was added; it is not cited as completed qualification. The final evidence-record
 update changes documentation only.
 
+## CRC runtime qualification — 2026-10-04
+
+The firmware installer pins Runtime
+`a13be9696e84bd3485cc0a56401d1984b107cc9c` and Infrastructure
+`ecd4fae6320b7f483b11dc4918e7182958f8ad36`. The STM32F4 CRC model now
+handles its absent optional input-reversal field as disabled. Original Antmicro
+and Pieter Agten MIT notices remain, with the modification notice added.
+
+[Clean candidate Runtime CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37178545076)
+passed native and managed builds, 290 focused model cases (including 20 CRC
+cases), actual guest/debugger paths and throughput gates. The original model
+failed both F4 cases while passing the other 18 cases; the rebuilt model passed
+all 20. The offline MicroPython support profile retains its original reviewed
+source pin; CI fetches that exact commit before offline verification so shallow
+checkouts can supply the required object without weakening byte checks.
+
+Infrastructure [PR 27](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/27)
+merged at `720c4b10ffa6697b1ba5109c713586df77c51f4c` with the same tree as
+the candidate. Runtime [PR 38](https://github.com/CrispStrobe/renode-spike-prime/pull/38)
+merged at `59a8d92572aac992b9e89e2296dcc432ed042b55`, preserving a concurrent
+drive-motor API addition. Its different combined tree passed
+[separate clean main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37179029874).
+The firmware retains the exact qualified Runtime candidate above.
+
+[The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37178571908)
+passed both protected profiles on `19997bf4700d66b719b7aa48e3ac7ceab2aa1bd6`.
+Both rebuilt the pinned Renode from source and passed their resource,
+licence/notices, TI-exclusion and actual guest gates. The HCI profile passed
+LE reconnect, Scratch Link, Classic, stationary calibration and pose peers.
+Userspace flash was 590,564 bytes for `simulation` and 590,556 bytes for
+`simulation-hci`, against a 654,336-byte limit. Both used 87,816 bytes of
+static RAM against a 98,304-byte limit, with zero TI payload.
+
+The evidence-record commit changes documentation only. The new
+[offline IMU capture decoder and bounded reference diagnostics](imu-reference-captures.md)
+do not qualify modern IMU scales, Euler conventions or yaw behavior. The
+reference application remains unchanged and private; it is not a firmware
+dependency or published artifact. Runtime flash-checkpoint persistence checks
+are source-level tests; guest filesystem evidence comes from the separate
+firmware matrix.
+
 Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
 exercise electrical power loss or the complete NuttX VFS stack. See

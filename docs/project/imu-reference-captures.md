@@ -72,3 +72,21 @@ the application slice loaded at `0x08008000` was
 `37e2e4dc997f3bf16bbf17e424c4ff1c15a4809e40066f0e747cc78a58795861`.
 These identify that preflight, not a successful oracle qualification. The
 decoder does not verify either image.
+
+After the [CRC correction](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/27),
+the same unchanged application completed the formerly crashing stage at
+2,220 microseconds of guest time. The old model failed both F4 regression cases;
+the explicitly rebuilt model passed all 20 F4/F0/WBA cases. That local diagnostic
+reused unchanged dependencies; the separate
+[clean Runtime CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37178545076)
+rebuilt native and managed sources and passed its model and guest gates.
+
+A separately recorded continuous-scheduling run retained the completed
+instruction-step prefix, then completed 10 ms and 100 ms virtual intervals,
+reaching 112,220 microseconds of guest time. Its 120-second wall-time bound
+expired during the following one-second interval. No fatal exception was
+observed, and UART output remained empty. The repeated sampled PC does not
+establish a cause or prove a guest loop. The application and peripheral models
+were unchanged between these diagnostics; changing the execution schedule
+provided more guest-time coverage. Full boot and modern IMU wire mappings
+remain unqualified.
