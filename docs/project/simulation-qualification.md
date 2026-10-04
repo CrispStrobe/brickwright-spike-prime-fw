@@ -342,7 +342,7 @@ SYSCFG behavior or reference notifications.
 
 ## ADC completion and SYSCFG routing candidate — 2026-10-04
 
-The candidate installer pins Runtime `5b31c8daecd9a8da69ff4ffcd5fc6af621389a8b` and Infrastructure
+The candidate installer pins Runtime `99d7045205a049adfef4d1b13a45b54f47e3dbf5` and Infrastructure
 `3f968455440204393d209f3d7941bc1304086eeb`. The ADC model now publishes EOC
 before a synchronous DMA read acknowledges ADC_DR; SYSCFG reset now publishes
 the held level of reset-selected port A. Original Antmicro MIT notices remain

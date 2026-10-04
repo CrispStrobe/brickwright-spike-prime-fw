@@ -215,7 +215,7 @@
     }
   ],
   "requirements_sha256": "b43bcef93a7d0d202be79357b2352f8171e4a4a93b35e3cc2f911df6ebd3472d",
-  "runtime_commit": "5b31c8daecd9a8da69ff4ffcd5fc6af621389a8b",
+  "runtime_commit": "99d7045205a049adfef4d1b13a45b54f47e3dbf5",
   "schema": 1,
   "scope": "Host-only Bluetooth-air test dependencies; no ARM or WASM inclusion"
 }
