@@ -504,9 +504,70 @@ limit, with zero TI payload. The final qualification-record update changes
 documentation only.
 
 Nested peripheral-to-memory request pulses ending before an old copy returns
-are outside these restart fixtures. Software-interruption TCIF and FIFO draining
+were outside these preceding restart fixtures; the following candidate
+addresses that separately. Software-interruption TCIF and FIFO draining
 remain unmodeled. Hardware's interruption status is distinct from the model's successful-buffer terminal
 acknowledgement. Asynchronous DMA timing, ADC overrun, full channel-mux,
 double-buffer/FIFO/error behavior, SYSCFG memory remapping, native battery ADC
 sources, reference boot and modern IMU wire compatibility remain outside this
 qualification. No private reference application is loaded or inspected here.
+
+
+## Nested DMA receive-request qualification — 2026-10-04
+
+The firmware pins Runtime `756b684eee56ba698a931a14b3f4885cb8d8ada6` and
+Infrastructure `fe4ad383c7392527433783fcec455daa7ddc2bb7`. It retains a
+receive-request pulse received inside a synchronous
+copy callback until that copy returns. It applies both within the current
+transfer and after callback-driven rearm. A real manual-disable edge discards
+an ended pulse queued by the old descriptor, while preserving a still-high
+request level. Automatic terminal completion keeps
+the existing transmit readiness behavior. Falling edges outside an active copy
+still cancel readiness. Requests held while disabled remain available on enable.
+Reset and generation checks cancel stale deferred work.
+
+This is a one-bit pending-readiness model, not a counted request FIFO or physical
+timing qualification. Seventeen authored source-read fixtures check rearm with
+manual disable/reset, matched byte/halfword/word widths, no-rearm nested pulses,
+old/new source read counts, data/guards, successful-buffer acknowledgements,
+old-generation isolation and held/cancelled readiness at rest. On the exact
+original model, the first 15 cases fail nine and pass six, with zero skips. An
+intermediate low-edge-only candidate fails two of those isolation cases and
+passes 13, demonstrating
+why manual disable must discard an old ended pulse. The broader first guarded
+suite found a live-high SPI readiness regression; explicit input-level tracking
+distinguishes held readiness from ended pulses. The final level-aware managed
+build passes 170 focused cases including all 17 new ones, with zero skips or
+build warnings/errors. Native board helpers preserve DDS=0 terminal handling,
+abort/restart, GPIO endpoints and routing. Stock Renode 1.16.1 staged sources
+pass all 17 new cases plus the previous source fixtures, board helpers and six
+UART bridges. These cached-dependency local checks are separate from the clean
+CI qualification below. Package assembly and six assembler tests also pass.
+
+The consumed source closure remains 20 files: only STM32DMA changes, and 19
+other inputs including the MIT licence remain identical. Antmicro notices
+remain intact with scoped modification credits; new fixtures use BSD-3-Clause.
+No private reference application is loaded or inspected.
+
+[Clean Runtime CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37207122815)
+passes 477 tests: 447 STM32/AM1808, six redirected-console and 22 EV3 tests.
+Native board helpers, guest, debugger and throughput gates also pass.
+Infrastructure PR #33 merged at `4d4fefee12af854c124a85960d445e012e870bea`;
+Runtime PR #49 merged at `c1e64d35d5dc4723c5ae2e4a1d9f57cb689083a9`.
+Both merge trees exactly match their tested candidates. The firmware retains
+those immutable candidate pins.
+
+[The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37207150835)
+passes both protected profiles on adoption candidate
+`7a70229841c2c35cbb0c12f745393c079b6ddef6`, including all five HCI peers
+(LE reconnect, Scratch Link, Classic, stationary IMU and pose IMU).
+Measured userspace flash is 590,556 bytes for `simulation` and 590,564 bytes
+for `simulation-hci`; both use 87,816 bytes of static RAM and contain zero
+TI service-pack payload bytes. This qualifies simulated synthetic IMU inputs,
+not the unchanged LEGO firmware's modern IMU wire protocol.
+
+Software-interruption TCIF, FIFO draining/disable latency, unequal-width
+conversion, full DMA channel-mux/double-buffer/FIFO/error behavior, asynchronous
+timing, ADC overrun, SYSCFG memory remapping, native battery/temperature sample
+sources, reference boot and modern IMU wire compatibility remain outside this
+qualification.
