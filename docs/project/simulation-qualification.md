@@ -379,14 +379,16 @@ The offline source profile includes an aliased SYSCFG model and keeps strict
 byte verification of its now 20-file source closure. The retained NuttX board
 already had SYSCFG routing and explicit synthetic ADC fixtures.
 
-DDS=0 DMA terminal-transfer handling, SYSCFG memory remapping and missing native
-battery/temperature ADC samples remain open gaps. Full reference boot and
+At this preceding pin, DDS=0 DMA terminal-transfer handling remained open; the
+following qualification addresses that synchronous model mechanism. SYSCFG
+memory remapping and missing native battery/temperature ADC samples remain
+open gaps. Full reference boot and
 modern IMU wire mappings remain unqualified. No application disassembly or
 firmware-specific register values were used for these corrections.
 
-## ADC limited-DMA terminal candidate — 2026-10-04
+## ADC limited-DMA terminal qualification — 2026-10-04
 
-The candidate pins Runtime `bac884d7af777be0e5552552188135d4e352e500` and
+The adoption pins Runtime `bac884d7af777be0e5552552188135d4e352e500` and
 Infrastructure `8be722f931a5d0b82a2b866478e25efc3232df2f`. DDS=0 now allows
 initial requests, then suppresses requests after the DMA controller's programmed
 buffer completes. DMA stream re-enable alone cannot rearm the ADC; ADC DMA must
@@ -406,10 +408,29 @@ passes 48 cases (29 new, 13 previous ADC and six DMA), zero skips or build
 warnings/errors. Native board and intended stock Renode 1.16.1 staged fixtures
 pass actual DDS=0 transfer/suppression/rearm with TCIE=0, all 29 new cases,
 existing model fixtures, GPIO endpoints and six UART bridges. These local
-cached-dependency scopes are separate from pending clean runtime and firmware
-qualification. Original Antmicro MIT notices remain with scoped credits; new
-fixtures are BSD-3-Clause. The strictly verified source closure remains20
-files: ADC/DMA change,18 other inputs unchanged; output manifest remains16.
+cached-dependency scopes are separate from the clean runtime qualification
+below and the firmware matrix. Original Antmicro MIT notices remain with scoped
+credits; new fixtures are BSD-3-Clause. The strictly verified source closure remains 20
+files: ADC/DMA change, 18 other inputs unchanged; output manifest remains 16.
+
+[Clean candidate CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37198239632)
+passed complete source/native builds, all 407 focused cases (379 STM32/AM1808,
+six console and 22 EV3), actual GPIO/ADC-DMA topology, guest execution, debugger
+and throughput checks. Infrastructure merge
+`3ee16a8e46b79f634abda8282575694189f2c3c1` and Runtime merge
+`ab9ec1bf70e8397c0ce541998917b26c84c2b857` have trees identical to their tested
+candidates. The redundant Runtime merged-main run was cancelled when a separate
+six-motor feature advanced main; this adoption retains its immutable tested
+candidate rather than incorporating that separate feature.
+
+[The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37198299149)
+passed on adoption candidate `9ed7d2f9ae0cf6e78120732c77bde2612c3dd766`.
+Both protected profiles rebuilt the exact pinned runtime and passed guest,
+resource, licence/notices and TI-exclusion gates. The HCI profile passed LE
+reconnect, Scratch Link, Classic, stationary calibration and pose peers. Both
+profiles used 590,564 bytes of userspace flash against a 654,336-byte limit and
+87,816 bytes of static RAM against a 98,304-byte limit, with zero TI payload.
+The final evidence and historical-gap corrections change documentation only.
 
 DDS=0 with circular DMA is a model boundary interpretation. ST recommends
 limited requests with noncircular DMA and unlimited requests with circular DMA
