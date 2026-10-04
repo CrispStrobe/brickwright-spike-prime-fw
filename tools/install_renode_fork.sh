@@ -6,7 +6,7 @@
 # dependencies; this does not download a prebuilt Renode executable/runtime.
 set -euo pipefail
 
-runtime_revision=44f412aaff737fd2b702cac915f25288edc617da
+runtime_revision=a13be9696e84bd3485cc0a56401d1984b107cc9c
 infrastructure_revision=ecd4fae6320b7f483b11dc4918e7182958f8ad36
 resources_revision=14b80cde0a136b684f316eb7f6a31aeaae0684bf
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
