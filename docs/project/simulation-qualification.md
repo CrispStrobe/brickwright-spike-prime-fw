@@ -504,9 +504,54 @@ limit, with zero TI payload. The final qualification-record update changes
 documentation only.
 
 Nested peripheral-to-memory request pulses ending before an old copy returns
-are outside these restart fixtures. Software-interruption TCIF and FIFO draining
+were outside these preceding restart fixtures; the following candidate
+addresses that separately. Software-interruption TCIF and FIFO draining
 remain unmodeled. Hardware's interruption status is distinct from the model's successful-buffer terminal
 acknowledgement. Asynchronous DMA timing, ADC overrun, full channel-mux,
 double-buffer/FIFO/error behavior, SYSCFG memory remapping, native battery ADC
 sources, reference boot and modern IMU wire compatibility remain outside this
 qualification. No private reference application is loaded or inspected here.
+
+
+## Nested DMA receive-request candidate — 2026-10-04
+
+The candidate pins Runtime `756b684eee56ba698a931a14b3f4885cb8d8ada6` and
+Infrastructure `fe4ad383c7392527433783fcec455daa7ddc2bb7`. It retains a
+receive-request pulse received inside a synchronous
+copy callback until that copy returns. It applies both within the current
+transfer and after callback-driven rearm. A real manual-disable edge discards
+an ended pulse queued by the old descriptor, while preserving a still-high
+request level. Automatic terminal completion keeps
+the existing transmit readiness behavior. Falling edges outside an active copy
+still cancel readiness. Requests held while disabled remain available on enable.
+Reset and generation checks cancel stale deferred work.
+
+This is a one-bit pending-readiness model, not a counted request FIFO or physical
+timing qualification. Seventeen authored source-read fixtures check rearm with
+manual disable/reset, matched byte/halfword/word widths, no-rearm nested pulses,
+old/new source read counts, data/guards, successful-buffer acknowledgements,
+old-generation isolation and held/cancelled readiness at rest. On the exact
+original model, the first 15 cases fail nine and pass six, with zero skips. An
+intermediate low-edge-only candidate fails two of those isolation cases and
+passes 13, demonstrating
+why manual disable must discard an old ended pulse. The broader first guarded
+suite found a live-high SPI readiness regression; explicit input-level tracking
+distinguishes held readiness from ended pulses. The final level-aware managed
+build passes 170 focused cases including all 17 new ones, with zero skips or
+build warnings/errors. Native board helpers preserve DDS=0 terminal handling,
+abort/restart, GPIO endpoints and routing. Stock Renode 1.16.1 staged sources
+pass all 17 new cases plus the previous source fixtures, board helpers and six
+UART bridges. These cached-dependency local checks are separate from pending
+clean runtime and firmware qualification. Package assembly and six assembler
+tests also pass.
+
+The consumed source closure remains 20 files: only STM32DMA changes, and 19
+other inputs including the MIT licence remain identical. Antmicro notices
+remain intact with scoped modification credits; new fixtures use BSD-3-Clause.
+No private reference application is loaded or inspected.
+
+Software-interruption TCIF, FIFO draining/disable latency, unequal-width
+conversion, full DMA channel-mux/double-buffer/FIFO/error behavior, asynchronous
+timing, ADC overrun, SYSCFG memory remapping, native battery/temperature sample
+sources, reference boot and modern IMU wire compatibility remain outside this
+qualification.
