@@ -339,3 +339,25 @@ evidence-record update changes documentation only.
 Modern reference boot and IMU wire mappings remain unqualified. The console
 correction removes the host EOF defect; it does not supply missing ADC inputs,
 SYSCFG behavior or reference notifications.
+
+## ADC completion and SYSCFG routing candidate — 2026-10-04
+
+The candidate installer pins Runtime `5b31c8daecd9a8da69ff4ffcd5fc6af621389a8b` and Infrastructure
+`3f968455440204393d209f3d7941bc1304086eeb`. The ADC model now publishes EOC
+before a synchronous DMA read acknowledges ADC_DR; SYSCFG reset now publishes
+the held level of reset-selected port A. Original Antmicro MIT notices remain
+with scoped modification credits. Actual original/changed synthetic tests
+returned 8 ADC failures versus 13 passes and 33 SYSCFG failures versus 66
+passes respectively. Those local diagnostics use cached dependencies; separate
+clean runtime and firmware qualification are pending.
+
+The native F413 platform now routes GPIO banks through SYSCFG EXTICR, retaining
+PA13 power hold, PA15 display latch, PB12 storage select and PC10 speaker enable.
+The offline source profile includes an aliased SYSCFG model and keeps strict
+byte verification of its now 20-file source closure. The retained NuttX board
+already had SYSCFG routing and explicit synthetic ADC fixtures.
+
+DDS=0 DMA terminal-transfer handling, SYSCFG memory remapping and missing native
+battery/temperature ADC samples remain open gaps. Full reference boot and
+modern IMU wire mappings remain unqualified. No application disassembly or
+firmware-specific register values were used for these corrections.
