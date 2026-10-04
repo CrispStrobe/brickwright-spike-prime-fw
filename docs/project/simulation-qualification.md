@@ -198,7 +198,7 @@ update changes documentation only.
 
 ## CRC runtime qualification — 2026-10-04
 
-The firmware installer pins Runtime
+The CRC qualification pinned Runtime
 `a13be9696e84bd3485cc0a56401d1984b107cc9c` and Infrastructure
 `ecd4fae6320b7f483b11dc4918e7182958f8ad36`. The STM32F4 CRC model now
 handles its absent optional input-reversal field as disabled. Original Antmicro
@@ -218,7 +218,7 @@ the candidate. Runtime [PR 38](https://github.com/CrispStrobe/renode-spike-prime
 merged at `59a8d92572aac992b9e89e2296dcc432ed042b55`, preserving a concurrent
 drive-motor API addition. Its different combined tree passed
 [separate clean main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37179029874).
-The firmware retains the exact qualified Runtime candidate above.
+The firmware matrix below used the exact qualified Runtime candidate above.
 
 [The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37178571908)
 passed both protected profiles on `19997bf4700d66b719b7aa48e3ac7ceab2aa1bd6`.
@@ -244,7 +244,7 @@ exercise electrical power loss or the complete NuttX VFS stack. See
 
 ## SPI Fast Read runtime qualification — 2026-10-04
 
-The firmware installer pins Runtime
+The SPI Fast Read qualification pinned Runtime
 `8c19f76437d9f395cd5ee3cb205ac7032abc64d8`, with Infrastructure
 `5d2d3a79ed1df755fc261194de0774960d2ae0d3`. The native general SPI flash
 model's Fast Read command (`0x0B`) now uses the selected three- or four-byte
@@ -269,7 +269,7 @@ MicroPython sensor-reader addition. That combined tree differs from the
 qualified candidate and passed
 [separate clean main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37184076166),
 including all 296 model cases and the source, guest, debugger and throughput
-gates. The firmware retains the exact candidate pin above.
+gates. The firmware matrix below used the exact candidate pin above.
 
 [The complete two-profile firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37183121789)
 passed on `9debccb86461e5c273bb36505bce9b18baded2dd`. Both jobs rebuilt the
@@ -285,3 +285,57 @@ This correction does not change the firmware's separate flash shim and does
 not establish which flash commands the private reference application uses.
 Modern IMU emission, full reference boot and physical hardware behavior remain
 unqualified. See [the reference diagnostic scope](imu-reference-captures.md).
+
+## Redirected console EOF qualification — 2026-10-04
+
+The firmware installer pins Runtime
+`f1920f6bd9eee63026cb5620e8bc1c0bf9f7522f` and Infrastructure
+`f6c31a7f8f223eb00378f88d7e2276792a1c392c`. The host console input worker
+now stops at EOF instead of repeatedly forwarding `-1`. Before a subscriber
+attaches it waits without consuming piped input; each blocking read retains
+the delegate captured before that read. Original Antmicro MIT notices remain,
+with a scoped modification credit.
+
+Six synchronous fixtures cover empty EOF, finite input including NUL,
+unattached and late subscribers, subscriber changes between reads and captured
+delegate dispatch. A bounded equivalent of the original loop fails all six;
+the explicitly rebuilt corrected helper passes all six. That local diagnostic
+retained historical cached other sources and dependencies; it is distinct from
+the complete clean source builds below.
+
+[Console candidate CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37184175318)
+passed on `48952c2408c7ba5f12bc3dd1c2ab73cd4f90b47d`.
+Infrastructure [PR 29](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/29)
+merged at `9b538871abbaad1b39c9e5fbbb50d872190a6f52` with the candidate's
+tree. Runtime [PR 43](https://github.com/CrispStrobe/renode-spike-prime/pull/43)
+merged at the pinned `f1920f6` commit, preserving a concurrent motor-feedback
+addition. Its combined tree passed
+[separate clean main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37184652942).
+Both runs passed native and managed source builds, 296 model cases, all six
+console cases and actual guest, debugger and throughput checks. Console code
+is outside the offline profile's 19-source closure; its strict verification
+and reviewed source reference remain unchanged.
+
+Separate real CLI checks rebuilt the complete Infrastructure source at `f6c31a7`
+with cached dependencies and a historical CLI. Immediate finite piped commands
+and commands sent after startup both produced their execution markers and
+quit normally. At immediate EOF, the input thread was absent from the five-
+and nine-second samples, memory stayed near 519–522 MiB and output remained
+bounded. The monitor stayed open until the deliberate twelve-second wall cap;
+EOF ends the input worker, not the monitor. These synthetic checks created no
+machine and loaded no firmware image; they do not measure the queue length.
+
+[The complete firmware adoption matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37184824092)
+passed on `548e759e6cdc24991ceb662619977c89b21c83d7`. Both protected
+profiles rebuilt the exact pinned runtime and passed guest execution,
+resource budgets, licence/notices and TI-exclusion gates. The HCI profile
+passed LE reconnect, Scratch Link, Classic, stationary calibration and pose
+peers. Both profiles used 590,556 bytes of userspace flash against a 654,336-byte
+limit and 87,816 bytes of static RAM against a 98,304-byte limit, with zero TI
+payload. The simulation flash total was eight bytes smaller than the preceding
+SPI qualification; the cause of that difference was not established. The
+evidence-record update changes documentation only.
+
+Modern reference boot and IMU wire mappings remain unqualified. The console
+correction removes the host EOF defect; it does not supply missing ADC inputs,
+SYSCFG behavior or reference notifications.
