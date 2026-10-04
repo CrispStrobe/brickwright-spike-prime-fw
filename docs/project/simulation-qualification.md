@@ -442,11 +442,11 @@ qualification; its acknowledgement recovery fixtures use a fixed-address
 sources, reference boot and modern IMU wire compatibility remain open.
 
 
-## DMA partial-abort restart candidate — 2026-10-04
+## DMA partial-abort restart qualification — 2026-10-04
 
-The candidate pins Runtime `31a43ea2be41e7baebe96df2d434f0136dc8065f` and
-Infrastructure `43741b47a7fbdb74ae8c9abd670a6491c61642e8`. It reloads working DMA pointers from programmed
-PAR/M0AR and the last software-programmed NDTR on a real EN 0→1 transition.
+The adoption pins Runtime `31a43ea2be41e7baebe96df2d434f0136dc8065f` and
+Infrastructure `43741b47a7fbdb74ae8c9abd670a6491c61642e8`. It reloads working
+DMA pointers from programmed PAR/M0AR and the last software-programmed NDTR on a real EN 0→1 transition.
 EN 1→1 control/interrupt-mask writes preserve transfer progress. To resume a
 partial transfer instead of restarting it, software adjusts the bases and
 explicitly writes the residual count before enabling. The contract follows
@@ -458,9 +458,10 @@ measurement.
 Enable dispatch runs after all control fields in the write have committed.
 If a synchronous bus callback aborts and rearms while the old copy is returning,
 the new descriptor's first work is deferred under its own generation. Disable
-or reset cancels stale scheduled work. A new peripheral request received in
-that callback is retained without requiring another edge. The model's one-
-microsecond scheduling yield does not claim cycle-accurate hardware timing.
+or reset cancels stale scheduled work. A new memory-to-peripheral request
+received in that callback is retained without requiring another edge. The
+model yields execution with a one-microsecond delay; this does not claim
+cycle-accurate hardware timing.
 
 All 51 new synthetic cases on the exact original model produce 34 failures and
 17 passes, zero skips. The actual original native board also fails the new-base
@@ -469,18 +470,42 @@ with zero skips or build warnings/errors. Native board and stock Renode 1.16.1
 staged-source/board checks pass all 51 new cases, the existing model fixtures,
 DDS=0 terminal handling, GPIO endpoints and six UART bridges. Package assembly
 and six assembler tests pass. These local diagnostics use cached dependencies;
-clean source/native runtime and firmware matrix qualification remain pending. The source closure remains 20 files: only STM32DMA changes, and
+clean source/native runtime and firmware qualification below are separate
+completed scopes. The source closure remains 20 files: only STM32DMA changes, and
 19 other inputs including the MIT licence remain identical. Antmicro notices
 are preserved with scoped modification credits; new fixtures use BSD-3-Clause.
 
-The restart fixture checks receive/transmit, byte/halfword/word widths,
-independent memory/peripheral increment settings, buffer guards, programmed
+The restart fixture checks receive/transmit, matched memory/peripheral
+byte/halfword/word widths, independent memory/peripheral increment settings, buffer guards, programmed
 versus residual count, whole-control writes and reentrant/cancelled work. The
 actual ADC/DMA board fixture checks a partial buffer followed by a newly
 programmed buffer and observes successful-buffer acknowledgement pulses.
 
-Software-interruption TCIF and FIFO draining remain unmodeled. Hardware's
-interruption status is distinct from the model's successful-buffer terminal
+[Clean candidate CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37200974971)
+passed complete source/native builds, all 458 focused cases (430 STM32/AM1808,
+six console and 22 EV3), the actual board abort/restart helper, GPIO topology,
+guest execution, debugger and throughput gates. Infrastructure merge
+`fbcfc30d7729d3dad2f0fb9089c4467f742edc06` and Runtime merge
+`58a31066cc8164b0aa439fa8de59d9a487242885` have trees identical to their tested
+candidates. The firmware retains those immutable tested candidate pins.
+
+[Separate merged-main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37201456088)
+also passed all 458 focused cases and the complete source/native, board, guest,
+debugger and throughput gates at the exact Runtime merge above.
+
+[The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37200996536)
+passed on adoption candidate `12de580fe15f7ecc1911316f4ae241130596c590`.
+Both protected profiles rebuilt the pinned runtime and passed guest execution,
+resource, licence/notices and TI-exclusion gates. HCI passed LE reconnect,
+Scratch Link, Classic, stationary calibration and pose peers. Userspace flash
+was 590,564 bytes for simulation and 590,572 bytes for simulation-hci, against a
+654,336-byte limit. Both used 87,816 bytes of static RAM against a 98,304-byte
+limit, with zero TI payload. The final qualification-record update changes
+documentation only.
+
+Nested peripheral-to-memory request pulses ending before an old copy returns
+are outside these restart fixtures. Software-interruption TCIF and FIFO draining
+remain unmodeled. Hardware's interruption status is distinct from the model's successful-buffer terminal
 acknowledgement. Asynchronous DMA timing, ADC overrun, full channel-mux,
 double-buffer/FIFO/error behavior, SYSCFG memory remapping, native battery ADC
 sources, reference boot and modern IMU wire compatibility remain outside this
