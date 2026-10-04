@@ -127,7 +127,8 @@ interrupts enabled and no recorded CPU faults. TIM12 accounted for 27,747,727
 rising edges with 1,128 observer callbacks; it preserves
 edge counts without emitting each GPIO pulse. No unsupported TIM12 request or
 SPI2 write was recorded; observed UART2 output remained empty. ADC channels
-without samples and unmapped SYSCFG accesses remain model gaps. Full boot,
+without samples and unmapped SYSCFG accesses were gaps in that pinned
+diagnostic revision. Full boot,
 Bluetooth startup and modern IMU wire behavior remain unqualified.
 
 A longer run used that same native profile with continuous scheduling directly
@@ -138,3 +139,11 @@ fault or SPI2 write, and observed UART2 output remained empty. R0 continued
 advancing; TIM12 accounted for 152,697,729 rising edges with 6,123 observer
 callbacks. Peak host memory was about 250 MB. This is additional bounded execution coverage, not
 evidence of completed startup or captured IMU notifications.
+
+The preceding reference runs predate the separately tested ADC completion and
+SYSCFG EXTICR routing/reset corrections recorded in
+[simulation qualification](simulation-qualification.md). Those generic
+peripheral tests establish register and board-routing behavior, not a successful
+reference application boot. DDS=0 DMA terminal-transfer handling, SYSCFG memory
+remapping and native battery/temperature ADC sample sources remain open gaps;
+no new reference notifications or modern IMU mapping are qualified here.

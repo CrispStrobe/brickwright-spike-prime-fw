@@ -288,7 +288,7 @@ unqualified. See [the reference diagnostic scope](imu-reference-captures.md).
 
 ## Redirected console EOF qualification — 2026-10-04
 
-The firmware installer pins Runtime
+The preceding console adoption pinned Runtime
 `f1920f6bd9eee63026cb5620e8bc1c0bf9f7522f` and Infrastructure
 `f6c31a7f8f223eb00378f88d7e2276792a1c392c`. The host console input worker
 now stops at EOF instead of repeatedly forwarding `-1`. Before a subscriber
@@ -339,3 +339,47 @@ evidence-record update changes documentation only.
 Modern reference boot and IMU wire mappings remain unqualified. The console
 correction removes the host EOF defect; it does not supply missing ADC inputs,
 SYSCFG behavior or reference notifications.
+
+## ADC completion and SYSCFG routing qualification — 2026-10-04
+
+The installer now pins Runtime
+`99d7045205a049adfef4d1b13a45b54f47e3dbf5` and Infrastructure
+`3f968455440204393d209f3d7941bc1304086eeb`. The ADC model now publishes EOC
+before a synchronous DMA read acknowledges ADC_DR; SYSCFG reset now publishes
+the held level of reset-selected port A. Original Antmicro MIT notices remain
+with scoped modification credits. Actual original/changed synthetic tests
+returned 8 ADC failures versus 13 passes and 33 SYSCFG failures versus 66
+passes respectively. Those local diagnostics use cached dependencies. Actual
+native topology tests and staged tests on the intended stock Renode 1.16.1
+also passed the routing, four retained device endpoints, 13 ADC cases and six
+UART bridges. Synthetic direct-EXTI bypass and missing-speaker-endpoint
+mutations were rejected.
+
+[Clean candidate CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37187564825)
+and [separate merged-main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37187927592)
+passed complete source/native builds, all 378 focused cases (350 STM32/AM1808,
+six console and 22 EV3 analog/motor), real native routing, guest execution,
+debugger and throughput gates. Runtime main
+`e49ecac194d3088314fec8c18be34c5101637d2d` and Infrastructure main
+`183d84d7f4b16f0cde3c79be77223028549aff8d` have trees identical to their
+respective tested candidates.
+
+[The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37187575812)
+passed on `132fff90c14e5c9d6a8c676a723b58f56c694586`. Both protected
+profiles rebuilt the exact pinned runtime and passed guest execution,
+resource, licence/notices and TI-exclusion gates. The HCI profile passed LE
+reconnect, Scratch Link, Classic, stationary calibration and pose peers. Both
+profiles used 590,556 bytes of userspace flash against a 654,336-byte limit and
+87,816 bytes of static RAM against a 98,304-byte limit, with zero TI payload.
+The final evidence update changes documentation only.
+
+The native F413 platform now routes GPIO banks through SYSCFG EXTICR, retaining
+PA13 power hold, PA15 display latch, PB12 storage select and PC10 speaker enable.
+The offline source profile includes an aliased SYSCFG model and keeps strict
+byte verification of its now 20-file source closure. The retained NuttX board
+already had SYSCFG routing and explicit synthetic ADC fixtures.
+
+DDS=0 DMA terminal-transfer handling, SYSCFG memory remapping and missing native
+battery/temperature ADC samples remain open gaps. Full reference boot and
+modern IMU wire mappings remain unqualified. No application disassembly or
+firmware-specific register values were used for these corrections.
