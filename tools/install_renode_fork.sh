@@ -6,8 +6,8 @@
 # dependencies; this does not download a prebuilt Renode executable/runtime.
 set -euo pipefail
 
-runtime_revision=a13be9696e84bd3485cc0a56401d1984b107cc9c
-infrastructure_revision=ecd4fae6320b7f483b11dc4918e7182958f8ad36
+runtime_revision=8c19f76437d9f395cd5ee3cb205ac7032abc64d8
+infrastructure_revision=5d2d3a79ed1df755fc261194de0774960d2ae0d3
 resources_revision=14b80cde0a136b684f316eb7f6a31aeaae0684bf
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 tools_dir=${BRICKWRIGHT_TOOLS_DIR:-"$repo_dir/.local/tools"}
