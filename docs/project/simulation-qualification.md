@@ -241,3 +241,44 @@ Physical USB/electrical behavior, motor safety, brownout timing, radio/security
 and long-duration qualification remain open. Host fault injection does not
 exercise electrical power loss or the complete NuttX VFS stack. See
 [the simulation-only safety policy](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/SAFETY.md).
+
+## SPI Fast Read runtime qualification — 2026-10-04
+
+The firmware installer pins Runtime
+`8c19f76437d9f395cd5ee3cb205ac7032abc64d8`, with Infrastructure
+`5d2d3a79ed1df755fc261194de0774960d2ae0d3`. The native general SPI flash
+model's Fast Read command (`0x0B`) now uses the selected three- or four-byte
+address mode. It retains one dummy byte; the dedicated four-byte command
+(`0x0C`) remains independent of that mode. The original Antmicro MIT notice
+is retained, with a scoped modification credit.
+
+An actual old-model negative control failed the four-byte-mode case while
+passing the other 13 flash cases. The rebuilt model passed all 14 cases.
+[Clean Runtime CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37182865383)
+passed native and managed source builds, 296 model cases, and actual guest,
+debugger and throughput checks. The offline MicroPython support profile
+advances its reviewed source pin because the consumed flash source changed.
+Of its 19 source inputs, the other 18 are byte-identical; its strict byte
+verification is unchanged. Of 16 staged package files, only `models.cs` changes.
+
+Infrastructure [PR 28](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/28)
+merged at `15d1ac022b483d8e92f71c12e2ade154b4b7b566` with the candidate's
+tree. Runtime [PR 41](https://github.com/CrispStrobe/renode-spike-prime/pull/41)
+merged at `35cb7b2352f8448b7c2603853409143c5e590aa1`, preserving a concurrent
+MicroPython sensor-reader addition. That combined tree differs from the
+qualified candidate; the firmware retains the exact candidate pin above.
+
+[The complete two-profile firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37183121789)
+passed on `9debccb86461e5c273bb36505bce9b18baded2dd`. Both jobs rebuilt the
+pinned runtime from source and passed protected firmware execution, resource
+budgets, licence/notices and TI-exclusion gates. The HCI profile passed LE
+reconnect, Scratch Link, Classic, stationary calibration and pose peers.
+Userspace flash was 590,564 bytes for `simulation` and 590,556 bytes for
+`simulation-hci`, against a 654,336-byte limit. Both used 87,816 bytes of static
+RAM against a 98,304-byte limit, with zero TI payload. The evidence-record
+update changes documentation only.
+
+This correction does not change the firmware's separate flash shim and does
+not establish which flash commands the private reference application uses.
+Modern IMU emission, full reference boot and physical hardware behavior remain
+unqualified. See [the reference diagnostic scope](imu-reference-captures.md).

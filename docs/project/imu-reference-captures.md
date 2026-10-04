@@ -90,3 +90,50 @@ establish a cause or prove a guest loop. The application and peripheral models
 were unchanged between these diagnostics; changing the execution schedule
 provided more guest-time coverage. Full boot and modern IMU wire mappings
 remain unqualified.
+
+Passive snapshots of the same legacy board model showed thread-mode execution
+with interrupts enabled and no recorded CPU fault. The sampled tick value
+advanced by 72 over a 100 ms virtual interval, despite the repeated sampled
+PC. SysTick was configured at 72 MHz with a reload of 99,999. The application's
+observed PLL configuration instead implies a 100 MHz core clock when combined
+with the board's 16 MHz oscillator, documented in the
+[MicroPython LEGO Hub No. 6 board configuration](https://github.com/micropython/micropython/blob/master/ports/stm32/boards/LEGO_HUB_NO6/stm32f4xx_hal_conf.h).
+These observations identify a board-clock mismatch; they do not qualify boot
+behavior. No SPI2 write was observed through 412,220 microseconds of guest time,
+and the external flash model remained idle.
+
+The longer diagnostic ended with a host `OutOfMemoryException`, rather than a
+guest fault. Inspection of the public Renode console implementation showed
+that redirected stdin at EOF was repeatedly forwarded to the console queue.
+The invocation had used `/dev/null` for stdin. Further runs must hold an empty
+input pipe open, or use a separately qualified console correction. Resource
+growth in that invocation cannot be attributed solely to guest timer activity.
+
+A repeat with stdin held open and empty completed cleanly through 112,220
+microseconds. Its 34 logged TIM12 writes all fit the existing analytical
+display-clock model's supported subset. A separate native-profile comparison
+then rebuilt the complete current Infrastructure source at
+`5d2d3a79ed1df755fc261194de0774960d2ae0d3`, retaining cached diagnostic
+dependencies. It used the public profile's 100 MHz clocks, paced 50 MHz SPI2,
+native erased flash and analytical TIM12 with the native display. It loaded no
+generated boot seed or user program and kept the reference application unchanged.
+This differs from the legacy board and is a separate qualification scope.
+
+The native comparison completed the same instruction-step prefix followed by
+10 ms, 100 ms and one-second continuous intervals, reaching 1,112,220
+microseconds of guest time. SysTick advanced at 1 kHz; sampled execution stayed
+in thread mode with interrupts enabled and no recorded CPU faults. TIM12
+accounted for 27,747,727 rising edges with 1,128 observer callbacks; it preserves
+edge counts without emitting each GPIO pulse. No unsupported TIM12 request,
+UART output or SPI2 write was observed. ADC channels without samples and
+unmapped SYSCFG accesses remain model gaps. Full boot, Bluetooth startup and
+modern IMU wire behavior remain unqualified.
+
+A longer run used that same native profile with continuous scheduling directly
+from reset. It completed 10 ms, 100 ms, one-second and five-second intervals,
+reaching 6.11 seconds of guest time before the 120-second wall bound interrupted
+the next ten-second interval. The final completed snapshot still had no CPU
+fault, UART output or SPI2 write. The tick value continued advancing; TIM12
+accounted for 152,697,729 rising edges with 6,123 observer callbacks. Peak host
+memory was about 250 MB. This is additional bounded execution coverage, not
+evidence of completed startup or captured IMU notifications.
