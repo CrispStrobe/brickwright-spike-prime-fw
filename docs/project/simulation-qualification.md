@@ -266,7 +266,10 @@ merged at `15d1ac022b483d8e92f71c12e2ade154b4b7b566` with the candidate's
 tree. Runtime [PR 41](https://github.com/CrispStrobe/renode-spike-prime/pull/41)
 merged at `35cb7b2352f8448b7c2603853409143c5e590aa1`, preserving a concurrent
 MicroPython sensor-reader addition. That combined tree differs from the
-qualified candidate; the firmware retains the exact candidate pin above.
+qualified candidate and passed
+[separate clean main CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37184076166),
+including all 296 model cases and the source, guest, debugger and throughput
+gates. The firmware retains the exact candidate pin above.
 
 [The complete two-profile firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37183121789)
 passed on `9debccb86461e5c273bb36505bce9b18baded2dd`. Both jobs rebuilt the
