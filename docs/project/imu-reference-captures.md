@@ -144,6 +144,7 @@ The preceding reference runs predate the separately tested ADC completion and
 SYSCFG EXTICR routing/reset corrections recorded in
 [simulation qualification](simulation-qualification.md). Those generic
 peripheral tests establish register and board-routing behavior, not a successful
-reference application boot. DDS=0 DMA terminal-transfer handling, SYSCFG memory
+reference application boot. The later DDS=0 DMA terminal-transfer qualification
+in that record also covers the synchronous model mechanism only. SYSCFG memory
 remapping and native battery/temperature ADC sample sources remain open gaps;
 no new reference notifications or modern IMU mapping are qualified here.
