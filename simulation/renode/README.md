@@ -56,6 +56,13 @@ author-created code is MIT, but its own README says files pulled from LEGO
 firmware or filesystems remain licensed by LEGO. This project therefore does
 not automatically fetch or vendor those files.
 
+### Historical bring-up gates
+
+The following isolated diagnostics describe early bring-up. Current source-built
+firmware qualification, including program execution and explicit Save/Load across
+fresh processes, is documented in [hubprogram](../../docs/hubprogram.md) and the
+[Renode qualification record](https://github.com/CrispStrobe/renode-spike-prime/blob/main/docs/prime-nuttx-qualification.md). Their results do not broaden the original-image probes.
+
 The production NuttX configuration exposes its console only over USB CDC.
 Renode's F4 model does not provide a functional OTG FS device, so early tests
 must use symbols, PC progress, and the fixed RAMLOG region. A diagnostic UART
