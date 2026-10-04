@@ -58,6 +58,7 @@ nav:
       - project/simulated-bluetooth-air.md
       - project/classic-protocol.md
       - project/ble-protocol.md
+      - project/imu-reference-captures.md
       - project/hub-contract.md
       - project/simulation-qualification.md
       - project/nuttx-backports.md
