@@ -60,6 +60,8 @@ nav:
       - project/ble-protocol.md
       - project/imu-reference-captures.md
       - project/hub-contract.md
+      - project/capabilities.md
+      - project/hardware-qualification.md
       - project/simulation-qualification.md
       - project/nuttx-backports.md
       - project/upstream-storage-hardening.md

@@ -40,6 +40,38 @@ static void lifecycle(void) {
   bw_program_tick(&p,110); assert(d.brakes[0]==1 && d.brakes[1]==1);
   bw_program_tick(&p,111); assert(p.state==BW_PROGRAM_COMPLETE);
 }
+static void restart_committed_program(void) {
+  struct bw_program p, before; struct devices d;
+  const struct bw_instruction code[]={{1,0,400,0},{2,10,0,0},{0,0,0,0}};
+  const enum bw_program_state terminal[]={BW_PROGRAM_COMPLETE,BW_PROGRAM_STOPPED,BW_PROGRAM_FAULT};
+  unsigned i;
+  init(&p,&d);assert(bw_program_start(&p,17,100)==-EINVAL);
+  assert(!bw_program_load(&p,17,code,3));
+  for(i=0;i<sizeof(terminal)/sizeof(terminal[0]);i++) {
+    p.state=terminal[i];p.pc=2;p.error=-ENODEV;p.owned=1;
+    p.moving=0;p.waiting=1;p.ending=1;p.deadline=UINT64_MAX;
+    before=p;
+    assert(bw_program_start(&p,18,100)==-EINVAL && !memcmp(&p,&before,sizeof(p)));
+    assert(bw_program_start(&p,17,UINT64_MAX)==-EINVAL && !memcmp(&p,&before,sizeof(p)));
+    assert(!bw_program_start(&p,17,100));
+    assert(p.state==BW_PROGRAM_RUNNING && p.pc==0 && !p.error && !p.owned);
+    assert(p.moving==-1 && !p.waiting && !p.ending && !p.deadline);
+    assert(p.started==100 && p.last_tick==100 && p.id==17 && p.count==3);
+    assert(!memcmp(p.code,code,sizeof(code)));
+    before=p;assert(bw_program_start(&p,17,101)==-EBUSY && !memcmp(&p,&before,sizeof(p)));
+    bw_program_tick(&p,100);assert(p.waiting && d.speed[0]==400);
+    bw_program_tick(&p,110);bw_program_tick(&p,111);assert(p.state==BW_PROGRAM_COMPLETE);
+  }
+  /* STOP cancels a pending wait; START executes the retained program anew. */
+  assert(!bw_program_start(&p,17,200));bw_program_tick(&p,200);
+  assert(!bw_program_stop(&p) && p.state==BW_PROGRAM_STOPPED && !d.speed[0]);
+  assert(!bw_program_start(&p,17,201));bw_program_tick(&p,201);assert(d.speed[0]==400);
+  /* A repaired device can run the same program after its previous fault. */
+  d.failure=-ENODEV;bw_program_stop(&p);assert(!bw_program_start(&p,17,300));
+  bw_program_tick(&p,300);assert(p.state==BW_PROGRAM_FAULT && p.error==-ENODEV);
+  d.failure=0;assert(!bw_program_start(&p,17,301));bw_program_tick(&p,301);
+  assert(p.state==BW_PROGRAM_RUNNING && !p.error && d.speed[0]==400);
+}
 static void position_and_sensor(void) {
   struct bw_program p; struct devices d;
   const struct bw_instruction code[]={{1,0,300,0},{6,1,-90,500},{3,1,250,0},{0,0,0,0}};
@@ -155,6 +187,6 @@ static void six_ports(void) {
 }
 int main(void) {
   assert(bw_program_crc32((const uint8_t *)"123456789",9)==0xcbf43926u);
-  six_ports();lifecycle(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
+  six_ports();lifecycle();restart_committed_program(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
   puts("firmware program lifecycle, feedback, boundaries and transactional upload: PASS"); return 0;
 }

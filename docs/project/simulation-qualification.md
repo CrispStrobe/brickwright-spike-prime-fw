@@ -571,3 +571,39 @@ conversion, full DMA channel-mux/double-buffer/FIFO/error behavior, asynchronous
 timing, ADC overrun, SYSCFG memory remapping, native battery/temperature sample
 sources, reference boot and modern IMU wire compatibility remain outside this
 qualification.
+
+## Capability completion candidate — 2026-10-05
+
+This source candidate adds retained-program restart and meaningful Python
+OSError results, measured Classic degree jobs, owned cancellation/error
+cleanup, and mounted-volume calibration persistence with validated live
+stationary thresholds. The [capability matrix](capabilities.md) maps the
+implemented subset and remaining gaps; the [hardware plan](hardware-qualification.md)
+keeps physical gates separate.
+
+Host program/service/embedded-Python, Classic/backend, neutral compile,
+IMU snapshot/source/persistence/daemon and eight raw-reference decoder tests
+pass. The daemon tests include UBSan float-cast-overflow and a 141-frame live
+threshold-load/rejection/recovery case. Negative controls reproduce terminal
+restart rejection, collapsed timeout errno, previous-record truncation on a
+failed calibration save and ignored Classic cancellation rearm failure.
+The prior calibration implementation fails the previous-record preservation
+assertion; the replacement passes write/sync/close/rename failure isolation,
+short I/O, exact record length and finite/nondegenerate validation.
+
+The calibration crash/restart harness runs the actual save/load code against
+pinned real LittleFS with simulated NOR: first save passes 18 cuts, ordinary
+replacement 24, and replacement after 64 previous saves 21, for 63 cases.
+Source hashes match the existing reviewed LittleFS closure. Its single-writer
+unique-file shim and host filesystem boundary do not qualify actual NuttX VFS,
+concurrent writers or physical brownouts. The original settings layout is
+retained without checksum/authentication.
+
+Clean ARM builds, actual linker-member changes and guest/peer execution remain
+pending for this source candidate. Historical image/archive byte hashes in the
+compiler-input inventories remain explicitly historical; reviewed current
+source hashes and original attribution are updated. Additional libc members
+from unique temporary creation must be checked against the actual build.
+The unchanged reference rerun and its limits are recorded in
+[reference captures](imu-reference-captures.md); it captured no modern IMU
+notifications and does not qualify the wire mapping.

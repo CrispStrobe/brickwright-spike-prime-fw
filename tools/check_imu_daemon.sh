@@ -24,6 +24,7 @@ struct sensor_mag { float x, y, z; };
 EOF
 : > "$work/include/arch/board/board_lsm6dsl.h"
 "${CC:-cc}" -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror \
+  -fsanitize=undefined,float-cast-overflow -fno-sanitize-recover=all \
   -pthread -I"$work/include" -I"$root/apps/imu" \
   "$root/tools/test_imu_daemon.c" "$root/apps/imu/imu_fusion.c" \
   "$root/apps/imu/imu_geometry.c" "$root/apps/imu/imu_stationary.c" \

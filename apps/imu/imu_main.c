@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 KatsumiOuwa
+ * Copyright (c) 2026 Christian Strobele (calibration persistence and validity)
+ * Inherited spike-nx grant retained; see LICENSE and THIRD_PARTY.md.
+ */
 /****************************************************************************
  * apps/imu/imu_main.c
  *
@@ -33,7 +38,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define IMU_CAL_PATH      "/data/imu_cal.bin"
+#ifndef IMU_CAL_PATH
+#define IMU_CAL_PATH      "/mnt/flash/imu.calibration"
+#endif
 #define IMU_DAEMON_NAME   "imu_daemon"
 /* Keep stop responsive when the sensor stops delivering samples. */
 #define IMU_POLL_TIMEOUT  20
@@ -91,6 +98,11 @@ static pthread_mutex_t g_daemon_lock = PTHREAD_MUTEX_INITIALIZER;
 static bool g_daemon_running;
 static bool g_daemon_starting;
 static bool g_daemon_stop;
+/* The command task publishes settings; the sample producer alone changes the
+ * stationary detector, so live loads cannot race its accumulation window. */
+static uint32_t g_calibration_revision;
+static float g_stationary_gyro_threshold;
+static float g_stationary_accel_threshold;
 
 /****************************************************************************
  * Private Functions
@@ -162,7 +174,7 @@ static int imu_daemon(int argc, char *argv[])
   /* Issue #139: scale factors are derived per-sample from idx fields,
    * so leave them at 0 and let the sample loop initialise on the first
    * frame.  The stationary thresholds also depend on the scale, so they
-   * get re-applied via imu_stationary_set_thresholds() when idx changes.
+   * get reapplied when idx changes or a calibration load is published.
    */
 
   g_accel_mms2_per_lsb = 0.0f;
@@ -170,11 +182,18 @@ static int imu_daemon(int argc, char *argv[])
 
   /* Initialize modules */
 
-  imu_settings_t *settings = imu_calibration_get_settings();
-  imu_calibration_init(settings);
+  imu_settings_t settings;
+  pthread_mutex_lock(&g_daemon_lock);
+  imu_settings_t *stored_settings = imu_calibration_get_settings();
+  imu_calibration_init(stored_settings);
   imu_calibration_load(IMU_CAL_PATH);
+  settings = *stored_settings;
+  g_stationary_gyro_threshold = settings.gyro_stationary_threshold;
+  g_stationary_accel_threshold = settings.accel_stationary_threshold;
+  uint32_t calibration_revision = ++g_calibration_revision;
   imu_fusion_init();
-  imu_fusion_set_settings(settings);
+  imu_fusion_set_settings(&settings);
+  pthread_mutex_unlock(&g_daemon_lock);
   imu_stationary_init(0.0f, 0.0f, IMU_ODR, stationary_callback);
 
   uint8_t cur_fsr_xl_idx = IMU_FSR_IDX_UNKNOWN;
@@ -182,6 +201,7 @@ static int imu_daemon(int argc, char *argv[])
   uint8_t cur_odr_idx = IMU_FSR_IDX_UNKNOWN;
   uint64_t previous_timestamp = 0;
   uint64_t accepted_timestamp = 0;
+  bool stationary_configuration_valid = false;
 
   pthread_mutex_lock(&g_daemon_lock);
   g_daemon_running = true;
@@ -268,7 +288,13 @@ static int imu_daemon(int argc, char *argv[])
               continue;
             }
 
-          bool changed = imu_data.fsr_xl_idx != cur_fsr_xl_idx ||
+          pthread_mutex_lock(&g_daemon_lock);
+          float gyro_threshold = g_stationary_gyro_threshold;
+          float accel_threshold = g_stationary_accel_threshold;
+          uint32_t current_revision = g_calibration_revision;
+          pthread_mutex_unlock(&g_daemon_lock);
+          bool changed = current_revision != calibration_revision ||
+                         imu_data.fsr_xl_idx != cur_fsr_xl_idx ||
                          imu_data.fsr_gy_idx != cur_fsr_gy_idx ||
                          imu_data.odr_idx != cur_odr_idx;
 
@@ -280,21 +306,23 @@ static int imu_daemon(int argc, char *argv[])
               cur_fsr_gy_idx = imu_data.fsr_gy_idx;
               cur_odr_idx = imu_data.odr_idx;
               previous_timestamp = 0;
+              calibration_revision = current_revision;
+              stationary_configuration_valid = false;
               g_accel_mms2_per_lsb = new_accel;
               g_gyro_dps_per_lsb = new_gyro;
               if (new_accel > 0 && new_gyro > 0 && odr > 0)
                 {
-                  imu_stationary_init(
-                      settings->gyro_stationary_threshold / new_gyro,
-                      settings->accel_stationary_threshold / new_accel,
-                      odr, stationary_callback);
+                  stationary_configuration_valid = imu_stationary_init(
+                      gyro_threshold / new_gyro, accel_threshold / new_accel,
+                      odr, stationary_callback) == 0;
                 }
             }
 
           /* Reject stale input, stopped/unknown ODR, unknown scales and
            * discontinuous time. A gap over 300 ms is not integrated blindly;
            * the next valid frame starts with one nominal ODR interval. */
-          if (odr == 0 || new_accel <= 0 || new_gyro <= 0 ||
+          if (!stationary_configuration_valid || odr == 0 ||
+              new_accel <= 0 || new_gyro <= 0 ||
               now_us - source_timestamp > IMU_MAX_AGE_US ||
               (previous_timestamp != 0 &&
                (source_timestamp <= previous_timestamp ||
@@ -317,6 +345,16 @@ static int imu_daemon(int argc, char *argv[])
           raw[4] = imu_data.ay;
           raw[5] = imu_data.az;
 
+          /* A load can arrive after the configuration snapshot. Serialize
+           * one accepted sample with publication so it cannot mix old
+           * stationary thresholds with newly loaded fusion settings. */
+          pthread_mutex_lock(&g_daemon_lock);
+          if (current_revision != g_calibration_revision)
+            {
+              previous_timestamp = 0;
+              pthread_mutex_unlock(&g_daemon_lock);
+              continue;
+            }
           imu_stationary_update(raw);
 
           imu_xyz_t accel_mms2 =
@@ -344,6 +382,7 @@ static int imu_daemon(int argc, char *argv[])
               previous_timestamp = 0;
               imu_stationary_reset();
             }
+          pthread_mutex_unlock(&g_daemon_lock);
         }
     }
 
@@ -836,9 +875,10 @@ int main(int argc, FAR char *argv[])
     }
   else if (strcmp(argv[1], "cal") == 0)
     {
-      if (argc < 3)
+      if (argc != 3)
         {
           printf("Usage: imu cal <save|load>\n");
+          return 1;
         }
       else if (strcmp(argv[2], "save") == 0)
         {
@@ -851,19 +891,36 @@ int main(int argc, FAR char *argv[])
           else
             {
               fprintf(stderr, "imu: save failed\n");
+              return 1;
             }
         }
       else if (strcmp(argv[2], "load") == 0)
         {
-          if (imu_calibration_load(IMU_CAL_PATH) == 0)
+          pthread_mutex_lock(&g_daemon_lock);
+          int load_result = imu_calibration_load(IMU_CAL_PATH);
+          if (load_result == 0)
             {
-              imu_fusion_set_settings(imu_calibration_get_settings());
+              imu_settings_t loaded = *imu_calibration_get_settings();
+              g_stationary_gyro_threshold = loaded.gyro_stationary_threshold;
+              g_stationary_accel_threshold = loaded.accel_stationary_threshold;
+              g_calibration_revision++;
+              imu_fusion_set_settings(&loaded);
+            }
+          pthread_mutex_unlock(&g_daemon_lock);
+          if (load_result == 0)
+            {
               printf("calibration loaded\n");
             }
           else
             {
               fprintf(stderr, "imu: load failed\n");
+              return 1;
             }
+        }
+      else
+        {
+          printf("Usage: imu cal <save|load>\n");
+          return 1;
         }
     }
   else if (strcmp(argv[1], "setbase") == 0)

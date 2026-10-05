@@ -10,6 +10,7 @@
 #include "../service.h"
 #include "../python_output.h"
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -73,6 +74,16 @@ int bw_python_execute(const char *source) {
     qstr name=lexer->source_name;
     mp_parse_tree_t tree=mp_parse(lexer,MP_PARSE_FILE_INPUT);
     mp_obj_t fn=mp_compile(&tree,name,true);mp_call_function_0(fn);nlr_pop();
-  } else {mp_obj_print_exception(&mp_plat_print,MP_OBJ_FROM_PTR(nlr.ret_val));rc=-EINVAL;}
+  } else {
+    mp_obj_t exception=MP_OBJ_FROM_PTR(nlr.ret_val);
+    mp_int_t error;
+    rc=-EINVAL;
+    /* Keep device failures, cancellation and deadlines visible to STATUS.
+     * Syntax/runtime errors and malformed OSError values remain EINVAL. */
+    if(mp_obj_exception_match(exception,MP_OBJ_FROM_PTR(&mp_type_OSError)) &&
+       mp_obj_get_int_maybe(mp_obj_exception_get_value(exception),&error) &&
+       error>0 && error<=INT_MAX)rc=-(int)error;
+    mp_obj_print_exception(&mp_plat_print,exception);
+  }
   mp_embed_deinit();free(heap);return rc;
 }

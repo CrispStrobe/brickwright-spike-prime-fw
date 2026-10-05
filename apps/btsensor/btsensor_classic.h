@@ -19,6 +19,9 @@ typedef int (*btsensor_classic_tagged_operation_t)(
 typedef int (*btsensor_classic_end_owned_t)(
     enum brickwright_hub_link link, uint8_t port, uint32_t ownership_token,
     uint8_t end_state, void *context);
+/* Returns a newly consumed measured encoder position, never a target. */
+typedef int (*btsensor_classic_encoder_t)(uint8_t port, int32_t *degrees,
+                                           void *context);
 typedef int (*btsensor_classic_snapshot_t)(
     struct btsensor_modern_snapshot *snapshot, void *context);
 typedef int (*btsensor_classic_send_t)(enum brickwright_hub_link link,
@@ -35,6 +38,7 @@ struct btsensor_classic_config
   btsensor_classic_tagged_operation_t tagged_operation;
   btsensor_classic_end_owned_t end_owned;
   btsensor_classic_snapshot_t snapshot;
+  btsensor_classic_encoder_t encoder;
   btsensor_classic_send_t send;
   btsensor_classic_now_t now;
   btsensor_classic_timer_start_t timer_start;

@@ -163,6 +163,12 @@ static int classic_end_owned(enum brickwright_hub_link link, uint8_t port,
       link, port, ownership_token, end_state);
 }
 
+static int classic_encoder(uint8_t port, int32_t *degrees, void *context)
+{
+  (void)context;
+  return btsensor_modern_backend_encoder(port, degrees);
+}
+
 static int classic_snapshot(struct btsensor_modern_snapshot *snapshot,
                             void *context)
 {
@@ -277,6 +283,7 @@ static int services_start(void *context)
       .tagged_operation = classic_tagged_operation,
       .end_owned = classic_end_owned,
       .snapshot = classic_snapshot,
+      .encoder = classic_encoder,
       .send = classic_send,
       .now = classic_now,
       .timer_start = classic_timer_start,

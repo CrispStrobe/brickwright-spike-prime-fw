@@ -146,9 +146,25 @@ deadline queue covers all six physical ports; disconnect cancels it and the
 port backend supplies the motor failsafe. Each completion carries the
 exclusive ownership token returned by its start command, so a later BLE or
 Classic command can take over the port without being stopped by an old timer.
-`motor_run_for_degrees` remains
-explicitly unsupported until the port backend can prove encoder-target
-completion instead of estimating it in software.
+`motor_run_for_degrees` now uses measured UART encoder displacement for
+supported motor types 48/49 on ports A–F. It acquires an encoder baseline before
+actuation and resolves only after measured displacement reaches the requested
+amount and the owned end action succeeds. Negative degree counts reverse the
+speed direction. Signed 32-bit counter wrap is handled by modular per-sample
+deltas; exactly half-range displacement is ambiguous and fails with
+`-EOVERFLOW`. Polling is bounded to 20 ms intervals, a 60-second overall limit
+and a one-second no-progress timeout. These are synthetic execution policies,
+not a measured physical servo calibration. Each encoder read drains at most
+16 frames; the current driver ABI has no capture timestamp, so frame age cannot
+be qualified from that interface.
+
+No-progress/timeout, cancellation and disconnect stop only the tagged owner;
+a stale callback cannot stop a newer owner's motor. Attachment-loss cleanup
+attempts coast only if the owned PWM channel is not pinned, while preserving
+the original failure rather than reporting successful completion. HOLD and
+requested stall detection remain `-ENOTSUP`; elapsed time alone never proves
+that a degree target was reached. The host fixtures cover six ports, wrap,
+capability errors and cancellation; guest/physical qualification is separate.
 
 Motor, display, light, and sound blocks often fall back to MicroPython if a
 JSON request rejects. Because the response parser never interprets a hub-level

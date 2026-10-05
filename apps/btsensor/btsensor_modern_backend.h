@@ -16,6 +16,14 @@ struct btsensor_modern_backend_io
   void *context;
 };
 
+/* Newly consumed mode-2 INT32 position for synchronized UART motors.
+ * No cached/fabricated feedback; -EAGAIN until a matching frame exists.
+ * The LUMP frame ABI does not expose its capture timestamp. */
+int btsensor_modern_backend_encoder(uint8_t port, int32_t *degrees);
+int btsensor_modern_backend_encoder_with_io(
+    uint8_t port, int32_t *degrees,
+    const struct btsensor_modern_backend_io *io);
+
 int btsensor_modern_backend_operation(
     const struct btsensor_modern_operation *operation);
 int btsensor_modern_backend_operation_for_link(

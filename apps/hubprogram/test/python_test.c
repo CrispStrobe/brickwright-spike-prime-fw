@@ -6,10 +6,10 @@
 #include "../python_output.h"
 #include <errno.h>
 #include <stdio.h>
-static int polls,speed,delta;
+static int polls,speed,delta,poll_error,motor_error;
 static unsigned motors,positions;
-int bw_program_service_poll(void) { return ++polls>1000 ? -ETIMEDOUT : 0; }
-int bw_program_service_motor(unsigned port,int32_t value) { assert(port<6);motors|=1u<<port;speed=value;return 0; }
+int bw_program_service_poll(void) { return poll_error ? poll_error : ++polls>1000 ? -ETIMEDOUT : 0; }
+int bw_program_service_motor(unsigned port,int32_t value) { assert(port<6);motors|=1u<<port;speed=value;return motor_error; }
 int bw_program_service_position(unsigned port,int32_t degrees,int32_t velocity) {
   assert(port<6 && velocity>=1 && velocity<=1110);positions|=1u<<port;delta=degrees;return 0;
 }
@@ -34,7 +34,14 @@ int main(void) {
   assert(g_bw_python_output.length==BW_PYTHON_OUTPUT_CAPACITY && g_bw_python_output.truncated);
   assert(!bw_python_execute("assert 1+1 == 2\n"));
   assert(g_bw_python_output.length==0 && !g_bw_python_output.truncated);
-  polls=0;assert(bw_python_execute("while True:\n pass\n")<0);
+  polls=0;assert(bw_python_execute("while True:\n pass\n")==-ETIMEDOUT);
+  poll_error=-ECANCELED;assert(bw_python_execute("while True:\n pass\n")==-ECANCELED);poll_error=0;
+  polls=0;motor_error=-ENODEV;
+  assert(bw_python_execute("import brickwright as b\nb.motor(0,400)\n")==-ENODEV);motor_error=0;
+  assert(bw_python_execute("raise OSError(5)\n")==-EIO);
+  assert(bw_python_execute("raise OSError('invalid')\n")==-EINVAL);
+  assert(bw_python_execute("raise OSError(-5)\n")==-EINVAL);
+  assert(!bw_python_execute("assert 2+2 == 4\n"));
   polls=0;assert(bw_python_execute("this is invalid syntax !")<0);
   puts("embedded MicroPython cancellation and syntax failure: PASS");return 0;
 }

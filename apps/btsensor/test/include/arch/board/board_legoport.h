@@ -18,6 +18,10 @@
 #define LEGOPORT_GET_DEVICE_INFO 0x4802
 #define LEGOPORT_LUMP_GET_INFO 0x4808
 #define LEGOPORT_LUMP_SEND 0x480a
+#define LEGOPORT_LUMP_SELECT 0x4809
+#define LEGOPORT_LUMP_POLL_DATA 0x480b
+#define LUMP_FLAG_SYNCED 1
+#define LUMP_DATA_INT32 2
 #define LEGOPORT_PWM_SET_DUTY 0x4810
 #define LEGOPORT_PWM_COAST 0x4811
 #define LEGOPORT_PWM_BRAKE 0x4812
@@ -41,6 +45,7 @@ struct lump_device_info_s
   uint8_t type_id, num_modes, current_mode, flags;
   struct lump_mode_info_s modes[8];
 };
+struct lump_data_frame_s { uint8_t mode, len, reserved[2], data[32]; };
 struct legoport_lump_send_arg_s
 {
   uint8_t mode, len, reserved[2], data[32];

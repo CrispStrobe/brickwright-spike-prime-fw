@@ -36,6 +36,24 @@ Pybricks attribution remains in the adapted source and
 [reuse inventory](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/pybricks-reuse.json); this is a modification
 of credited code, with no clean-room claim.
 
+Calibration saves use `/mnt/flash/imu.calibration` on the mounted LittleFS
+volume. A unique same-directory temporary is completely written, synchronized
+and closed before replacement; failures preserve the previous file. Loads
+require the exact native settings size and finite, nondegenerate values before
+changing active state. This retains the existing native record layout, without
+checksum/authentication or cross-platform format guarantees. `imu cal save`
+and `imu cal load` return failure when the operation fails. A successful load
+refreshes stationary thresholds on the next sample even at unchanged FSR/ODR.
+Raw threshold conversion is validated against the signed-16-bit representation;
+unrepresentable scaled values make samples unavailable until corrected.
+
+`tools/check_imu_persistence.sh` checks failed-write/sync/close/rename isolation,
+short I/O and malformed loads. `tools/test_imu_littlefs.py` exercises the actual
+save/load code against the build-pinned LittleFS with simulated NOR power cuts:
+63 host crash/restart cases passed locally. The harness substitutes the VFS and
+unique-file creation under a single-writer assumption; physical brownouts,
+concurrent writers and actual NuttX VFS persistence are separate qualifications.
+
 Run `tools/check_imu_snapshot.sh`, `tools/check_imu_source.sh` and
 `tools/check_imu_daemon.sh` for host coherence, validity, timestamp-wrap,
 persistence and producer lifecycle checks. Starting reserves the producer

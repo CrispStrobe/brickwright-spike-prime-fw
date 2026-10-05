@@ -59,7 +59,9 @@ jobs:
 
       - name: Test saved programs through real LittleFS interrupted writes
         if: matrix.profile == 'simulation'
-        run: python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
+        run: |
+          python3 tools/test_littlefs_power_loss.py nuttx/fs/littlefs/littlefs
+          python3 tools/test_imu_littlefs.py nuttx/fs/littlefs/littlefs
 
       - name: Prepare an explicit existing-filesystem simulation fixture
         run: |

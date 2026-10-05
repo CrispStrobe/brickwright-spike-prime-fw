@@ -3,6 +3,7 @@
  * policy/pybricks-reuse.json and licenses/. No clean-room claim is made.
  * SPDX-License-Identifier: MIT
  * Copyright (c) 2020-2023 The Pybricks Authors
+ * Copyright (c) 2026 Christian Strobele (threshold validation)
  */
 /****************************************************************************
  * apps/imu/imu_stationary.c
@@ -12,6 +13,9 @@
  * Pybricks Authors).
  ****************************************************************************/
 
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
 #include <string.h>
 #include <time.h>
 
@@ -108,9 +112,30 @@ static void update_slow_average(const int16_t *data)
  * Public Functions
  ****************************************************************************/
 
-void imu_stationary_init(float gyro_threshold, float accel_threshold,
+/* Raw thresholds are stored as signed 16-bit counts. Validate before
+ * conversion; representability limits do not prescribe physical calibration. */
+static int thresholds_valid(float gyro_threshold, float accel_threshold)
+{
+  if (!isfinite(gyro_threshold) || !isfinite(accel_threshold) ||
+      gyro_threshold < 0.0f || accel_threshold < 0.0f)
+    {
+      return -EINVAL;
+    }
+  if (gyro_threshold > INT16_MAX || accel_threshold > INT16_MAX)
+    {
+      return -ERANGE;
+    }
+  return 0;
+}
+
+int imu_stationary_init(float gyro_threshold, float accel_threshold,
                          uint32_t odr, imu_stationary_cb_t cb)
 {
+  int result = thresholds_valid(gyro_threshold, accel_threshold);
+  if (result < 0 || odr == 0)
+    {
+      return result < 0 ? result : -EINVAL;
+    }
   memset(&g_stat, 0, sizeof(g_stat));
   g_stat.gyro_threshold = (int16_t)gyro_threshold;
   g_stat.accel_threshold = (int16_t)accel_threshold;
@@ -118,12 +143,19 @@ void imu_stationary_init(float gyro_threshold, float accel_threshold,
   g_stat.sample_time = 1.0f / odr;
   g_stat.cb = cb;
   g_stat.time_start_us = get_time_us();
+  return 0;
 }
 
-void imu_stationary_set_thresholds(float gyro_thresh, float accel_thresh)
+int imu_stationary_set_thresholds(float gyro_thresh, float accel_thresh)
 {
+  int result = thresholds_valid(gyro_thresh, accel_thresh);
+  if (result < 0)
+    {
+      return result;
+    }
   g_stat.gyro_threshold = (int16_t)gyro_thresh;
   g_stat.accel_threshold = (int16_t)accel_thresh;
+  return 0;
 }
 
 void imu_stationary_update(const int16_t *data)

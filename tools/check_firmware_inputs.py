@@ -101,6 +101,11 @@ def check_links(maps, root, review):
     errors = []
     if archives != expected:
         errors.append('Linker-selected archive/member set changed; review binary dependencies')
+        for name in sorted(archives.keys() | expected.keys()):
+            added = sorted(archives.get(name, set()) - expected.get(name, set()))
+            removed = sorted(expected.get(name, set()) - archives.get(name, set()))
+            if added or removed:
+                errors.append(f'{name}: added={added}, removed={removed}')
     if direct != set(review['direct_objects']):
         errors.append('Direct linker object set changed; review binary dependencies')
     if paths != {name: set(values) for name, values in review['archive_paths'].items()}:

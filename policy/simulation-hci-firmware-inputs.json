@@ -49,7 +49,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_classic.c",
-      "sha256": "b955233ab17c27744410faff7ba64cd018bcd6829a54eaa9fe5f56d625e4e2be",
+      "sha256": "e0eaa878f500be40fd5feed5790c846db3d48f5bb568cf992ce75de92b49cb9a",
       "spdx": [
         "Apache-2.0"
       ],
@@ -60,7 +60,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_classic.h",
-      "sha256": "44f05af9af262bcaf1da658833b637a99e00708766651f94a19332c8c152a062",
+      "sha256": "392eac85c39cb8bb21a9ec3fa12a2250b6819ef3828018c1e4c5ff13ed42b349",
       "spdx": [
         "Apache-2.0"
       ],
@@ -146,7 +146,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_modern_backend.c",
-      "sha256": "202ab7334a20fa2e434a005727df13b622004894d1e13ca5a63c6fbdeec3b25b",
+      "sha256": "fcaf66d4bccefcaf07e20a8413387c7bd701e90e61b901b31d976af3f399dd2b",
       "spdx": [
         "Apache-2.0"
       ],
@@ -157,7 +157,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_modern_backend.h",
-      "sha256": "de3dc463ce03ed81db62251c5900db5f010ffb26e77aaeda7f780cc982e799c6",
+      "sha256": "5b922823c4a3820de6a1039eeeca1ec88ed3050161a9c2586b2822fa207f1a38",
       "spdx": [
         "Apache-2.0"
       ],
@@ -806,7 +806,7 @@
     },
     {
       "path": "apps/hubprogram/micropython/brickwright_module.c",
-      "sha256": "b81bbadf24e675853e777442c918bac1a478e49aa286bcbe451ba8c308721fea",
+      "sha256": "9324a11c088b58abcc4a861e0da80d3111ea808cd84557d2c0ace15ad056c353",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -839,7 +839,7 @@
     },
     {
       "path": "apps/hubprogram/program.c",
-      "sha256": "80d431c52dd3fc467fd2c101402aedb6f75b24ca37bd9febb00c4a6581aa3367",
+      "sha256": "f74148cda82c262a91646b4d3a163173954bff6fdb4d1594d0840956703246bd",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -927,7 +927,7 @@
     },
     {
       "path": "apps/imu/imu_calibration.c",
-      "sha256": "f124ab85ffc2cb087b53ab9cab42b8b391802eef671f6676c96b27491aa2e929",
+      "sha256": "9e32cfbf75daa88c7c51e33d64c225742c9de99b9d6a3fff1dc909190e81bd78",
       "spdx": [
         "MIT"
       ],
@@ -938,7 +938,7 @@
     },
     {
       "path": "apps/imu/imu_calibration.h",
-      "sha256": "fd39d6355057c358b001efa360228a38fbbb55b66afaab39553533c672dcc967",
+      "sha256": "5cadbd9c29c08c2238388978d08ebed7d7324256ff7fe4d5ebbb03643d9805f9",
       "spdx": [
         "MIT"
       ],
@@ -993,7 +993,7 @@
     },
     {
       "path": "apps/imu/imu_main.c",
-      "sha256": "1b51f5409bc74210d2232c25442eed145aaccce71f5add2ba300acc3c1150222",
+      "sha256": "13176567ee75f519fa6abc56af27441c0700f3fecad865b418d82adb5a49cb3e",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1013,7 +1013,7 @@
     },
     {
       "path": "apps/imu/imu_stationary.c",
-      "sha256": "f3be2bd57cd8630899c5a3452c58a2a0185e0ba87448ff32f2f4f0ecaa1db0bf",
+      "sha256": "79ea42c4bb996889f280ec6b26b536415d60ab2b9627c21a40f5cc91f4f08962",
       "spdx": [
         "MIT"
       ],
@@ -1024,7 +1024,7 @@
     },
     {
       "path": "apps/imu/imu_stationary.h",
-      "sha256": "6e6237e4388d787a0eebf4a2700c64b2bd6a815da6517bf609fbfdc071c507e9",
+      "sha256": "022ce93a1c2cd5376e9336a650eabb621c666996ed4d51378bd84d464c981a28",
       "spdx": [
         "MIT"
       ],
@@ -35055,5 +35055,5 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately."
+  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification."
 }

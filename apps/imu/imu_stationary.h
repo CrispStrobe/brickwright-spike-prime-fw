@@ -3,6 +3,7 @@
  * policy/pybricks-reuse.json and licenses/. No clean-room claim is made.
  * SPDX-License-Identifier: MIT
  * Copyright (c) 2020-2023 The Pybricks Authors
+ * Copyright (c) 2026 Christian Strobele (threshold validation)
  */
 /****************************************************************************
  * apps/imu/imu_stationary.h
@@ -23,9 +24,12 @@ typedef void (*imu_stationary_cb_t)(const int32_t *gyro_sum,
                                     const int32_t *accel_sum,
                                     uint32_t num_samples);
 
-void imu_stationary_init(float gyro_threshold, float accel_threshold,
+/* Invalid thresholds/ODR fail without changing the previous configuration.
+ * Raw thresholds must be finite, nonnegative and fit int16_t; zero is allowed.
+ * Returns zero, -EINVAL (invalid input), or -ERANGE (unrepresentable count). */
+int imu_stationary_init(float gyro_threshold, float accel_threshold,
                          uint32_t odr, imu_stationary_cb_t cb);
-void imu_stationary_set_thresholds(float gyro_thresh, float accel_thresh);
+int imu_stationary_set_thresholds(float gyro_thresh, float accel_thresh);
 void imu_stationary_update(const int16_t *data);
 bool imu_stationary_is_stationary(void);
 float imu_stationary_get_sample_time(void);
