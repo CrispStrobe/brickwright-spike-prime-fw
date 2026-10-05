@@ -361,10 +361,12 @@ machine-readable and cannot be confused with physical-hardware evidence.
 ## Current next action
 
 Use [the capability matrix](docs/project/capabilities.md) as the current
-implementation/evidence map. Qualify the retained-program restart, measured
-Classic degree jobs and atomic calibration candidate in both protected profiles.
-Then prioritize guest-coupled motor completion, arbitrary-port sensor/state
-coverage and cold-restart bond reuse over unrelated peripheral expansion.
+implementation/evidence map. Source `db67e6d1b7582cd5e61fb2880dd81ffed6828e76`
+passes both protected profiles in matrix `37267297180`, including actual ARM
+retained-program restart and the calibration save/load/reopen air peer. Classic
+degree jobs are host-qualified; their motor-coupled guest exercise remains open.
+Prioritize that exercise, a current-source six-motor regression, arbitrary-port
+sensor/state coverage and cold-restart bond reuse over unrelated peripheral expansion.
 
 Modern IMU wire units, Euler conventions, yaw faces and reset behaviour still
 require paired independent observations. Synthetic poses and decoder tests do

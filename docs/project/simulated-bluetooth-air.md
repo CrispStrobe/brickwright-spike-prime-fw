@@ -221,5 +221,7 @@ must have corrected gyro while stationary readiness remains false. A missing
 save or lost bias fails the probe. This exercises our fixed mounted LittleFS
 service, not modern IMU wire mapping or physical power-loss behaviour. The
 six-mode matrix adds `calibration` after LE, Scratch Link, Classic, stationary
-and poses; actual build/guest evidence is recorded in
+and poses. All six scenarios pass on source
+`db67e6d1b7582cd5e61fb2880dd81ffed6828e76` in matrix `37267297180`;
+actual build/guest evidence is recorded in
 [simulation qualification](simulation-qualification.md).

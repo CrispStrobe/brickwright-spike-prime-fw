@@ -52,9 +52,9 @@ unrepresentable scaled values make samples unavailable until corrected.
 `tools/check_imu_persistence.sh` checks failed-write/sync/close/rename isolation,
 short I/O and malformed loads. `tools/test_imu_littlefs.py` exercises the actual
 save/load code against the build-pinned LittleFS with simulated NOR power cuts:
-63 host crash/restart cases passed locally. The harness substitutes the VFS and
+63 host crash/restart cases pass locally and in clean CI. The harness substitutes the VFS and
 unique-file creation under a single-writer assumption; physical brownouts,
-concurrent writers and actual NuttX VFS persistence are separate qualifications.
+concurrent writers and crash durability of actual NuttX VFS are separate qualifications.
 
 Run `tools/check_imu_snapshot.sh`, `tools/check_imu_source.sh` and
 `tools/check_imu_daemon.sh` for host coherence, validity, timestamp-wrap,
@@ -78,8 +78,10 @@ readiness and removal of a fixed gyro bias, followed by stop/reopen resetting
 unsaved state. This is a digital driver/producer check, not physical calibration
 or a durable calibration save. A separate `--imu-calibration` scenario exercises
 SAVE/LOAD through mounted guest LittleFS and verifies loaded bias after
-producer reopen independently of stationary readiness; see current qualification
-for actual execution results. Startup still does not launch the fusion daemon. The full
+producer reopen independently of stationary readiness. This actual ARM guest
+scenario passes in matrix `37267297180`: saved bias survives reopen while the
+first fresh sample remains not-ready. See
+[qualification](../../project/simulation-qualification.md) for scope and results. Startup still does not launch the fusion daemon. The full
 modern IMU wire record requires separate orientation, unit and enum mappings.
 
 The separate `--classic --imu-poses` probe starts a fresh producer for each
