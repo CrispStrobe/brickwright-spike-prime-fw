@@ -58,7 +58,7 @@ pass. Exact scope is in [simulation qualification](simulation-qualification.md).
 
 ## Shared frontend and version boundaries
 
-[Brickwright Lite state and integration lanes](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/SPIKE-STATUS-AND-LANES.md)
+[Brickwright Lite state and integration lanes](https://github.com/CrispStrobe/brickwright-lite/blob/1127285873b03ff6540809c15e627b946412f0c9/docs/SPIKE-STATUS-AND-LANES.md)
 record the actual Code-tab/installed Linux GUI qualification from
 [PR #631](https://github.com/CrispStrobe/brickwright-lite/pull/631). Small ARM guest,
 full NuttX embedded Python and separately supplied upstream MicroPython routes
@@ -69,9 +69,9 @@ Firmware PR #34 is newer than that tested desktop package. Its retained restart,
 virtual Bluetooth and LittleFS results require an explicit source-profile/pin
 refresh and actual installed GUI qualification before being advertised in a new
 desktop build. Lite G01 owns that adoption; Runtime
-[task lanes](https://github.com/CrispStrobe/renode-spike-prime/blob/main/docs/SPIKE-STATUS-AND-LANES.md)
+[task lanes](https://github.com/CrispStrobe/renode-spike-prime/blob/0bb3f3e40ec8e84afe6c7a63a03374a5a0553969/docs/SPIKE-STATUS-AND-LANES.md)
 and Infrastructure
-[model lanes](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/blob/main/docs/SPIKE-STATUS-AND-LANES.md)
+[model lanes](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/blob/5a519ce5d9b5122bcf2ecedcbfd6f49d2735bbeb/docs/SPIKE-STATUS-AND-LANES.md)
 own their implementation boundaries. Keep these versions distinct.
 
 ## How to execute a lane
