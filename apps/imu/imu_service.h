@@ -19,6 +19,13 @@ void imu_service_status(bool *starting, bool *running, bool *stopping);
  * Units and orientation convention are those of imu_fusion_snapshot_t. */
 int imu_service_snapshot(imu_fusion_snapshot_t *out);
 
+/* Fixed mounted calibration slot; SAVE requires coherent fusion settings.
+ * LOAD publishes settings and refreshes live thresholds on the next sample.
+ * Both return zero or negative errno; neither asserts readiness or physical
+ * power-loss durability. */
+int imu_service_calibration_save(void);
+int imu_service_calibration_load(void);
+
 /* Declare application front/top as orthogonal signed cardinal unit axes in
  * physical hub coordinates. Requires running without a pending stop; resets
  * application heading while retaining physical orientation/face and source

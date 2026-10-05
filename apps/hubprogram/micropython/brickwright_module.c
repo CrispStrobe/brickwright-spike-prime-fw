@@ -10,7 +10,6 @@
 #include "../service.h"
 #include "../python_output.h"
 #include <errno.h>
-#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -79,10 +78,11 @@ int bw_python_execute(const char *source) {
     mp_int_t error;
     rc=-EINVAL;
     /* Keep device failures, cancellation and deadlines visible to STATUS.
-     * Syntax/runtime errors and malformed OSError values remain EINVAL. */
+     * The runtime error field is signed 16-bit; out-of-range OSError
+     * values, syntax/runtime errors and malformed values remain EINVAL. */
     if(mp_obj_exception_match(exception,MP_OBJ_FROM_PTR(&mp_type_OSError)) &&
        mp_obj_get_int_maybe(mp_obj_exception_get_value(exception),&error) &&
-       error>0 && error<=INT_MAX)rc=-(int)error;
+       error>0 && error<=INT16_MAX)rc=-(int)error;
     mp_obj_print_exception(&mp_plat_print,exception);
   }
   mp_embed_deinit();free(heap);return rc;

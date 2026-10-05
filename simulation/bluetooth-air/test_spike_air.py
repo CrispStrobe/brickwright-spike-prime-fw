@@ -414,7 +414,8 @@ async def microbit_check(air, results: dict, timeout: float) -> None:
 async def classic_round_trip(central, results: dict,
                              legacy_extension: Path | None = None, *,
                              imu_renode=None, renode_log: Path | None = None,
-                             imu_readiness: bool = False, imu_poses: bool = False) -> None:
+                             imu_readiness: bool = False, imu_poses: bool = False,
+                             imu_calibration: bool = False) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -458,9 +459,10 @@ async def classic_round_trip(central, results: dict,
             if imu_poses:
                 await pose_round_trip(dlc, received, imu_renode, results,
                                       renode_log=renode_log)
-            elif imu_readiness:
+            elif imu_readiness or imu_calibration:
                 await stationary_round_trip(dlc, received, imu_renode, results,
-                                            renode_log=renode_log)
+                                            renode_log=renode_log, persistence=imu_calibration,
+                                            timeout=1200 if imu_calibration else 900)
             else:
                 await imu_round_trip(dlc, received, imu_renode, results,
                                      renode_log=renode_log)
@@ -673,6 +675,8 @@ async def main() -> int:
                         help="with --classic, verify six physical faces and declared base axes")
     parser.add_argument("--imu-readiness", action="store_true",
                         help="with --classic, qualify stationary readiness using a configured-rate guest-time fixture")
+    parser.add_argument("--imu-calibration", action="store_true",
+                        help="with --classic, save/reload learned gyro bias through guest LittleFS")
     parser.add_argument("--serve-scratch-link", type=int, default=20111,
                         metavar="PORT", help="Scratch Link port for --then")
     parser.add_argument("--then", metavar="COMMAND",
@@ -706,6 +710,10 @@ async def main() -> int:
         parser.error("Bluetooth-air tests require Python 3.11 or later")
     if arguments.timeout <= 0:
         parser.error("--timeout must be positive")
+    imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
+                     arguments.imu_readiness, arguments.imu_calibration))
+    if arguments.imu_calibration and (not arguments.classic or imu_modes != 1):
+        parser.error("--imu-calibration requires --classic and a separate IMU scenario")
     if arguments.imu_probe and not arguments.classic:
         parser.error("--imu-probe requires --classic")
     if arguments.imu_poses and (not arguments.classic or arguments.imu_probe or arguments.imu_readiness):
@@ -733,7 +741,7 @@ async def main() -> int:
             from renode_load_littlefs_fixture import validate_fixture
             _, results["fixture_receipt"] = validate_fixture(str(arguments.existing_filesystem))
             results["storage"] = "explicit-existing-filesystem"
-        async with asyncio.timeout(arguments.timeout + (1200 if arguments.imu_readiness else 600)):
+        async with asyncio.timeout(arguments.timeout + (1500 if arguments.imu_calibration else 1200 if arguments.imu_readiness else 600)):
             air_hub = subprocess.Popen(
                 [sys.executable, str(AIR_TOOLS / "airhub.py"), "--tcp",
                  f"127.0.0.1:{arguments.hub_port}", "--ws", "", "--log",
@@ -748,7 +756,7 @@ async def main() -> int:
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
             imu_fixture = None
-            if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses:
+            if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration:
                 from imu_probe import RENODE_IMU_HELPER
                 imu_fixture = workdir / "imu-fixture.py"
                 imu_fixture.write_text(RENODE_IMU_HELPER)
@@ -803,10 +811,11 @@ async def main() -> int:
                 peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
                 await asyncio.wait_for(
                     classic_round_trip(peer, results, arguments.lite_extension,
-                                       imu_renode=renode if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses else None,
+                                       imu_renode=renode if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration else None,
                                        renode_log=workdir / "renode.log",
-                                       imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses),
-                    1020 if arguments.imu_readiness else (360 if arguments.imu_poses else 240))
+                                       imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses,
+                                       imu_calibration=arguments.imu_calibration),
+                    1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (360 if arguments.imu_poses else 240))
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"

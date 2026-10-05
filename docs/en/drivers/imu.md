@@ -42,7 +42,9 @@ and closed before replacement; failures preserve the previous file. Loads
 require the exact native settings size and finite, nondegenerate values before
 changing active state. This retains the existing native record layout, without
 checksum/authentication or cross-platform format guarantees. `imu cal save`
-and `imu cal load` return failure when the operation fails. A successful load
+and `imu cal load` return failure when the operation fails. Classic additionally
+exposes the same fixed-slot service as `FUSION CAL SAVE/LOAD`; LOAD does not
+start the producer. A successful load
 refreshes stationary thresholds on the next sample even at unchanged FSR/ODR.
 Raw threshold conversion is validated against the signed-16-bit representation;
 unrepresentable scaled values make samples unavailable until corrected.
@@ -74,7 +76,10 @@ a bounded synthetic fixture at the configured 104 Hz guest-time rate. It
 checks not-ready snapshots before the baseline/window completes, then live
 readiness and removal of a fixed gyro bias, followed by stop/reopen resetting
 unsaved state. This is a digital driver/producer check, not physical calibration
-or a durable calibration save. Startup still does not launch the fusion daemon. The full
+or a durable calibration save. A separate `--imu-calibration` scenario exercises
+SAVE/LOAD through mounted guest LittleFS and verifies loaded bias after
+producer reopen independently of stationary readiness; see current qualification
+for actual execution results. Startup still does not launch the fusion daemon. The full
 modern IMU wire record requires separate orientation, unit and enum mappings.
 
 The separate `--classic --imu-poses` probe starts a fresh producer for each

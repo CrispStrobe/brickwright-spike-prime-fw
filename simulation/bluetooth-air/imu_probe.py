@@ -473,17 +473,20 @@ async def fusion_round_trip(dlc, received, renode_proc, results: dict, *,
 
 
 async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
-                                renode_log: Path, timeout: float = 900) -> None:
+                                renode_log: Path, timeout: float = 900,
+                                persistence: bool = False) -> None:
     """Configured-rate synthetic stationarity; no firmware/clock substitution.
 
     The first window qualifies readiness and live bias correction. This does
-    not assert durable calibration, physical motion or autonomous silicon ODR.
+    not assert physical motion or autonomous silicon ODR. The separate
+    persistence mode saves through the guest's mounted LittleFS and verifies
+    loaded bias on reopening; it does not assert physical power-loss durability.
     """
     parser = MixedFrames()
     pending = deque()
     fixture = (20, -30, -40, 0, 0, -16384)
-    record = results.setdefault("imu_stationary", {"snapshots": [], "commands": [],
-                                                  "model_receipts": []})
+    record = results.setdefault("imu_calibration" if persistence else "imu_stationary",
+                                {"snapshots": [], "commands": [], "model_receipts": []})
 
     async def request(command):
         dlc.write((command + "\n").encode("ascii"))
@@ -602,17 +605,40 @@ async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
                 raise ValueError("Stationary source time did not advance")
             if await request("FUSION GET") != ready["line"]:
                 raise ValueError("Stationary snapshot read changed publication")
+            if persistence:
+                # Three completed stationary windows publish initial bias;
+                # readiness alone (one window) is insufficient for persistence.
+                await feed(180)
+                learned = await snapshot(441)
+                if not learned["ready"] or any(abs(v) > .001 for v in learned["gyro_dps"]):
+                    raise ValueError("Initial bias did not settle before calibration save")
+                await ok("FUSION CAL SAVE")
+                record["saved_sequence"] = learned["sequence"]
+                ready = learned
             await ok("FUSION STOP")
             await running(False)
             disabled = await model("state")
             if disabled["feed"][0] or any(v >> 4 for v in disabled["controls"]):
                 raise ValueError("Stationary stop retained feeder/sensor activation")
+            if persistence:
+                await ok("FUSION CAL LOAD")
+                if await request("FUSION GET") != "ERR errno=11":
+                    raise ValueError("Calibration load fabricated a running snapshot")
             await ok("FUSION START")
             await running(True)
             if (await model("inject", fixture))["accepted"] is not True:
                 raise ValueError("Stationary reopen did not activate sensor")
             reopened = await snapshot(1)
-            validate_fusion(reopened, fixture)
+            if persistence:
+                if reopened["ready"] or any(abs(v) > .001 for v in reopened["gyro_dps"]):
+                    raise ValueError("Saved calibration was not loaded independently of readiness")
+                if reopened["up_side"] != 2 or any(abs(v - expected) > .1 for v, expected in
+                        zip(reopened["accel_mms2"], (0, 0, 9806.65))):
+                    raise ValueError("Loaded calibration changed physical acceleration")
+                record["loaded_bias_verified"] = True
+                record["physical_durability_qualified"] = False
+            else:
+                validate_fusion(reopened, fixture)
             if reopened["timestamp_us"] <= ready["timestamp_us"]:
                 raise ValueError("Stationary reopen retained an old source timestamp")
             await ok("FUSION STOP")

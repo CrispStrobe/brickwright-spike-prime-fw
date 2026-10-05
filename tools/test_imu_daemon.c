@@ -50,7 +50,7 @@ static char calibration_path[] = "/tmp/bw-imu-daemon-calibration-XXXXXX";
 #undef printf
 
 enum scenario { STOP_PENDING, OPEN_FAIL, TASK_FAIL, INTERRUPTED, STOP_DRAIN,
-                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN, LIVE_BASE, LIVE_CALIBRATION };
+                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN, LIVE_BASE, LIVE_CALIBRATION, PERSISTENCE_REOPEN };
 static enum scenario scenario;
 static int create_count;
 static int open_count;
@@ -80,6 +80,7 @@ static const float steps[] = {0, 1.0f / 833, .01f, 1.0f / 104, 0,
 static float integrated_time;
 static unsigned valid_count;
 static float stationary_heading;
+static bool save_learned_bias;
 
 /* All three compiled modules must observe the same synthetic monotonic clock,
  * rather than measuring real wall time while samples are supplied instantly. */
@@ -148,7 +149,8 @@ static ssize_t fake_read(int fd, void *out, size_t len)
   assert(fd == 42 && len == sizeof(struct sensor_imu));
   read_count++;
   bool streaming = scenario == LIVE_TIMING || scenario == STATIONARY_BIAS ||
-                   scenario == STATIONARY_REOPEN || scenario == LIVE_CALIBRATION;
+                   scenario == STATIONARY_REOPEN || scenario == LIVE_CALIBRATION ||
+                   scenario == PERSISTENCE_REOPEN;
   if (streaming && !sample_pending)
     {
       errno = EAGAIN;
@@ -182,7 +184,7 @@ static ssize_t fake_read(int fd, void *out, size_t len)
       sample_pending = false;
     }
   if (scenario == STATIONARY_BIAS || scenario == STATIONARY_REOPEN ||
-      scenario == LIVE_CALIBRATION)
+      scenario == LIVE_CALIBRATION || scenario == PERSISTENCE_REOPEN)
     {
       sample.timestamp = 1000000 + sample_index * 1000000 / 13;
       sample.odr_idx = 1;
@@ -253,6 +255,25 @@ static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
   assert(count == 1 && fds[0].fd == 42 && timeout == IMU_POLL_TIMEOUT);
   poll_count++;
   assert(scenario != STOP_PENDING);
+  if (scenario == PERSISTENCE_REOPEN)
+    {
+      if (poll_count > 1)
+        {
+          imu_fusion_snapshot_t snapshot;
+          imu_settings_t settings;
+          assert(imu_service_snapshot(&snapshot) == 0);
+          assert(snapshot.sequence == 1 && !snapshot.ready);
+          assert(imu_fusion_get_settings(&settings));
+          assert(settings.flags & IMU_FLAG_GYRO_BIAS);
+          for (unsigned i = 0; i < 3; i++)
+            assert(fabsf(snapshot.gyro_dps.values[i]) < .00001f);
+          assert(imu_service_stop() == 0);
+          return 0;
+        }
+      sample_pending = true;
+      fds[0].revents = POLLIN;
+      return 1;
+    }
   if (scenario == LIVE_CALIBRATION)
     {
       if (poll_count > 1)
@@ -344,6 +365,12 @@ static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
               assert(fabsf(settings.angular_velocity_bias_start.x - .7f) < .00001f);
               assert(fabsf(settings.angular_velocity_bias_start.y + 1.05f) < .00001f);
               assert(fabsf(settings.angular_velocity_bias_start.z - 1.4f) < .00001f);
+            }
+          if (save_learned_bias && frames == 164)
+            {
+              assert(settings.flags & IMU_FLAG_GYRO_BIAS);
+              assert(imu_service_calibration_save() == 0);
+              save_learned_bias = false;
             }
           sample_index++;
         }
@@ -490,6 +517,9 @@ int main(void)
   int calibration_fd = mkstemp(calibration_path);
   assert(calibration_fd >= 0 && close(calibration_fd) == 0);
   assert(unlink(calibration_path) == 0);
+  imu_fusion_init();
+  assert(imu_service_calibration_save() == -EAGAIN);
+  assert(imu_service_calibration_load() == -ENOENT);
   imu_xyz_t front = {.y = 1}, top = {.z = 1};
   assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
   reset(STOP_PENDING);
@@ -571,6 +601,19 @@ int main(void)
   assert(imu_service_start() == 0);
   assert(run_task() == 0);
   assert(sample_index == 141 && close_count == 1);
-  puts("IMU daemon lifecycle, source timing, bias, reopen, base-axis and live calibration threshold checks passed");
+  reset(STATIONARY_BIAS);
+  save_learned_bias = true;
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0 && !save_learned_bias);
+  assert(imu_service_calibration_save() == -EAGAIN);
+  assert(imu_service_calibration_load() == 0);
+  imu_settings_t loaded;
+  assert(imu_fusion_get_settings(&loaded) && (loaded.flags & IMU_FLAG_GYRO_BIAS));
+  assert(imu_service_calibration_save() == 0);
+  reset(PERSISTENCE_REOPEN);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0 && read_count == 2 && close_count == 1);
+  assert(unlink(calibration_path) == 0);
+  puts("IMU daemon lifecycle, source timing, bias, reopen, base-axis, live thresholds and calibration service persistence checks passed");
   return 0;
 }

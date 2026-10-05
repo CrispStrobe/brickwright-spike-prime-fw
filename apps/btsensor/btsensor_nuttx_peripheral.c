@@ -159,6 +159,18 @@ static int fusion_status(void *context, bool *starting, bool *running,
   return 0;
 }
 
+static int fusion_calibration_save(void *context)
+{
+  (void)context;
+  return imu_service_calibration_save();
+}
+
+static int fusion_calibration_load(void *context)
+{
+  (void)context;
+  return imu_service_calibration_load();
+}
+
 static int fusion_set_base_axes(void *context, const imu_xyz_t *front,
                                 const imu_xyz_t *top)
 {
@@ -195,6 +207,8 @@ static const struct btsensor_peripheral_ops g_ops =
   .fusion_status = fusion_status,
   .fusion_snapshot = fusion_snapshot,
   .fusion_set_base_axes = fusion_set_base_axes,
+  .fusion_calibration_save = fusion_calibration_save,
+  .fusion_calibration_load = fusion_calibration_load,
 #endif
 };
 

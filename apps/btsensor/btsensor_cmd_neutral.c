@@ -262,6 +262,23 @@ static void fusion(enum brickwright_hub_link link, char *verb, char **save) {
     fusion_base(link, save);
     return;
   }
+  if (verb && !strcmp(verb, "CAL")) {
+    char *action = strtok_r(NULL, " ", save);
+    if (!action || (strcmp(action, "SAVE") && strcmp(action, "LOAD")) ||
+        has_trailing_token(save)) {
+      reply(link, "ERR invalid FUSION CAL\n");
+      return;
+    }
+    rc = -ENOTSUP;
+    if (link == BRICKWRIGHT_HUB_LINK_CLASSIC && g_ops) {
+      if (!strcmp(action, "SAVE") && g_ops->fusion_calibration_save)
+        rc = g_ops->fusion_calibration_save(g_ops->context);
+      else if (!strcmp(action, "LOAD") && g_ops->fusion_calibration_load)
+        rc = g_ops->fusion_calibration_load(g_ops->context);
+    }
+    reply_rc(link, rc, "FUSION CAL");
+    return;
+  }
   if (!verb || has_trailing_token(save)) {
     reply(link, "ERR invalid FUSION\n");
     return;

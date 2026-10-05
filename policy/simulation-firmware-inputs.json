@@ -80,7 +80,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_cmd_neutral.c",
-      "sha256": "919dcb5b3ea2ca3e21fa35e5f181255af8bdcae61f34105cea83c7b1255dedfb",
+      "sha256": "456d4489ba9453512e2e6555171e20d6406742290f66583cb23c3daeff410de4",
       "spdx": [
         "Apache-2.0"
       ],
@@ -190,7 +190,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_peripheral.h",
-      "sha256": "788f018be0075ddcb93604068c5e15029f6f099fa050b7a555e148cfff9c53d7",
+      "sha256": "b61d55cde995d8f824144b8531428bdf4087d14498c40864e0ce1ec97cf6a647",
       "spdx": [
         "Apache-2.0"
       ],
@@ -806,7 +806,7 @@
     },
     {
       "path": "apps/hubprogram/micropython/brickwright_module.c",
-      "sha256": "9324a11c088b58abcc4a861e0da80d3111ea808cd84557d2c0ace15ad056c353",
+      "sha256": "015edfdbe6724a39a3860c56a7d7db39573254b7e7a38b26d53221b3c17167e7",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -993,7 +993,7 @@
     },
     {
       "path": "apps/imu/imu_main.c",
-      "sha256": "13176567ee75f519fa6abc56af27441c0700f3fecad865b418d82adb5a49cb3e",
+      "sha256": "2a5f939c43dad6e21ddc7d1038dd6709ffcdc288d4d31d30509519c057a9cafd",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1002,7 +1002,7 @@
     },
     {
       "path": "apps/imu/imu_service.h",
-      "sha256": "6d97d67a35d4a53093c95bf5799b0a9f794543f36753e977633e6d7755329868",
+      "sha256": "f9cd8b9d1aa66cdf226235b44e2526d54c76bec3ef4a23e7c4c30c8498a1ef43",
       "spdx": [
         "Apache-2.0"
       ],
@@ -34522,7 +34522,9 @@
         "task_gettid.o": "36177b2bdf3003985a40b321a0899012a39da356bb29e2f943ed55e47a7fa9c2",
         "task_setcancelstate.o": "f3d706d904ad42a6294e63fce529cb9b8d297524ff885e66c1541c07f61cec41",
         "task_startup.o": "aa96febd2a63587e1563cd20469512445005317fc2a298fb2fad8109c5d9e08a",
-        "tls_getinfo.o": "df5d93a1607b32668c1cf8f49da77b7c5996ac6ea9760ad692282d1ceb1a0870"
+        "tls_getinfo.o": "df5d93a1607b32668c1cf8f49da77b7c5996ac6ea9760ad692282d1ceb1a0870",
+        "lib_mkstemp.o": "974a11fe2f4b621c7d99a96f489835d031c125328da11a7fdf35ef3997c83802",
+        "lib_mktemp.o": "1e78f0aaa75151a067a5a8758dac2100509192969ea92e10ca42de6e2c0acba6"
       }
     },
     "libmm.a": {
@@ -35055,5 +35057,20 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification."
+  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification.",
+  "current_linker_additions": {
+    "observed_ci_run": 37265813475,
+    "profile": "simulation",
+    "archive": "libc.a",
+    "members": [
+      "lib_mkstemp.o",
+      "lib_mktemp.o"
+    ],
+    "source_paths": [
+      "nuttx/libs/libc/stdlib/lib_mkstemp.c",
+      "nuttx/libs/libc/stdlib/lib_mktemp.c"
+    ],
+    "selected_licence": "Apache-2.0",
+    "byte_hash_scope": "New member byte hashes are from the cached historical reviewed ARM archive at a8c4c5f24c4f242158704f15ebedde115946223b, not this candidate build. Current candidate selection was observed in both clean CI builds; source inputs/grants are already in this inventory. Current build qualification is recorded separately."
+  }
 }

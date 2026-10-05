@@ -41,6 +41,9 @@ int main(void) {
   assert(bw_python_execute("raise OSError(5)\n")==-EIO);
   assert(bw_python_execute("raise OSError('invalid')\n")==-EINVAL);
   assert(bw_python_execute("raise OSError(-5)\n")==-EINVAL);
+  assert(bw_python_execute("raise OSError(32767)\n")==-32767);
+  assert(bw_python_execute("raise OSError(32768)\n")==-EINVAL);
+  assert(bw_python_execute("raise OSError(65536)\n")==-EINVAL);
   assert(!bw_python_execute("assert 2+2 == 4\n"));
   polls=0;assert(bw_python_execute("this is invalid syntax !")<0);
   puts("embedded MicroPython cancellation and syntax failure: PASS");return 0;

@@ -42,6 +42,8 @@ struct btsensor_peripheral_ops {
   int (*fusion_stop)(void *);
   int (*fusion_status)(void *, bool *, bool *, bool *);
   int (*fusion_snapshot)(void *, imu_fusion_snapshot_t *);
+  int (*fusion_calibration_save)(void *);
+  int (*fusion_calibration_load)(void *);
   int (*fusion_set_base_axes)(void *, const imu_xyz_t *, const imu_xyz_t *);
 };
 

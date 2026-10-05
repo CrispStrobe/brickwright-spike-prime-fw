@@ -474,6 +474,33 @@ int imu_service_snapshot(imu_fusion_snapshot_t *out)
   return result;
 }
 
+int imu_service_calibration_save(void)
+{
+  imu_settings_t settings;
+  pthread_mutex_lock(&g_daemon_lock);
+  int result = -EAGAIN;
+  if (imu_fusion_get_settings(&settings))
+    result = imu_calibration_save_copy(IMU_CAL_PATH, &settings) == 0 ? 0 : -errno;
+  pthread_mutex_unlock(&g_daemon_lock);
+  return result;
+}
+
+int imu_service_calibration_load(void)
+{
+  pthread_mutex_lock(&g_daemon_lock);
+  int result = imu_calibration_load(IMU_CAL_PATH) == 0 ? 0 : -errno;
+  if (result == 0)
+    {
+      imu_settings_t loaded = *imu_calibration_get_settings();
+      g_stationary_gyro_threshold = loaded.gyro_stationary_threshold;
+      g_stationary_accel_threshold = loaded.accel_stationary_threshold;
+      g_calibration_revision++;
+      imu_fusion_set_settings(&loaded);
+    }
+  pthread_mutex_unlock(&g_daemon_lock);
+  return result;
+}
+
 static bool cardinal_axis(const imu_xyz_t *axis)
 {
   unsigned int nonzero = 0;
@@ -882,9 +909,7 @@ int main(int argc, FAR char *argv[])
         }
       else if (strcmp(argv[2], "save") == 0)
         {
-          imu_settings_t coherent_settings;
-          if (imu_fusion_get_settings(&coherent_settings) &&
-              imu_calibration_save_copy(IMU_CAL_PATH, &coherent_settings) == 0)
+          if (imu_service_calibration_save() == 0)
             {
               printf("calibration saved\n");
             }
@@ -896,17 +921,7 @@ int main(int argc, FAR char *argv[])
         }
       else if (strcmp(argv[2], "load") == 0)
         {
-          pthread_mutex_lock(&g_daemon_lock);
-          int load_result = imu_calibration_load(IMU_CAL_PATH);
-          if (load_result == 0)
-            {
-              imu_settings_t loaded = *imu_calibration_get_settings();
-              g_stationary_gyro_threshold = loaded.gyro_stationary_threshold;
-              g_stationary_accel_threshold = loaded.accel_stationary_threshold;
-              g_calibration_revision++;
-              imu_fusion_set_settings(&loaded);
-            }
-          pthread_mutex_unlock(&g_daemon_lock);
+          int load_result = imu_service_calibration_load();
           if (load_result == 0)
             {
               printf("calibration loaded\n");

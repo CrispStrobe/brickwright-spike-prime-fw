@@ -227,3 +227,15 @@ This inventory describes observed software behaviour. Bluetooth pairing mode,
 the actual legacy hub Class-of-Device, its SDP record/channel, command reply
 shape, and disconnect safety still require packet captures or black-box tests
 on hardware; no claim about those facts is inferred from TI controller code.
+
+### Fixed-slot calibration commands
+
+The local Classic control seam accepts `FUSION CAL SAVE` and `FUSION CAL LOAD`
+with no path or trailing argument. BLE use reports unsupported. SAVE writes
+coherent fusion settings, including learned bias, to
+`/mnt/flash/imu.calibration`; absent settings return `-EAGAIN`, while filesystem
+failures preserve negative errno. Coherent settings and stationary readiness
+are separate. LOAD validates the same fixed record, updates fusion settings
+and publishes a threshold revision; it does not start the producer. Both
+commands use the same helpers as `imu cal save/load`. This is our local
+control contract, not a newly qualified LEGO modern IMU wire command.

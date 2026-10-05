@@ -599,11 +599,21 @@ unique-file shim and host filesystem boundary do not qualify actual NuttX VFS,
 concurrent writers or physical brownouts. The original settings layout is
 retained without checksum/authentication.
 
-Clean ARM builds, actual linker-member changes and guest/peer execution remain
-pending for this source candidate. Historical image/archive byte hashes in the
+Both first clean ARM profiles compiled, then the unchanged dependency gate
+rejected two newly selected Apache-2.0 libc members: `lib_mkstemp.o` and
+`lib_mktemp.o`. [The rejected first matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37265813475)
+records the exact additions with no removals. Their sources already match the
+reviewed NuttX input closure. The inventories now include the observed member
+selection; cached historical member byte hashes are explicitly identified as
+historical. The final matrix records actual new build member hashes separately.
+Final clean ARM and guest/peer qualification remains pending. Historical image/archive byte hashes in the
 compiler-input inventories remain explicitly historical; reviewed current
-source hashes and original attribution are updated. Additional libc members
-from unique temporary creation must be checked against the actual build.
+source hashes and original attribution are updated. The selected-member gate remains mandatory. A dedicated real ARM mailbox
+workflow checks retained native COMPLETE/START and STOP/START plus Python
+FAULT/START with OSError preserved, without function hooks or scheduler stubs.
+A sixth air scenario saves learned calibration through the mounted guest
+LittleFS, stops/loads/reopens and checks loaded bias independently of readiness.
+Both new guest tests remain pending actual CI execution.
 The unchanged reference rerun and its limits are recorded in
 [reference captures](imu-reference-captures.md); it captured no modern IMU
 notifications and does not qualify the wire mapping.

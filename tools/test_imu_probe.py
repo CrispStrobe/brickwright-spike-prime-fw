@@ -282,19 +282,30 @@ class FusionLifecycleTests(unittest.IsolatedAsyncioTestCase):
 
 class StationaryLifecycleTests(unittest.IsolatedAsyncioTestCase):
     async def exercise(self, *, wrong_ready=False, unlearned_bias=False,
-                       skipped_feed=False, silent=False, cancel=False):
+                       skipped_feed=False, silent=False, cancel=False,
+                       persistence=False, lost_saved_bias=False, save_error=False):
         received = asyncio.Queue(); requests = []; actions = []
         started = asyncio.Event()
         state = {'on': False, 'sequence': 0, 'time': 1000000,
-                 'stamp': 0, 'feed': [0, 104, 0, 0, 0, 0], 'odr': 833}
+                 'stamp': 0, 'feed': [0, 104, 0, 0, 0, 0], 'odr': 833,
+                 'saved': False, 'loaded_bias': False}
         with tempfile.TemporaryDirectory() as directory:
             log = Path(directory) / 'renode.log'; log.write_text('')
             class DLC:
                 def write(self, data):
                     command = data.decode().strip(); requests.append(command)
                     if command == 'FUSION START':
-                        state.update(on=True, sequence=0, stamp=0)
+                        state.update(on=True, sequence=0, stamp=0,
+                                     loaded_bias=state.get('saved', False) and not lost_saved_bias)
                         reply = 'OK'
+                    elif command == 'FUSION CAL SAVE':
+                        if save_error:
+                            reply = 'ERR errno=28'
+                        else:
+                            state['saved'] = state['sequence'] >= 437
+                            reply = 'OK'
+                    elif command == 'FUSION CAL LOAD':
+                        reply = 'OK' if state['saved'] else 'ERR errno=2'
                     elif command == 'FUSION STOP':
                         state['on'] = False; reply = 'OK'
                     elif command == 'FUSION STATUS':
@@ -304,7 +315,7 @@ class StationaryLifecycleTests(unittest.IsolatedAsyncioTestCase):
                             reply = 'ERR errno=11'
                         else:
                             calibrated = state['sequence'] >= 229
-                            gyro = (0, 0, 0) if calibrated and not unlearned_bias else (.7, 1.05, 1.4)
+                            gyro = (0, 0, 0) if (calibrated or state['loaded_bias']) and not unlearned_bias else (.7, 1.05, 1.4)
                             words = fusion_line(state['sequence'], state['stamp'], gyro=gyro).split()
                             words[4] = str(int(calibrated and not wrong_ready))
                             reply = ' '.join(words)
@@ -360,19 +371,41 @@ class StationaryLifecycleTests(unittest.IsolatedAsyncioTestCase):
             result = {}
             task = asyncio.create_task(probe.stationary_round_trip(
                 DLC(), received, Process(), result, renode_log=log,
-                timeout=.05 if silent else 3))
+                timeout=.05 if silent else 3, persistence=persistence))
             if cancel:
                 await started.wait(); task.cancel()
                 with self.assertRaises(asyncio.CancelledError): await task
             elif silent:
                 with self.assertRaises(TimeoutError): await task
-            elif wrong_ready or unlearned_bias or skipped_feed:
+            elif wrong_ready or unlearned_bias or skipped_feed or lost_saved_bias or save_error:
                 with self.assertRaises(ValueError): await task
             else: await task
             self.assertFalse(state['on'], 'Stationary probe left producer enabled')
             self.assertFalse(state['feed'][0], 'Stationary probe left feeder enabled')
             self.assertEqual(actions[-1], 'feed_stop')
             return result, requests, actions
+
+    async def test_guest_calibration_save_reopen_bias_without_readiness(self):
+        result, requests, actions = await self.exercise(persistence=True)
+        record = result['imu_calibration']
+        self.assertEqual(record['status'], 'PASS')
+        self.assertTrue(record['loaded_bias_verified'])
+        self.assertFalse(record['physical_durability_qualified'])
+        self.assertEqual(record['saved_sequence'], 441)
+        self.assertEqual([s['sequence'] for s in record['snapshots']], [1, 101, 261, 441, 1])
+        self.assertIn('FUSION CAL SAVE', requests)
+        self.assertIn('FUSION CAL LOAD', requests)
+        self.assertFalse(record['snapshots'][-1]['ready'])
+
+    async def test_guest_calibration_lost_bias_is_rejected(self):
+        result, _, _ = await self.exercise(persistence=True, lost_saved_bias=True)
+        self.assertTrue(result['imu_calibration']['status'].startswith('FAIL'))
+        self.assertNotIn('loaded_bias_verified', result['imu_calibration'])
+
+    async def test_guest_calibration_save_error_is_rejected(self):
+        result, _, _ = await self.exercise(persistence=True, save_error=True)
+        self.assertTrue(result['imu_calibration']['status'].startswith('FAIL'))
+        self.assertNotIn('loaded_bias_verified', result['imu_calibration'])
 
     async def test_configured_rate_ready_bias_and_reopen(self):
         result, requests, actions = await self.exercise()

@@ -211,3 +211,15 @@ retain the same record/count/silence assertions and change no guest code.
 Raw receipts and failed-attempt evidence remain local; no firmware/test artifact
 is published. IMU/mixed-mode sensor records, bonds and physical behavior remain
 separate.
+
+## Calibration persistence scenario
+
+`--classic --skip-le --imu-calibration` runs separately from the stationary
+scenario. It waits for learned initial gyro bias, sends `FUSION CAL SAVE`,
+stops, explicitly loads and reopens the producer. The first fresh snapshot
+must have corrected gyro while stationary readiness remains false. A missing
+save or lost bias fails the probe. This exercises our fixed mounted LittleFS
+service, not modern IMU wire mapping or physical power-loss behaviour. The
+six-mode matrix adds `calibration` after LE, Scratch Link, Classic, stationary
+and poses; actual build/guest evidence is recorded in
+[simulation qualification](simulation-qualification.md).

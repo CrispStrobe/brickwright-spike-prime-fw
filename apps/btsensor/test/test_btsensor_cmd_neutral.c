@@ -101,6 +101,12 @@ static int fusion_stop(void *p) {
   strcpy(x->op, "fusion_stop");
   return x->result;
 }
+static int fusion_calibration_save(void *p) {
+  struct fixture *x = p; x->fusion_calls++; strcpy(x->op, "fusion_save"); return x->result;
+}
+static int fusion_calibration_load(void *p) {
+  struct fixture *x = p; x->fusion_calls++; strcpy(x->op, "fusion_load"); return x->result;
+}
 static int fusion_status(void *p, bool *starting, bool *running, bool *stopping) {
   struct fixture *x = p;
   x->fusion_calls++;
@@ -135,6 +141,8 @@ static struct btsensor_peripheral_ops ops = {.context = &f,
                                              .imu_capture_stop = cap_stop,
                                              .fusion_start = fusion_start,
                                              .fusion_stop = fusion_stop,
+                                             .fusion_calibration_save = fusion_calibration_save,
+                                             .fusion_calibration_load = fusion_calibration_load,
                                              .fusion_status = fusion_status,
                                              .fusion_snapshot = fusion_snapshot,
                                              .fusion_set_base_axes = fusion_set_base_axes};
@@ -309,6 +317,26 @@ static void test_fusion(void) {
   send(0, "FUSION STATUS\n"); expect_errno(ENOTSUP);
   send(0, "FUSION START\n"); expect_errno(ENOTSUP);
 }
+static void test_fusion_calibration(void) {
+  reset();
+  send(0, "FUSION CAL SAVE\n"); expect("OK\n"); assert(!strcmp(f.op, "fusion_save"));
+  send(0, "FUSION CAL LOAD\n"); expect("OK\n"); assert(!strcmp(f.op, "fusion_load"));
+  unsigned calls = f.fusion_calls;
+  send(1, "FUSION CAL SAVE\n"); expect_errno(ENOTSUP);
+  send(1, "FUSION CAL LOAD\n"); expect_errno(ENOTSUP);
+  const char *bad[] = {"FUSION CAL\n", "FUSION CAL save\n", "FUSION CAL ERASE\n",
+                       "FUSION CAL SAVE path\n", "FUSION CAL LOAD 1\n"};
+  for(unsigned i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
+    send(0,bad[i]);expect("ERR invalid FUSION CAL\n");
+  }
+  assert(f.fusion_calls == calls);
+  f.result=-ENOENT;send(0,"FUSION CAL LOAD\n");expect_errno(ENOENT);
+  f.result=-ENOSPC;send(0,"FUSION CAL SAVE\n");expect_errno(ENOSPC);
+  f.result=-EAGAIN;send(0,"FUSION CAL SAVE\n");expect_errno(EAGAIN);
+  btsensor_cmd_set_peripheral_ops(NULL);
+  send(0,"FUSION CAL SAVE\n");expect_errno(ENOTSUP);
+  send(0,"FUSION CAL LOAD\n");expect_errno(ENOTSUP);
+}
 static void test_fusion_base(void) {
   reset();
   send(0, "FUSION BASE 1 0 0 0 0 1\n");
@@ -345,6 +373,7 @@ static void test_fusion_base(void) {
 }
 int main(void) {
   test_fusion_base();
+  test_fusion_calibration();
   test_fusion();
   test_operations();
   test_errors();

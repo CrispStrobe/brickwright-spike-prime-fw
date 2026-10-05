@@ -57,6 +57,9 @@ jobs:
           set -o pipefail
           make nuttx BOARD_CONFIG=${{ matrix.profile }} V=1 2>&1 | tee "$RUNNER_TEMP/build.log"
 
+      - name: Record actual selected temporary-file libc member hashes
+        run: python3 tools/report_tempfile_link_evidence.py nuttx/nuttx.map nuttx/nuttx_user.map
+
       - name: Test saved programs through real LittleFS interrupted writes
         if: matrix.profile == 'simulation'
         run: |
@@ -164,6 +167,13 @@ jobs:
             --include brickwright-board-models \
             --include brickwright-existing-filesystem-board \
             --include brickwright-board-stubs
+
+      - name: Execute retained program restarts through the actual ARM service
+        if: matrix.profile == 'simulation'
+        run: |
+          PATH="$RENODE_TEST_VENV/bin:$PATH" "$RENODE_DIR/renode-test" \
+            --results-dir .local/renode-program-workflow-results --stop-on-error \
+            simulation/renode/program-workflow.robot
 
       - name: Validate the source-generated empty LittleFS seed
         if: matrix.profile == 'simulation'
