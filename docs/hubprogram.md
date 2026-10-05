@@ -6,8 +6,10 @@ the host does not supply motor positions or execute the program instructions.
 Motor commands accept physical ports A–F (integer indices 0–5) when the
 attached device reports a supported motor type (46, 48, 49 or 65). Missing
 ports, unsynchronized discovery and wrong device types return driver errors;
-a motor command never changes an attached sensor into a motor. The sensor API
-retains color/reflection C, distance D and force-button E. It is a bounded API,
+a motor command never changes an attached sensor into a motor. The default topology
+uses motors A/B and color/reflection C, distance D and force-button E. The
+explicit six-motor simulation topology supports A–F through the same drivers;
+A/B remain rover wheels and sensor reads are unavailable in that topology. It is a bounded API,
 not complete SPIKE Python compatibility.
 
 The simulation profile starts local program execution independently of radio
@@ -45,9 +47,12 @@ this clock is driven by simulated hardware time. Zero-duration waits yield;
 Programs time out after 120 simulated seconds. Unknown/stale sensor samples
 cannot satisfy a condition. Driver errors terminate execution and attempt to
 brake only the motors owned by the program. END waits for those motors to stop.
-The version-1 debug snapshot still contains only motors A/B. The current
-arena wiring remains A/B motors and C/D/E sensors; host device-IO fixtures
-cover other attached-motor layouts without claiming six-motor Renode coverage.
+The legacy version-1 debug snapshot contains only motors A/B. Current Renode
+arena snapshots support the default A/B motor and C/D/E sensor topology and
+the separately qualified six-motor topology. Native, Scratch and embedded
+Python programs can use A–F in the latter; A/B move the rover and C–F remain
+auxiliary motors. See the
+[six-motor qualification](https://github.com/CrispStrobe/renode-spike-prime/blob/main/docs/prime-nuttx-qualification.md).
 There is no position-hold guarantee after the devices are released.
 
 Encoder-feedback control ramps the reference, applies a bounded PWM demand,
@@ -189,13 +194,19 @@ blocks on an absent USB/BLE console. Each VM execution clears the buffer.
 Host VM tests exercise output overflow followed by another execution.
 
 The SPI/DMA follow-up qualified blank external flash formatting and mounting
-in Renode. That does not yet qualify program-file persistence.
+in Renode. Later explicit Save/Load tests restored and executed native and
+completed Python programs in separate Renode processes. Configured Linux
+desktop packages retain the last completed explicit Save through a host flash
+checkpoint; Load restores READY without automatic execution. This does not
+establish power-loss durability or physical flash behavior.
 
 Remaining integration gaps include USB OTG transport, an actual Bluetooth
 radio/link, power-loss recovery and wider filesystem operations, runtime MPU isolation qualification,
-and wider long-duration and resource-exhaustion tests. Original LEGO and
-upstream LEGO_HUB_NO6 MicroPython images have only bounded CPU startup probes;
-no original-firmware robot-program or peripheral compatibility is claimed.
+and wider long-duration and resource-exhaustion tests. Original LEGO images
+have only bounded CPU startup probes; no original-firmware robot-program or
+peripheral compatibility is claimed. Supplied upstream LEGO_HUB_NO6
+MicroPython images use a separate, bounded
+[arena execution profile](https://github.com/CrispStrobe/renode-spike-prime/blob/main/docs/spike-micropython-support.md).
 Private image inputs, generated run records and complete transcripts remain
 outside public repositories.
 
