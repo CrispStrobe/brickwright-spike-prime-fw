@@ -14,7 +14,9 @@ system and incorporating adapted or referenced Pybricks robotics code.
 > safety. See [SAFETY.md](SAFETY.md).
 
 The [capability matrix](docs/project/capabilities.md) distinguishes implemented
-behaviour, simulation evidence and remaining work.
+behaviour, simulation evidence and remaining work. The
+[current-state handover and task lanes](docs/project/next-steps.md) give fresh
+contributors concrete starting points, dependencies and acceptance criteria.
 
 ## Origins and architecture
 
