@@ -5,6 +5,10 @@ simulation-only and publish no flashable firmware artifacts. This document
 records the evidence required to close the existing C5/C6/C7 hardware gates;
 it does not authorize a hardware release or record tests that have not run.
 
+The [current-state handover](next-steps.md#l13-physical-qualification-and-release-decision)
+assigns this work to L13 and separates preparation from experiments that require
+identified hardware and an operator.
+
 ## Prerequisites and evidence
 
 Use an identified hardware revision, firmware source/configuration hashes,

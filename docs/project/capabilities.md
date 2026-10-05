@@ -55,6 +55,9 @@ candidate's clean build and guest results are recorded separately in
 
 ## Ordered remaining work
 
+For independently assignable tasks, source entry points, dependencies and
+acceptance tests, use [the current-state handover and task lanes](next-steps.md).
+
 Both protected profiles, compiler-input licence closures, resource budgets and
 all six guest/peer scenarios pass for the source candidate recorded in
 [simulation qualification](simulation-qualification.md). Continue with:

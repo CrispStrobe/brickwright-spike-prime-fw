@@ -14,7 +14,8 @@ fetches TI's unmodified, TI-device-only file at build time. See
 The latest integration and its explicit limits are recorded in
 [the simulation qualification record](docs/project/simulation-qualification.md).
 Earlier checkpoint rows are historical evidence, not current configuration
-instructions.
+instructions. [The current-state handover and task lanes](docs/project/next-steps.md)
+are the active scheduling and acceptance guide for new work.
 The simulator does not execute TI controller firmware or validate
 RF/electrical behaviour.
 
@@ -224,7 +225,12 @@ milestones in one shared model; our unchanged protected production image
 reaches its userspace and transport daemon; remaining model limitations are
 machine-readable and cannot be confused with physical-hardware evidence.
 
-### Next simulation-only roadmap
+### Historical simulation-only roadmap
+
+This earlier sequence is retained for context. Its checkbox states are not a
+current capability assessment. Use the dated
+[agent task lanes](docs/project/next-steps.md) and
+[capability matrix](docs/project/capabilities.md) instead.
 
 1. [~] Reconcile all public safety, licence, TI, and provenance documentation.
 2. [ ] Replace full NuttX gitlinks with a hash-pinned, permissively licensed
@@ -360,18 +366,16 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 ## Current next action
 
-Use [the capability matrix](docs/project/capabilities.md) as the current
-implementation/evidence map. Source `db67e6d1b7582cd5e61fb2880dd81ffed6828e76`
-passes both protected profiles in matrix `37267297180`, including actual ARM
-retained-program restart and the calibration save/load/reopen air peer. Classic
-degree jobs are host-qualified; their motor-coupled guest exercise remains open.
-Prioritize that exercise, a current-source six-motor regression, arbitrary-port
-sensor/state coverage and cold-restart bond reuse over unrelated peripheral expansion.
+The [current-state handover and task lanes](docs/project/next-steps.md) record
+merged firmware PR #34, exact tested pins, passing matrix `37267297180` and
+merged-main CI `37269883271`. They replace the earlier broad next-step list
+with assignable work, public source entry points and acceptance criteria.
 
-Modern IMU wire units, Euler conventions, yaw faces and reset behaviour still
-require paired independent observations. Synthetic poses and decoder tests do
-not qualify that mapping. Retry unchanged reference firmware with the latest
-qualified public models; preserve failures and distinguish bounded execution
-from completed boot. Physical C5/C6.4 validation remains open and cannot be
-closed by simulation. Complete Pybricks robotics replacement is a separate
-optional project, not a claim made by this source candidate.
+Start **L01** with the Classic degree motor-coupled guest scenario and a fresh
+six-motor regression. **L02** arbitrary-port sensor/attachment contracts and
+**L03** cold-restart bonds or **L04** cold guest storage can proceed separately;
+coordinate shared ABI and inventory changes at integration. L05–L12 scope hub
+I/O, controllers, reference/model work, Python routes, resilience, dependencies
+and optional robotics replacement. **L07** mapping qualification needs independent
+reference observations; **L13** physical experiments need identified hardware.
+Neither dependency is satisfied by synthetic simulation results.
