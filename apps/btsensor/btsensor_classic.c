@@ -10,6 +10,8 @@
 #define CLASSIC_REPLY_MAX 192u
 #define CLASSIC_PORT_COUNT 6u
 #define CLASSIC_TIMED_MAX_MS 60000u
+#define CLASSIC_ENCODER_POLL_MS 20u
+#define CLASSIC_NO_PROGRESS_MS 1000u
 
 static struct btsensor_classic_config g_config;
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -17,6 +19,11 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 struct pending_run
 {
   uint64_t deadline_ms;
+  uint64_t expires_ms, progress_ms;
+  int32_t last_position;
+  int64_t target_delta, displacement;
+  int direction;
+  bool degrees;
   uint32_t generation;
   uint32_t ownership_token;
   uint8_t end_state;
@@ -318,7 +325,8 @@ static bool parse_center_button_lights(
 
 /* {"port":"A","speed":N,"degrees":N,"stop":N,"stall":bool} */
 static bool parse_motor_degrees(const struct request *request,
-                                struct btsensor_modern_operation *operation)
+                                struct btsensor_modern_operation *operation,
+                                int32_t *angle, uint8_t *end_state, bool *stall)
 {
   const char *p = request->params;
   const char *end = p + request->params_length;
@@ -336,8 +344,11 @@ static bool parse_motor_degrees(const struct request *request,
       !parse_integer(&p, end, 0, 2, &stop) ||
       !take(&p, end, ",\"stall\":"))
     return false;
-  if (!take(&p, end, "true}") && !take(&p, end, "false}")) return false;
+  if (take(&p, end, "true}")) *stall = true;
+  else if (take(&p, end, "false}")) *stall = false;
+  else return false;
   if (p != end) return false;
+  *angle = degrees; *end_state = (uint8_t)stop;
   operation->kind = BTSENSOR_MODERN_OP_MOTOR;
   operation->speed = (int8_t)speed;
   return true;
@@ -425,10 +436,21 @@ static bool port_pending(uint8_t port)
   return active;
 }
 
+static void abort_failed_runs(const struct pending_run *failed, int error)
+{
+  for (unsigned port = 0; port < CLASSIC_PORT_COUNT; port++)
+    if (failed[port].active) {
+      int stop_rc = g_config.end_owned(BRICKWRIGHT_HUB_LINK_CLASSIC, (uint8_t)port,
+                                       failed[port].ownership_token, 1, g_config.context);
+      send_pending_result(&failed[port], stop_rc < 0 ? stop_rc : error);
+    }
+}
+
 static void cancel_port(uint8_t port)
 {
-  struct pending_run canceled;
+  struct pending_run canceled, failed[CLASSIC_PORT_COUNT];
   bool had_pending;
+  memset(failed, 0, sizeof(failed));
   pthread_mutex_lock(&g_lock);
   canceled = g_pending[port];
   had_pending = canceled.active;
@@ -437,12 +459,17 @@ static void cancel_port(uint8_t port)
   if (!had_pending) return;
   if (g_config.timer_stop) g_config.timer_stop(g_config.context);
   pthread_mutex_lock(&g_lock);
-  (void)arm_next_locked();
+  int arm_rc = arm_next_locked();
+  if (arm_rc < 0) {
+    memcpy(failed, g_pending, sizeof(failed));
+    memset(g_pending, 0, sizeof(g_pending));
+  }
   pthread_mutex_unlock(&g_lock);
   /* An explicit stop safely completes the older run; resolving its request
    * avoids triggering the extension's MicroPython fallback after the motor
    * has already been stopped. */
   send_pending_result(&canceled, 0);
+  abort_failed_runs(failed, arm_rc);
 }
 
 static int start_timed(enum brickwright_hub_link link,
@@ -461,7 +488,9 @@ static int start_timed(enum brickwright_hub_link link,
       stop.port = operation->port;
       stop.has_end_state = true;
       stop.end_state = end_state;
-      return g_config.operation(link, &stop, g_config.context);
+      int stop_rc = g_config.operation ? g_config.operation(link, &stop, g_config.context) : -ENOTSUP;
+      if (stop_rc == 0) cancel_port(operation->port);
+      return stop_rc;
     }
   pthread_mutex_lock(&g_lock);
   if (g_pending[operation->port].active)
@@ -469,12 +498,16 @@ static int start_timed(enum brickwright_hub_link link,
       pthread_mutex_unlock(&g_lock);
       return -EBUSY;
     }
+  if (g_config.now(g_config.context) > UINT64_MAX - time_ms) {
+    pthread_mutex_unlock(&g_lock); return -EOVERFLOW;
+  }
   uint32_t ownership_token = 0;
   rc = g_config.tagged_operation(link, operation, &ownership_token,
                                  g_config.context);
   if (rc == 0)
     {
       struct pending_run *pending = &g_pending[operation->port];
+      memset(pending, 0, sizeof(*pending));
       pending->deadline_ms = g_config.now(g_config.context) + time_ms;
       pending->generation = ++g_generation;
       pending->ownership_token = ownership_token;
@@ -494,6 +527,54 @@ static int start_timed(enum brickwright_hub_link link,
   return rc;
 }
 
+static int start_degrees(enum brickwright_hub_link link,
+                         const struct request *request,
+                         struct btsensor_modern_operation *operation,
+                         int32_t angle, uint8_t end_state)
+{
+  int32_t baseline;
+  int rc;
+  if (!g_config.encoder || !g_config.tagged_operation || !g_config.end_owned ||
+      !g_config.now || !g_config.timer_start || !g_config.timer_stop)
+    return -ENOTSUP;
+  if (end_state == 2) return -ENOTSUP;
+  if (angle == 0) return start_timed(link, request, operation, 0, end_state);
+  if (operation->speed == 0) return -EINVAL;
+  pthread_mutex_lock(&g_lock);
+  if (g_pending[operation->port].active) {
+    pthread_mutex_unlock(&g_lock); return -EBUSY;
+  }
+  if (g_config.now(g_config.context) > UINT64_MAX - CLASSIC_TIMED_MAX_MS) {
+    pthread_mutex_unlock(&g_lock); return -EOVERFLOW;
+  }
+  rc = g_config.encoder(operation->port, &baseline, g_config.context);
+  if (rc == 0) {
+    uint32_t token = 0;
+    if (angle < 0) operation->speed = -operation->speed;
+    rc = g_config.tagged_operation(link, operation, &token, g_config.context);
+    if (rc == 0) {
+      uint64_t now = g_config.now(g_config.context);
+      struct pending_run *p = &g_pending[operation->port];
+      memset(p, 0, sizeof(*p));
+      p->degrees = true; p->last_position = baseline;
+      p->target_delta = angle < 0 ? -(int64_t)angle : angle;
+      p->direction = operation->speed < 0 ? -1 : 1;
+      p->expires_ms = now + CLASSIC_TIMED_MAX_MS;
+      p->progress_ms = now; p->deadline_ms = now + CLASSIC_ENCODER_POLL_MS;
+      p->ownership_token = token; p->generation = ++g_generation;
+      p->has_id = request->has_id; memcpy(p->id, request->id, sizeof(p->id));
+      p->end_state = end_state; p->active = true;
+      rc = arm_next_locked();
+      if (rc < 0) {
+        p->active = false;
+        (void)g_config.end_owned(link, operation->port, token, 1, g_config.context);
+      }
+    }
+  }
+  pthread_mutex_unlock(&g_lock);
+  return rc;
+}
+
 void btsensor_classic_timer_fired(void)
 {
   for (unsigned port = 0; port < CLASSIC_PORT_COUNT; port++)
@@ -508,12 +589,40 @@ void btsensor_classic_timer_fired(void)
           continue;
         }
       completed = g_pending[port];
+      rc = 0;
+      if (completed.degrees) {
+        int32_t measured = completed.last_position;
+        uint64_t now = g_config.now(g_config.context);
+        rc = g_config.encoder((uint8_t)port, &measured, g_config.context);
+        if (rc == -EAGAIN) rc = 0;
+        if (!rc && measured != completed.last_position) {
+          uint32_t raw_delta = (uint32_t)measured - (uint32_t)completed.last_position;
+          /* INT32 counter wrap is modular. Exactly half a counter range has
+           * no distinguishable direction and must not complete a move. */
+          if (raw_delta == UINT32_C(0x80000000)) rc = -EOVERFLOW;
+          else {
+            int32_t delta = raw_delta <= INT32_MAX ? (int32_t)raw_delta : -(int32_t)(~raw_delta) - 1;
+            g_pending[port].displacement += delta;
+            g_pending[port].last_position = measured;
+            g_pending[port].progress_ms = now;
+          }
+        }
+        bool reached = g_pending[port].displacement * completed.direction >= completed.target_delta;
+        if (!rc && !reached && now < completed.expires_ms &&
+            now - g_pending[port].progress_ms < CLASSIC_NO_PROGRESS_MS) {
+          g_pending[port].deadline_ms = now + CLASSIC_ENCODER_POLL_MS;
+          pthread_mutex_unlock(&g_lock); continue;
+        }
+        if (!rc && !reached) rc = -ETIMEDOUT;
+      }
       pthread_mutex_unlock(&g_lock);
+      int motion_result = rc;
       rc = g_config.end_owned ?
            g_config.end_owned(BRICKWRIGHT_HUB_LINK_CLASSIC, (uint8_t)port,
                               completed.ownership_token,
-                              completed.end_state, g_config.context) :
+                              (motion_result < 0 ? 1 : completed.end_state), g_config.context) :
            -ENOTSUP;
+      if (rc == 0) rc = motion_result;
       pthread_mutex_lock(&g_lock);
       bool owned = false;
       if (g_pending[port].active &&
@@ -525,9 +634,16 @@ void btsensor_classic_timer_fired(void)
       pthread_mutex_unlock(&g_lock);
       if (owned) send_pending_result(&completed, rc);
     }
+  struct pending_run failed[CLASSIC_PORT_COUNT];
+  memset(failed, 0, sizeof(failed));
   pthread_mutex_lock(&g_lock);
-  (void)arm_next_locked();
+  int arm_rc = arm_next_locked();
+  if (arm_rc < 0) {
+    memcpy(failed, g_pending, sizeof(failed));
+    memset(g_pending, 0, sizeof(g_pending));
+  }
   pthread_mutex_unlock(&g_lock);
+  abort_failed_runs(failed, arm_rc);
 }
 
 void btsensor_classic_link_state(enum brickwright_hub_link link,
@@ -535,13 +651,18 @@ void btsensor_classic_link_state(enum brickwright_hub_link link,
 {
   btsensor_classic_timer_stop_t timer_stop;
   void *context;
+  struct pending_run canceled[CLASSIC_PORT_COUNT];
   if (link != BRICKWRIGHT_HUB_LINK_CLASSIC || connected) return;
   pthread_mutex_lock(&g_lock);
   timer_stop = g_config.timer_stop;
   context = g_config.context;
+  memcpy(canceled, g_pending, sizeof(canceled));
   memset(g_pending, 0, sizeof(g_pending));
   pthread_mutex_unlock(&g_lock);
   if (timer_stop) timer_stop(context);
+  for (unsigned port = 0; port < CLASSIC_PORT_COUNT; port++)
+    if (canceled[port].active && g_config.end_owned)
+      (void)g_config.end_owned(link, (uint8_t)port, canceled[port].ownership_token, 1, context);
 }
 
 static int send_current_state(enum brickwright_hub_link link)
@@ -603,8 +724,8 @@ bool btsensor_classic_receive(enum brickwright_hub_link link,
       else if (!g_config.operation) rc = -ENOTSUP;
       else
         {
-          cancel_port(operation.port);
           rc = g_config.operation(link, &operation, g_config.context);
+          if (rc == 0) cancel_port(operation.port);
         }
     }
   else if (exact(request.method, request.method_length,
@@ -658,11 +779,11 @@ bool btsensor_classic_receive(enum brickwright_hub_link link,
   else if (exact(request.method, request.method_length,
                  "scratch.motor_run_for_degrees"))
     {
-      /* Well-formed requests are answered, not executed: the neutral
-       * operation API drives motors by speed and has no encoder-position
-       * target yet, and a speed-only approximation would not stop at the
-       * requested angle. */
-      rc = parse_motor_degrees(&request, &operation) ? -ENOTSUP : -EINVAL;
+      int32_t angle;
+      if (!parse_motor_degrees(&request, &operation, &angle, &end_state, &stall)) rc = -EINVAL;
+      else if (stall) rc = -ENOTSUP;
+      else rc = start_degrees(link, &request, &operation, angle, end_state);
+      if (rc == 0 && angle != 0) return true;
     }
   else
     {

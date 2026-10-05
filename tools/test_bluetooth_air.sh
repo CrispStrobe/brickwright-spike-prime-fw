@@ -46,7 +46,7 @@ net_launcher=(unshare --net)
 if [[ $(id -u) != 0 ]]; then
     net_launcher=(sudo --non-interactive unshare --net)
 fi
-for mode in le scratch classic stationary poses; do
+for mode in le scratch classic stationary poses calibration; do
     run_limit=900s
     case "$mode" in
         le) options=(--reconnect --periodic) ;;
@@ -54,6 +54,7 @@ for mode in le scratch classic stationary poses; do
         classic) options=(--classic --skip-le --imu-probe) ;;
         poses) options=(--classic --skip-le --imu-poses) ;;
         stationary) options=(--classic --skip-le --imu-readiness); run_limit=1200s ;;
+        calibration) options=(--classic --skip-le --imu-calibration); run_limit=1500s ;;
     esac
     timeout "$run_limit" "${net_launcher[@]}" /bin/bash -c '
         set -euo pipefail

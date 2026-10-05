@@ -64,6 +64,8 @@ static unsigned g_fusion_starts, g_fusion_stops;
 static const imu_xyz_t *g_base_front, *g_base_top;
 int imu_service_set_base_axes(const imu_xyz_t *front, const imu_xyz_t *top)
 { g_base_front = front; g_base_top = top; return g_forward_rc; }
+int imu_service_calibration_save(void) { return g_forward_rc; }
+int imu_service_calibration_load(void) { return g_forward_rc; }
 int imu_service_start(void) { g_fusion_starts++; return g_forward_rc; }
 int imu_service_stop(void) { g_fusion_stops++; return g_forward_rc; }
 void imu_service_status(bool *starting, bool *running, bool *stopping)
@@ -165,6 +167,8 @@ static void test_forwarding_and_bounds(void)
   g_forward_rc = -EAGAIN;
   assert(g_installed->fusion_start(NULL) == -EAGAIN && g_fusion_starts == 1);
   assert(g_installed->fusion_stop(NULL) == -EAGAIN && g_fusion_stops == 1);
+  assert(g_installed->fusion_calibration_save(NULL) == -EAGAIN);
+  assert(g_installed->fusion_calibration_load(NULL) == -EAGAIN);
   assert(g_installed->fusion_status(NULL, &starting, &running, &stopping) == 0);
   assert(!starting && running && !stopping);
   assert(g_installed->fusion_snapshot(NULL, &snap) == -EAGAIN && snap.sequence == 42);
@@ -174,7 +178,8 @@ static void test_forwarding_and_bounds(void)
 #else
   assert(!g_installed->fusion_start && !g_installed->fusion_stop &&
          !g_installed->fusion_status && !g_installed->fusion_snapshot &&
-         !g_installed->fusion_set_base_axes);
+         !g_installed->fusion_set_base_axes &&
+         !g_installed->fusion_calibration_save && !g_installed->fusion_calibration_load);
 #endif
   btsensor_nuttx_peripheral_stop();
 }

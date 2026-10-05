@@ -32,6 +32,32 @@ static int fixture_position(void *ctx,unsigned port,int32_t degrees,int32_t spee
   (void)ctx;assert(port<6 && degrees==90 && speed==300);return port==4 ? -ENOENT : 0;
 }
 static int fixture_done(void *ctx,unsigned port) {(void)ctx;assert(port<6);return 1;}
+static int fixture_brake(void *ctx,unsigned port) {(void)ctx;assert(port<6);return 0;}
+static int fixture_sensor(void *ctx,unsigned predicate,int32_t *value) {
+  (void)ctx;(void)predicate;*value=0;return 0;
+}
+static void restart_transport(void) {
+  const struct bw_instruction code[]={{0,0,0,0}};
+  const struct bw_program_io io={fixture_motor,fixture_position,fixture_done,fixture_brake,fixture_sensor,NULL};
+  uint8_t packet[8]={BW_PROGRAM_REQUEST,1,3,0,42,0,0,0},reply[20];
+  const enum bw_program_state states[]={BW_PROGRAM_COMPLETE,BW_PROGRAM_STOPPED,BW_PROGRAM_FAULT};
+  unsigned i;
+  bw_program_init(&g_program,&io);assert(!bw_program_load(&g_program,42,code,1));
+  for(i=0;i<sizeof(states)/sizeof(states[0]);i++) {
+    g_program.state=states[i];g_program.error=-ENODEV;g_program.pc=1;
+    /* A previous Python execution must unwind before its retained source can
+     * be started by any other transport. */
+    g_python_active=1;
+    assert(bw_program_service_request(2,packet,8,reply)==-EBUSY);
+    assert(reply[2]==3 && reply[3]==states[i] && g_program.error==-ENODEV);
+    g_python_active=0;
+    assert(!bw_program_service_request(2,packet,8,reply));
+    assert(reply[2]==3 && reply[3]==BW_PROGRAM_RUNNING && reply[4]==42);
+    assert(!g_program.pc && !g_program.error && !reply[12] && !reply[18] && !reply[19]);
+    assert(bw_program_service_request(1,packet,8,reply)==-EBUSY);
+    packet[2]=4;assert(!bw_program_service_request(1,packet,8,reply));packet[2]=3;
+  }
+}
 static void six_port_wrappers(void) {
   g_program.state=BW_PROGRAM_RUNNING;g_program.owned=0;
   g_program.io.motor=fixture_motor;g_program.io.position=fixture_position;g_program.io.done=fixture_done;
@@ -89,6 +115,7 @@ int main(void) {
   packet[2]=4;assert(bw_program_service_request(1,packet,8,reply)==0 && releases==i);
   packet[2]=9;assert(bw_program_service_request(1,packet,8,reply)==-EBUSY && releases==i);
   g_python_active=0;assert(bw_program_service_request(1,packet,8,reply)==0 && releases>i);
-  puts("service: fixed storage slot, transport guards and oversized mailbox rejection passed");
+  restart_transport();
+  puts("service: fixed storage slot, transport guards, oversized mailbox rejection and retained-program restart passed");
   return 0;
 }

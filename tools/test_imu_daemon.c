@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <poll.h>
 #include <pthread.h>
@@ -27,6 +29,8 @@ static int fake_poll(struct pollfd *, nfds_t, int);
 static int fake_clock_gettime(clockid_t, struct timespec *);
 static int fake_printf(const char *, ...);
 
+static char calibration_path[] = "/tmp/bw-imu-daemon-calibration-XXXXXX";
+#define IMU_CAL_PATH calibration_path
 #define main imu_application_main
 #define task_create fake_task_create
 #define open fake_open
@@ -46,7 +50,7 @@ static int fake_printf(const char *, ...);
 #undef printf
 
 enum scenario { STOP_PENDING, OPEN_FAIL, TASK_FAIL, INTERRUPTED, STOP_DRAIN,
-                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN, LIVE_BASE };
+                POLL_FAULT, LIVE_TIMING, STATIONARY_BIAS, STATIONARY_REOPEN, LIVE_BASE, LIVE_CALIBRATION, PERSISTENCE_REOPEN };
 static enum scenario scenario;
 static int create_count;
 static int open_count;
@@ -76,6 +80,7 @@ static const float steps[] = {0, 1.0f / 833, .01f, 1.0f / 104, 0,
 static float integrated_time;
 static unsigned valid_count;
 static float stationary_heading;
+static bool save_learned_bias;
 
 /* All three compiled modules must observe the same synthetic monotonic clock,
  * rather than measuring real wall time while samples are supplied instantly. */
@@ -144,7 +149,8 @@ static ssize_t fake_read(int fd, void *out, size_t len)
   assert(fd == 42 && len == sizeof(struct sensor_imu));
   read_count++;
   bool streaming = scenario == LIVE_TIMING || scenario == STATIONARY_BIAS ||
-                   scenario == STATIONARY_REOPEN;
+                   scenario == STATIONARY_REOPEN || scenario == LIVE_CALIBRATION ||
+                   scenario == PERSISTENCE_REOPEN;
   if (streaming && !sample_pending)
     {
       errno = EAGAIN;
@@ -177,7 +183,8 @@ static ssize_t fake_read(int fd, void *out, size_t len)
       fake_now = (uint64_t)sample.timestamp + 10;
       sample_pending = false;
     }
-  if (scenario == STATIONARY_BIAS || scenario == STATIONARY_REOPEN)
+  if (scenario == STATIONARY_BIAS || scenario == STATIONARY_REOPEN ||
+      scenario == LIVE_CALIBRATION || scenario == PERSISTENCE_REOPEN)
     {
       sample.timestamp = 1000000 + sample_index * 1000000 / 13;
       sample.odr_idx = 1;
@@ -232,11 +239,93 @@ static void check_live_base(void)
   assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
 }
 
+static void load_live_threshold(float gyro_threshold)
+{
+  imu_settings_t settings;
+  assert(imu_fusion_get_settings(&settings));
+  settings.gyro_stationary_threshold = gyro_threshold;
+  settings.flags |= IMU_FLAG_GYRO_THRESHOLD;
+  assert(imu_calibration_save_copy(calibration_path, &settings) == 0);
+  char *args[] = {"imu", "cal", "load"};
+  assert(imu_application_main(3, args) == 0);
+}
+
 static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
 {
   assert(count == 1 && fds[0].fd == 42 && timeout == IMU_POLL_TIMEOUT);
   poll_count++;
   assert(scenario != STOP_PENDING);
+  if (scenario == PERSISTENCE_REOPEN)
+    {
+      if (poll_count > 1)
+        {
+          imu_fusion_snapshot_t snapshot;
+          imu_settings_t settings;
+          assert(imu_service_snapshot(&snapshot) == 0);
+          assert(snapshot.sequence == 1 && !snapshot.ready);
+          assert(imu_fusion_get_settings(&settings));
+          assert(settings.flags & IMU_FLAG_GYRO_BIAS);
+          for (unsigned i = 0; i < 3; i++)
+            assert(fabsf(snapshot.gyro_dps.values[i]) < .00001f);
+          assert(imu_service_stop() == 0);
+          return 0;
+        }
+      sample_pending = true;
+      fds[0].revents = POLLIN;
+      return 1;
+    }
+  if (scenario == LIVE_CALIBRATION)
+    {
+      if (poll_count > 1)
+        {
+          unsigned frames = sample_index + 1;
+          imu_fusion_snapshot_t snapshot;
+          if (frames == 140)
+            {
+              assert(imu_service_snapshot(&snapshot) == -EAGAIN);
+              assert(!imu_stationary_is_stationary());
+              load_live_threshold(2.0f);
+            }
+          else
+            {
+              assert(imu_service_snapshot(&snapshot) == 0);
+              if (frames == 138)
+                {
+                  assert(snapshot.ready && imu_stationary_is_stationary());
+                  load_live_threshold(0.0f);
+                }
+              else if (frames == 139)
+                {
+                  /* FSR/ODR stayed identical; loading a new threshold alone
+                   * must restart the old stationary accumulation window. */
+                  assert(!imu_stationary_is_stationary());
+                  load_live_threshold(FLT_MAX);
+                }
+              else if (frames == 141)
+                {
+                  assert(!imu_stationary_is_stationary());
+                  uint32_t revision = g_calibration_revision;
+                  imu_settings_t before, after;
+                  assert(imu_fusion_get_settings(&before));
+                  assert(unlink(calibration_path) == 0);
+                  char *args[] = {"imu", "cal", "load"};
+                  assert(imu_application_main(3, args) == 1);
+                  assert(g_calibration_revision == revision);
+                  assert(imu_fusion_get_settings(&after));
+                  assert(memcmp(&before, &after, sizeof(before)) == 0);
+                }
+            }
+          sample_index++;
+        }
+      if (sample_index == 141)
+        {
+          assert(imu_service_stop() == 0);
+          return 0;
+        }
+      sample_pending = true;
+      fds[0].revents = POLLIN;
+      return 1;
+    }
   if (scenario == STATIONARY_BIAS || scenario == STATIONARY_REOPEN)
     {
       if (poll_count > 1)
@@ -276,6 +365,12 @@ static int fake_poll(struct pollfd *fds, nfds_t count, int timeout)
               assert(fabsf(settings.angular_velocity_bias_start.x - .7f) < .00001f);
               assert(fabsf(settings.angular_velocity_bias_start.y + 1.05f) < .00001f);
               assert(fabsf(settings.angular_velocity_bias_start.z - 1.4f) < .00001f);
+            }
+          if (save_learned_bias && frames == 164)
+            {
+              assert(settings.flags & IMU_FLAG_GYRO_BIAS);
+              assert(imu_service_calibration_save() == 0);
+              save_learned_bias = false;
             }
           sample_index++;
         }
@@ -395,8 +490,36 @@ static void *start_thread(void *unused)
   return NULL;
 }
 
+static void stationary_threshold_guards(void)
+{
+  const float invalid[] = {NAN, INFINITY, -INFINITY, -1.0f,
+                           (float)INT16_MAX + 1.0f, FLT_MAX};
+  assert(imu_stationary_init(7.5f, INT16_MAX, 13, NULL) == 0);
+  float sample_time = imu_stationary_get_sample_time();
+  for (unsigned i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++)
+    {
+      int result = i >= 4 ? -ERANGE : -EINVAL;
+      assert(imu_stationary_init(invalid[i], 1, 104, NULL) == result);
+      assert(imu_stationary_init(1, invalid[i], 104, NULL) == result);
+      assert(imu_stationary_set_thresholds(invalid[i], 1) == result);
+      assert(imu_stationary_set_thresholds(1, invalid[i]) == result);
+      assert(imu_stationary_get_sample_time() == sample_time);
+    }
+  assert(imu_stationary_init(1, 1, 0, NULL) == -EINVAL);
+  assert(imu_stationary_get_sample_time() == sample_time);
+  assert(imu_stationary_init(0, 0, 104, NULL) == 0);
+  assert(imu_stationary_set_thresholds(INT16_MAX, INT16_MAX) == 0);
+}
+
 int main(void)
 {
+  stationary_threshold_guards();
+  int calibration_fd = mkstemp(calibration_path);
+  assert(calibration_fd >= 0 && close(calibration_fd) == 0);
+  assert(unlink(calibration_path) == 0);
+  imu_fusion_init();
+  assert(imu_service_calibration_save() == -EAGAIN);
+  assert(imu_service_calibration_load() == -ENOENT);
   imu_xyz_t front = {.y = 1}, top = {.z = 1};
   assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
   reset(STOP_PENDING);
@@ -474,6 +597,23 @@ int main(void)
   assert(run_task() == 0);
   assert(close_count == 1 && read_count == 2);
   assert(imu_service_set_base_axes(&front, &top) == -EAGAIN);
-  puts("IMU daemon lifecycle, source timing, bias, reopen and base-axis checks passed");
+  reset(LIVE_CALIBRATION);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0);
+  assert(sample_index == 141 && close_count == 1);
+  reset(STATIONARY_BIAS);
+  save_learned_bias = true;
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0 && !save_learned_bias);
+  assert(imu_service_calibration_save() == -EAGAIN);
+  assert(imu_service_calibration_load() == 0);
+  imu_settings_t loaded;
+  assert(imu_fusion_get_settings(&loaded) && (loaded.flags & IMU_FLAG_GYRO_BIAS));
+  assert(imu_service_calibration_save() == 0);
+  reset(PERSISTENCE_REOPEN);
+  assert(imu_service_start() == 0);
+  assert(run_task() == 0 && read_count == 2 && close_count == 1);
+  assert(unlink(calibration_path) == 0);
+  puts("IMU daemon lifecycle, source timing, bias, reopen, base-axis, live thresholds and calibration service persistence checks passed");
   return 0;
 }

@@ -360,12 +360,18 @@ machine-readable and cannot be confused with physical-hardware evidence.
 
 ## Current next action
 
-Define modern IMU wire units, Euler conventions, yaw-face transformations and
-reset semantics from an explicit contract and independent evidence before
-emitting the modern record. Six physical poses and declared base projections
-now have synthetic guest evidence; zero-gyro poses cannot determine yaw about
-gravity. Keep fusion explicitly controlled while integrating the modern stream.
-The 21-byte record has no temperature field; any temperature transport needs a
-separate contract. Durable calibration saving, encoder-completed degree moves,
-stall/capability policy and cold-restart bond reuse need separate evidence.
-Physical C5/C6.4 validation remains open and cannot be closed by simulation.
+Use [the capability matrix](docs/project/capabilities.md) as the current
+implementation/evidence map. Source `db67e6d1b7582cd5e61fb2880dd81ffed6828e76`
+passes both protected profiles in matrix `37267297180`, including actual ARM
+retained-program restart and the calibration save/load/reopen air peer. Classic
+degree jobs are host-qualified; their motor-coupled guest exercise remains open.
+Prioritize that exercise, a current-source six-motor regression, arbitrary-port
+sensor/state coverage and cold-restart bond reuse over unrelated peripheral expansion.
+
+Modern IMU wire units, Euler conventions, yaw faces and reset behaviour still
+require paired independent observations. Synthetic poses and decoder tests do
+not qualify that mapping. Retry unchanged reference firmware with the latest
+qualified public models; preserve failures and distinguish bounded execution
+from completed boot. Physical C5/C6.4 validation remains open and cannot be
+closed by simulation. Complete Pybricks robotics replacement is a separate
+optional project, not a claim made by this source candidate.

@@ -10,7 +10,11 @@
 
 struct fake_port {
   uint8_t device_type, flags, lump_type;
-  bool pinned;
+  bool pinned, encoder;
+  int32_t position;
+  unsigned samples;
+  uint8_t frame_mode, frame_len;
+  int encoder_error, coast_error;
   int16_t duty;
   int coast_count, brake_count;
   struct legoport_lump_send_arg_s matrix;
@@ -70,6 +74,21 @@ static int fake_ioctl(int fd, int command, unsigned long argument,
     i->modes[2].writable = 1;
     i->modes[2].num_values = 9;
     i->modes[2].data_type = LUMP_DATA_INT8;
+    if (p->encoder) {
+      i->flags = LUMP_FLAG_SYNCED; i->current_mode = 2;
+      i->modes[2].data_type = LUMP_DATA_INT32; i->modes[2].num_values = 1;
+    }
+    return 0;
+  }
+  if (command == LEGOPORT_LUMP_SELECT) return 0;
+  if (command == LEGOPORT_LUMP_POLL_DATA) {
+    if (p->encoder_error) return p->encoder_error;
+    if (!p->samples) return -EAGAIN;
+    p->samples--;
+    struct lump_data_frame_s *frame = (void *)argument;
+    memset(frame, 0, sizeof(*frame)); frame->mode = p->frame_mode; frame->len = p->frame_len;
+    uint32_t position = (uint32_t)p->position;
+    for (unsigned i = 0; i < 4; i++) frame->data[i] = (uint8_t)(position >> (8*i));
     return 0;
   }
   if (command == LEGOPORT_PWM_GET_STATUS) {
@@ -84,7 +103,7 @@ static int fake_ioctl(int fd, int command, unsigned long argument,
   }
   if (command == LEGOPORT_PWM_COAST) {
     p->coast_count++;
-    return 0;
+    return p->coast_error;
   }
   if (command == LEGOPORT_PWM_BRAKE) {
     p->brake_count++;
@@ -333,6 +352,67 @@ int main(void) {
   assert(btsensor_modern_backend_end_motor_if_owned(
       BRICKWRIGHT_HUB_LINK_BLE, 4, ble_token, 0) == -ESTALE);
 
+  op.port = 4; op.speed = 50; op.has_end_state = false;
+  assert(btsensor_modern_backend_operation_for_link_tagged(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, &op, &classic_token) == 0);
+  f.ports[4].flags = 0;
+  coast_before = f.ports[4].coast_count;
+  assert(btsensor_modern_backend_end_motor_if_owned(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, 4, classic_token, 1) == -ENODEV);
+  assert(f.ports[4].coast_count == coast_before + 1);
+  assert(btsensor_modern_backend_end_motor_if_owned(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, 4, classic_token, 1) == -ESTALE);
+  uart_device(&f, 4, 48);
+  assert(btsensor_modern_backend_operation_for_link_tagged(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, &op, &classic_token) == 0);
+  f.ports[4].flags = 0; f.ports[4].pinned = true;
+  coast_before = f.ports[4].coast_count;
+  assert(btsensor_modern_backend_end_motor_if_owned(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, 4, classic_token, 1) == -ENODEV);
+  assert(f.ports[4].coast_count == coast_before);
+  f.ports[4].pinned = false; f.ports[4].coast_error = -EIO;
+  assert(btsensor_modern_backend_end_motor_if_owned(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, 4, classic_token, 1) == -ENODEV);
+  assert(f.ports[4].coast_count == coast_before + 1);
+  f.ports[4].coast_error = 0;
+  assert(btsensor_modern_backend_end_motor_if_owned(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, 4, classic_token, 1) == -ENODEV);
+  assert(f.ports[4].coast_count == coast_before + 2); /* failed cleanup retained owner for retry */
+  assert(btsensor_modern_backend_end_motor_if_owned(
+      BRICKWRIGHT_HUB_LINK_CLASSIC, 4, classic_token, 1) == -ESTALE);
+
+  btsensor_modern_backend_reset_with_io(&io);
+  memset(&f, 0, sizeof(f));
+  for (unsigned port = 0; port < 6; port++) {
+    uart_device(&f, port, port & 1 ? 49 : 48);
+    f.ports[port].encoder = true; f.ports[port].samples = 1;
+    f.ports[port].frame_mode = 2; f.ports[port].frame_len = 4;
+    f.ports[port].position = port ? -123 : INT32_MIN;
+    int32_t measured = 0;
+    assert(btsensor_modern_backend_encoder_with_io(port, &measured, &io) == 0);
+    assert(measured == f.ports[port].position);
+    assert(btsensor_modern_backend_encoder_with_io(port, &measured, &io) == -EAGAIN);
+    assert(measured == 0); /* old sample is not reused */
+    assert(f.ports[port].duty == 0 && f.ports[port].brake_count == 0);
+  }
+  int32_t measured;
+  f.ports[0].samples = 1; f.ports[0].frame_mode = 1;
+  assert(btsensor_modern_backend_encoder_with_io(0, &measured, &io) == -EAGAIN);
+  f.ports[0].samples = 1; f.ports[0].frame_mode = 2; f.ports[0].frame_len = 3;
+  assert(btsensor_modern_backend_encoder_with_io(0, &measured, &io) == -EPROTO);
+  f.ports[0].encoder_error = -EIO;
+  assert(btsensor_modern_backend_encoder_with_io(0, &measured, &io) == -EIO);
+  f.ports[1].pinned = true;
+  assert(btsensor_modern_backend_encoder_with_io(1, &measured, &io) == -EBUSY);
+  f.ports[2].flags = 0;
+  assert(btsensor_modern_backend_encoder_with_io(2, &measured, &io) == -ENODEV);
+  f.ports[3].encoder = false;
+  assert(btsensor_modern_backend_encoder_with_io(3, &measured, &io) == -EAGAIN);
+  f.ports[4].flags = LEGOPORT_FLAG_CONNECTED; f.ports[4].device_type = LEGOPORT_TYPE_LPF2_MMOTOR;
+  assert(btsensor_modern_backend_encoder_with_io(4, &measured, &io) == -ENOTSUP);
+  assert(btsensor_modern_backend_encoder_with_io(6, &measured, &io) == -EINVAL);
+  assert(btsensor_modern_backend_encoder_with_io(0, NULL, &io) == -EINVAL);
+  btsensor_modern_backend_reset_with_io(&io);
   puts("btsensor modern backend tests: OK");
   return 0;
 }

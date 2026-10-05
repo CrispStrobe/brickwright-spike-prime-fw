@@ -601,7 +601,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "f124ab85ffc2cb087b53ab9cab42b8b391802eef671f6676c96b27491aa2e929"
+      "sha256": "9e32cfbf75daa88c7c51e33d64c225742c9de99b9d6a3fff1dc909190e81bd78"
     },
     {
       "path": "apps/imu/imu_calibration.h",
@@ -612,7 +612,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "fd39d6355057c358b001efa360228a38fbbb55b66afaab39553533c672dcc967"
+      "sha256": "5cadbd9c29c08c2238388978d08ebed7d7324256ff7fe4d5ebbb03643d9805f9"
     },
     {
       "path": "apps/imu/imu_fusion.c",
@@ -669,7 +669,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "f3be2bd57cd8630899c5a3452c58a2a0185e0ba87448ff32f2f4f0ecaa1db0bf"
+      "sha256": "79ea42c4bb996889f280ec6b26b536415d60ab2b9627c21a40f5cc91f4f08962"
     },
     {
       "path": "apps/imu/imu_stationary.h",
@@ -680,7 +680,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "6e6237e4388d787a0eebf4a2700c64b2bd6a815da6517bf609fbfdc071c507e9"
+      "sha256": "022ce93a1c2cd5376e9336a650eabb621c666996ed4d51378bd84d464c981a28"
     },
     {
       "path": "apps/imu/imu_types.h",

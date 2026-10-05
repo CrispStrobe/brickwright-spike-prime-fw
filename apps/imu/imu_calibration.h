@@ -18,6 +18,10 @@
 
 void imu_calibration_init(imu_settings_t *settings);
 void imu_calibration_set_defaults(imu_settings_t *settings);
+/* Save synchronizes a same-directory temporary before atomic replacement.
+ * Load rejects incomplete, trailing or nonfinite/degenerate settings and leaves
+ * the active settings unchanged on failure. Native record layout is retained;
+ * no checksum, authentication or filesystem-independent durability is claimed. */
 int imu_calibration_save(const char *path);
 int imu_calibration_save_copy(const char *path, const imu_settings_t *settings);
 int imu_calibration_load(const char *path);

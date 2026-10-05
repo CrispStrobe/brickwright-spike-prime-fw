@@ -36,6 +36,26 @@ Pybricks attribution remains in the adapted source and
 [reuse inventory](https://github.com/CrispStrobe/brickwright-spike-prime-fw/blob/main/policy/pybricks-reuse.json); this is a modification
 of credited code, with no clean-room claim.
 
+Calibration saves use `/mnt/flash/imu.calibration` on the mounted LittleFS
+volume. A unique same-directory temporary is completely written, synchronized
+and closed before replacement; failures preserve the previous file. Loads
+require the exact native settings size and finite, nondegenerate values before
+changing active state. This retains the existing native record layout, without
+checksum/authentication or cross-platform format guarantees. `imu cal save`
+and `imu cal load` return failure when the operation fails. Classic additionally
+exposes the same fixed-slot service as `FUSION CAL SAVE/LOAD`; LOAD does not
+start the producer. A successful load
+refreshes stationary thresholds on the next sample even at unchanged FSR/ODR.
+Raw threshold conversion is validated against the signed-16-bit representation;
+unrepresentable scaled values make samples unavailable until corrected.
+
+`tools/check_imu_persistence.sh` checks failed-write/sync/close/rename isolation,
+short I/O and malformed loads. `tools/test_imu_littlefs.py` exercises the actual
+save/load code against the build-pinned LittleFS with simulated NOR power cuts:
+63 host crash/restart cases pass locally and in clean CI. The harness substitutes the VFS and
+unique-file creation under a single-writer assumption; physical brownouts,
+concurrent writers and crash durability of actual NuttX VFS are separate qualifications.
+
 Run `tools/check_imu_snapshot.sh`, `tools/check_imu_source.sh` and
 `tools/check_imu_daemon.sh` for host coherence, validity, timestamp-wrap,
 persistence and producer lifecycle checks. Starting reserves the producer
@@ -56,7 +76,12 @@ a bounded synthetic fixture at the configured 104 Hz guest-time rate. It
 checks not-ready snapshots before the baseline/window completes, then live
 readiness and removal of a fixed gyro bias, followed by stop/reopen resetting
 unsaved state. This is a digital driver/producer check, not physical calibration
-or a durable calibration save. Startup still does not launch the fusion daemon. The full
+or a durable calibration save. A separate `--imu-calibration` scenario exercises
+SAVE/LOAD through mounted guest LittleFS and verifies loaded bias after
+producer reopen independently of stationary readiness. This actual ARM guest
+scenario passes in matrix `37267297180`: saved bias survives reopen while the
+first fresh sample remains not-ready. See
+[qualification](../../project/simulation-qualification.md) for scope and results. Startup still does not launch the fusion daemon. The full
 modern IMU wire record requires separate orientation, unit and enum mappings.
 
 The separate `--classic --imu-poses` probe starts a fresh producer for each

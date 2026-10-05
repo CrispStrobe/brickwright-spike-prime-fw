@@ -13,6 +13,9 @@ system and incorporating adapted or referenced Pybricks robotics code.
 > real silicon. Simulator and unit-test results do not establish hardware
 > safety. See [SAFETY.md](SAFETY.md).
 
+The [capability matrix](docs/project/capabilities.md) distinguishes implemented
+behaviour, simulation evidence and remaining work.
+
 ## Origins and architecture
 
 This project builds on substantial work by upstream projects and their

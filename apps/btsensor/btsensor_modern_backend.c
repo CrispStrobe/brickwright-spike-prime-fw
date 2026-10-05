@@ -138,6 +138,61 @@ static int validate_motor(int fd,
   return (pwm.flags & LEGOPORT_PWM_FLAG_PINNED) ? -EBUSY : 0;
 }
 
+int btsensor_modern_backend_encoder_with_io(
+    uint8_t port, int32_t *degrees,
+    const struct btsensor_modern_backend_io *io)
+{
+  struct legoport_info_s attached;
+  struct lump_device_info_s info;
+  struct lump_data_frame_s frame;
+  int rc, fd;
+  bool received = false;
+  if (!degrees || !io || !io->open || !io->ioctl || !io->close ||
+      port >= BOARD_LEGOPORT_COUNT) return -EINVAL;
+  *degrees = 0;
+  fd = port_open(port, io);
+  if (fd < 0) return fd;
+  rc = validate_motor(fd, io);
+  if (rc < 0) return rc;
+  memset(&attached, 0, sizeof(attached));
+  rc = io->ioctl(fd, LEGOPORT_GET_DEVICE_INFO, (unsigned long)&attached, io->context);
+  if (rc < 0) return rc;
+  if (!(attached.flags & LEGOPORT_FLAG_IS_UART)) return -ENOTSUP;
+  memset(&info, 0, sizeof(info));
+  rc = io->ioctl(fd, LEGOPORT_LUMP_GET_INFO, (unsigned long)&info, io->context);
+  if (rc < 0) return rc;
+  if (!(info.flags & LUMP_FLAG_SYNCED)) return -EAGAIN;
+  if (info.num_modes <= 2 || info.modes[2].data_type != LUMP_DATA_INT32 ||
+      info.modes[2].num_values != 1) return -ENOTSUP;
+  if (info.current_mode != 2) {
+    rc = io->ioctl(fd, LEGOPORT_LUMP_SELECT, 2, io->context);
+    if (rc < 0) return rc;
+  }
+  for (unsigned budget = 0; budget < 16; budget++) {
+    memset(&frame, 0, sizeof(frame));
+    rc = io->ioctl(fd, LEGOPORT_LUMP_POLL_DATA, (unsigned long)&frame, io->context);
+    if (rc == -EAGAIN) break;
+    if (rc < 0) return rc;
+    if (frame.mode != 2) continue;
+    if (frame.len != 4) return -EPROTO;
+    uint32_t raw = (uint32_t)frame.data[0] | ((uint32_t)frame.data[1] << 8) |
+                   ((uint32_t)frame.data[2] << 16) | ((uint32_t)frame.data[3] << 24);
+    *degrees = raw <= INT32_MAX ? (int32_t)raw : -(int32_t)(~raw) - 1;
+    received = true;
+  }
+  return received ? 0 : -EAGAIN;
+}
+
+int btsensor_modern_backend_encoder(uint8_t port, int32_t *degrees)
+{
+  const struct btsensor_modern_backend_io io =
+    { production_open, production_ioctl, production_close, NULL };
+  pthread_mutex_lock(&g_owner_lock);
+  int rc = btsensor_modern_backend_encoder_with_io(port, degrees, &io);
+  pthread_mutex_unlock(&g_owner_lock);
+  return rc;
+}
+
 static int motor_operation(const struct btsensor_modern_operation *operation,
                            const struct btsensor_modern_backend_io *io)
 {
@@ -399,6 +454,18 @@ int btsensor_modern_backend_end_motor_if_owned(
   else
     {
       rc = btsensor_modern_backend_operation_with_io(&stop, &io);
+      if ((rc == -ENODEV || rc == -EAGAIN) && g_port_fds[port] >= 0) {
+        struct legoport_pwm_status_s status;
+        memset(&status, 0, sizeof(status));
+        /* Attachment loss must not leave an old owner's PWM demand live.
+         * A pinned controller is another owner and must never be disturbed.
+         * Cleanup does not turn the original device error into success. */
+        if (io.ioctl(g_port_fds[port], LEGOPORT_PWM_GET_STATUS,
+                     (unsigned long)&status, io.context) == 0 &&
+            !(status.flags & LEGOPORT_PWM_FLAG_PINNED) &&
+            io.ioctl(g_port_fds[port], LEGOPORT_PWM_COAST, 0, io.context) == 0)
+          set_motor_owner_locked(link, port, false, NULL);
+      }
       if (rc == 0) set_motor_owner_locked(link, port, false, NULL);
     }
   pthread_mutex_unlock(&g_owner_lock);

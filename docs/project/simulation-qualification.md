@@ -571,3 +571,79 @@ conversion, full DMA channel-mux/double-buffer/FIFO/error behavior, asynchronous
 timing, ADC overrun, SYSCFG memory remapping, native battery/temperature sample
 sources, reference boot and modern IMU wire compatibility remain outside this
 qualification.
+
+## Capability completion qualification — 2026-10-05
+
+This source candidate adds retained-program restart and meaningful Python
+OSError results, measured Classic degree jobs, owned cancellation/error
+cleanup, and mounted-volume calibration persistence with validated live
+stationary thresholds. The [capability matrix](capabilities.md) maps the
+implemented subset and remaining gaps; the [hardware plan](hardware-qualification.md)
+keeps physical gates separate.
+
+Host program/service/embedded-Python, Classic/backend, neutral compile,
+IMU snapshot/source/persistence/daemon and eight raw-reference decoder tests
+pass. The daemon tests include UBSan float-cast-overflow and a 141-frame live
+threshold-load/rejection/recovery case. Negative controls reproduce terminal
+restart rejection, collapsed timeout errno, previous-record truncation on a
+failed calibration save and ignored Classic cancellation rearm failure.
+The prior calibration implementation fails the previous-record preservation
+assertion; the replacement passes write/sync/close/rename failure isolation,
+short I/O, exact record length and finite/nondegenerate validation.
+
+The calibration crash/restart harness runs the actual save/load code against
+pinned real LittleFS with simulated NOR: first save passes 18 cuts, ordinary
+replacement 24, and replacement after 64 previous saves 21, for 63 cases.
+Source hashes match the existing reviewed LittleFS closure. Its single-writer
+unique-file shim and host filesystem boundary do not qualify crash durability of actual NuttX VFS,
+concurrent writers or physical brownouts. The original settings layout is
+retained without checksum/authentication.
+
+Both first clean ARM profiles compiled, then the unchanged dependency gate
+rejected two newly selected Apache-2.0 libc members: `lib_mkstemp.o` and
+`lib_mktemp.o`. [The rejected first matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37265813475)
+records the exact additions with no removals. Their sources already match the
+reviewed NuttX input closure. The inventories now include the observed member
+selection; cached historical member byte hashes are explicitly identified as
+historical. The final matrix records actual new build member hashes separately. In both
+profiles, selected `lib_mkstemp.o` is 4,096 bytes with SHA-256
+`974a11fe2f4b621c7d99a96f489835d031c125328da11a7fdf35ef3997c83802`, and
+`lib_mktemp.o` is 10,904 bytes with SHA-256
+`1e78f0aaa75151a067a5a8758dac2100509192969ea92e10ca42de6e2c0acba6`.
+These newly observed bytes match the historical reviewed member copies; the
+receipt scope still distinguishes current measurements from old inventories.
+Historical image/archive byte hashes in the compiler-input inventories remain
+explicitly historical; reviewed current source hashes and original attribution
+are updated. The selected-member gate remains mandatory. A dedicated real ARM mailbox
+workflow checks retained native COMPLETE/START and STOP/START plus Python
+FAULT/START with OSError preserved, without function hooks or scheduler stubs.
+A sixth air scenario saves learned calibration through the mounted guest
+LittleFS, stops/loads/reopens and checks loaded bias independently of readiness.
+The actual ARM retained-program workflow passes in 72.01 wall seconds on
+source `db67e6d1b7582cd5e61fb2880dd81ffed6828e76`. It checks three native
+completions without re-upload, including STOP/START, and repeated Python
+FAULT/START with errno -5. The simulation profile also passes all 426 saved-program
+and 63 calibration LittleFS crash/restart cases. Both protected profiles pass their resource gates at 593,932 bytes of
+userspace flash and 88,144 bytes of static RAM, with zero TI payload bytes.
+
+[The complete firmware matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37267297180)
+passes both profiles on that immutable source candidate.
+[Source/documentation CI](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37267300153)
+also passes, including 23 IMU peer-probe fixtures. All six top-level air scenarios
+pass: LE reconnect, Scratch Link, Classic/raw fusion, stationary readiness,
+physical poses/base axes and calibration persistence. In the calibration peer,
+the initial gyro is `(0.7, 1.05, 1.4)` deg/s, readiness becomes true by sequence
+261, and learned bias is saved after sequence 441. SAVE and explicit LOAD both
+reply OK. LOAD leaves the stopped producer unavailable (`errno=11`); after
+reopen, sequence 1 is not ready and residual gyro is below 0.000001 deg/s on
+every axis. This verifies ordinary fixed-slot persistence through the actual
+guest NuttX/LittleFS service, not a cold reboot or physical power-loss guarantee.
+
+The new Classic degree implementation remains host-qualified; this matrix does
+not couple those degree jobs to the simulated motor encoder. Existing separate
+six-motor topology evidence is retained without claiming a fresh six-motor run
+on this candidate. HOLD, measured stall detection, arbitrary sensor layouts,
+cold-restart bond reuse and physical qualification remain open.
+The unchanged reference rerun and its limits are recorded in
+[reference captures](imu-reference-captures.md); it captured no modern IMU
+notifications and does not qualify the wire mapping.

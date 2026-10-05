@@ -148,3 +148,53 @@ reference application boot. The later DDS=0 DMA terminal-transfer qualification
 in that record also covers the synchronous model mechanism only. SYSCFG memory
 remapping and native battery/temperature ADC sample sources remain open gaps;
 no new reference notifications or modern IMU mapping are qualified here.
+
+## Independent experiment plan
+
+Keep the unchanged image and raw capture private under ignored `.local/` paths.
+For each capture, keep a separate experiment ledger containing firmware/device
+identification, requests and results, independently observed API values or
+known physical inputs, clock alignment and uncertainty. A label such as
+`static-top` or a supplied hash alone does not authenticate an experiment.
+
+| Experiment | Independent observations required |
+|---|---|
+| Six static faces | Known jig/gravity direction, face IDs and all raw fields |
+| Signed single-axis motion | Positive/negative 90, 180 and 360 degree rotations, independently measured angles and endpoints |
+| Noncommuting mixed motion | XY and YX sequences, initial pose and measured final orientation |
+| Wrap and singularities | Approaches from both signs near yaw wrap and pitch singularity |
+| Rate and quantization | Independently measured rate sweeps, timestamps, repeated samples and raw step sizes |
+| Yaw-face/reset API | Every accepted/rejected face, explicit request/result, repeated resets and subsequent motion |
+
+Fit proposed units and conventions on one set of observations, then verify
+separate held-out poses/motions. Record quantization, uncertainty and API errors.
+Keep raw fields unscaled in the decoder; it continues to report
+`wire_mapping_qualified=false`. An eventual emitter mapping needs its own
+reviewed contract and evidence, rather than inferred defaults from synthetic
+fixtures.
+
+## Latest qualified-model rerun — 2026-10-05
+
+The unchanged private application was rerun against the managed Infrastructure
+source already matched to `fe4ad383c7392527433783fcec455daa7ddc2bb7`, using
+cached native/runtime dependencies. The loaded Infrastructure DLL SHA-256 was
+`a4e589190739086b804e8eddda6e9629d29b7d384e8410f4c13bec2f1746bfe2`.
+Application-slice SHA-256 remained
+`37e2e4dc997f3bf16bbf17e424c4ff1c15a4809e40066f0e747cc78a58795861`.
+This local diagnostic is not a newly rebuilt native Runtime CI qualification.
+
+The four freshly staged application platform descriptions use the verified
+current source closure, with class aliases reversed for the native fork:
+100 MHz clocks, paced 50 MHz SPI, analytical TIM12 and native erased storage.
+No synthetic boot seed or user program was copied or loaded; the application
+was not patched or inspected. An empty stdin pipe stayed open. Two setup-only
+attempts were rejected before execution because of an incomplete platform
+closure and a mismatched observer/timer type; their private logs were retained.
+
+The corrected continuous run completed 10 ms, 100 ms and one-second intervals,
+reaching 1,110,000 microseconds of completed guest time. The following five-second
+interval was interrupted by the 120-second wall bound. Completed snapshots
+showed no CFSR/HFSR faults, zero UART2 bytes and zero SPI2 writes. Full boot,
+Bluetooth startup and modern IMU notifications remain unqualified. This bounded
+run supplies no wire-mapping evidence and does not establish a performance
+regression against the earlier longer run.

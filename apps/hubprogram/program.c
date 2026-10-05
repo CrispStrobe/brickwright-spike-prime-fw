@@ -53,9 +53,13 @@ int bw_program_load(struct bw_program *p, uint32_t id,
 int bw_program_start(struct bw_program *p, uint32_t id, uint64_t now)
 {
   if (p->state == BW_PROGRAM_RUNNING) return -EBUSY;
-  if (p->state != BW_PROGRAM_READY || p->id != id || now>UINT64_MAX-BW_PROGRAM_TIME_LIMIT) return -EINVAL;
+  /* A terminal execution keeps its committed program. Re-running it does
+   * not require a second upload or a filesystem round trip. */
+  if ((p->state != BW_PROGRAM_READY && p->state != BW_PROGRAM_COMPLETE &&
+       p->state != BW_PROGRAM_STOPPED && p->state != BW_PROGRAM_FAULT) ||
+      p->id != id || now>UINT64_MAX-BW_PROGRAM_TIME_LIMIT) return -EINVAL;
   if (!p->io.motor || !p->io.position || !p->io.done || !p->io.brake || !p->io.sensor) return -ENOSYS;
-  p->pc=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0;
+  p->pc=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0; p->deadline=0;
   p->started=p->last_tick=now; p->error=0; p->state=BW_PROGRAM_RUNNING;
   return 0;
 }

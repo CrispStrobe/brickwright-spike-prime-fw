@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
+static const char *error_reply(const char *id, int error) {
+  static char reply[96];
+  snprintf(reply, sizeof(reply), "{\"i\":\"%s\",\"e\":{\"code\":%d}}\r\n", id, -error);
+  return reply;
+}
 struct fixture {
   struct btsensor_modern_operation operation;
   unsigned operations;
@@ -20,6 +25,9 @@ struct fixture {
   int timer_result;
   uint32_t next_token;
   uint32_t owner_token[6];
+  int32_t encoder[6];
+  int encoder_result;
+  unsigned encoder_reads;
 };
 static bool receive(const char *text);
 static int operation(enum brickwright_hub_link link,
@@ -27,7 +35,7 @@ static int operation(enum brickwright_hub_link link,
   struct fixture *f = ctx;
   assert(link == BRICKWRIGHT_HUB_LINK_CLASSIC);
   f->operation = *value; f->operations++;
-  if (value->kind == BTSENSOR_MODERN_OP_MOTOR && value->speed == 0)
+  if (f->operation_result == 0 && value->kind == BTSENSOR_MODERN_OP_MOTOR && value->speed == 0)
     f->owner_token[value->port] = 0;
   return f->operation_result;
 }
@@ -50,6 +58,10 @@ static int end_owned(enum brickwright_hub_link link, uint8_t port,
       .has_end_state = true, .end_state = end_state };
   return operation(link, &stop, ctx);
 }
+static int encoder(uint8_t port, int32_t *degrees, void *ctx) {
+  struct fixture *f = ctx; f->encoder_reads++;
+  *degrees = f->encoder[port]; return f->encoder_result;
+}
 static int snapshot(struct btsensor_modern_snapshot *value, void *ctx) {
   struct fixture *f = ctx;
   memset(value, 0, sizeof(*value)); value->battery_percent = f->battery;
@@ -70,10 +82,10 @@ static int timer_start(uint32_t delay, void *ctx) {
 }
 static void timer_stop(void *ctx) { ((struct fixture *)ctx)->timer_stops++; }
 static void configure(struct fixture *f) {
-  memset(f, 0, sizeof(*f)); f->battery = 73;
+  memset(f, 0, sizeof(*f)); f->battery = 73; f->encoder_result = -ENOTSUP;
   const struct btsensor_classic_config config =
     { .operation = operation, .tagged_operation = tagged_operation,
-      .end_owned = end_owned, .snapshot = snapshot, .send = send_data,
+      .end_owned = end_owned, .snapshot = snapshot, .encoder = encoder, .send = send_data,
       .now = now_ms, .timer_start = timer_start, .timer_stop = timer_stop,
       .context = f };
   btsensor_classic_init(&config);
@@ -85,7 +97,7 @@ static void test_takeover_makes_completion_stale(void) {
   f.owner_token[4] = ++f.next_token;
   f.now = 11; btsensor_classic_timer_fired();
   assert(f.operations == 1); /* stale completion performed no physical stop */
-  assert(!strcmp(f.sent[0], "{\"i\":\"old1\",\"e\":{\"code\":-116}}\r\n"));
+  assert(!strcmp(f.sent[0], error_reply("old1", ESTALE)));
 }
 static void test_timed_motor(void) {
   struct fixture f; configure(&f); f.now = 1000;
@@ -93,7 +105,7 @@ static void test_timed_motor(void) {
   assert(f.operations == 1 && f.operation.port == 2 && f.operation.speed == -25);
   assert(f.sends == 0 && f.timer_starts == 1 && f.timer_delay == 500);
   assert(receive("{\"i\":\"busy\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"C\",\"speed\":20,\"time\":1,\"stop\":0,\"stall\":false}}"));
-  assert(f.operations == 1 && !strcmp(f.sent[0], "{\"i\":\"busy\",\"e\":{\"code\":-16}}\r\n"));
+  assert(f.operations == 1 && !strcmp(f.sent[0], error_reply("busy", EBUSY)));
   f.now = 1499; btsensor_classic_timer_fired();
   assert(f.operations == 1 && f.timer_delay == 1);
   f.now = 1500; btsensor_classic_timer_fired();
@@ -109,7 +121,7 @@ static void test_timed_motor(void) {
   configure(&f); f.now = 5; f.timer_result = -ENOSPC;
   assert(receive("{\"i\":\"full\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"B\",\"speed\":50,\"time\":10,\"stop\":0,\"stall\":false}}"));
   assert(f.operations == 2 && f.operation.speed == 0 && f.operation.has_end_state);
-  assert(!strcmp(f.sent[0], "{\"i\":\"full\",\"e\":{\"code\":-28}}\r\n"));
+  assert(!strcmp(f.sent[0], error_reply("full", ENOSPC)));
 }
 static void test_timed_adversarial(void) {
   struct fixture f; configure(&f);
@@ -119,14 +131,16 @@ static void test_timed_adversarial(void) {
   assert(receive("{\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"A\",\"speed\":1,\"time\":1,\"stop\":0,\"stall\":false,}}"));
   assert(receive("{\"i\":\"degr\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":1,\"degrees\":90,\"stop\":0,\"stall\":false}}"));
   assert(f.operations == 0 && f.sends == 3);
-  assert(strstr(f.sent[0], "-95") && strstr(f.sent[1], "-95") && strstr(f.sent[2], "-95"));
+  assert(!strcmp(f.sent[0], error_reply("hold", ENOTSUP)));
+  assert(!strcmp(f.sent[1], error_reply("stal", ENOTSUP)));
+  assert(!strcmp(f.sent[2], error_reply("degr", ENOTSUP)));
 }
 static void test_disconnect_cancels_timed(void) {
   struct fixture f; configure(&f); f.now = 10;
   assert(receive("{\"i\":\"gone\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"F\",\"speed\":10,\"time\":20,\"stop\":1,\"stall\":false}}"));
   btsensor_classic_link_state(BRICKWRIGHT_HUB_LINK_CLASSIC, false);
   assert(f.timer_stops >= 1); f.now = 100; btsensor_classic_timer_fired();
-  assert(f.operations == 1 && f.sends == 0);
+  assert(f.operations == 2 && f.operation.end_state == 1 && f.sends == 0);
 }
 static void test_explicit_stop_cancels_timed(void) {
   struct fixture f; configure(&f); f.now = 10;
@@ -152,8 +166,9 @@ static void test_current_state(void) {
   configure(&f); f.snapshot_result = -ENODATA;
   assert(receive("{\"i\":\"a1z9\",\"m\":\"trigger_current_state\",\"p\":{}}"));
   assert(f.sends == 1);
-  assert(!strcmp(f.sent[0],
-                 "{\"i\":\"a1z9\",\"e\":{\"code\":-61}}\r\n"));
+  char expected[80];
+  snprintf(expected, sizeof(expected), "{\"i\":\"a1z9\",\"e\":{\"code\":%d}}\r\n", -ENODATA);
+  assert(!strcmp(f.sent[0], expected));
 }
 static void test_motors(void) {
   struct fixture f; configure(&f);
@@ -164,10 +179,10 @@ static void test_motors(void) {
   assert(receive("{\"i\":\"0abc\",\"m\":\"scratch.motor_stop\",\"p\":{\"port\":\"A\",\"stop\":1}}"));
   assert(f.operations == 2 && f.operation.port == 0 && f.operation.speed == 0);
   assert(f.operation.has_end_state && f.operation.end_state == 1);
-  assert(!strcmp(f.sent[0], "{\"i\":\"0abc\",\"e\":{\"code\":-95}}\r\n"));
+  assert(!strcmp(f.sent[0], error_reply("0abc", ENOTSUP)));
   assert(receive("{\"i\":\"zzzz\",\"m\":\"scratch.motor_start\",\"p\":{\"port\":\"A\",\"speed\":1,\"stall\":true}}"));
   assert(f.operations == 2);
-  assert(!strcmp(f.sent[1], "{\"i\":\"zzzz\",\"e\":{\"code\":-95}}\r\n"));
+  assert(!strcmp(f.sent[1], error_reply("zzzz", ENOTSUP)));
 }
 static void test_sound(void) {
   struct fixture f; configure(&f);
@@ -217,7 +232,7 @@ static void test_display(void) {
    * current RGBLED interface and remains an explicit finite-op boundary. */
   assert(receive("{\"i\":\"img1\",\"m\":\"scratch.display_image\",\"p\":{\"image\":\"00000:00000:00900:00000:00000\"}}"));
   assert(f.operations == 4);
-  assert(!strcmp(f.sent[2], "{\"i\":\"img1\",\"e\":{\"code\":-95}}\r\n"));
+  assert(!strcmp(f.sent[2], error_reply("img1", ENOTSUP)));
 }
 static void test_exact_rejection(void) {
   struct fixture f; configure(&f);
@@ -237,7 +252,7 @@ static void test_unsupported_request_replies_for_fallback(void) {
   /* A method the 2.x path of lite's extension never emits. */
   assert(receive("{\"i\":\"a123\",\"m\":\"scratch.motor_set_speed\",\"p\":{\"port\":\"A\",\"speed\":5}}"));
   assert(f.operations == 0 && f.sends == 1);
-  assert(!strcmp(f.sent[0], "{\"i\":\"a123\",\"e\":{\"code\":-95}}\r\n"));
+  assert(!strcmp(f.sent[0], error_reply("a123", ENOTSUP)));
 }
 static void test_display_text(void) {
   struct fixture f; configure(&f);
@@ -272,13 +287,126 @@ static void test_motor_run_for_degrees(void) {
   struct fixture f; configure(&f);
   assert(receive("{\"i\":\"deg1\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":50,\"degrees\":360,\"stop\":1,\"stall\":true}}"));
   assert(f.operations == 0);
-  assert(!strcmp(f.sent[0], "{\"i\":\"deg1\",\"e\":{\"code\":-95}}\r\n"));
+  assert(!strcmp(f.sent[0], error_reply("deg1", ENOTSUP)));
   assert(receive("{\"i\":\"deg2\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"Z\",\"speed\":50,\"degrees\":360,\"stop\":1,\"stall\":true}}"));
   assert(!strcmp(f.sent[1], "{\"i\":\"deg2\",\"e\":{\"code\":-22}}\r\n"));
 }
+static void test_cancel_rearm_failure(void) {
+  for (unsigned replacement = 0; replacement < 2; replacement++) {
+    struct fixture f; configure(&f);
+    assert(receive("{\"i\":\"runa\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"A\",\"speed\":50,\"time\":500,\"stop\":0,\"stall\":false}}"));
+    assert(receive("{\"i\":\"runb\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"B\",\"speed\":50,\"time\":500,\"stop\":0,\"stall\":false}}"));
+    if (replacement) f.owner_token[1]++;
+    f.timer_result = -ENOSPC;
+    assert(receive("{\"i\":\"stop\",\"m\":\"scratch.motor_stop\",\"p\":{\"port\":\"A\",\"stop\":1}}"));
+    assert(f.operations == (replacement ? 3u : 4u));
+    assert(f.sends == 3 && strstr(f.sent[0], "null") && strstr(f.sent[2], "null"));
+    assert(!strcmp(f.sent[1], error_reply("runb", replacement ? ESTALE : ENOSPC)));
+    f.now = 1000; btsensor_classic_timer_fired();
+    assert(f.operations == (replacement ? 3u : 4u) && f.sends == 3);
+  }
+  for (unsigned degrees = 0; degrees < 2; degrees++) {
+    struct fixture f; configure(&f); f.encoder_result = 0;
+    assert(receive("{\"i\":\"move\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"A\",\"speed\":50,\"time\":500,\"stop\":0,\"stall\":false}}"));
+    const char *zero = degrees ?
+      "{\"i\":\"zero\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":50,\"degrees\":0,\"stop\":1,\"stall\":false}}" :
+      "{\"i\":\"zero\",\"m\":\"scratch.motor_run_timed\",\"p\":{\"port\":\"A\",\"speed\":50,\"time\":0,\"stop\":1,\"stall\":false}}";
+    assert(receive(zero));
+    assert(f.operations == 2 && f.sends == 2 && strstr(f.sent[0], "null") && strstr(f.sent[1], "null"));
+    f.now = 1000; btsensor_classic_timer_fired(); assert(f.operations == 2 && f.sends == 2);
+  }
+}
+
+static void test_degree_counter_wrap(void) {
+  for (unsigned reverse = 0; reverse < 2; reverse++) {
+    struct fixture f; configure(&f); f.encoder_result = 0;
+    f.encoder[0] = reverse ? INT32_MIN + 10 : INT32_MAX - 10;
+    char request[180];
+    snprintf(request, sizeof(request), "{\"i\":\"wrap\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":%d,\"degrees\":30,\"stop\":1,\"stall\":false}}", reverse ? -50 : 50);
+    assert(receive(request));
+    f.now = 20; f.encoder[0] = reverse ? INT32_MAX - 8 : INT32_MIN + 8;
+    btsensor_classic_timer_fired(); assert(f.operations == 1 && f.sends == 0);
+    f.now = 40; f.encoder[0] = reverse ? INT32_MAX - 20 : INT32_MIN + 20;
+    btsensor_classic_timer_fired(); assert(f.operations == 2 && f.sends == 1);
+    assert(strstr(f.sent[0], "null"));
+  }
+  struct fixture f; configure(&f); f.encoder_result = 0;
+  const char *move = "{\"i\":\"wrap\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":50,\"degrees\":30,\"stop\":1,\"stall\":false}}";
+  assert(receive(move)); f.now = 20; f.encoder[0] = INT32_MIN;
+  btsensor_classic_timer_fired();
+  assert(f.operations == 2 && !strcmp(f.sent[0], error_reply("wrap", EOVERFLOW)));
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  btsensor_classic_link_state(BRICKWRIGHT_HUB_LINK_CLASSIC, false);
+  btsensor_classic_link_state(BRICKWRIGHT_HUB_LINK_CLASSIC, true);
+  f.now = 10; assert(receive(move));
+  unsigned operations = f.operations;
+  f.now = 20; f.encoder[0] = 30; btsensor_classic_timer_fired();
+  assert(f.operations == operations && f.sends == 0); /* older timer cannot finish replacement early */
+  f.now = 30; btsensor_classic_timer_fired();
+  assert(f.operations == operations + 1 && f.sends == 1);
+}
+
+static void test_encoder_degrees(void) {
+  for (unsigned port = 0; port < 6; port++) {
+    struct fixture f; configure(&f); f.encoder_result = 0; f.encoder[port] = 100;
+    char request[180];
+    snprintf(request, sizeof(request), "{\"i\":\"deg1\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"%c\",\"speed\":-50,\"degrees\":90,\"stop\":1,\"stall\":false}}", 'A'+port);
+    assert(receive(request));
+    assert(f.operations == 1 && f.sends == 0 && f.timer_delay == 20);
+    f.now = 20; f.encoder[port] = 11; btsensor_classic_timer_fired();
+    assert(f.operations == 1 && f.sends == 0);
+    f.now = 40; f.encoder[port] = 10; btsensor_classic_timer_fired();
+    assert(f.operations == 2 && f.operation.end_state == 1 && f.sends == 1);
+    assert(strstr(f.sent[0], "null"));
+    f.now = 80; btsensor_classic_timer_fired(); assert(f.operations == 2);
+  }
+  struct fixture f; configure(&f); f.encoder_result = 0;
+  const char *move = "{\"i\":\"deg2\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":-50,\"degrees\":-90,\"stop\":0,\"stall\":false}}";
+  assert(receive(move)); assert(f.operation.speed == 50);
+  f.now = 1000; btsensor_classic_timer_fired();
+  assert(f.operations == 2 && f.operation.end_state == 1 && strstr(f.sent[0], "code"));
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  f.encoder_result = -ENODEV; f.now = 20; btsensor_classic_timer_fired();
+  assert(f.operations == 2 && f.operation.end_state == 1 && strstr(f.sent[0], "code"));
+  configure(&f); f.encoder_result = -EAGAIN; assert(receive(move));
+  assert(f.operations == 0 && f.sends == 1);
+  configure(&f); f.encoder_result = 0; f.timer_result = -ENOSPC; assert(receive(move));
+  assert(f.operations == 2 && f.operation.end_state == 1 && f.sends == 1);
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  f.owner_token[0]++; f.now = 20; f.encoder[0] = 90; btsensor_classic_timer_fired();
+  assert(f.operations == 1 && f.sends == 1); /* stale job cannot stop replacement */
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  f.timer_result = -ENOSPC; f.now = 20; btsensor_classic_timer_fired();
+  assert(f.operations == 2 && f.operation.end_state == 1 && f.sends == 1);
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  f.now = 20; f.encoder[0] = -100; btsensor_classic_timer_fired();
+  assert(f.operations == 1 && f.sends == 0); /* opposite travel cannot complete */
+  f.now = 60000; btsensor_classic_timer_fired();
+  assert(f.operations == 2 && f.operation.end_state == 1 && f.sends == 1);
+  configure(&f); f.encoder_result = 0;
+  assert(receive("{\"i\":\"hold\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":50,\"degrees\":90,\"stop\":2,\"stall\":false}}"));
+  assert(receive("{\"i\":\"stal\",\"m\":\"scratch.motor_run_for_degrees\",\"p\":{\"port\":\"A\",\"speed\":50,\"degrees\":90,\"stop\":1,\"stall\":true}}"));
+  assert(f.operations == 0 && f.encoder_reads == 0 && f.sends == 2);
+  assert(!strcmp(f.sent[0], error_reply("hold", ENOTSUP)));
+  assert(!strcmp(f.sent[1], error_reply("stal", ENOTSUP)));
+  configure(&f); f.encoder_result = 0; f.now = UINT64_MAX; assert(receive(move));
+  assert(f.operations == 0 && f.sends == 1);
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  f.operation_result = -EIO;
+  assert(receive("{\"i\":\"stop\",\"m\":\"scratch.motor_stop\",\"p\":{\"port\":\"A\",\"stop\":1}}"));
+  assert(f.sends == 1); /* failed stop must not report move complete */
+  f.operation_result = 0; f.now = 20; f.encoder[0] = 90;
+  btsensor_classic_timer_fired(); assert(f.sends == 2);
+  configure(&f); f.encoder_result = 0; assert(receive(move));
+  btsensor_classic_link_state(BRICKWRIGHT_HUB_LINK_CLASSIC, false);
+  assert(f.operations == 2 && f.sends == 0);
+  f.now = 60000; btsensor_classic_timer_fired(); assert(f.operations == 2);
+}
+
 int main(void) {
   test_current_state(); test_motors(); test_sound(); test_display();
   test_display_text(); test_center_button_lights(); test_motor_run_for_degrees();
+  test_encoder_degrees(); test_degree_counter_wrap(); test_cancel_rearm_failure();
   test_exact_rejection();
   test_timed_motor(); test_timed_adversarial(); test_disconnect_cancels_timed();
   test_explicit_stop_cancels_timed();

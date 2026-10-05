@@ -105,6 +105,13 @@ the committed ID. States are EMPTY=0, READY=1, RUNNING=2, COMPLETE=3, STOPPED=4,
 FAULT=5. Results use negative errno values. Count means instructions for an
 instruction program and source bytes for Python.
 
+START accepts a retained program in READY, COMPLETE, STOPPED or FAULT. It starts
+from the beginning with fresh execution state and a new bounded deadline;
+re-upload or LOAD is unnecessary. Concurrent START, a wrong ID or an invalid
+deadline fails without modifying the active program. Genuine MicroPython
+`OSError` values preserve device, cancellation and timeout errno in the runtime
+result; syntax and malformed exceptions remain `-EINVAL`.
+
 ## Explicit program persistence
 
 SAVE (8) writes the committed program with the matching nonzero ID to the
@@ -130,8 +137,10 @@ renames it over the slot. Errors leave the committed in-memory program
 unchanged. Host tests verify that failure to create the temporary file also
 preserves the previous slot. The full ARM firmware also saved native and completed Python programs on
 LittleFS; separate Renode processes restored their flash snapshots, loaded
-each program to READY and executed it successfully. Power-loss durability,
-physical flash behavior and wider filesystem operations remain unqualified. Python file I/O remains
+each program to READY and executed it successfully. The pinned real LittleFS
+crash/restart harness also covers 426 interrupted-write cases for program
+replacement. Physical flash behavior and wider filesystem operations remain
+unqualified. Python file I/O remains
 unavailable; persistence is an explicit service operation.
 
 ## Memory and licences
