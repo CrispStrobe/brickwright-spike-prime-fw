@@ -267,7 +267,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.c",
-      "sha256": "29e1546178bbb2e7adbe24917ae33312d43bda7da38a67324b36ea4fbb278397",
+      "sha256": "1e4ae06f60729cb11326d08c1c185c874b1ed5b41204047af8a85a53ea62b106",
       "spdx": [
         "Apache-2.0"
       ],
@@ -1243,7 +1243,7 @@
     },
     {
       "path": "bluetooth/zephyr_compat/include/brickwright/hub_transport.h",
-      "sha256": "e72b4bc56d8e2ae2f360c5c6f5995afac1226f02f476d5e65587addb0a7bc46a",
+      "sha256": "00dde522d874502a08c1b0f6ad3cf021a42bc56ac2b27316466f8a60de12e545",
       "spdx": [
         "Apache-2.0"
       ],
@@ -1716,7 +1716,7 @@
     },
     {
       "path": "bluetooth/zephyr_compat/src/hub_transport.c",
-      "sha256": "d834a81387d85ae54b598dfba2df179b4373ea58192e95589fcb8191403ace99",
+      "sha256": "5f77eca8e948f8061cbb22c0866d8ab19f2b94b6aafec23314f1caaac2eaa936",
       "spdx": [
         "Apache-2.0"
       ],

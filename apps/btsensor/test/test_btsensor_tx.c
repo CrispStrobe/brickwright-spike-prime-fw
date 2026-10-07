@@ -35,6 +35,10 @@ bool brickwright_hub_transport_connected(enum brickwright_hub_link link)
 {
   return connected[link];
 }
+int brickwright_hub_transport_capture_ble(uint64_t *identity)
+{ *identity = 1; return connected[BRICKWRIGHT_HUB_LINK_BLE] ? 0 : -ENOTCONN; }
+int brickwright_hub_transport_send_ble(uint64_t identity, const void *data, size_t length)
+{ assert(identity == 1); return brickwright_hub_transport_send(BRICKWRIGHT_HUB_LINK_BLE, data, length); }
 static int timer_start(uint32_t milliseconds, void *ctx)
 {
   assert(milliseconds == 500 && ctx == &timer_started);
