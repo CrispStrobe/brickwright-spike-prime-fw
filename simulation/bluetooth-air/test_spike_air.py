@@ -36,6 +36,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from spike_timeouts import le_round_trip_budget
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -286,7 +287,7 @@ async def le_round_trip(central, advertisement, results: dict, *,
 
     connection = None
     try:
-        async with asyncio.timeout(300 if periodic else 180):
+        async with asyncio.timeout(le_round_trip_budget(periodic, reconnect_quiet)):
             started = time.monotonic()
             connection = await central.connect(advertisement.address,
                                                transport=PhysicalTransport.LE,
