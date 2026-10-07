@@ -36,6 +36,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from spike_timeouts import le_round_trip_budget
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -88,19 +89,39 @@ log = logging.getLogger("spike-air-test")
 
 def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   dumps=(), existing_filesystem: Path | None = None,
-                  imu_fixture: Path | None = None) -> str:
+                  imu_fixture: Path | None = None,
+                  motor_runtime: Path | None = None,
+                  electrical_qualification: Path | None = None,
+                  empty_ports: bool = False) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
-    lines = [
-        f"include @{DEVICES}",
+    platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
+    if electrical_qualification and not motor_runtime:
+        raise ValueError('electrical qualification requires explicit motor topology')
+    if empty_ports and not motor_runtime:
+        raise ValueError('empty ports require explicit compiled topology')
+    prefix = ([f"include @{electrical_qualification / 'models.cs'}"] if electrical_qualification
+              else [] if motor_runtime else [f"include @{DEVICES}"])
+    lines = prefix + [
         "mach create \"spike\"",
-        f"machine LoadPlatformDescription @{PLATFORM}",
+        f"machine LoadPlatformDescription @{platform}",
     ]
+    if motor_runtime:
+        command = 'CreateQualificationElectricalPorts' if electrical_qualification else 'CreatePrimeElectricalPorts'
+        lines.append(f'emulation {command} "spike"')
+        if empty_ports:
+            # Match the battery-only LE fixture's external input conditions.
+            # This acts on model attachments before loading/running the guest.
+            lines.extend(f'port{name} Detach' for name in 'ABCDEF')
     if existing_filesystem is not None:
-        lines.extend([
-            f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}",
-            f"load_littlefs_fixture @{existing_filesystem}",
-        ])
+        lines.append(f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}")
+        if motor_runtime:
+            # Same validated synthetic NOR fixture and ISPIPeripheral loader;
+            # the staged topology has a different public flash peripheral name.
+            lines.append('python "load_fixture(monitor.Machine[\'sysbus.spi2.primeStorageMux.primeStorage\'], '
+                         f"\'{existing_filesystem}\')\"")
+        else:
+            lines.append(f"load_littlefs_fixture @{existing_filesystem}")
     lines.extend([
         f"sysbus LoadELF @{images / 'nuttx'}",
         f"sysbus LoadELF @{images / 'nuttx_user.elf'}",
@@ -148,13 +169,40 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
     return "\n".join(lines) + "\n"
 
 
+def compiled_le_board(arguments, parser):
+    """Admit a receipt-bound compiled topology without enabling motor jobs."""
+    if arguments.compiled_board is None:
+        return None
+    if any((arguments.motor_runtime, arguments.classic, arguments.imu_probe,
+            arguments.imu_poses, arguments.imu_readiness, arguments.imu_calibration,
+            arguments.lite_extension, arguments.skip_le, arguments.scratch_link,
+            arguments.then)):
+        parser.error('--compiled-board requires a separate direct LE scenario')
+    import re
+    root = arguments.compiled_board.resolve()
+    for path in (root, arguments.existing_filesystem):
+        if path is None or re.search(r"[\s\"'@;\\]", str(path)):
+            parser.error('compiled board requires an explicit filesystem and monitor-safe paths')
+    receipt = json.loads((root / 'topology-receipt.json').read_text())
+    for name in ('boards/spike-prime.repl', 'boards/spike-prime-brick-devices.repl',
+                 'cpus/stm32f413vg.repl', 'cpus/stm32f4.repl'):
+        raw = (root / 'platforms' / name).read_bytes()
+        if (hashlib.sha256(raw).hexdigest() != receipt['files'][name]['stagedSha256']
+                or b'https://' in raw or b'http://' in raw):
+            parser.error('compiled board differs from its offline topology receipt')
+    return root
+
+
 async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        trace=(), callers=(), watches=(), dumps=(),
                        existing_filesystem: Path | None = None,
-                       imu_fixture: Path | None = None):
+                       imu_fixture: Path | None = None,
+                       motor_runtime: Path | None = None,
+                       electrical_qualification: Path | None = None,
+                       empty_ports: bool = False):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem, imu_fixture))
+                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification, empty_ports))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -190,7 +238,7 @@ async def find_hub(device, timeout: float):
 BATTERY_FIXTURE_PERCENT = 62
 
 
-async def set_notification_interval(peer, rx, frames, errors, interval, receipt):
+async def set_notification_interval(peer, rx, frames, errors, interval, receipt, decoder=None):
     from spike_frames import receive_payload, notification_ack, battery_notification
 
     request = cobs_encode(bytes((0x28, interval & 255, interval >> 8)))
@@ -205,24 +253,42 @@ async def set_notification_interval(peer, rx, frames, errors, interval, receipt)
                 notification_ack(payload)
                 receipt["ack_payload"] = payload.hex()
                 return
-            sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            sample = (decoder(payload) if decoder else
+                      battery_notification(payload, BATTERY_FIXTURE_PERCENT))
             sample.update(frame=frame.hex(), payload=payload.hex())
             receipt["before_ack"].append(sample)
             if len(receipt["before_ack"]) > 64:
                 raise ValueError("Too many notifications before interval acknowledgement")
 
 
-async def collect_battery_notifications(frames, errors, receipt):
+async def collect_battery_notifications(frames, errors, receipt, decoder=None,
+                                        allow_initial_battery=False):
     from spike_frames import receive_payload, battery_notification
 
     started = time.monotonic()
+    receipt["host_started_s"] = started
     samples = receipt["samples"] = []
+    receipt["initial_battery"] = []
     async with asyncio.timeout(90):
-        for _ in range(3):
+        while len(samples) < 3:
             frame, payload = await receive_payload(frames, errors, timeout=60)
-            sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            receipt["last_payload"] = payload.hex()
+            # Discovery may not yet have delivered a coherent ultrasonic frame.
+            # Only this exact battery-only startup record is allowed, before
+            # the first distance sample, bounded by 32 records and the same 90s.
+            if allow_initial_battery and not samples and len(payload) == 5:
+                startup = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+                startup.update(frame=frame.hex(), payload=payload.hex())
+                receipt["initial_battery"].append(startup)
+                if len(receipt["initial_battery"]) > 32:
+                    raise AssertionError("Ultrasonic discovery exceeded startup record bound")
+                continue
+            sample = (decoder(payload) if decoder else
+                      battery_notification(payload, BATTERY_FIXTURE_PERCENT))
+            received = time.monotonic()
             sample.update(frame=frame.hex(), payload=payload.hex(),
-                          received_after_s=time.monotonic() - started)
+                          received_after_s=received - started,
+                          received_at_host_s=received)
             samples.append(sample)
     # Observe several measured host intervals after unsubscribe/reconnect.
     # This is a bounded silence check, not a claim about RF or timer accuracy.
@@ -235,7 +301,7 @@ async def collect_battery_notifications(frames, errors, receipt):
     return quiet_seconds
 
 
-async def expect_notification_quiet(frames, errors, window, receipt, allowed=0):
+async def expect_notification_quiet(frames, errors, window, receipt, allowed=0, decoder=None):
     from spike_frames import receive_payload, battery_notification
 
     receipt["window_s"] = window
@@ -252,7 +318,8 @@ async def expect_notification_quiet(frames, errors, window, receipt, allowed=0):
             if errors.done():
                 raise errors.result()
             break
-        sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+        sample = (decoder(payload) if decoder else
+                      battery_notification(payload, BATTERY_FIXTURE_PERCENT))
         sample.update(frame=frame.hex(), payload=payload.hex())
         receipt["in_flight"].append(sample)
         if len(receipt["in_flight"]) > allowed:
@@ -273,12 +340,13 @@ async def receive_connection_info(frames, errors, strict=False):
 
 async def le_round_trip(central, advertisement, results: dict, *,
                         periodic=False, leave_subscribed=False,
-                        reconnect_quiet=None) -> None:
+                        reconnect_quiet=None, notification_decoder=None,
+                        distance_step=None, motion_context=None) -> None:
     from spike_frames import FrameBuffer
 
     connection = None
     try:
-        async with asyncio.timeout(300 if periodic else 180):
+        async with asyncio.timeout(le_round_trip_budget(periodic, reconnect_quiet)):
             started = time.monotonic()
             connection = await central.connect(advertisement.address,
                                                transport=PhysicalTransport.LE,
@@ -322,26 +390,35 @@ async def le_round_trip(central, advertisement, results: dict, *,
                     # Observe before this new central sends an interval request.
                     await expect_notification_quiet(
                         frames, errors, reconnect_quiet,
-                        periodic_receipt.setdefault("reconnect_quiet", {}))
+                        periodic_receipt.setdefault("reconnect_quiet", {}), decoder=notification_decoder)
                 await set_notification_interval(
                     peer, rx, frames, errors, 100,
-                    periodic_receipt.setdefault("subscribe", {}))
+                    periodic_receipt.setdefault("subscribe", {}), decoder=notification_decoder)
                 quiet_window = await collect_battery_notifications(
-                    frames, errors, periodic_receipt)
+                    frames, errors, periodic_receipt, decoder=notification_decoder,
+                    allow_initial_battery=notification_decoder is not None and reconnect_quiet is None)
+                if distance_step is not None:
+                    if motion_context is not None:
+                        from le_concurrent_motion import run_with_motion
+                        await run_with_motion(*motion_context, frames, errors, distance_step,
+                            periodic_receipt.setdefault('concurrent_motion', {}), classic_round_trip)
+                    else:
+                        await distance_step.run(frames, errors,
+                            periodic_receipt.setdefault('distance_step', {}))
                 await set_notification_interval(
                     peer, rx, frames, errors, 0,
-                    periodic_receipt.setdefault("unsubscribe", {}))
+                    periodic_receipt.setdefault("unsubscribe", {}), decoder=notification_decoder)
                 await expect_notification_quiet(
                     frames, errors, quiet_window,
-                    periodic_receipt.setdefault("unsubscribe_quiet", {}), allowed=1)
+                    periodic_receipt.setdefault("unsubscribe_quiet", {}), allowed=1, decoder=notification_decoder)
                 if leave_subscribed:
                     await set_notification_interval(
                         peer, rx, frames, errors, 100,
-                        periodic_receipt.setdefault("resubscribe_before_disconnect", {}))
+                        periodic_receipt.setdefault("resubscribe_before_disconnect", {}), decoder=notification_decoder)
                     # Prove it is active when the disconnect/reset is tested.
                     active_window = await collect_battery_notifications(
                         frames, errors,
-                        periodic_receipt.setdefault("active_before_disconnect", {}))
+                        periodic_receipt.setdefault("active_before_disconnect", {}), decoder=notification_decoder)
                     periodic_receipt["disconnect_reset_window_s"] = max(
                         quiet_window, active_window)
                 periodic_receipt["subscribed_at_disconnect"] = leave_subscribed
@@ -415,7 +492,8 @@ async def classic_round_trip(central, results: dict,
                              legacy_extension: Path | None = None, *,
                              imu_renode=None, renode_log: Path | None = None,
                              imu_readiness: bool = False, imu_poses: bool = False,
-                             imu_calibration: bool = False) -> None:
+                             imu_calibration: bool = False,
+                             motor_renode=None, motor_case: str = 'all', motor_action=None) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -454,6 +532,12 @@ async def classic_round_trip(central, results: dict,
         results["spp_request"] = request.decode().strip()
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
+        if motor_action is not None:
+            await motor_action(dlc, received)
+        if motor_renode is not None:
+            from classic_motor_probe import motor_round_trip
+            await motor_round_trip(dlc, received, motor_renode, results,
+                                   renode_log=renode_log, case=motor_case)
         if imu_renode is not None:
             from imu_probe import imu_round_trip, fusion_round_trip, stationary_round_trip, pose_round_trip
             if imu_poses:
@@ -669,6 +753,22 @@ async def main() -> int:
                         help="explicit validated synthetic LittleFS fixture directory; default is erased flash")
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
+    parser.add_argument("--motor-runtime", type=Path,
+                        help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
+    parser.add_argument("--active-port-notifications", action="store_true",
+                        help="separate compiled LE fixture: default A/B motors, C color, D 1000mm ultrasonic, E force")
+    parser.add_argument("--le-distance-step", action="store_true",
+                        help="with active ports, change external D input to 250mm while subscribed")
+    parser.add_argument("--le-concurrent-motion", action="store_true",
+                        help="with distance step, run real Classic A/B jobs alongside LE")
+    parser.add_argument("--compiled-board", type=Path,
+                        help="direct LE only: receipt-bound offline topology using the supplied Runtime compiled models")
+    parser.add_argument("--electrical-qualification", type=Path,
+                        help="Explicit source-compiled candidate from Infrastructure's qualification stager")
+    parser.add_argument("--motor-port-layout", type=Path,
+                        help="Private read-only DCM layout collected from this exact own-kernel ELF")
+    parser.add_argument("--motor-case", choices=('all', 'motion', 'cancel', 'no-progress', 'detach'), default='all',
+                        help="select a separate bounded diagnostic motor scenario; CI requires all")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
     parser.add_argument("--imu-poses", action="store_true",
@@ -689,6 +789,8 @@ async def main() -> int:
                         help="after the first LE round trip, require a second one")
     parser.add_argument("--periodic", action="store_true",
                         help="with --reconnect, verify battery notifications, unsubscribe and connection reset")
+    parser.add_argument("--observe-guest-clock", action="store_true",
+                        help="with --periodic, record bounded read-only guest-clock progress beside host arrivals")
     parser.add_argument("--skip-le", action="store_true",
                         help="make no LE connection (Classic only)")
     parser.add_argument("--scratch-link", type=int, metavar="PORT",
@@ -712,6 +814,39 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
                      arguments.imu_readiness, arguments.imu_calibration))
+    le_board = compiled_le_board(arguments, parser)
+    if arguments.motor_case != 'all' and not arguments.motor_runtime:
+        parser.error("--motor-case requires --motor-runtime")
+    if arguments.motor_case == 'detach' and not arguments.motor_port_layout:
+        parser.error("--motor-case detach requires a matching own-kernel layout and bridge-observer models")
+    if (arguments.electrical_qualification or arguments.motor_port_layout) and not arguments.motor_runtime:
+        parser.error("electrical qualification and DCM observations require --motor-runtime")
+    if arguments.motor_runtime:
+        if not arguments.classic or imu_modes or arguments.lite_extension:
+            parser.error("--motor-runtime requires a separate --classic motor scenario")
+        arguments.motor_runtime = arguments.motor_runtime.resolve()
+        import re
+        for path in (arguments.motor_runtime, arguments.existing_filesystem):
+            if path is None or re.search(r"[\s\"'@;\\]", str(path)):
+                parser.error("motor scenario requires an explicit filesystem and monitor-safe paths")
+        for name in ("platforms/boards/spike-prime.repl",):
+            if not (arguments.motor_runtime / name).is_file():
+                parser.error("motor topology must be staged using tools/stage_classic_motor_topology.py")
+    port_layout = None
+    electrical_receipt = None
+    if arguments.electrical_qualification:
+        arguments.electrical_qualification = arguments.electrical_qualification.resolve()
+        if re.search(r"[\s\"'@;\\]", str(arguments.electrical_qualification)):
+            parser.error("electrical qualification requires a monitor-safe path")
+        receipt = json.loads((arguments.electrical_qualification / 'source-receipt.json').read_text())
+        source = (arguments.electrical_qualification / 'models.cs').read_bytes()
+        electrical_receipt = receipt
+        if hashlib.sha256(source).hexdigest() != receipt.get('generatedSha256'):
+            parser.error("source-compiled electrical candidate differs from its receipt")
+    if arguments.motor_port_layout:
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from collect_legoport_observation_layout import load_layout
+        port_layout = load_layout(arguments.motor_port_layout, arguments.images / 'nuttx')
     if arguments.imu_calibration and (not arguments.classic or imu_modes != 1):
         parser.error("--imu-calibration requires --classic and a separate IMU scenario")
     if arguments.imu_probe and not arguments.classic:
@@ -724,13 +859,37 @@ async def main() -> int:
         parser.error("--reconnect requires the direct LE path")
     if arguments.periodic and not arguments.reconnect:
         parser.error("--periodic requires --reconnect on the direct LE path")
+    if arguments.observe_guest_clock and not arguments.periodic:
+        parser.error("--observe-guest-clock requires --periodic")
+    if arguments.active_port_notifications and not (le_board and arguments.periodic and arguments.reconnect):
+        parser.error('--active-port-notifications requires --compiled-board --periodic --reconnect')
+    if arguments.le_distance_step and not arguments.active_port_notifications:
+        parser.error('--le-distance-step requires --active-port-notifications')
+    if arguments.le_concurrent_motion and not arguments.le_distance_step:
+        parser.error('--le-concurrent-motion requires --le-distance-step')
+    notification_decoder = None
+    distance_step = None
+    if arguments.active_port_notifications:
+        from active_port_notifications import distance_notification
+        notification_decoder = distance_notification
     arguments.images = arguments.images.resolve()
     workdir = arguments.workdir or Path(tempfile.mkdtemp(prefix="spike-air-"))
     workdir.mkdir(parents=True, exist_ok=True)
 
     results: dict = {"images": str(arguments.images), "air_tools": str(AIR_TOOLS),
                      "status": "RUNNING", "storage": "initially-erased"}
+    board_runtime = arguments.motor_runtime or le_board
+    if board_runtime:
+        results['electrical_model_route'] = 'source-compiled' if electrical_receipt is not None else 'compiled-runtime'
+    if le_board is not None:
+        results['compiled_board_external_ports'] = ('default-attached-A-E-distance-D-1000mm'
+            if arguments.active_port_notifications else 'empty-A-F-before-guest')
+    if electrical_receipt is not None:
+        results['electrical_candidate_receipt'] = electrical_receipt
+    if port_layout is not None:
+        results['own_kernel_diagnostic_layout'] = port_layout
     air_hub = microbit = renode = hub = None
+    clock_probe = None
     air = Air(f"127.0.0.1:{arguments.hub_port}")
     return_code = 1
     try:
@@ -756,6 +915,13 @@ async def main() -> int:
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
             imu_fixture = None
+            if arguments.motor_runtime or arguments.le_concurrent_motion:
+                from classic_motor_probe import RENODE_MOTOR_HELPER
+                imu_fixture = workdir / "motor-fixture.py"
+                imu_fixture.write_text(RENODE_MOTOR_HELPER)
+                if port_layout:
+                    with imu_fixture.open('a') as fixture:
+                        fixture.write('\n_classic_port_layout = json.loads(' + repr(json.dumps(port_layout)) + ')\n')
             if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration:
                 from imu_probe import RENODE_IMU_HELPER
                 imu_fixture = workdir / "imu-fixture.py"
@@ -764,9 +930,19 @@ async def main() -> int:
                                         arguments.port, workdir, arguments.trace_symbol,
                                         arguments.trace_caller, arguments.watch,
                                         arguments.dump, arguments.existing_filesystem,
-                                        imu_fixture)
+                                        imu_fixture, board_runtime, arguments.electrical_qualification,
+                                        le_board is not None and not arguments.active_port_notifications)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
+            if arguments.le_distance_step:
+                from le_distance_step import DistanceStep
+                distance_step = DistanceStep(renode, workdir / 'renode.log')
+                notification_decoder = distance_step.decode
+            if arguments.observe_guest_clock:
+                from le_clock_probe import GuestClockProbe
+                clock_probe = GuestClockProbe(renode, workdir / 'renode.log',
+                                              results.setdefault('guest_clock_diagnostics', {}))
+                clock_probe.start()
             # Reconnection is a separate full discovery and request on a new peer.
             if arguments.then:
                 await serve_and_run(air, arguments, results)
@@ -783,7 +959,11 @@ async def main() -> int:
                 results["advertisement_after_s"] = round(time.monotonic() - started, 1)
                 await le_round_trip(central, advertisement, results,
                                     periodic=arguments.periodic,
-                                    leave_subscribed=arguments.periodic)
+                                    leave_subscribed=arguments.periodic,
+                                    notification_decoder=notification_decoder,
+                                    distance_step=distance_step,
+                                    motion_context=(air, renode, workdir / 'renode.log')
+                                        if arguments.le_concurrent_motion else None)
                 if arguments.reconnect:
                     # A second central after the first link ended: the hub must
                     # advertise again and answer again.
@@ -797,7 +977,8 @@ async def main() -> int:
                     await le_round_trip(
                         again, advertisement, second, periodic=arguments.periodic,
                         reconnect_quiet=(results["periodic_battery"]["disconnect_reset_window_s"]
-                                         if arguments.periodic else None))
+                                         if arguments.periodic else None),
+                        notification_decoder=notification_decoder)
                     results["second_info_response_payload"] = second["info_response_payload"]
             if arguments.classic:
                 # Page only once the hub has enabled page scan, as a real
@@ -814,14 +995,19 @@ async def main() -> int:
                                        imu_renode=renode if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration else None,
                                        renode_log=workdir / "renode.log",
                                        imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses,
-                                       imu_calibration=arguments.imu_calibration),
-                    1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (360 if arguments.imu_poses else 240))
+                                       imu_calibration=arguments.imu_calibration,
+                                       motor_renode=renode if arguments.motor_runtime else None,
+                                       motor_case=arguments.motor_case),
+                    1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (600 if arguments.motor_runtime else 360 if arguments.imu_poses else 240))
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"
             if "MILESTONE daemon_wait_for_stop" not in (workdir / "renode.log").read_text(errors="replace"):
                 raise AssertionError("Firmware did not reach daemon readiness")
             results["script_sha256"] = hashlib.sha256((workdir / "spike-air.resc").read_bytes()).hexdigest()
+            if clock_probe is not None:
+                await clock_probe.stop()
+                clock_probe.require_complete()
             results["status"] = "PASS"
             return_code = 0
     except Exception as error:  # report, then fail
@@ -832,6 +1018,8 @@ async def main() -> int:
         results["status"] = "FAIL: cancelled"
         raise
     finally:
+        if clock_probe is not None:
+            await clock_probe.stop()
         if hub is not None:
             results["hub_hci_commands"] = [f"0x{op:04x}" for op in hub.controller.commands]
             results["hub_vendor_commands"] = hub.controller.vendor_commands

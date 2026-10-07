@@ -35,8 +35,7 @@ void btsensor_cmd_reset_rx_buffer(void) {
 }
 
 static void reply(enum brickwright_hub_link link, const char *s) {
-  btsensor_tx_set_link(link, true);
-  (void)btsensor_tx_enqueue_response(s);
+  (void)btsensor_tx_enqueue_response_for_link(link, s);
 }
 
 static void reply_rc(enum brickwright_hub_link link, int rc, const char *what) {

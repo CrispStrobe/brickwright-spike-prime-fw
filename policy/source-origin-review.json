@@ -1239,7 +1239,7 @@
     },
     {
       "path": "bluetooth/zephyr_compat/include/zephyr/autoconf.h",
-      "sha256": "dd9f6c5e074e1d339a37a23e1b115315f4830717a84469cbdd286865f0fbedda",
+      "sha256": "ccaff44a3adfc1d5c25615d99d9c7267b990c75befa2e4a77649a9bb3be07f42",
       "kind": "text"
     },
     {

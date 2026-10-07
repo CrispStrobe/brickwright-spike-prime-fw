@@ -647,3 +647,56 @@ cold-restart bond reuse and physical qualification remain open.
 The unchanged reference rerun and its limits are recorded in
 [reference captures](imu-reference-captures.md); it captured no modern IMU
 notifications and does not qualify the wire mapping.
+
+## Measured Classic motor candidate — 2026-10-07
+
+The [new external motor contract](classic-motor-qualification.md) records the
+candidate tested firmware `92ced1c5d721e1d4f0f9bc19f5e303b5691b007b` and corrected
+peer `52caf015cca2fe8f13b65a1c4b63210830aa1f4d`. Both clean simulation profiles pass
+compiler/configuration/linker/licence-input/TI and resource gates: 592,772 bytes
+userspace flash, 88,144 bytes static RAM and zero TI payload. Runtime/model pins
+remain unchanged. The system Bluetooth worker now reserves 6 KiB dynamic stack;
+the 4 KiB predecessor reproducibly overwrote TLS during Stop reply handling.
+
+The complete hook-free Classic peer passes signed and concurrent A/B measured
+degree moves, Stop/replacement, loaded no-progress timeout and declared boundary
+errors. It checks exactly-once reply identities, terminal power and displacement
+within the documented tolerance. Nine host peer tests, nine resource tests and
+four comparator mutation checks cover false motion/direction, retained power,
+duplicate replies and false timeout success. Failed setup attempts, immediate
+EAGAIN, Stop assertions and the initial incorrect host errno comparison remain
+preserved privately.
+
+The current-source six-motor regression passes all 208 observations through
+15,957 guest milliseconds: native A–F speed and position, concurrent six-port
+activity, native/Python cancellation and the long-run reset regression boundary.
+Its retained installed native Runtime with source-staged pinned models remains
+a distinct evidence boundary from a newly source-built Runtime.
+
+The [canonical hosted matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
+is incomplete: HCI ARM compilation passed, then its pinned TI fingerprint-reference
+fetch failed because the official Git server connection timed out. Later hosted
+guest gates did not run in either job: the default profile subsequently failed
+at the same fetch step after its ARM build passed. Local clean gates and actual guest results remain separate from
+this hosted failure. TI checks stay mandatory and the failure is preserved.
+No merge or shipped desktop adoption is claimed here. Immediate back-to-back jobs,
+attachment/disconnect cleanup, counter-wrap/rearm guest interleavings, physical
+accuracy and HOLD remain outside this passing external fixture. L01 is partially
+qualified; the untested parts of its acceptance contract remain open.
+
+
+The current-source local air rerun also passes Scratch Link, Classic/raw fusion,
+stationary readiness and the six-face/gyro pose/base-axis scenario. The stationary sequence becomes ready at sample 261;
+Stop/restart returns a fresh sequence-one, not-ready snapshot. Calibration
+persistence also passes: bias saved at sequence 441 survives STOP/LOAD/reopen,
+with readiness reset and a fresh sequence-one snapshot. This is guest-VFS
+persistence, not physical power-loss durability. The initial LE reconnect run timed out during
+its final silence observation. The corrected LE run at harness
+`02bb2aefdeb640e95be3685589dd5f5fbe2de5d8` now passes against the same firmware:
+three fixture battery records per round, unsubscribe silence, active traffic
+before disconnect and zero inherited notifications across reconnect. The final
+quiet window completes with no late/in-flight notification and no surviving
+owned processes. The five other air results used harness `52caf015`; a new
+complete canonical matrix on the newer harness is still required. Preserve the
+initial timeout and both hosted TI fetch failures; these split local results
+must not be promoted to a complete hosted-matrix or release claim.

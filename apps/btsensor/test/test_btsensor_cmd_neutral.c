@@ -37,6 +37,10 @@ int btsensor_tx_enqueue_response(const char *s) {
   strcpy(f.replies[f.nr++], s);
   return 0;
 }
+int btsensor_tx_enqueue_response_for_link(enum brickwright_hub_link link, const char *s) {
+  f.link = link;
+  return btsensor_tx_enqueue_response(s);
+}
 static int toggle(void *p, bool v) {
   ((struct fixture *)p)->enabled = v;
   return ((struct fixture *)p)->result;

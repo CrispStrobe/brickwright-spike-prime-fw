@@ -86,3 +86,15 @@ Complete removal of Pybricks-derived robotics code is a separate architecture
 project; retained licensed source does not itself prevent the permitted-source
 simulation profiles. Every replacement would need behaviour and provenance
 review without erasing existing rights-holder notices.
+
+## Pending Classic guest extension
+
+The [measured Classic motor contract](classic-motor-qualification.md) records a
+passing complete external A/B fixture on the stack-corrected firmware candidate.
+Signed/concurrent displacement, Stop/replacement, loaded timeout and explicit
+unsupported errors are now observed through actual guest command handling and
+the electrical motor models. The current-source six-motor native/Python regression
+also passes. This remains a candidate: the hosted matrix is incomplete after an
+external TI fingerprint-reference fetch timeout, and its gates remain required. It does not supersede the
+historical matrix above, qualify arbitrary layouts or establish desktop package
+adoption. L01 still owns attachment/disconnect and excluded interleaving work.

@@ -80,7 +80,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_cmd_neutral.c",
-      "sha256": "456d4489ba9453512e2e6555171e20d6406742290f66583cb23c3daeff410de4",
+      "sha256": "2621e5848e910c4c0791d28a895d4c0e7a915f6e5492b2edaedadad528d32a34",
       "spdx": [
         "Apache-2.0"
       ],
@@ -146,7 +146,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_modern_backend.c",
-      "sha256": "fcaf66d4bccefcaf07e20a8413387c7bd701e90e61b901b31d976af3f399dd2b",
+      "sha256": "9b2c5d096b3f7901430d1d9fe66d99e171b356d9d9a21ba57b870a105be002b6",
       "spdx": [
         "Apache-2.0"
       ],
@@ -157,7 +157,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_modern_backend.h",
-      "sha256": "5b922823c4a3820de6a1039eeeca1ec88ed3050161a9c2586b2822fa207f1a38",
+      "sha256": "68baf7319fefdedba4ca3fbfe6f6f4f65effff6412857f084d0b7f00cc4ab658",
       "spdx": [
         "Apache-2.0"
       ],
@@ -267,7 +267,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.c",
-      "sha256": "7f5f3bcb55715c4c97e387e51d13222031710d34f09059221d72aaaa96ddfc20",
+      "sha256": "29e1546178bbb2e7adbe24917ae33312d43bda7da38a67324b36ea4fbb278397",
       "spdx": [
         "Apache-2.0"
       ],
@@ -278,7 +278,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.h",
-      "sha256": "4452e94983e273fd3e3a903f639202c57377254b8939f059671710d61d6078a3",
+      "sha256": "93588596bfaabcc767fa73837b12828c83a448a4b7b92721e9723df78e181bb7",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1320,7 +1320,7 @@
     },
     {
       "path": "bluetooth/zephyr_compat/include/zephyr/autoconf.h",
-      "sha256": "dd9f6c5e074e1d339a37a23e1b115315f4830717a84469cbdd286865f0fbedda",
+      "sha256": "ccaff44a3adfc1d5c25615d99d9c7267b990c75befa2e4a77649a9bb3be07f42",
       "spdx": [
         "Apache-2.0"
       ],
@@ -35057,7 +35057,7 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification.",
+  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification. Candidate encoder attachment guard updates the two reviewed source-input hashes only; existing image/link evidence remains historical until both clean profiles and affected guests are qualified.",
   "current_linker_additions": {
     "observed_ci_run": 37265813475,
     "profile": "simulation-hci",

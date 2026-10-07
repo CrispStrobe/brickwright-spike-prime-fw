@@ -13,6 +13,9 @@ struct fake_port {
   bool pinned, encoder;
   int32_t position;
   unsigned samples;
+  uint32_t event_counter;
+  bool change_attachment_on_poll, detach_on_poll, polled_data;
+  int after_poll_info_error;
   uint8_t frame_mode, frame_len;
   int encoder_error, coast_error;
   int16_t duty;
@@ -58,10 +61,13 @@ static int fake_ioctl(int fd, int command, unsigned long argument,
     return -EBADF;
   struct fake_port *p = &f->ports[port];
   if (command == LEGOPORT_GET_DEVICE_INFO) {
+    if (p->polled_data && p->after_poll_info_error)
+      return p->after_poll_info_error;
     struct legoport_info_s *i = (void *)argument;
     memset(i, 0, sizeof(*i));
     i->device_type = p->device_type;
     i->flags = p->flags;
+    i->event_counter = p->event_counter;
     return 0;
   }
   if (command == LEGOPORT_LUMP_GET_INFO) {
@@ -85,6 +91,16 @@ static int fake_ioctl(int fd, int command, unsigned long argument,
     if (p->encoder_error) return p->encoder_error;
     if (!p->samples) return -EAGAIN;
     p->samples--;
+    p->polled_data = true;
+    if (p->detach_on_poll) {
+      p->flags = 0;
+      p->event_counter++;
+      p->detach_on_poll = false;
+    }
+    if (p->change_attachment_on_poll) {
+      p->event_counter++;
+      p->change_attachment_on_poll = false;
+    }
     struct lump_data_frame_s *frame = (void *)argument;
     memset(frame, 0, sizeof(*frame)); frame->mode = p->frame_mode; frame->len = p->frame_len;
     uint32_t position = (uint32_t)p->position;
@@ -395,6 +411,33 @@ int main(void) {
     assert(measured == 0); /* old sample is not reused */
     assert(f.ports[port].duty == 0 && f.ports[port].brake_count == 0);
   }
+  /* A same-type disconnect/reconnect during collection changes the event
+   * counter even though type/flags match again. Never publish its old frame. */
+  for (unsigned wrap = 0; wrap < 2; wrap++) {
+    f.ports[0].event_counter = wrap ? UINT32_MAX : 17;
+    f.ports[0].samples = 1;
+    f.ports[0].change_attachment_on_poll = true;
+    int32_t stale = 99;
+    assert(btsensor_modern_backend_encoder_with_io(0, &stale, &io) == -ESTALE);
+    assert(stale == 0);
+    assert(f.ports[0].duty == 0);
+    /* A subsequent frame under the new stable attachment is admissible. */
+    f.ports[0].samples = 1;
+    assert(btsensor_modern_backend_encoder_with_io(0, &stale, &io) == 0);
+    assert(stale == f.ports[0].position);
+  }
+  f.ports[0].samples = 1;
+  f.ports[0].detach_on_poll = true;
+  int32_t detached = 99;
+  assert(btsensor_modern_backend_encoder_with_io(0, &detached, &io) == -ESTALE);
+  assert(detached == 0);
+  uart_device(&f, 0, 48);
+  f.ports[0].samples = 1;
+  f.ports[0].polled_data = false;
+  f.ports[0].after_poll_info_error = -EIO;
+  assert(btsensor_modern_backend_encoder_with_io(0, &detached, &io) == -EIO);
+  assert(detached == 0);
+  f.ports[0].after_poll_info_error = 0;
   int32_t measured;
   f.ports[0].samples = 1; f.ports[0].frame_mode = 1;
   assert(btsensor_modern_backend_encoder_with_io(0, &measured, &io) == -EAGAIN);

@@ -57,6 +57,23 @@ class ResourceBudgetTests(unittest.TestCase):
             with self.assertRaises(BudgetError):
                 check_configuration(root, limits)
 
+    def test_classic_worker_rejects_previously_overflowing_stack(self):
+        import json
+        header = "bluetooth/zephyr_compat/include/zephyr/autoconf.h"
+        limits = json.loads((ROOT / "policy/resource-budgets.json").read_text())["configuration"][header]
+        name = "CONFIG_BRICKWRIGHT_SYSTEM_WORKQUEUE_STACK_SIZE"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / header
+            config.parent.mkdir(parents=True)
+            text = (ROOT / header).read_text()
+            for value in (4096, 8192):
+                config.write_text(text.replace(f"{name} 6144", f"{name} {value}"))
+                with self.assertRaises(BudgetError):
+                    check_configuration(root, {header: limits})
+            config.write_text(text)
+            check_configuration(root, {header: limits})
+
     def test_parses_header_and_dot_config_numbers(self):
         values = parse_defines("#define CONFIG_A 0x10\nCONFIG_B=32\n")
         self.assertEqual(values, {"CONFIG_A": 16, "CONFIG_B": 32})

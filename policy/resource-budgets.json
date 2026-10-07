@@ -12,6 +12,7 @@
       "CONFIG_APP_BTSENSOR_RING_DEPTH": {"min": 4, "max": 32}
     },
     "bluetooth/zephyr_compat/include/zephyr/autoconf.h": {
+      "CONFIG_BRICKWRIGHT_SYSTEM_WORKQUEUE_STACK_SIZE": {"min": 6144, "max": 6144},
       "CONFIG_BT_LONG_WQ_STACK_SIZE": {"min": 1536, "max": 3072},
       "CONFIG_BRICKWRIGHT_DELAYED_WORK_SLOTS": {"min": 1, "max": 8},
       "CONFIG_BT_BUF_ACL_RX_COUNT": {"min": 2, "max": 6},

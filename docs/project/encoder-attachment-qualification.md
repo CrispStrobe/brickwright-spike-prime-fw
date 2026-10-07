@@ -1,0 +1,482 @@
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<!-- Copyright (c) 2026 Brickwright contributors -->
+
+# Encoder attachment snapshot candidate
+
+This is an unmerged integration follow-up to
+[the Classic motor qualification](classic-motor-qualification.md). Its exact
+attachment-change interleaving is host-tested only. It changes the retained NuttX backend;
+no clean-room or whole-firmware independence claim is made.
+
+## Problem and contract
+
+A device connection can change while the backend polls UART position frames.
+The existing `legoport_info_s.event_counter` records confirmed device-type edges;
+a disconnect and same-type reconnect can restore type/flags while advancing that
+counter. Previously a collected frame could be returned successfully across
+this observed change.
+
+Bracket motor validation and frame collection with the existing device-info
+interface. If a connection edge or loss of UART/connected identity is detected,
+return `ESTALE` and leave the output zero. A failed closing device-info read
+propagates its error without publishing a position. A later stable attachment
+can supply a new frame. Ordinary missing feedback still returns `EAGAIN`;
+unsupported mode/type and malformed frames retain their explicit errors.
+The zero-output guarantee covers reads with valid arguments; invalid arguments
+return `EINVAL` with no output guarantee, preserving the existing API.
+No cached frame, PWM demand or ownership state is introduced by this change.
+
+The edge counter is not an absolute physical identity or a LUMP synchronization
+generation. Undetected disconnects, unchanged-type UART resynchronization and
+an entire counter cycle between observations are outside this guard. The API
+still has no frame capture timestamp. Most importantly, the read and later PWM
+operation are separate transactions: this candidate does not close their race
+or implement the proposed asynchronous sequential-admission contract. L01/L02
+must establish conditional admission and attachment/session ownership before
+claiming that stronger protection.
+
+## Host evidence
+
+`tools/check_btsensor_modern_backend.sh` fails against the unchanged backend when
+the synthetic I/O seam supplies a valid frame and a same-type connection edge
+during its collection. The candidate passes that regression, including an edge
+from `UINT32_MAX` to zero, fresh stable-frame recovery, detach during collection,
+and a closing device-info I/O failure. Each rejected read leaves its output zero.
+The existing six-port backend and Classic adapter host suites also pass.
+
+Two compiled mutations fail the comparison: ignoring the event counter and
+publishing the candidate position before validation. These are host observations
+through the existing I/O seam, not actual ARM/attachment evidence. Retain the
+initial failure and unchanged raw receipts privately.
+
+## Clean ARM and guest regression checkpoint
+
+Both protected profiles were rebuilt from
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94`. Compiler/configuration, linker,
+reviewed source-input and notice checks, resource budgets and local TI-exclusion
+checks passed. Userspace flash is 592,860/654,336 bytes and static RAM is
+88,144/98,304 bytes; the synthetic TI payload is zero. This adds 88 flash bytes
+over the qualified predecessor without changing static RAM. The configured
+inventories retain their historical image/link records; the new private build
+receipts are separate evidence and do not rewrite those records.
+
+The complete Classic electrical-motor peer passed on the new HCI image with
+the consumed Runtime/model pins from the Classic qualification. Requested
+signed 90-degree moves produced +94.752/-94.746 degrees; concurrent signed
+180-degree moves produced +183.526/-183.891 degrees. Stop followed by replacement
+produced -182.903 degrees. These satisfy the documented signed displacement
+tolerance. Full load produced `ETIMEDOUT` after 1,018,011 guest microseconds;
+unsupported HOLD/stall and zero-speed rejection checks also passed. Existing
+terminal power and exactly-once completion checks remained enabled.
+
+The default-profile native/Python six-motor regression also passed: 208
+observations through guest clock 15,957 milliseconds, including A–F speed and
+position control, six concurrent motors, native/Python Stop and the long-run
+reset boundary. Signed -30-degree position targets remained within the
+fixture's 3-degree tolerance. This used source-staged models and the retained
+installed native Runtime; it does not qualify a newly assembled desktop package
+or change a consumer dependency pin.
+
+This regression does not exercise the exact attachment-change interleaving:
+that remains host-only. It uses the retained qualified compiled Runtime, not a
+new Runtime source-to-binary qualification. The official TI endpoint still
+times out; the separate mandatory hosted fingerprint revalidation remains
+blocked and has not been waived.
+
+## Qualification still required
+
+Extend the external Classic electrical-motor fixture with public detach and
+reattach inputs, observing real guest results, displacement and released power.
+Require no success across the observed attachment change and a working fresh
+replacement request. Rerun the affected motor regressions after any further
+source/model change, and run the full existing air suite on this candidate.
+Record exact firmware, harness and
+model pins and tolerances. Do not copy the predecessor's successful guest results
+onto this source, merge on host tests alone or waive an unavailable TI gate.
+
+## Detach-fixture prerequisite
+
+Before treating the public model's `Detach()` as an electrical unplug, qualify
+its actual GPIO and guest observations. The consumed
+[electrical-port model](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/blob/fe4ad383c7392527433783fcec455daa7ddc2bb7/src/Emulator/Peripherals/Peripherals/UART/LegoLpf2ElectricalPort.cs)
+returns from `Tick()` when `Device` is null. The base port's attachment booleans
+are explicitly logical indicators, not electrical ID-pin levels. This source
+inspection identifies a prerequisite; it is not an observed guest-detach failure.
+
+A paused-model probe of this consumed model confirmed the distinction. With
+the ID/UART GPIOs configured as inputs, attached, detached and same-type
+reattached observations all read ID1 high, ID2 low and RX low. The logical
+attachment indicator changed true/false/true and topology generation advanced
+2/3/4. The probe loaded no firmware and advanced no guest time. It establishes
+retained sampled input levels across this sequence, not electrical unplug
+semantics, a guest disconnect failure or a correct detached voltage policy.
+The initial probe used an unavailable machine-child name and failed; the
+corrected probe used the public external port handle. Both receipts remain
+private and unchanged.
+
+Add model controls for attach, detach and same-type reattach that observe the
+ID/UART inputs and H-bridge demand through documented interfaces, including
+when no motor object remains. Establish the detached input policy from the
+board/driver contract; do not guess levels or write guest connection state.
+Then require a real guest DCM disconnect edge, fresh discovery on reattach,
+released bridge demand and isolation of a replacement from the old job. Logical
+topology generation alone cannot establish that these electrical/guest effects
+occurred. Keep the exact read-time interleaving host-only unless a natural guest
+run actually observes it; ordinary detach error handling is a separate result.
+
+Reproduce the host checks with:
+
+```sh
+bash tools/check_btsensor_modern_backend.sh
+bash tools/check_btsensor_classic.sh
+python3 tools/check_source_policy.py
+python3 tools/check_reuse_licenses.py
+python3 tools/check_source_origin_review.py --require-clearance
+```
+
+## Electrical detach/reconnect candidate — 2026-10-07
+
+[Infrastructure PR #35](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/35)
+adds synthetic detached ID/RX resolution and read-only bridge-demand observations.
+Its source-compiled controls preserve all 35 existing checks; mutations that
+retain the detached inputs or hide detached bridge demand are both detected.
+[Runtime PR #53](https://github.com/CrispStrobe/renode-spike-prime/pull/53) explicitly
+pins the model candidate for canonical build and complete peripheral tests.
+Neither candidate has been adopted by the shipped desktop package.
+
+An actual ARM guest using clean protected HCI firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94` and namespace-isolated model candidate
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48` passed one external Classic sequence:
+
+- Start a long powered move, then detach through the public model interface.
+  Initial detached bridge demand remains observable; the fixture does not clear it.
+- The interrupted job returns `ENODEV=-19`. In 767,803 guest microseconds the
+  actual DCM confirmed type changes from 14 to NONE, its event counter advances
+  from 1 to 2, CONNECTED clears and bridge demand reaches zero.
+- A new request while absent returns `ENODEV` without drive.
+- Same-type reattachment creates fresh mechanics. Guest discovery advances the
+  counter to 3; a fresh -90-degree job completes at -94.7464 degrees, within the
+  external fixture's 20-degree tolerance, and leaves zero bridge demand.
+- Unsupported HOLD/stall and zero-speed checks retain their explicit errors.
+
+The harness reads guest diagnostics without writing them. Generate the private,
+exact own-kernel debug layout and run the separate scenario after staging models
+with Infrastructure's `tools/stage_electrical_attachment_qualification.py`:
+
+```sh
+python3 tools/collect_legoport_observation_layout.py \
+  --kernel OWN_DEBUG_KERNEL_ELF --output NEW_PRIVATE_LAYOUT_JSON
+# Add to the existing explicit Classic motor invocation:
+# --motor-case detach --electrical-qualification STAGED_CANDIDATE_DIRECTORY
+# --motor-port-layout PRIVATE_LAYOUT_JSON
+python3 tools/test_legoport_observation_layout.py
+python3 tools/test_classic_motor_probe.py
+```
+
+The layout is a hash-bound, six-port read-only diagnostic, not a stable ABI or
+an interface for third-party/reference images. Host adversaries reject mismatched
+hashes, out-of-range memory and invalid offsets. Model controls, canonical build
+results, staged guest results and installed package qualification remain separate.
+The final harness additionally embeds candidate/layout receipts in its private
+results; the successful guest run preserves the pre-metadata harness snapshot.
+
+This closes one ordinary detach/reconnect sequence in the source-compiled model
+context. It does not exercise the exact encoder-read interleaving in the guest,
+arbitrary hotplug races, physical unplug safety, transport-disconnect ownership
+or canonical-consumer adoption. Repeat affected Classic/native/Python guest tests
+on the canonical Runtime candidate, complete the current-source air suite and
+satisfy every mandatory gate before merging. The unavailable official TI
+fingerprint endpoint remains a blocker, not a waived gate.
+
+### Compiled-model admission and stricter edge checks
+
+The same detach scenario now accepts either the namespace-isolated source
+candidate or a Runtime containing the compiled model correction. For the compiled
+route, omit `--electrical-qualification`, retain `--motor-runtime` and
+`--motor-port-layout`, and supply the exact qualified Runtime build. The default
+compiled topology entry point remains `CreatePrimeElectricalPorts`.
+
+Before issuing motor jobs, the peer requires real bridge-drive/brake observations
+and a bounded own-kernel DCM identity. An older compiled model missing the bridge
+observers fails explicitly with no motor request; it does not fall back to cached
+motor power. Private results identify the selected route, model type and module
+identity. Those identities are diagnostic bindings, not binary authenticity or a
+substitute for the source/build receipt.
+
+The disconnect comparison now also requires a connected, non-NONE prior guest
+identity and a detached model afterward; rediscovery must restore the same guest
+type with a new counter. Host adversaries reject an initially disconnected guest,
+a retained logical attachment and missing/malformed bridge observers. The stricter
+comparison passes the exact preserved earlier guest observations. That offline
+comparison is not a fresh guest execution or canonical-consumer qualification.
+
+A fresh guest sequence using harness
+`ebfdb03d350e22a5ff8fadd29af23b79216cdc00`, the same clean firmware image and
+the namespace-isolated model candidate passed these stricter detach/rediscovery
+assertions. A separate actual invocation against the retained older compiled
+model refused with zero motor requests and zero observed motor power. The latter
+is an expected negative admission result, not positive qualification of the new
+compiled model. The six-port native/Python scenario also passed with staged
+candidate models; compiled-consumer adoption remains separate.
+
+### LE timing qualification gap
+
+The diagnostic air sequence on firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94` and harness
+`8409fa9cf9967e0a7dd66a2c926e70e750253ecd` passed the complete Classic motor,
+Scratch Link, Classic IMU, pose, stationary/readiness and calibration
+save/reopen cases. Fresh compiled admission/edge results above identify their
+own later tested harness revision. The LE case failed
+inside its unchanged 90-second three-record collector after resubscription before
+disconnect. Its first three battery records, unsubscribe acknowledgement/silence
+and resubscribe acknowledgement passed; only two active records arrived inside
+the next collection bound. Reconnect validation was not reached. The failure is
+preserved; neither firmware causality nor full air-suite success is established.
+
+A separate follow-up should record read-only guest-clock progress alongside host
+arrival times before changing the observation contract. Preserve three exact
+battery records, unsubscribe silence, a fresh central's strict InfoResponse and
+zero inherited notifications. Retain finite host/process cleanup bounds and
+negative checks for missing/malformed records, clock stalls/regression and leaked
+notifications. Do not simply increase a wall timeout to turn this failure green,
+force guest time, replace firmware callbacks or infer physical radio timing.
+Require an actual current-source air run and preserve the original failure.
+
+The optional `--observe-guest-clock` diagnostic now implements that preparation
+for `--periodic --reconnect`. It reads `ElapsedVirtualTime` through the owned
+monitor and records host before/after windows every five seconds. These use
+the same host monotonic time base as the collector's start and absolute record
+arrival timestamps, permitting direct observation-window correlation. Reads have
+three-second bounds and a 256-sample cap; regression, malformed values and no
+observed progress for fifteen host seconds fail the diagnostic. These host
+bounds are instrumentation limits, not firmware timer or physical radio accuracy.
+The sampler is joined during success, failure and cancellation cleanup. Host
+controls cover a stalled/regressed clock, echoed monitor commands, real command
+decoding and cancelled/failed sampler cleanup. Actual instrumented LE results
+are recorded below; no observation or cleanup timeout has been increased.
+
+```sh
+python3 tools/test_le_clock_probe.py
+# Add --observe-guest-clock to the existing explicit --periodic --reconnect run.
+```
+
+For direct LE qualification with a compiled Runtime, use `--compiled-board` and
+the output of `tools/stage_classic_motor_topology.py`. This selects the same
+offline board and aggregate display clock without enabling Classic motor jobs
+or including replacement model source. It requires explicit synthetic storage,
+matching staged-file hashes and the direct LE route; incompatible transport or
+motor options refuse before emulator startup. `--motor-runtime` remains restricted
+to the separate Classic motor scenario. Supplied canonical Runtime bundles must
+retain their tracked `.renode-root` marker so monitor initialization can load.
+Copied platform receipts do not authenticate the supplied Runtime binary.
+
+This battery-only LE scenario starts with empty A–F external ports, matching the
+original scenario. The compiled topology's default motors are detached through
+public model commands before guest loading/execution; guest DCM state and PWM
+are not written. An initial attempt with the default motors attached correctly
+failed the exact battery-only payload comparison. That fixture mismatch remains
+preserved and does not justify accepting extra/malformed notification fields.
+
+## Compiled consumer checkpoint — 2026-10-07
+
+The canonical compiled Runtime source
+[`8f128e66`](https://github.com/CrispStrobe/renode-spike-prime/commit/8f128e66d0be5f83da035eaba9cc4441c0a29a31)
+with Infrastructure `adf40d98062a6b31aae7ef86e1ae5f289eebdc48` passed these
+actual guest scenarios using the same clean protected firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94`. No replacement peripheral source
+was included. NuttX qualifier source was `fa27da11b9654d2e4b54dfb44139cb88975c7d47`;
+Classic peer source was `535ac92ea61d71bc52889a7b89c4d6d20b34e916` and direct LE
+source was `c2b2eebcdb96691668fefddc20bb8c981deb2734`.
+
+| Scenario | Observed result and boundary |
+| --- | --- |
+| Classic electrical motors | PASS: signed/concurrent moves, Stop/replacement, load timeout, explicit unsupported/invalid inputs and terminal drive checks. The declared displacement tolerance remains 20 degrees. |
+| Detach/reconnect | PASS: `ENODEV`, actual guest type 14 → NONE → 14, counters 1 → 2 → 3, CONNECTED clearing and zero bridge demand after 790,987 guest microseconds. Fresh -90-degree displacement was -95.0791 degrees. |
+| Native/Python A–F | PASS: 209 observations covering all six ports, concurrent native/Python activity, Stop and the old unattended-reset boundary. Six position moves stayed within 1.756 degrees of their -30-degree targets, inside the 3-degree limit. Final program clock was 15,997 ms. |
+| Supplied upstream MicroPython 1.26.1 | PASS: basic raw-REPL execution/error/cancellation/recovery, GPIO motor/load/cleanup and filesystem reopening in a fresh process. This is not full SDK, USB bootloader or GUI qualification. |
+| Direct LE, empty A–F | PASS: exact battery-only notifications, unsubscribe silence, active resubscription, fresh-central strict InfoResponse and zero inherited notifications. Seventeen clock observations stopped cleanly; absolute host arrivals share their monotonic time base. |
+
+An earlier instrumented LE run on the original board fixture also passed both
+centrals with 134 clock observations. The preceding timeout remains preserved;
+these passes do not establish its cause or physical radio timing. Initial private
+compiled-package startup failures caused by an omitted root marker are preserved
+separately. Restoring the exact tracked marker supplied the missing initialization
+input; original downloaded artifacts, model code and guest bytes were unchanged.
+
+The exact final Runtime candidate also passed its
+[canonical build and regression CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37635759307):
+448 focused peripheral tests and a complete-suite summary of 566 passed / 5
+skipped / 571 total. The raw log additionally reports the pre-existing GIC
+inconclusive case as skipped; do not infer that all discovered tests executed.
+Native translator, board and free ARM guest checks remained enabled.
+
+These results close the declared compiled-model consumer scenarios. They do not
+advance firmware/Lite package pins, qualify an installed GUI, close atomic
+encoder/PWM admission or arbitrary attachment/transport races, establish original
+reference-firmware boot, or prove physical accuracy. The mandatory firmware TI
+fingerprint/matrix gate remains blocked by the official endpoint; no gate is
+waived. Keep Runtime/model merges separate from firmware and package adoption.
+
+The attached-port contract below separately qualifies the coherent ultrasonic
+record with other devices attached. Further LE work should exercise changing
+sensor inputs, concurrent commanded motion and malformed requests through the
+actual guest. Preserve the strict battery-only empty-port scenario.
+
+## Attached-port LE notification contract
+
+The separate `--active-port-notifications` scenario requires `--compiled-board
+--periodic --reconnect`. It preserves the compiled topology's declared A/B
+motors, C color, D ultrasonic and E force attachments, with F empty. The model's
+initial distance input is 1000 mm on D (wire port 3). This exercises discovery
+and reporting while those devices are attached; it does not command motor
+motion or claim color/force/motor notification support.
+
+The own firmware's coherent snapshot supports a type-0 battery record followed
+by one type-0x0d distance record. The exact expected payload is nine bytes:
+`3c 06 00 00 3e 0d 03 e8 03`. The record-byte count is six, battery is 62%,
+and distance is a signed little-endian 16-bit value in millimetres. Duplicate,
+unknown, reordered, truncated, trailing, wrong-port and wrong-distance records
+fail the comparison. The original five-byte battery-only scenario still rejects
+this attached-device payload.
+
+Only the initial collection may observe up to 32 exact battery-only records
+before the first distance sample, within its unchanged 90-second host bound.
+It must then collect three exact distance samples. Battery-only output after
+that first sample, during active resubscription, or in the fresh central's
+collection fails. Missing distance cannot pass through unlimited startup
+records or time. The existing interval acknowledgement, unsubscribe silence
+(one bounded in-flight record), strict fresh InfoResponse and reconnect silence
+(zero inherited records) assertions remain enabled. Arrival times are host
+observations; no physical cadence or RF claim follows.
+
+Reproducible host controls:
+
+```sh
+python3 tools/test_active_port_notifications.py
+python3 tools/test_bluetooth_air_periodic.py
+python3 tools/test_compiled_le_board.py
+```
+
+The first includes actual collector controls and two intentional comparator
+mutations: remove the expected-port check or remove the expected-distance
+check. Each mutation admits an adverse external record rejected by the original
+comparison. These controls do not prove malformed requests sent over BLE are
+rejected by a guest; that is a separate protocol exercise.
+
+For actual guest qualification, use the existing direct LE command with the
+same supplied compiled Runtime, explicit existing-filesystem fixture and
+receipt-bound compiled board, adding `--active-port-notifications`. No image is
+downloaded, no replacement peripheral implementation is included and no guest
+memory/PWM/clock write is introduced.
+
+Actual attached-port qualification passed with harness
+`2b8c07a8d53af69766e0d385960ab9d33e130e70`, own firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94`, compiled Runtime
+`8f128e66d0be5f83da035eaba9cc4441c0a29a31` and Infrastructure
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48`. Two initial battery-only records
+preceded three exact distance records; active resubscription and the second
+central each received three exact distance records. Both unsubscribe windows
+had zero in-flight records; the fresh central's strict InfoResponse and
+17.067-second reconnect silence window passed with zero inherited records.
+Twenty-two guest-clock observations completed without diagnostic error. Host
+cadence is diagnostic, not simulated or physical timing equivalence.
+
+The first attempt at harness `b5dc3d14aefb56076669bca4395fbd8892dcaa42`
+failed on an initial battery-only record. That failure is preserved. The later
+bounded discovery policy is explicit and tested to reject missing distance and
+post-discovery battery-only output; it does not accept arbitrary extra fields.
+No firmware C code, model code, guest bytes or package pin changed for this
+scenario. The following contract adds changing inputs and simultaneous motor
+motion. Detach during notification, additional coherent record types, malformed
+guest requests, installed GUI adoption and the mandatory hosted firmware matrix
+remain separate gates.
+
+## Live distance changes and simultaneous motor jobs
+
+Add `--le-distance-step` to the attached-port scenario to change D's external
+distance input from 1000 to 250 mm while the first central remains subscribed.
+The harness invokes the public sensor model's `SetDistance` and verifies its
+readback. It does not write guest memory, encoder positions, PWM or clocks.
+The guest must subsequently send three exact
+`3c 06 00 00 3e 0d 03 fa 00` payloads. At most 32 exact old-distance records
+are allowed before the first changed record, within the unchanged 90-second
+collection bound. Old values after the first changed record, battery-only
+output, malformed records and a frozen input fail. Resubscription and the fresh
+central must retain 250 mm, with the original silence/reset assertions enabled.
+
+Actual distance-step qualification passed at harness
+`f2b30f90138646b4d6b33cbba4626f64c6c2ee13` using the same firmware and compiled model/Runtime identities as the
+attached-port run. The first collection contained three 1000 mm records; the
+step collection, active resubscription and fresh central each contained three
+250 mm records. No old records were observed in the step transition. Twenty-six
+guest-clock observations completed without error. This qualifies a change in
+the external model input flowing through the real guest notification path, not
+physical sensor dynamics.
+
+The optional `--le-concurrent-motion` contract requires `--le-distance-step`.
+It opens an authenticated/encrypted Classic connection while LE remains active,
+establishes A/B encoder readiness through real jobs, and requests +360 degrees
+on A and -360 on B. It observes both motors moving before changing distance,
+then collects the changed LE records alongside bounded read-only motor
+observations. At least one record must have observations of nonzero power and
+opposite signed speeds exceeding 1 degree/second. Each job must return a valid
+terminal reply, satisfy the existing displacement and released-drive contract,
+and pass the duplicate-reply quiet check. Task scheduling alone is insufficient.
+These multi-field observations are sequential, not an atomic electrical sample.
+The source-only helper observes the same compiled model instances; it supplies
+no replacement peripheral implementation.
+
+Host controls:
+
+```sh
+python3 tools/test_le_distance_step.py
+python3 tools/test_le_concurrent_motion.py
+```
+
+The first verifies transition bounds, frozen-input and post-change regression
+rejection, exact setter readback and integer admission. The second rejects
+missing samples, unpowered motion and wrong speed directions. Earlier payload
+comparator mutations remain required controls. None of these host controls
+alone qualifies the actual concurrent guest scenario.
+
+The first actual concurrent attempt at harness
+`7ee157bc496bfb19948320d823d801323f1539db` **failed** before establishing
+encoder readiness. Classic authentication, encryption, RFCOMM and PING/PONG
+succeeded, but the first motor request received no parsed reply. The bounded
+Classic parser rejected `RFCOMM text line exceeds bound`. The air record shows
+modern periodic notification frames on Classic after it connected, rather than
+on the still-subscribed LE connection. Twenty-two guest-clock observations
+completed and cleanup reported no error. No simultaneous motion, distance
+change or overlap is qualified by this failed run.
+
+That first attempt also contained a harness error: its request IDs were five
+characters, while the Classic parser requires exactly four lowercase letters
+or digits. Harness `5b9e38f` corrects the IDs and rejects invalid IDs before
+sending. Its actual compiled rerun parsed one motor reply but still failed
+with `Invalid RFCOMM text` when modern binary notifications reached Classic.
+Thus the invalid-ID failure and cross-link redirection are distinct findings;
+neither run qualifies simultaneous motion. The candidate correction and
+remaining session/delivery limitations are recorded in
+[TX destination qualification](tx-link-qualification.md).
+
+Source review identifies a concrete routing gap to investigate:
+`apps/btsensor/btsensor_main.c::transport_receive` changes the single selected
+TX link on incoming traffic; `modern_send` enqueues without an explicit BLE
+destination; `apps/btsensor/btsensor_tx.c` pumps using that mutable selection.
+The observed route change is consistent with this design. It does not alone
+explain every missing motor reply or prove a complete root cause. Do not enlarge
+the Classic parser bound or accept redirected notifications to make the
+concurrency scenario pass.
+
+The next transport lane should preserve each queued message's destination and
+session generation. Modern notifications/replies must stay on their BLE session;
+Classic command and asynchronous motor replies must stay on their Classic
+session. Disconnect/reconnect must invalidate old-session work without redirecting
+or replaying it to the other link or a new central. Retain bounded queues,
+response priority, back-pressure, partial-send handling and callback cleanup.
+Host controls must cover alternating receive traffic, queued work under
+back-pressure, simultaneous disconnect, stale completion, and can-send callback
+reentry. Then clean-build both protected guest profiles and run the existing
+single-link regressions plus this exact compiled concurrent scenario. Compiler,
+resource, source/notice and mandatory TI/matrix gates still apply; no host-only
+success permits firmware merge or desktop adoption.

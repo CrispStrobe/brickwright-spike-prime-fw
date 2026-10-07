@@ -46,7 +46,12 @@ net_launcher=(unshare --net)
 if [[ $(id -u) != 0 ]]; then
     net_launcher=(sudo --non-interactive unshare --net)
 fi
-for mode in le scratch classic stationary poses calibration; do
+# Source-only motor models reuse the Runtime's licensed topology and public
+# electrical attachment interface. Keep each invocation's staging for receipts.
+motor_stage_parent=$(mktemp -d "$root/.local/bluetooth-air-results/motor-runtime.XXXXXX")
+python3 "$root/tools/stage_classic_motor_topology.py" \
+    --runtime "$renode_dir" --output "$motor_stage_parent/staged"
+for mode in le scratch classic stationary poses calibration motors; do
     run_limit=900s
     case "$mode" in
         le) options=(--reconnect --periodic) ;;
@@ -55,6 +60,7 @@ for mode in le scratch classic stationary poses calibration; do
         poses) options=(--classic --skip-le --imu-poses) ;;
         stationary) options=(--classic --skip-le --imu-readiness); run_limit=1200s ;;
         calibration) options=(--classic --skip-le --imu-calibration); run_limit=1500s ;;
+        motors) options=(--classic --skip-le --motor-runtime "$motor_stage_parent/staged"); run_limit=900s ;;
     esac
     timeout "$run_limit" "${net_launcher[@]}" /bin/bash -c '
         set -euo pipefail
