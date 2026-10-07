@@ -317,7 +317,75 @@ reference-firmware boot, or prove physical accuracy. The mandatory firmware TI
 fingerprint/matrix gate remains blocked by the official endpoint; no gate is
 waived. Keep Runtime/model merges separate from firmware and package adoption.
 
-The next LE lane should define a separate active-port notification contract from
-our public firmware protocol and exercise attached motors/sensors, concurrent
-traffic and malformed/duplicate records. Preserve this strict battery-only empty
-port scenario rather than accepting arbitrary extra fields to make it pass.
+The attached-port contract below separately qualifies the coherent ultrasonic
+record with other devices attached. Further LE work should exercise changing
+sensor inputs, concurrent commanded motion and malformed requests through the
+actual guest. Preserve the strict battery-only empty-port scenario.
+
+## Attached-port LE notification contract
+
+The separate `--active-port-notifications` scenario requires `--compiled-board
+--periodic --reconnect`. It preserves the compiled topology's declared A/B
+motors, C color, D ultrasonic and E force attachments, with F empty. The model's
+initial distance input is 1000 mm on D (wire port 3). This exercises discovery
+and reporting while those devices are attached; it does not command motor
+motion or claim color/force/motor notification support.
+
+The own firmware's coherent snapshot supports a type-0 battery record followed
+by one type-0x0d distance record. The exact expected payload is nine bytes:
+`3c 06 00 00 3e 0d 03 e8 03`. The record-byte count is six, battery is 62%,
+and distance is a signed little-endian 16-bit value in millimetres. Duplicate,
+unknown, reordered, truncated, trailing, wrong-port and wrong-distance records
+fail the comparison. The original five-byte battery-only scenario still rejects
+this attached-device payload.
+
+Only the initial collection may observe up to 32 exact battery-only records
+before the first distance sample, within its unchanged 90-second host bound.
+It must then collect three exact distance samples. Battery-only output after
+that first sample, during active resubscription, or in the fresh central's
+collection fails. Missing distance cannot pass through unlimited startup
+records or time. The existing interval acknowledgement, unsubscribe silence
+(one bounded in-flight record), strict fresh InfoResponse and reconnect silence
+(zero inherited records) assertions remain enabled. Arrival times are host
+observations; no physical cadence or RF claim follows.
+
+Reproducible host controls:
+
+```sh
+python3 tools/test_active_port_notifications.py
+python3 tools/test_bluetooth_air_periodic.py
+python3 tools/test_compiled_le_board.py
+```
+
+The first includes actual collector controls and two intentional comparator
+mutations: remove the expected-port check or remove the expected-distance
+check. Each mutation admits an adverse external record rejected by the original
+comparison. These controls do not prove malformed requests sent over BLE are
+rejected by a guest; that is a separate protocol exercise.
+
+For actual guest qualification, use the existing direct LE command with the
+same supplied compiled Runtime, explicit existing-filesystem fixture and
+receipt-bound compiled board, adding `--active-port-notifications`. No image is
+downloaded, no replacement peripheral implementation is included and no guest
+memory/PWM/clock write is introduced.
+
+Actual attached-port qualification passed with harness
+`2b8c07a8d53af69766e0d385960ab9d33e130e70`, own firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94`, compiled Runtime
+`8f128e66d0be5f83da035eaba9cc4441c0a29a31` and Infrastructure
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48`. Two initial battery-only records
+preceded three exact distance records; active resubscription and the second
+central each received three exact distance records. Both unsubscribe windows
+had zero in-flight records; the fresh central's strict InfoResponse and
+17.067-second reconnect silence window passed with zero inherited records.
+Twenty-two guest-clock observations completed without diagnostic error. Host
+cadence is diagnostic, not simulated or physical timing equivalence.
+
+The first attempt at harness `b5dc3d14aefb56076669bca4395fbd8892dcaa42`
+failed on an initial battery-only record. That failure is preserved. The later
+bounded discovery policy is explicit and tested to reject missing distance and
+post-discovery battery-only output; it does not accept arbitrary extra fields.
+No firmware C code, model code, guest bytes or package pin changed for this
+scenario. Dynamic input changes, detach during notification, commanded motor
+motion alongside LE, additional coherent record types, malformed guest requests,
+installed GUI adoption and the mandatory hosted firmware matrix remain open.
