@@ -683,3 +683,12 @@ No merge or shipped desktop adoption is claimed here. Immediate back-to-back job
 attachment/disconnect cleanup, counter-wrap/rearm guest interleavings, physical
 accuracy and HOLD remain outside this passing external fixture. L01 is partially
 qualified; the untested parts of its acceptance contract remain open.
+
+
+The current-source local air rerun also passes Scratch Link, Classic/raw fusion
+and stationary readiness. The stationary sequence becomes ready at sample 261;
+Stop/restart returns a fresh sequence-one, not-ready snapshot. Pose and calibration
+persistence runs remain pending. The initial LE reconnect run timed out during
+its final silence observation; the host-only observation-budget correction at
+`02bb2ae` awaits its actual guest run and a new canonical matrix. These results
+must not be promoted to a complete air-matrix or release claim.

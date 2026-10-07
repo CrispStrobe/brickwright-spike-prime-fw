@@ -1,6 +1,6 @@
 # Classic measured motor guest qualification
 
-This is the L01 test contract and partial failure checkpoint from 2026-10-07.
+This is the L01 test contract and partial qualification checkpoint from 2026-10-07.
 The complete peer has **not passed**. The lane owns the Classic motor peer, its offline
 adversaries and optional motor topology selection in
 `simulation/bluetooth-air/test_spike_air.py`. It does not change firmware motor
@@ -146,16 +146,20 @@ is incomplete. Its HCI ARM build passed, then the pinned TI fingerprint-referenc
 fetch failed with an official-server connection timeout before later guest gates.
 The default-profile job subsequently failed at the same fetch step after its
 ARM build passed. Both hosted jobs therefore remain failed. The failure is
-preserved and the TI exclusion gates remain required. Existing six air regressions
-are also being rerun locally against the staged HCI image; no pass is inferred
-from their historical results.
+preserved and the TI exclusion gates remain required. The existing air regressions are also being rerun locally against the staged
+HCI image. Scratch Link, Classic/raw fusion and stationary readiness passed on
+this candidate. Stationary readiness became true at sample 261; Stop/restart
+returned a fresh sequence-one, not-ready snapshot. Poses, calibration persistence
+and the corrected LE reconnect scenario remain pending. These local results do
+not replace the incomplete hosted matrix.
 
-After the official endpoint is reachable, rerun the failed jobs of the same
-immutable matrix source (`52caf015cca2fe8f13b65a1c4b63210830aa1f4d`) and retain
-the failed attempt. Documentation-only follow-ups do not require another ARM
-source candidate. Do not waive the TI gate, substitute an unreviewed reference,
-or merge before all required guest/peer gates pass. A later executable or harness
-change needs its own affected qualification.
+After the official endpoint is reachable, qualify the current executable/harness
+candidate in a new complete matrix run and retain the failed attempt at
+`52caf015cca2fe8f13b65a1c4b63210830aa1f4d`. The later LE budget correction below
+changes the harness, so rerunning that old source alone is insufficient.
+Documentation-only follow-ups do not change firmware or require another local
+ARM build. Do not waive the TI gate, substitute an unreviewed reference or merge
+before all required guest/peer gates pass.
 
 Nine host peer tests and the existing Classic/backend host gates passed. Four
 deliberate comparator changes were detected: ignored direction, ignored terminal
@@ -175,13 +179,14 @@ with `--motor-runtime` pointing at output from
 `tools/stage_classic_motor_topology.py --runtime "$RENODE_DIR" --output .local/motor-topology`.
 Direct diagnostics must use the same network isolation as the canonical wrapper.
 
-Next work: reproduce the Stop reset with passive assert/hard-fault/reset hooks
-and the own firmware's RAM log, identify the actual failing boundary, add a
-failing host regression where possible, and qualify any source/model fix with
-affected clean guest builds. Separately specify asynchronous fresh-baseline
-admission for immediate sequential jobs, preserving ownership and cancellation.
-Do not solve either failure by substituting guest functions, inventing readings,
-silencing the error comparison or changing reference firmware bytes.
+Next work: finish the remaining regression runs and canonical matrix before
+merging this candidate. The observed Stop reset is fixed and the complete motor
+peer passes on the candidate; preserve its earlier failure and read-only diagnosis.
+A separate source lane must specify asynchronous fresh-baseline admission for
+immediate sequential jobs, retaining bounded waits, attachment generation,
+exactly-once replies and cancellation ownership. Add detach/disconnect and old-job
+versus replacement adversaries before broadening L01 completion claims. Do not
+substitute guest functions, invent readings or silence error comparisons.
 
 ## Existing LE regression observation budget
 
