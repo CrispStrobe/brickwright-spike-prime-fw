@@ -112,10 +112,11 @@ completed without error. The fields are sequential observations, not an atomic
 electrical sample or physical SPIKE measurement.
 
 The [mandatory matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37662520208)
-tests the same firmware source with its retained pins. Its simulation job passed;
-both profiles passed the official TI fingerprint check. The HCI peer job was
-still running when this record was authored: verify its final conclusion before
-merge. These finite results do not qualify desktop adoption, all session races,
+tests the same firmware source with its retained pins. Both jobs passed,
+including the official TI fingerprint checks and all seven Bluetooth air modes:
+LE, Scratch Link, Classic, stationary IMU, poses, calibration and measured motors.
+The final documentation changes no firmware source or dependency pins.
+These finite results do not qualify desktop adoption, all session races,
 terminal delivery under saturation or physical hardware behavior. Raw logs and
 failed harness attempts remain private. Remaining implementation work has
 [separate lane contracts](tx-followup-lanes.md).
