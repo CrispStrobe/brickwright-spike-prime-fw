@@ -18,7 +18,7 @@
 _Static_assert(BTSENSOR_BUNDLE_FRAME_MAX <= BTSENSOR_TX_FRAME_MAX_SIZE,
                "BTSENSOR_TX_FRAME_MAX_SIZE too small");
 
-struct tag_s { uint64_t ticket; uint32_t session; enum brickwright_hub_link link; bool used; };
+struct tag_s { uint64_t ticket, ble_identity; uint32_t session; enum brickwright_hub_link link; bool used; };
 struct frame_s { uint8_t buf[BTSENSOR_TX_FRAME_MAX_SIZE]; uint16_t len; struct tag_s tag; };
 struct response_s { char buf[BTSENSOR_TX_RESPONSE_MAX_LEN]; uint16_t len; struct tag_s tag; };
 struct pending_s { uint8_t data[BTSENSOR_TX_FRAME_MAX_SIZE]; size_t len; bool frame; struct tag_s tag; };
@@ -54,7 +54,14 @@ static int admission(enum brickwright_hub_link link, struct tag_s *tag)
   if (!valid_link(link)) return -EINVAL;
   if (!g_online[link]) return -ENOTCONN;
   if (g_ticket == UINT64_MAX) return -EOVERFLOW;
-  *tag = (struct tag_s){ .ticket = ++g_ticket, .session = g_sessions[link], .link = link, .used = true };
+  uint64_t identity = 0;
+  if (link == BRICKWRIGHT_HUB_LINK_BLE)
+    {
+      int rc = brickwright_hub_transport_capture_ble(&identity);
+      if (rc) return rc;
+    }
+  *tag = (struct tag_s){ .ticket = ++g_ticket, .ble_identity = identity,
+    .session = g_sessions[link], .link = link, .used = true };
   return 0;
 }
 
@@ -265,20 +272,25 @@ void btsensor_tx_on_can_send_now(void)
         }
       enum brickwright_hub_link link = pending.tag.link;
       pthread_mutex_unlock(&g_lock);
-      int rc = brickwright_hub_transport_connected(link) ?
+      int rc = link == BRICKWRIGHT_HUB_LINK_BLE ?
+               brickwright_hub_transport_send_ble(pending.tag.ble_identity, pending.data, pending.len) :
+               brickwright_hub_transport_connected(link) ?
                brickwright_hub_transport_send(link, pending.data, pending.len) : -ENOTCONN;
+      bool stale_ble = link == BRICKWRIGHT_HUB_LINK_BLE && rc == -ESTALE;
       pthread_mutex_lock(&g_lock);
       if (lifetime != g_lifetime) { pthread_mutex_unlock(&g_lock); return; }
       struct tag_s *tag = pending.frame ? &g_frames[slot].tag : &g_responses[slot].tag;
       bool same = tag->used && tag->ticket == pending.tag.ticket &&
                   tag->session == pending.tag.session && g_online[link] &&
                   g_sessions[link] == pending.tag.session;
-      if (!rc && same)
+      /* A refused stale BLE token cannot become writable again. Drop only its
+       * exact ticket; preserve a replacement enqueued during the send call. */
+      if ((!rc || stale_ble) && same)
         {
           tag->used = false;
-          if (pending.frame) g_sent++;
+          if (pending.frame && !rc) g_sent++;
         }
-      if (rc) blocked[link] = true;
+      if (rc && !stale_ble) blocked[link] = true;
       pthread_mutex_unlock(&g_lock);
     }
 

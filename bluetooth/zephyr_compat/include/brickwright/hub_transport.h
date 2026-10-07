@@ -28,6 +28,15 @@ int brickwright_hub_transport_send(enum brickwright_hub_link link,
                                    const void *data, size_t length);
 bool brickwright_hub_transport_connected(enum brickwright_hub_link link);
 
+/* BLE-only connection admission. Identities never repeat during this process.
+ * Capture at queue admission; send rejects a replaced/disconnected identity.
+ * The final notification holds a reference to that concrete connection across
+ * the unlocked Bluetooth call. This does not bind asynchronous producer origin
+ * or provide a Classic RFCOMM lifetime guarantee. */
+int brickwright_hub_transport_capture_ble(uint64_t *identity);
+int brickwright_hub_transport_send_ble(uint64_t identity,
+                                      const void *data, size_t length);
+
 /* A controller stops legacy advertising when a central connects, and the
  * host does not resume it. The transport reports both moments so the owner
  * of advertising can track it and restart it: advertising_stopped runs when

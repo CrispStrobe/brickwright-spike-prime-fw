@@ -14,6 +14,7 @@ static struct sent observed[32];
 static unsigned count;
 static int refusal[2];
 static bool change_session, reenter;
+static uint64_t ble_identity = 1;
 
 bool brickwright_hub_transport_connected(enum brickwright_hub_link link)
 { (void)link; return true; }
@@ -39,6 +40,13 @@ int brickwright_hub_transport_send(enum brickwright_hub_link link, const void *d
     }
   return 0;
 }
+int brickwright_hub_transport_capture_ble(uint64_t *identity)
+{ *identity = ble_identity; return 0; }
+int brickwright_hub_transport_send_ble(uint64_t identity, const void *data, size_t length)
+{
+  if (identity != ble_identity) return -ESTALE;
+  return brickwright_hub_transport_send(BRICKWRIGHT_HUB_LINK_BLE, data, length);
+}
 
 static void reset(void)
 {
@@ -48,6 +56,7 @@ static void reset(void)
   count = 0;
   refusal[0] = refusal[1] = -EAGAIN;
   change_session = reenter = false;
+  ble_identity = 1;
   btsensor_tx_link_state(BRICKWRIGHT_HUB_LINK_CLASSIC, true, 1);
   btsensor_tx_link_state(BRICKWRIGHT_HUB_LINK_BLE, true, 1);
 }
@@ -97,6 +106,26 @@ int main(void)
   btsensor_tx_on_can_send_now();
   assert(count == 2 && !strcmp(observed[0].text, "OLD") && !strcmp(observed[1].text, "NEW"));
   assert(btsensor_tx_response_queue_empty());
+  reset();
+  assert(btsensor_tx_enqueue_response_for_link(ble, "OLD-TOKEN") == 0);
+  assert(btsensor_tx_enqueue_response_for_link(classic, "KEEP-CLASSIC") == 0);
+  /* Replacement before final send, deliberately without a TX state callback.
+   * Queue-time generation checks alone must not admit the stale payload. */
+  ble_identity = 2;
+  refusal[0] = refusal[1] = 0;
+  btsensor_tx_on_can_send_now();
+  assert(count == 1 && observed[0].link == classic && !strcmp(observed[0].text, "KEEP-CLASSIC"));
+  assert(btsensor_tx_response_queue_empty());
+  assert(btsensor_tx_enqueue_response_for_link(ble, "FRESH-TOKEN") == 0);
+  assert(count == 2 && observed[1].link == ble && !strcmp(observed[1].text, "FRESH-TOKEN"));
+
+  reset();
+  refusal[classic] = -ESTALE;
+  assert(btsensor_tx_enqueue_response_for_link(classic, "CLASSIC-RETRY") == 0);
+  assert(!btsensor_tx_response_queue_empty() && count == 0);
+  refusal[classic] = 0;
+  btsensor_tx_on_can_send_now();
+  assert(count == 1 && observed[0].link == classic && !strcmp(observed[0].text, "CLASSIC-RETRY"));
 
   reset();
   assert(btsensor_tx_enqueue_response_for_link(classic, "RETRY") == 0);

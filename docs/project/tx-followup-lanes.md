@@ -11,6 +11,10 @@ Preserve retained attribution, compiler-input inventories and mandatory gates.
 
 ## T01 — Bind final transport admission to a connection instance
 
+The [BLE admission candidate](ble-session-qualification.md) records a bounded
+implementation and its required qualification. Classic lifetime protection and
+the rest of this lane remain open.
+
 Owner repository: `CrispStrobe/brickwright-spike-prime-fw`.
 Entry points: `bluetooth/zephyr_compat/include/brickwright/hub_transport.h`,
 `bluetooth/zephyr_compat/src/hub_transport.c`,
