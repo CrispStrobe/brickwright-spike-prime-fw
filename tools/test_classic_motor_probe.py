@@ -10,9 +10,11 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'simulation/bluetooth-air'))
-from classic_motor_probe import MotorPeer, require_move, require_reply, require_disconnect, boundary_jobs
+from classic_motor_probe import (MotorPeer, require_move, require_reply, require_disconnect,
+                                require_attachment_observation, motor_round_trip, boundary_jobs)
 
 
 class ScriptSelection(unittest.TestCase):
@@ -46,6 +48,25 @@ class ScriptSelection(unittest.TestCase):
             with self.assertRaises(ValueError):
                 scope['renode_script'](images, 12345, electrical_qualification=Path('candidate'))
 
+    def test_actual_detach_guard_accepts_compiled_models_with_explicit_layout(self):
+        source = Path(__file__).resolve().parents[1] / 'simulation/bluetooth-air/test_spike_air.py'
+        main = next(n for n in ast.parse(source.read_text()).body
+                    if isinstance(n, ast.AsyncFunctionDef) and n.name == 'main')
+        guard = next(n for n in main.body if isinstance(n, ast.If)
+                     and "arguments.motor_case == 'detach'" in ast.unparse(n.test))
+        class Parser:
+            def error(self, message):
+                raise ValueError(message)
+        for candidate in (None, Path('source-candidate')):
+            args = SimpleNamespace(motor_case='detach', motor_port_layout=Path('layout'),
+                                   electrical_qualification=candidate)
+            exec(compile(ast.Module(body=[guard], type_ignores=[]), str(source), 'exec'),
+                 dict(arguments=args, parser=Parser()))
+            args.motor_port_layout = None
+            with self.assertRaises(ValueError):
+                exec(compile(ast.Module(body=[guard], type_ignores=[]), str(source), 'exec'),
+                     dict(arguments=args, parser=Parser()))
+
     def test_compiled_topology_preserves_notices_and_records_source_identity(self):
         from stage_classic_motor_topology import stage, FILES
         with tempfile.TemporaryDirectory() as directory:
@@ -76,19 +97,49 @@ class ScriptSelection(unittest.TestCase):
                 stage(runtime, output)
 
 
+class AdmissionChecks(unittest.IsolatedAsyncioTestCase):
+    async def test_unsupported_compiled_model_is_refused_before_motor_requests(self):
+        packets = []
+        dlc = SimpleNamespace(write=packets.append)
+        initial = {'bridge_drive': None, 'bridge_braking': None, 'attached': True,
+                   'guest': {'confirmed_type': 0, 'flags': 0, 'event_counter': 0}}
+        with patch.object(MotorPeer, 'model', AsyncMock(return_value=initial)), \
+             patch.object(MotorPeer, 'establish_encoder', AsyncMock()) as establish:
+            with self.assertRaisesRegex(AssertionError, 'bridge observers'):
+                await motor_round_trip(dlc, asyncio.Queue(), None, {}, renode_log=Path('unused'), case='detach')
+            establish.assert_not_called()
+        self.assertFalse(packets)
+
+
 class ObservationChecks(unittest.TestCase):
     def test_disconnect_requires_real_guest_edge_and_bridge_release(self):
-        before = {'guest': {'event_counter': 7}}
+        before = {'attached': True, 'bridge_drive': 5000, 'bridge_braking': False,
+                  'guest': {'event_counter': 7, 'confirmed_type': 14, 'flags': 1}}
         detached = {'virtual_us': 100}
-        after = {'virtual_us': 1000100, 'bridge_drive': 0,
+        after = {'virtual_us': 1000100, 'bridge_drive': 0, 'bridge_braking': False, 'attached': False,
                  'guest': {'event_counter': 8, 'confirmed_type': 0, 'flags': 0}}
         self.assertEqual(require_disconnect(before, detached, after), 1000000)
-        for mutation in ({'bridge_drive': 3000}, {'virtual_us': 100}, {'virtual_us': 3000100},
+        for mutation in ({'bridge_drive': 3000}, {'attached': True}, {'virtual_us': 100}, {'virtual_us': 3000100},
                          {'guest': dict(after['guest'], event_counter=7)},
                          {'guest': dict(after['guest'], confirmed_type=14)},
                          {'guest': dict(after['guest'], flags=1)}):
             with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
                 require_disconnect(before, detached, dict(after, **mutation))
+        for guest in (dict(before['guest'], confirmed_type=0), dict(before['guest'], flags=0)):
+            with self.subTest(prior=guest), self.assertRaises(AssertionError):
+                require_disconnect(dict(before, guest=guest), detached, after)
+
+    def test_missing_or_malformed_observers_are_not_supported_bridge_state(self):
+        good = {'attached': True, 'bridge_drive': 0, 'bridge_braking': True,
+                'guest': {'confirmed_type': 0, 'flags': 0, 'event_counter': 0}}
+        require_attachment_observation(good)
+        for mutation in ({'bridge_drive': None}, {'bridge_drive': False}, {'bridge_drive': 10001},
+                         {'bridge_braking': None}, {'attached': 1}, {'guest': None},
+                         {'guest': dict(good['guest'], event_counter=-1)},
+                         {'guest': dict(good['guest'], event_counter=0x100000000)},
+                         {'guest': dict(good['guest'], flags=256)}):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                require_attachment_observation(dict(good, **mutation))
 
     def test_signed_motion_and_terminal_drive(self):
         before = {'position': 15, 'virtual_us': 100}

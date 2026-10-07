@@ -50,7 +50,8 @@ def mc_classic_motor(action, port, tag, value=0):
         'attached': motor is not None, 'generation': int(attachment.TopologyGeneration),
         'bridge_drive': int(attachment.BridgeDrive) if hasattr(attachment, 'BridgeDrive') else None,
         'bridge_braking': bool(attachment.BridgeBraking) if hasattr(attachment, 'BridgeBraking') else None,
-        'guest': guest,
+        'guest': guest, 'model_type': str(attachment.GetType().FullName),
+        'model_module_id': str(attachment.GetType().Module.ModuleVersionId),
         'virtual_us': int(monitor.Machine.ElapsedVirtualTime.TimeElapsed.TotalMicroseconds)}, sort_keys=True)
     monitor.Parse('log "CLASSIC_MOTOR ' + tag + ' ' + receipt.replace('"', '\\"') + '"')
 '''
@@ -75,10 +76,28 @@ def require_reply(reply, request_id, error=0):
         raise AssertionError('Unexpected Classic job result: ' + repr(reply))
 
 
+def require_attachment_observation(state):
+    """Refuse missing bridge observers before admitting a detach test's jobs."""
+    guest = state.get('guest')
+    if (type(state.get('bridge_drive')) is not int
+            or not -10000 <= state['bridge_drive'] <= 10000
+            or type(state.get('bridge_braking')) is not bool
+            or type(state.get('attached')) is not bool
+            or not isinstance(guest, dict)
+            or any(type(guest.get(key)) is not int or not 0 <= guest[key] <= maximum
+                   for key, maximum in [('confirmed_type', 255), ('flags', 255),
+                                        ('event_counter', 0xFFFFFFFF)])):
+        raise AssertionError('Detach requires bridge observers and bounded own-kernel guest identity')
+
+
 def require_disconnect(before, detached, after):
+    require_attachment_observation(before)
+    require_attachment_observation(after)
     guest = after['guest']
+    prior = before['guest']
     elapsed = after['virtual_us'] - detached['virtual_us']
-    if (not guest or guest['confirmed_type'] != 0 or guest['flags'] & 1
+    if (not before['attached'] or not prior['confirmed_type'] or not prior['flags'] & 1
+            or after['attached'] or guest['confirmed_type'] != 0 or guest['flags'] & 1
             or guest['event_counter'] == before['guest']['event_counter']
             or after['bridge_drive'] != 0 or not 0 < elapsed <= 2500000):
         raise AssertionError('Guest disconnect did not advance identity and release the bridge within its bound')
@@ -280,7 +299,8 @@ async def boundary_jobs(peer, record):
 async def detach_job(peer, record):
     peer.degrees('d001', 'A', 10000)
     before = (await peer.moving('A'))[0]
-    if not before['guest'] or before['bridge_drive'] == 0:
+    require_attachment_observation(before)
+    if not before['guest']['confirmed_type'] or not before['guest']['flags'] & 1 or before['bridge_drive'] == 0:
         raise AssertionError('Detach requires actual guest identity and powered bridge observations')
     detached = await peer.model('A', 'detach')
     if detached['attached'] or detached['bridge_drive'] == 0:
@@ -308,7 +328,10 @@ async def detach_job(peer, record):
         raise AssertionError('Replacement inherited mechanics or powered demand')
     await peer.establish_encoder('A', tag='r')
     fresh = await peer.model('A')
-    if fresh['guest']['event_counter'] == state['guest']['event_counter'] or not fresh['guest']['flags'] & 1:
+    require_attachment_observation(fresh)
+    if (fresh['guest']['confirmed_type'] != before['guest']['confirmed_type']
+            or fresh['guest']['event_counter'] == state['guest']['event_counter']
+            or not fresh['guest']['flags'] & 1):
         raise AssertionError('Guest did not discover a fresh attachment')
     peer.degrees('d003', 'A', -90)
     await peer.moving('A');await peer.collect('d003')
@@ -329,6 +352,10 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log, case='
     record = results.setdefault('classic_motors', {'requests': [], 'replies': [],
                                                   'model_states': [], 'cases': [], 'selection': case})
     peer = MotorPeer(dlc, received, renode, renode_log, record)
+    if case == 'detach':
+        initial = await peer.model('A')
+        require_attachment_observation(initial)
+        record['attachment_model'] = {key: initial[key] for key in ('model_type', 'model_module_id')}
     await peer.establish_encoder('A')
     if case == 'detach':
         await detach_job(peer, record)

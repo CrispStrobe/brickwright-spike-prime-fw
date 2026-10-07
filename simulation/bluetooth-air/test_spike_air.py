@@ -743,8 +743,8 @@ async def main() -> int:
                      arguments.imu_readiness, arguments.imu_calibration))
     if arguments.motor_case != 'all' and not arguments.motor_runtime:
         parser.error("--motor-case requires --motor-runtime")
-    if arguments.motor_case == 'detach' and not (arguments.electrical_qualification and arguments.motor_port_layout):
-        parser.error("--motor-case detach requires electrical qualification and a matching own-kernel layout")
+    if arguments.motor_case == 'detach' and not arguments.motor_port_layout:
+        parser.error("--motor-case detach requires a matching own-kernel layout and bridge-observer models")
     if (arguments.electrical_qualification or arguments.motor_port_layout) and not arguments.motor_runtime:
         parser.error("electrical qualification and DCM observations require --motor-runtime")
     if arguments.motor_runtime:
@@ -791,6 +791,8 @@ async def main() -> int:
 
     results: dict = {"images": str(arguments.images), "air_tools": str(AIR_TOOLS),
                      "status": "RUNNING", "storage": "initially-erased"}
+    if arguments.motor_runtime:
+        results['electrical_model_route'] = 'source-compiled' if electrical_receipt is not None else 'compiled-runtime'
     if electrical_receipt is not None:
         results['electrical_candidate_receipt'] = electrical_receipt
     if port_layout is not None:

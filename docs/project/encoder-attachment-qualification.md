@@ -187,3 +187,44 @@ or canonical-consumer adoption. Repeat affected Classic/native/Python guest test
 on the canonical Runtime candidate, complete the current-source air suite and
 satisfy every mandatory gate before merging. The unavailable official TI
 fingerprint endpoint remains a blocker, not a waived gate.
+
+### Compiled-model admission and stricter edge checks
+
+The same detach scenario now accepts either the namespace-isolated source
+candidate or a Runtime containing the compiled model correction. For the compiled
+route, omit `--electrical-qualification`, retain `--motor-runtime` and
+`--motor-port-layout`, and supply the exact qualified Runtime build. The default
+compiled topology entry point remains `CreatePrimeElectricalPorts`.
+
+Before issuing motor jobs, the peer requires real bridge-drive/brake observations
+and a bounded own-kernel DCM identity. An older compiled model missing the bridge
+observers fails explicitly with no motor request; it does not fall back to cached
+motor power. Private results identify the selected route, model type and module
+identity. Those identities are diagnostic bindings, not binary authenticity or a
+substitute for the source/build receipt.
+
+The disconnect comparison now also requires a connected, non-NONE prior guest
+identity and a detached model afterward; rediscovery must restore the same guest
+type with a new counter. Host adversaries reject an initially disconnected guest,
+a retained logical attachment and missing/malformed bridge observers. The stricter
+comparison passes the exact preserved earlier guest observations. That offline
+comparison is not a fresh guest execution or canonical-consumer qualification.
+
+### LE timing qualification gap
+
+The current-source diagnostic air sequence passed the complete Classic motor,
+Scratch Link, Classic IMU, pose and stationary/readiness cases. The LE case failed
+inside its unchanged 90-second three-record collector after resubscription before
+disconnect. Its first three battery records, unsubscribe acknowledgement/silence
+and resubscribe acknowledgement passed; only two active records arrived inside
+the next collection bound. Reconnect validation was not reached. The failure is
+preserved; neither firmware causality nor full air-suite success is established.
+
+A separate follow-up should record read-only guest-clock progress alongside host
+arrival times before changing the observation contract. Preserve three exact
+battery records, unsubscribe silence, a fresh central's strict InfoResponse and
+zero inherited notifications. Retain finite host/process cleanup bounds and
+negative checks for missing/malformed records, clock stalls/regression and leaked
+notifications. Do not simply increase a wall timeout to turn this failure green,
+force guest time, replace firmware callbacks or infer physical radio timing.
+Require an actual current-source air run and preserve the original failure.
