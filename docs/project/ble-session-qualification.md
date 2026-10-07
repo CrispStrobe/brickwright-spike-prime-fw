@@ -47,9 +47,8 @@ executables are bounded to ten seconds. These are host controls, not guest proof
 
 Both configured input inventories refresh only the three changed Apache-2.0
 source/header hashes. Licence selections, notices, dependency pins, linker and
-resource expectations remain intact. Fresh clean ARM builds, full mandatory
-matrix/TI fingerprint checks, and compiled guest single-link/reconnect/overlap
-qualification are still required before merge or package adoption.
+resource expectations remain intact. The observations below do not authorize
+package adoption; the mandatory matrix remains a separate merge gate.
 
 Classic's mutable RFCOMM endpoint is unchanged and has no equivalent lifetime
 guarantee. Asynchronous producers still need originating-session admission;
@@ -62,4 +61,38 @@ Review found that the first candidate applied its new stale-drop rule to
 Classic as well. A new control failed on that candidate when Classic returned
 `-ESTALE`; the corrected rule drops only stale BLE tickets and preserves the
 Classic refusal for retry. The failed comparison and superseded build results
-remain preserved. Fresh qualification is required for the corrected source.
+remain preserved. Corrected-source qualification is recorded below.
+
+## Corrected-source qualification
+
+Tested firmware and guest harness source:
+`e6f10f9ae8e47ae070693e966e03a7b3d3e18d35`.
+Both clean protected candidate profiles passed reviewed compiler/link inputs,
+resource limits and local TI exclusion. Observed userspace budgets:
+
+| Profile | Flash bytes / limit | Static RAM bytes / limit |
+| --- | ---: | ---: |
+| simulation | 595472 / 654336 | 88816 / 98304 |
+| simulation-hci | 595456 / 654336 | 88808 / 98304 |
+
+Fresh execution used the actual compiled Runtime source
+`8f128e66d0be5f83da035eaba9cc4441c0a29a31` and Infrastructure
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48`, the exact HCI candidate image,
+and a diagnostic layout derived from that image's own kernel. No runtime model
+source was substituted into these executions. All three scenarios passed:
+
+- Classic motion sequence, cancellation, no-progress, invalid-speed and stall
+  refusal controls, including observed motor position and bridge state.
+- Detach/reconnect and reattachment controls.
+- BLE sensor notifications overlapping Classic motor activity and reconnect.
+
+These executions preserve existing observable behavior; the deterministic host
+controls and four detected mutations exercise the forced stale-admission and
+reference-lifetime boundaries. A passing guest scenario alone does not prove
+all connection races. Untested thread schedules, Classic endpoint lifetime and
+asynchronous originating-session propagation retain the limits stated above.
+
+The full two-profile [mandatory matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37683307104)
+is still pending. Source/documentation CI passed at the tested source. No merge,
+release, desktop pin or installed GUI adoption is claimed by this checkpoint.
+Raw build and guest evidence remains in the operator's private evidence archive.
