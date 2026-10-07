@@ -688,7 +688,9 @@ qualified; the untested parts of its acceptance contract remain open.
 The current-source local air rerun also passes Scratch Link, Classic/raw fusion,
 stationary readiness and the six-face/gyro pose/base-axis scenario. The stationary sequence becomes ready at sample 261;
 Stop/restart returns a fresh sequence-one, not-ready snapshot. Calibration
-persistence remains pending. The initial LE reconnect run timed out during
+persistence also passes: bias saved at sequence 441 survives STOP/LOAD/reopen,
+with readiness reset and a fresh sequence-one snapshot. This is guest-VFS
+persistence, not physical power-loss durability. The initial LE reconnect run timed out during
 its final silence observation; the host-only observation-budget correction at
 `02bb2ae` awaits its actual guest run and a new canonical matrix. These results
 must not be promoted to a complete air-matrix or release claim.

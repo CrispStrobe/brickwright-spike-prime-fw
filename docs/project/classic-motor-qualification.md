@@ -149,8 +149,10 @@ ARM build passed. Both hosted jobs therefore remain failed. The failure is
 preserved and the TI exclusion gates remain required. The existing air regressions are also being rerun locally against the staged
 HCI image. Scratch Link, Classic/raw fusion, stationary readiness and the six-face/gyro
 pose/base-axis scenario passed on this candidate. Stationary readiness became true at sample 261; Stop/restart
-returned a fresh sequence-one, not-ready snapshot. Calibration persistence
-and the corrected LE reconnect scenario remain pending. These local results do
+returned a fresh sequence-one, not-ready snapshot. Calibration persistence also passed: SAVE at sequence 441, then STOP/LOAD/reopen
+retained the learned gyro bias with sequence one and readiness reset. This is
+simulated guest-VFS persistence, not physical power-loss durability. The corrected
+LE reconnect scenario is running and has not passed. These local results do
 not replace the incomplete hosted matrix.
 
 After the official endpoint is reachable, qualify the current executable/harness
@@ -208,8 +210,8 @@ quiet-window duration and duplicate/late assertions are unchanged. Firmware and
 model bytes do not change. The correction is in
 `simulation/bluetooth-air/spike_timeouts.py`; three offline tests include the
 actual LE caller and detect restoring its old fixed timeout. The corrected
-actual run is queued after the remaining baseline scenarios and has not passed
-at this checkpoint.
+actual run has started after the five other baseline scenarios passed and has
+not passed at this checkpoint.
 
 Because this is a later harness change, it requires affected guest qualification
 and a new hosted source candidate after the external TI fetch is available.
@@ -238,9 +240,13 @@ admission, and another request for that occupied port returns `EBUSY`.
 Before applying PWM, require feedback from the same live attachment and session
 that admitted the request. A fresh sample must establish the baseline without
 counting prior displacement toward the new target. A detached, replaced or
-unsynchronized device must never contribute a cached baseline. If the existing
-device interface cannot distinguish attachment generations, add and test that
-interface in coordination with L02 before claiming this protection. Waiting
+unsynchronized device must never contribute a cached baseline. The existing
+`legoport_info_s.event_counter` exposes confirmed device-type edges; it does not
+cover every UART resynchronization or make read-and-PWM atomic. Separate
+[PR #38](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/38) adds a
+host-tested read-time guard, with ARM/guest qualification still pending. Extend
+conditional attachment/session admission in coordination with L02 before
+claiming the stronger protection required here. Waiting
 expires with `ETIMEDOUT` and zero commanded power. Missing devices and malformed
 frames retain their explicit errors. The motion progress timeout starts when
 powered motion begins, separately from the admission limit.
