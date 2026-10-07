@@ -146,12 +146,19 @@ is incomplete. Its HCI ARM build passed, then the pinned TI fingerprint-referenc
 fetch failed with an official-server connection timeout before later guest gates.
 The default-profile job subsequently failed at the same fetch step after its
 ARM build passed. Both hosted jobs therefore remain failed. The failure is
-preserved and the TI exclusion gates remain required. The existing air regressions are also being rerun locally against the staged
-HCI image. Scratch Link, Classic/raw fusion, stationary readiness and the six-face/gyro
-pose/base-axis scenario passed on this candidate. Stationary readiness became true at sample 261; Stop/restart
-returned a fresh sequence-one, not-ready snapshot. Calibration persistence
-and the corrected LE reconnect scenario remain pending. These local results do
-not replace the incomplete hosted matrix.
+preserved and the TI exclusion gates remain required.
+
+Five existing air scenarios passed locally against the staged HCI image with
+harness `52caf015cca2fe8f13b65a1c4b63210830aa1f4d`: Scratch Link, Classic/raw
+fusion, stationary readiness, six-face/gyro poses/base axes and calibration
+persistence. Stationary readiness became true at sample 261; Stop/restart
+returned a fresh sequence-one, not-ready snapshot. Calibration SAVE at sequence
+441, then STOP/LOAD/reopen retained the learned gyro bias with sequence one and
+readiness reset. This is guest-VFS persistence, not physical power-loss durability.
+The corrected LE reconnect scenario separately passed with the host-only harness
+`02bb2aefdeb640e95be3685589dd5f5fbe2de5d8` against the same firmware/model inputs.
+This split evidence is not a complete canonical matrix on the newer harness
+and does not replace the failed hosted matrix.
 
 After the official endpoint is reachable, qualify the current executable/harness
 candidate in a new complete matrix run and retain the failed attempt at
@@ -190,7 +197,7 @@ substitute guest functions, invent readings or silence error comparisons.
 
 ## Existing LE regression observation budget
 
-The current local run of the existing LE reconnect scenario is **incomplete**:
+The initial local run of the existing LE reconnect scenario was **incomplete**:
 it passed the first periodic subscription/unsubscription and reconnect silence,
 then timed out during the final unsubscribe silence observation. Its measured
 pre-subscription reconnect window was 106.871 wall seconds; three subsequent
@@ -207,14 +214,23 @@ and outer process bounds remain unchanged. Notification content, sample counts,
 quiet-window duration and duplicate/late assertions are unchanged. Firmware and
 model bytes do not change. The correction is in
 `simulation/bluetooth-air/spike_timeouts.py`; three offline tests include the
-actual LE caller and detect restoring its old fixed timeout. The corrected
-actual run is queued after the remaining baseline scenarios and has not passed
-at this checkpoint.
+actual LE caller and detect restoring its old fixed timeout.
 
-Because this is a later harness change, it requires affected guest qualification
-and a new hosted source candidate after the external TI fetch is available.
-Rerunning the old matrix alone cannot qualify this newer harness. Preserve the
-initial local timeout and both hosted fetch failures.
+The corrected actual run passed against firmware `92ced1c` with the unchanged
+Runtime/model inputs. It verified three 62-percent battery records, unsubscribe
+and a 96.395-second quiet window, then resubscribed and observed active traffic
+before disconnect. A fresh central received its InfoResponse and completed a
+97.398-second pre-subscription window with zero inherited notifications. Its
+three new battery records matched, unsubscribe succeeded and the final
+98.001-second window had no in-flight or late notifications. Owned-process
+cleanup completed with no surviving test processes. These wall durations bound
+this synthetic comparison; they do not establish physical radio timing or
+simulator performance.
+
+The affected local LE qualification is complete. A new complete hosted matrix
+on this newer harness is still required after the external TI fetch is available.
+Rerunning the old matrix alone cannot qualify it. Preserve the initial local
+timeout and both hosted fetch failures.
 
 
 ## Follow-up task: immediate sequential admission
@@ -238,9 +254,13 @@ admission, and another request for that occupied port returns `EBUSY`.
 Before applying PWM, require feedback from the same live attachment and session
 that admitted the request. A fresh sample must establish the baseline without
 counting prior displacement toward the new target. A detached, replaced or
-unsynchronized device must never contribute a cached baseline. If the existing
-device interface cannot distinguish attachment generations, add and test that
-interface in coordination with L02 before claiming this protection. Waiting
+unsynchronized device must never contribute a cached baseline. The existing
+`legoport_info_s.event_counter` exposes confirmed device-type edges; it does not
+cover every UART resynchronization or make read-and-PWM atomic. Separate
+[PR #38](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/38) adds a
+host-tested read-time guard, with ARM/guest qualification still pending. Extend
+conditional attachment/session admission in coordination with L02 before
+claiming the stronger protection required here. Waiting
 expires with `ETIMEDOUT` and zero commanded power. Missing devices and malformed
 frames retain their explicit errors. The motion progress timeout starts when
 powered motion begins, separately from the admission limit.
