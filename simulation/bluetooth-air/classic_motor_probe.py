@@ -228,10 +228,14 @@ async def no_progress_job(peer, record):
     await peer.quiet(150)
 
 
+# Pinned NuttX include/errno.h: ENOTSUP=138; EOPNOTSUPP=95 is distinct.
+NUTTX_ENOTSUP = 138
+
+
 async def boundary_jobs(peer, record):
-    for ident, overrides, error in [('p009', {'stop': 2}, -95),
+    for ident, overrides, error in [('p009', {'stop': 2}, -NUTTX_ENOTSUP),
                                     ('p010', {'speed': 0}, -22),
-                                    ('p011', {'stall': True}, -95)]:
+                                    ('p011', {'stall': True}, -NUTTX_ENOTSUP)]:
         params = {'port': 'A', 'speed': 30, 'degrees': 90, 'stop': 1, 'stall': False}
         params.update(overrides)
         peer.send(ident, 'scratch.motor_run_for_degrees', params)

@@ -60,6 +60,12 @@ encoder baseline across attachment changes.
   attachment must accept a replacement job. A disconnected peer must leave no
   powered owned motor; reconnection is a separate peer session.
 
+The wire carries the pinned NuttX negative errno values: `ENOTSUP=-138`,
+`EINVAL=-22` and `ETIMEDOUT=-110`. NuttX distinguishes ENOTSUP from
+EOPNOTSUPP (95); the host C tests use their host libc's symbolic errno and do
+not establish an identical numeric ABI. The first complete candidate run
+preserves the test's incorrect Linux ENOTSUP expectation as a failed comparison.
+
 All wall waits are bounded independently of guest-time observations. Retain
 failed invocations, source/model/image hashes, requests, replies and measured
 states privately. Public results must contain only synthetic summaries and
@@ -109,7 +115,16 @@ static RAM usage alone cannot establish runtime heap headroom. Clean guest and
 complete-peer qualification of this candidate is still pending. Assertions
 and the complete peer gate remain enabled.
 
-Eight host tests and the existing Classic/backend host gates passed. Four
+On firmware candidate `92ced1c`, the hook-free complete peer passed signed and
+concurrent motion, Stop/replacement (-182.244 degrees for -180 requested) and
+loaded no-progress (`ETIMEDOUT` after 1,021,052 guest microseconds). It then failed
+the first boundary comparison because the peer incorrectly expected Linux's
+ENOTSUP number instead of the observed pinned NuttX ABI. That failure is retained;
+the corrected complete peer must pass before guest acceptance. This is not an
+additional firmware behavior change. The clean HCI candidate passed build/input,
+linker, TI and resource gates (592,772 flash bytes, 88,144 static RAM bytes).
+
+Nine host peer tests and the existing Classic/backend host gates passed. Four
 deliberate comparator changes were detected: ignored direction, ignored terminal
 power, accepted duplicate replies and accepted success instead of timeout.
 Source/reuse/origin/safety policy and strict documentation checks passed. All

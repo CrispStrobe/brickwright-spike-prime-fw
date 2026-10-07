@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'simulation/bluetooth-air'))
-from classic_motor_probe import MotorPeer, require_move, require_reply
+from classic_motor_probe import MotorPeer, require_move, require_reply, boundary_jobs
 
 
 class ScriptSelection(unittest.TestCase):
@@ -88,6 +88,28 @@ class ObservationChecks(unittest.TestCase):
                        {'i': 'p001', 'e': {'code': -95}}):
             with self.assertRaises(AssertionError):
                 require_reply(broken, 'p001', -110)
+
+
+class BoundaryChecks(unittest.IsolatedAsyncioTestCase):
+    async def test_guest_errno_abi_and_rejected_power(self):
+        class Peer:
+            def __init__(self, unsupported=-138, power=0):
+                self.unsupported, self.power = unsupported, power
+            def send(self, ident, method, params):
+                self.ident, self.params = ident, params
+            async def collect(self, ident, error):
+                actual = -22 if self.params['speed'] == 0 else self.unsupported
+                require_reply({'i': self.ident, 'e': {'code': actual}}, ident, error)
+            async def model(self, port):
+                return {'power': self.power}
+            async def quiet(self, duration):
+                pass
+        record = {'cases': []}
+        await boundary_jobs(Peer(), record)
+        self.assertEqual([c['error'] for c in record['cases']], [-138, -22, -138])
+        for broken in (Peer(unsupported=-95), Peer(power=30)):
+            with self.assertRaises(AssertionError):
+                await boundary_jobs(broken, {'cases': []})
 
 
 class ReplyChecks(unittest.IsolatedAsyncioTestCase):
