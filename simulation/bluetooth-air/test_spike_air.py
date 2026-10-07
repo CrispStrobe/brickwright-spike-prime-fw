@@ -424,7 +424,7 @@ async def classic_round_trip(central, results: dict,
                              imu_renode=None, renode_log: Path | None = None,
                              imu_readiness: bool = False, imu_poses: bool = False,
                              imu_calibration: bool = False,
-                             motor_renode=None) -> None:
+                             motor_renode=None, motor_case: str = 'all') -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -466,7 +466,7 @@ async def classic_round_trip(central, results: dict,
         if motor_renode is not None:
             from classic_motor_probe import motor_round_trip
             await motor_round_trip(dlc, received, motor_renode, results,
-                                   renode_log=renode_log)
+                                   renode_log=renode_log, case=motor_case)
         if imu_renode is not None:
             from imu_probe import imu_round_trip, fusion_round_trip, stationary_round_trip, pose_round_trip
             if imu_poses:
@@ -684,6 +684,8 @@ async def main() -> int:
     parser.add_argument("--classic", action="store_true")
     parser.add_argument("--motor-runtime", type=Path,
                         help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
+    parser.add_argument("--motor-case", choices=('all', 'motion', 'cancel', 'no-progress'), default='all',
+                        help="select a separate bounded diagnostic motor scenario; CI requires all")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
     parser.add_argument("--imu-poses", action="store_true",
@@ -727,6 +729,8 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
                      arguments.imu_readiness, arguments.imu_calibration))
+    if arguments.motor_case != 'all' and not arguments.motor_runtime:
+        parser.error("--motor-case requires --motor-runtime")
     if arguments.motor_runtime:
         if not arguments.classic or imu_modes or arguments.lite_extension:
             parser.error("--motor-runtime requires a separate --classic motor scenario")
@@ -845,7 +849,8 @@ async def main() -> int:
                                        renode_log=workdir / "renode.log",
                                        imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses,
                                        imu_calibration=arguments.imu_calibration,
-                                       motor_renode=renode if arguments.motor_runtime else None),
+                                       motor_renode=renode if arguments.motor_runtime else None,
+                                       motor_case=arguments.motor_case),
                     1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (600 if arguments.motor_runtime else 360 if arguments.imu_poses else 240))
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"

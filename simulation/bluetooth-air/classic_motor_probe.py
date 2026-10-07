@@ -178,12 +178,7 @@ class MotorPeer:
                     return
 
 
-async def motor_round_trip(dlc, received, renode, results, *, renode_log):
-    record = results.setdefault('classic_motors', {'requests': [], 'replies': [],
-                                                  'model_states': [], 'cases': []})
-    peer = MotorPeer(dlc, received, renode, renode_log, record)
-    await peer.establish_encoder('A')
-    await peer.establish_encoder('B')
+async def motion_jobs(peer, record):
     # Positive and negative encoder-coupled jobs, with independent observations.
     for ident, angle in [('p001', 90), ('p002', -90)]:
         before = await peer.model('A')
@@ -201,6 +196,9 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log):
         after = await peer.model(port)
         record['cases'].append({'case': 'concurrent-' + port,
                                 'delta': require_move(before[index], after, angle)})
+
+
+async def cancellation_job(peer, record):
     peer.degrees('p005', 'A', 10000)
     await peer.moving('A')
     peer.send('p006', 'scratch.motor_stop', {'port': 'A', 'stop': 1})
@@ -213,6 +211,9 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log):
     after = await peer.model('A')
     record['cases'].append({'case': 'cancel-replace', 'delta': require_move(before, after, -180)})
     await peer.quiet(150)
+
+
+async def no_progress_job(peer, record):
     before = await peer.model('A', 'load', 100)
     peer.degrees('p008', 'A', 90)
     await peer.collect('p008', -110)
@@ -225,6 +226,9 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log):
                             'elapsed_us': after['virtual_us'] - before['virtual_us']})
     await peer.model('A', 'load', 0)
     await peer.quiet(150)
+
+
+async def boundary_jobs(peer, record):
     for ident, overrides, error in [('p009', {'stop': 2}, -95),
                                     ('p010', {'speed': 0}, -22),
                                     ('p011', {'stall': True}, -95)]:
@@ -236,6 +240,24 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log):
             raise AssertionError('Rejected request powered a motor')
         record['cases'].append({'case': ident, 'error': error})
     await peer.quiet(150)
+
+
+async def motor_round_trip(dlc, received, renode, results, *, renode_log, case='all'):
+    if case not in ('all', 'motion', 'cancel', 'no-progress'):
+        raise ValueError('Unsupported motor scenario')
+    record = results.setdefault('classic_motors', {'requests': [], 'replies': [],
+                                                  'model_states': [], 'cases': [], 'selection': case})
+    peer = MotorPeer(dlc, received, renode, renode_log, record)
+    await peer.establish_encoder('A')
+    if case in ('all', 'motion'):
+        await peer.establish_encoder('B')
+        await motion_jobs(peer, record)
+    if case in ('all', 'cancel'):
+        await cancellation_job(peer, record)
+    if case in ('all', 'no-progress'):
+        await no_progress_job(peer, record)
+    await boundary_jobs(peer, record)
     record['passed'] = True
-    record['exclusions'] = ['attachment loss/reconnect', 'disconnect ownership cleanup',
-                            'counter wrap', 'timer-rearm failure', 'physical accuracy', 'HOLD']
+    record['exclusions'] = ['immediate back-to-back jobs', 'attachment loss/reconnect',
+                            'disconnect ownership cleanup', 'counter wrap',
+                            'timer-rearm failure', 'physical accuracy', 'HOLD']
