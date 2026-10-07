@@ -92,9 +92,22 @@ degrees for the signed 90-degree requests. The concurrent A/B 180-degree request
 measured +184.875 and -184.889 degrees, both with power zero at the terminal
 observation. Preparatory 30-degree moves also passed. The same run then reset
 the CPU during Stop/replacement and timed out waiting for replies. The reset's
-cause is under investigation; cancellation, replacement and the later
-no-progress/boundary cases are **not guest-qualified** by this run. Completion
+cause was subsequently isolated with read-only guest observations; cancellation,
+replacement and the later no-progress/boundary cases are **not guest-qualified**
+by this run. Completion
 power zero does not imply instantaneous zero angular velocity or active HOLD.
+
+An isolated Stop run reproduced a NuttX mutex-owner assertion while allocating
+an RFCOMM reply buffer. A read-only write watch observed the worker's correct
+initial thread ID, then ARM exception stack saves overwriting its TLS before
+the assertion. This establishes stack exhaustion in the observed reply path,
+not a missing TLS initialization or a successful cancellation. The candidate
+reserves 6 KiB instead of 4 KiB for the system Bluetooth work queue and adds an
+exact resource-policy bound that rejects both the old value and unreviewed
+growth. This adds 2 KiB to that worker's dynamic stack allocation; unchanged
+static RAM usage alone cannot establish runtime heap headroom. Clean guest and
+complete-peer qualification of this candidate is still pending. Assertions
+and the complete peer gate remain enabled.
 
 Eight host tests and the existing Classic/backend host gates passed. Four
 deliberate comparator changes were detected: ignored direction, ignored terminal
