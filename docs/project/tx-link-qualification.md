@@ -74,3 +74,48 @@ profiles, preserving their existing Apache-2.0 and inherited MIT selections.
 No configuration, compiler runtime, dependency pin, linker-member expectation
 or notice selection is relaxed. The subsequent build must verify the actual
 compiler closure and linker selections; refreshing hashes is not a build pass.
+
+## Fresh candidate results
+
+Tested firmware and harness source:
+`95ea0d44c9da3e1956e74466c4071f91254751f4`. Both clean protected profiles
+passed compiler-input, linker, configuration, notice, resource and local
+TI-exclusion gates. Simulation used 594,888/654,336 bytes of userspace flash;
+simulation-hci used 594,880/654,336. Both used 88,600/98,304 bytes of userspace
+static RAM and zero TI payload bytes. Host link controls also passed under
+AddressSanitizer and UndefinedBehaviorSanitizer.
+
+Fresh local qualification used compiled Runtime source
+`8f128e66d0be5f83da035eaba9cc4441c0a29a31` and Infrastructure source
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48`, without source model extensions.
+These are separate from the firmware matrix's retained dependency pins.
+The simulation image passed the six-port native/Python scenario with 208
+observations: speed and position commands, concurrent motors, cancellation,
+drive release and execution beyond the reset regression boundary. Six position
+endpoints had maximum error 1.571 degrees against the 3-degree tolerance.
+
+The simulation-hci image passed Classic signed motion, concurrent commands,
+cancellation and load timeout. Its attachment-change scenario reported
+`-ENODEV`, guest type transitions 14→0→14 and counters 1→2→3, released drive,
+and fresh -90-degree motion measuring -94.087 degrees within the 20-degree
+tolerance. The first attempt correctly refused an old-kernel diagnostic layout
+before guest startup. Regenerating the read-only layout from our new kernel ELF
+enabled the rerun; the original refusal remains preserved.
+
+The combined scenario passed with authenticated/encrypted Classic alongside
+subscribed BLE. A/B moved +367.856/-367.509 degrees for ±360-degree requests,
+within the 20-degree tolerance. Three initial 1000 mm records were followed by
+three exact 250 mm records while read-only observations showed opposite powered
+motion. Terminal replies, duplicate-reply quiet checks, unsubscribe,
+resubscription and a fresh central passed. Thirty-six guest-clock observations
+completed without error. The fields are sequential observations, not an atomic
+electrical sample or physical SPIKE measurement.
+
+The [mandatory matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37662520208)
+tests the same firmware source with its retained pins. Its simulation job passed;
+both profiles passed the official TI fingerprint check. The HCI peer job was
+still running when this record was authored: verify its final conclusion before
+merge. These finite results do not qualify desktop adoption, all session races,
+terminal delivery under saturation or physical hardware behavior. Raw logs and
+failed harness attempts remain private. Remaining implementation work has
+[separate lane contracts](tx-followup-lanes.md).
