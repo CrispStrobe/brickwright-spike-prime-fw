@@ -66,7 +66,7 @@ class BoardAdmission(unittest.TestCase):
         call = next(n for n in ast.walk(main) if isinstance(n, ast.Call)
                     and isinstance(n.func, ast.Name) and n.func.id == 'start_renode')
         self.assertEqual(ast.unparse(call.args[-3]), 'board_runtime')
-        self.assertEqual(ast.unparse(call.args[-1]), 'le_board is not None')
+        self.assertEqual(ast.unparse(call.args[-1]), 'le_board is not None and (not arguments.active_port_notifications)')
         assignment = next(n for n in main.body if isinstance(n, ast.Assign)
                           and any(isinstance(t, ast.Name) and t.id == 'board_runtime' for t in n.targets))
         self.assertEqual(ast.unparse(assignment.value), 'arguments.motor_runtime or le_board')

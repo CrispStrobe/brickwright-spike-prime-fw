@@ -238,7 +238,7 @@ async def find_hub(device, timeout: float):
 BATTERY_FIXTURE_PERCENT = 62
 
 
-async def set_notification_interval(peer, rx, frames, errors, interval, receipt):
+async def set_notification_interval(peer, rx, frames, errors, interval, receipt, decoder=None):
     from spike_frames import receive_payload, notification_ack, battery_notification
 
     request = cobs_encode(bytes((0x28, interval & 255, interval >> 8)))
@@ -253,14 +253,15 @@ async def set_notification_interval(peer, rx, frames, errors, interval, receipt)
                 notification_ack(payload)
                 receipt["ack_payload"] = payload.hex()
                 return
-            sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            sample = (decoder(payload) if decoder else
+                      battery_notification(payload, BATTERY_FIXTURE_PERCENT))
             sample.update(frame=frame.hex(), payload=payload.hex())
             receipt["before_ack"].append(sample)
             if len(receipt["before_ack"]) > 64:
                 raise ValueError("Too many notifications before interval acknowledgement")
 
 
-async def collect_battery_notifications(frames, errors, receipt):
+async def collect_battery_notifications(frames, errors, receipt, decoder=None):
     from spike_frames import receive_payload, battery_notification
 
     started = time.monotonic()
@@ -269,7 +270,8 @@ async def collect_battery_notifications(frames, errors, receipt):
     async with asyncio.timeout(90):
         for _ in range(3):
             frame, payload = await receive_payload(frames, errors, timeout=60)
-            sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            sample = (decoder(payload) if decoder else
+                      battery_notification(payload, BATTERY_FIXTURE_PERCENT))
             received = time.monotonic()
             sample.update(frame=frame.hex(), payload=payload.hex(),
                           received_after_s=received - started,
@@ -286,7 +288,7 @@ async def collect_battery_notifications(frames, errors, receipt):
     return quiet_seconds
 
 
-async def expect_notification_quiet(frames, errors, window, receipt, allowed=0):
+async def expect_notification_quiet(frames, errors, window, receipt, allowed=0, decoder=None):
     from spike_frames import receive_payload, battery_notification
 
     receipt["window_s"] = window
@@ -303,7 +305,8 @@ async def expect_notification_quiet(frames, errors, window, receipt, allowed=0):
             if errors.done():
                 raise errors.result()
             break
-        sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+        sample = (decoder(payload) if decoder else
+                      battery_notification(payload, BATTERY_FIXTURE_PERCENT))
         sample.update(frame=frame.hex(), payload=payload.hex())
         receipt["in_flight"].append(sample)
         if len(receipt["in_flight"]) > allowed:
@@ -324,7 +327,7 @@ async def receive_connection_info(frames, errors, strict=False):
 
 async def le_round_trip(central, advertisement, results: dict, *,
                         periodic=False, leave_subscribed=False,
-                        reconnect_quiet=None) -> None:
+                        reconnect_quiet=None, notification_decoder=None) -> None:
     from spike_frames import FrameBuffer
 
     connection = None
@@ -373,26 +376,26 @@ async def le_round_trip(central, advertisement, results: dict, *,
                     # Observe before this new central sends an interval request.
                     await expect_notification_quiet(
                         frames, errors, reconnect_quiet,
-                        periodic_receipt.setdefault("reconnect_quiet", {}))
+                        periodic_receipt.setdefault("reconnect_quiet", {}), decoder=notification_decoder)
                 await set_notification_interval(
                     peer, rx, frames, errors, 100,
-                    periodic_receipt.setdefault("subscribe", {}))
+                    periodic_receipt.setdefault("subscribe", {}), decoder=notification_decoder)
                 quiet_window = await collect_battery_notifications(
-                    frames, errors, periodic_receipt)
+                    frames, errors, periodic_receipt, decoder=notification_decoder)
                 await set_notification_interval(
                     peer, rx, frames, errors, 0,
-                    periodic_receipt.setdefault("unsubscribe", {}))
+                    periodic_receipt.setdefault("unsubscribe", {}), decoder=notification_decoder)
                 await expect_notification_quiet(
                     frames, errors, quiet_window,
-                    periodic_receipt.setdefault("unsubscribe_quiet", {}), allowed=1)
+                    periodic_receipt.setdefault("unsubscribe_quiet", {}), allowed=1, decoder=notification_decoder)
                 if leave_subscribed:
                     await set_notification_interval(
                         peer, rx, frames, errors, 100,
-                        periodic_receipt.setdefault("resubscribe_before_disconnect", {}))
+                        periodic_receipt.setdefault("resubscribe_before_disconnect", {}), decoder=notification_decoder)
                     # Prove it is active when the disconnect/reset is tested.
                     active_window = await collect_battery_notifications(
                         frames, errors,
-                        periodic_receipt.setdefault("active_before_disconnect", {}))
+                        periodic_receipt.setdefault("active_before_disconnect", {}), decoder=notification_decoder)
                     periodic_receipt["disconnect_reset_window_s"] = max(
                         quiet_window, active_window)
                 periodic_receipt["subscribed_at_disconnect"] = leave_subscribed
@@ -727,6 +730,8 @@ async def main() -> int:
     parser.add_argument("--classic", action="store_true")
     parser.add_argument("--motor-runtime", type=Path,
                         help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
+    parser.add_argument("--active-port-notifications", action="store_true",
+                        help="separate compiled LE fixture: default A/B motors, C color, D 1000mm ultrasonic, E force")
     parser.add_argument("--compiled-board", type=Path,
                         help="direct LE only: receipt-bound offline topology using the supplied Runtime compiled models")
     parser.add_argument("--electrical-qualification", type=Path,
@@ -827,6 +832,12 @@ async def main() -> int:
         parser.error("--periodic requires --reconnect on the direct LE path")
     if arguments.observe_guest_clock and not arguments.periodic:
         parser.error("--observe-guest-clock requires --periodic")
+    if arguments.active_port_notifications and not (le_board and arguments.periodic and arguments.reconnect):
+        parser.error('--active-port-notifications requires --compiled-board --periodic --reconnect')
+    notification_decoder = None
+    if arguments.active_port_notifications:
+        from active_port_notifications import distance_notification
+        notification_decoder = distance_notification
     arguments.images = arguments.images.resolve()
     workdir = arguments.workdir or Path(tempfile.mkdtemp(prefix="spike-air-"))
     workdir.mkdir(parents=True, exist_ok=True)
@@ -837,7 +848,8 @@ async def main() -> int:
     if board_runtime:
         results['electrical_model_route'] = 'source-compiled' if electrical_receipt is not None else 'compiled-runtime'
     if le_board is not None:
-        results['compiled_board_external_ports'] = 'empty-A-F-before-guest'
+        results['compiled_board_external_ports'] = ('default-attached-A-E-distance-D-1000mm'
+            if arguments.active_port_notifications else 'empty-A-F-before-guest')
     if electrical_receipt is not None:
         results['electrical_candidate_receipt'] = electrical_receipt
     if port_layout is not None:
@@ -885,7 +897,7 @@ async def main() -> int:
                                         arguments.trace_caller, arguments.watch,
                                         arguments.dump, arguments.existing_filesystem,
                                         imu_fixture, board_runtime, arguments.electrical_qualification,
-                                        le_board is not None)
+                                        le_board is not None and not arguments.active_port_notifications)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             if arguments.observe_guest_clock:
@@ -909,7 +921,8 @@ async def main() -> int:
                 results["advertisement_after_s"] = round(time.monotonic() - started, 1)
                 await le_round_trip(central, advertisement, results,
                                     periodic=arguments.periodic,
-                                    leave_subscribed=arguments.periodic)
+                                    leave_subscribed=arguments.periodic,
+                                    notification_decoder=notification_decoder)
                 if arguments.reconnect:
                     # A second central after the first link ended: the hub must
                     # advertise again and answer again.
@@ -923,7 +936,8 @@ async def main() -> int:
                     await le_round_trip(
                         again, advertisement, second, periodic=arguments.periodic,
                         reconnect_quiet=(results["periodic_battery"]["disconnect_reset_window_s"]
-                                         if arguments.periodic else None))
+                                         if arguments.periodic else None),
+                        notification_decoder=notification_decoder)
                     results["second_info_response_payload"] = second["info_response_payload"]
             if arguments.classic:
                 # Page only once the hub has enabled page scan, as a real
