@@ -1,0 +1,97 @@
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<!-- Copyright (c) 2026 Brickwright contributors -->
+
+# Drain registration identity candidate
+
+This implements the TX drain API part of [T03](tx-followup-lanes.md).
+The application currently has no production caller registering a TX drain
+wait: the callers found are host tests. Do not describe this as a demonstrated
+production timer failure or as an installed GUI feature. Classic connection
+lifetime and asynchronous reply admission remain separate lanes.
+
+## Contract
+
+The owner is `apps/btsensor/btsensor_tx.c`; its public declarations are in
+`apps/btsensor/btsensor_tx.h`. This internal API intentionally changes: callers
+must supply identities to expiry/cancellation and handle one terminal callback
+with an explicit result. There is no identity-free expiry compatibility path.
+
+- `set_timer_ops(start, cancel, context)` installs a provider. Supply both
+  functions or neither (`-EINVAL` otherwise). Replacement returns `-EBUSY`
+  while any drain registration, installed timer or timer operation owns it.
+- `arm_post_drain_callback(callback, context, timeout_ms, &identity)` admits
+  one wait. Milliseconds use an unsigned 32-bit value; zero requests no timer.
+  Empty queues complete immediately without starting a timer. The identity is
+  written before any callback, even if completion is synchronous.
+- Admission returns zero; a callback may already have run. Negative returns
+  mean no admission: `-EINVAL` for missing callback/output pointer, `-EBUSY`
+  for an existing wait, `-ENOTSUP` for a needed missing provider, and
+  `-EOVERFLOW` when the process-lifetime 64-bit counter is exhausted. A valid
+  output pointer is set to zero on failure. Init/deinit never reset the counter.
+- The terminal callback receives its identity and either zero for empty local
+  queues, `-ETIMEDOUT`, or a negative provider-start error. Empty queues do not
+  prove remote receipt or physical delivery. A registration has at most one
+  terminal callback; start failure cannot remove a replacement wait.
+- `clear_post_drain_callback(identity)` returns true if cancellation won. It
+  then prevents a callback from claiming that identity. False includes stale
+  identities and callbacks already claimed; it is not a callback join. Keep
+  callback context alive until cancellation wins or its callback returns.
+- Init/deinit and disconnect/selection changes that discard queued output
+  cancel the current wait without a terminal callback. An unrelated empty link
+  cannot cancel it. Lifecycle calls do not join already claimed callbacks.
+- Expiry carries the original identity and acts only on the matching active,
+  installed timer. Old, duplicate, zero and untimed-registration expiry calls
+  have no effect on a replacement wait.
+
+A single reconciler serializes provider start/cancel operations outside the
+queue mutex. Reentrant/concurrent calls update desired state; they do not start
+nested provider operations. Cancellation of an old installed timer finishes
+before a replacement is started. Provider functions must return promptly, may
+reenter this API, and return zero or negative errno for start. A failed start
+must leave no timer armed. Cancellation may leave an already queued expiry;
+that expiry must retain its old identity. Provider/context ownership lasts
+through its operation; replacement is allowed only when `set_timer_ops`
+succeeds. Callback functions also run outside the queue mutex.
+
+`timeout_ms` is passed unchanged to the provider when its serialized start
+executes. It is a delay from provider start, not an absolute admission deadline.
+The API adds neither a wall clock nor real-time pacing. A future production
+provider must qualify its own simulated-clock semantics and bounded operation
+latency; these host controls do not establish that integration.
+
+## Reproducible controls and qualification boundary
+
+```sh
+tools/check_btsensor_tx_drain.sh
+python3 tools/prove_btsensor_tx_drain_mutations.py
+tools/check_btsensor_tx.sh
+tools/check_btsensor_tx_links.sh
+python3 tools/prove_ble_session_mutations.py
+python3 tools/prove_btsensor_tx_links_mutations.py
+```
+
+The new controls compile the actual TX module with a neutral timer/transport
+boundary. They cover old expiry/cancel after replacement, duplicate expiry,
+replacement inside start/cancel/completion callbacks, lifecycle reset during
+start, drain versus expiry, failed old start after replacement, disconnect,
+missing/busy providers, untimed waits, maximum 32-bit delay passthrough and
+synthetic identity exhaustion. A real
+pthread/condition-variable schedule blocks a start while another thread cancels
+and registers a replacement. Each executable has a ten-second wall bound.
+
+Five compiled mutations must fail assertions: accept stale expiry, accept stale
+cancellation, overlap provider operations, reuse identities after init, and
+let an old start failure clear a replacement. Compiler failure is not detection.
+The previously reproduced identity-free API failure remains preserved privately.
+
+Only the two changed TX source/header hashes are refreshed in each protected
+compiler-input inventory. Retained Apache-2.0 implementation and inherited MIT
+header selections and notices remain intact. New test/tool/documentation
+components use BSD-3-Clause. This is not a whole-firmware independence or licence
+clearance claim.
+
+Fresh clean protected builds, mandatory input/link/resource/official-TI matrix
+and affected compiled guest regressions are pending. Host controls alone do not
+authorize merging firmware. No desktop pin, package or installed GUI adoption is
+included. Direct production timer/guest scheduling qualification remains a
+future task until an actual application caller is added.

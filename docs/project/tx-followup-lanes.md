@@ -63,6 +63,9 @@ Run actual compiled guest single-link and overlapping BLE/Classic scenarios.
 
 ## T03 — Give drain timeout registrations an identity
 
+The [drain registration candidate](drain-registration-qualification.md) records
+the identity-bearing API, its host controls and remaining guest/provider boundary.
+
 Owner repository: `CrispStrobe/brickwright-spike-prime-fw`.
 Entry points: `apps/btsensor/btsensor_tx.c` and its timer callers/tests.
 

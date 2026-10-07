@@ -39,19 +39,19 @@ int brickwright_hub_transport_capture_ble(uint64_t *identity)
 { *identity = 1; return connected[BRICKWRIGHT_HUB_LINK_BLE] ? 0 : -ENOTCONN; }
 int brickwright_hub_transport_send_ble(uint64_t identity, const void *data, size_t length)
 { assert(identity == 1); return brickwright_hub_transport_send(BRICKWRIGHT_HUB_LINK_BLE, data, length); }
-static int timer_start(uint32_t milliseconds, void *ctx)
+static int timer_start(uint32_t milliseconds, uint64_t id, void *ctx)
 {
-  assert(milliseconds == 500 && ctx == &timer_started);
+  assert(id && milliseconds == 500 && ctx == &timer_started);
   timer_started++;
   return 0;
 }
-static void timer_cancel(void *ctx)
+static void timer_cancel(uint64_t id, void *ctx)
 {
-  assert(ctx == &timer_started);
+  assert(id && ctx == &timer_started);
   timer_cancelled++;
 }
-static void drain(void *ctx) { assert(ctx == &drained); drained++; }
-static void timeout(void *ctx) { assert(ctx == &drained); timed_out++; }
+static void drain(uint64_t id, int result, void *ctx)
+{ assert(id && ctx == &drained); if (!result) drained++; else { assert(result == -ETIMEDOUT); timed_out++; } }
 
 static void *produce(void *argument)
 {
@@ -154,16 +154,17 @@ int main(void)
 
   send_result = -ENOMEM;
   assert(btsensor_tx_enqueue_response("WAIT\n") == 0);
-  btsensor_tx_set_timer_ops(timer_start, timer_cancel, &timer_started);
-  assert(btsensor_tx_arm_post_drain_callback(drain, timeout, &drained, 500) == 0);
+  uint64_t registration;
+  assert(btsensor_tx_set_timer_ops(timer_start, timer_cancel, &timer_started) == 0);
+  assert(btsensor_tx_arm_post_drain_callback(drain, &drained, 500, &registration) == 0);
   assert(timer_started == 1 && drained == 0);
-  btsensor_tx_on_drain_timeout();
+  btsensor_tx_on_drain_timeout(registration);
   assert(timed_out == 1 && drained == 0);
 
   send_result = 0;
   btsensor_tx_on_can_send_now();
   assert(sent_count == 3 && !memcmp(sent[2].data, "WAIT\n", 5));
-  assert(btsensor_tx_arm_post_drain_callback(drain, timeout, &drained, 500) == 0);
+  assert(btsensor_tx_arm_post_drain_callback(drain, &drained, 500, &registration) == 0);
   assert(drained == 1);
   assert(timer_started == 1 && timer_cancelled == 0);
 
