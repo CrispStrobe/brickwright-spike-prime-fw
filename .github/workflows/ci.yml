@@ -255,6 +255,8 @@ jobs:
           tools/check_btsensor_modern_backend.sh
           tools/check_btsensor_sound.sh
           tools/check_btsensor_tx.sh
+          tools/check_btsensor_tx_links.sh
+          python3 tools/prove_btsensor_tx_links_mutations.py
           tools/check_btsensor_scheduler.sh
           tools/check_btsensor_neutral_compile.sh
           tools/check_btsensor_commands.sh

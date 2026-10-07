@@ -116,7 +116,8 @@ static int modern_send(const uint8_t *message, size_t length,
   int rc = bw_spike_pack(message, length, high_priority, g_modern_send_frame,
                          sizeof(g_modern_send_frame), &frame_length);
   if (rc == BW_CODEC_OK)
-    rc = btsensor_tx_try_enqueue_frame(g_modern_send_frame, frame_length);
+    rc = btsensor_tx_try_enqueue_frame_for_link(BRICKWRIGHT_HUB_LINK_BLE,
+                                               g_modern_send_frame, frame_length);
   else
     rc = -EMSGSIZE;
   pthread_mutex_unlock(&g_modern_send_lock);
@@ -180,8 +181,7 @@ static int classic_send(enum brickwright_hub_link link, const uint8_t *data,
                         size_t length, void *context)
 {
   (void)context;
-  btsensor_tx_set_link(link, true);
-  return btsensor_tx_try_enqueue_frame(data, length);
+  return btsensor_tx_try_enqueue_frame_for_link(link, data, length);
 }
 
 static int modern_interval(uint16_t interval_ms, void *context)
@@ -235,6 +235,7 @@ static void transport_state(enum brickwright_hub_link link, bool connected,
                             uint32_t generation, void *context)
 {
   (void)context;
+  btsensor_tx_link_state(link, connected, generation);
   if (link == BRICKWRIGHT_HUB_LINK_BLE && !connected)
     btsensor_modern_notifier_reset(&g_modern_notifier);
   btsensor_classic_link_state(link, connected);

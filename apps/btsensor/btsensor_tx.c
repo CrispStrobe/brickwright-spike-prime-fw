@@ -18,26 +18,45 @@
 _Static_assert(BTSENSOR_BUNDLE_FRAME_MAX <= BTSENSOR_TX_FRAME_MAX_SIZE,
                "BTSENSOR_TX_FRAME_MAX_SIZE too small");
 
-struct frame_s { uint8_t buf[BTSENSOR_TX_FRAME_MAX_SIZE]; uint16_t len; };
-struct response_s { char buf[BTSENSOR_TX_RESPONSE_MAX_LEN]; uint16_t len; };
-struct pending_s { uint8_t data[BTSENSOR_TX_FRAME_MAX_SIZE]; size_t len; bool frame; };
+struct tag_s { uint64_t ticket; uint32_t session; enum brickwright_hub_link link; bool used; };
+struct frame_s { uint8_t buf[BTSENSOR_TX_FRAME_MAX_SIZE]; uint16_t len; struct tag_s tag; };
+struct response_s { char buf[BTSENSOR_TX_RESPONSE_MAX_LEN]; uint16_t len; struct tag_s tag; };
+struct pending_s { uint8_t data[BTSENSOR_TX_FRAME_MAX_SIZE]; size_t len; bool frame; struct tag_s tag; };
 
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct frame_s g_frames[TX_DEPTH];
 static struct response_s g_responses[RESP_DEPTH];
-static uint8_t g_frame_head, g_frame_tail, g_response_head, g_response_tail;
 static enum brickwright_hub_link g_link;
-static bool g_selected, g_pumping;
-static uint32_t g_generation, g_sent, g_dropped_oldest, g_dropped_full;
+static bool g_selected, g_pumping, g_repoll, g_online[2];
+static uint32_t g_sessions[2], g_lifetime, g_sent, g_dropped_oldest, g_dropped_full;
+static uint64_t g_ticket;
 static btsensor_tx_drain_cb_t g_drain_cb, g_timeout_cb;
 static void *g_drain_ctx, *g_timer_ctx;
 static btsensor_tx_timer_start_t g_timer_start;
 static btsensor_tx_timer_cancel_t g_timer_cancel;
 static bool g_timer_armed;
 
-static bool frames_empty(void) { return g_frame_head == g_frame_tail; }
-static bool responses_empty(void) { return g_response_head == g_response_tail; }
-static bool frames_full(void) { return (g_frame_head + 1) % TX_DEPTH == g_frame_tail; }
+static bool valid_link(enum brickwright_hub_link link)
+{ return link == BRICKWRIGHT_HUB_LINK_CLASSIC || link == BRICKWRIGHT_HUB_LINK_BLE; }
+static unsigned frame_count(void)
+{ unsigned n = 0; for (unsigned i = 0; i < TX_DEPTH; i++) n += g_frames[i].tag.used; return n; }
+static bool frames_empty(void) { return frame_count() == 0; }
+static bool responses_empty(void)
+{ for (unsigned i = 0; i < RESP_DEPTH; i++) if (g_responses[i].tag.used) return false; return true; }
+static bool frames_full(void) { return frame_count() == TX_DEPTH - 1; }
+static void discard_link(enum brickwright_hub_link link)
+{
+  for (unsigned i = 0; i < TX_DEPTH; i++) if (g_frames[i].tag.link == link) g_frames[i].tag.used = false;
+  for (unsigned i = 0; i < RESP_DEPTH; i++) if (g_responses[i].tag.link == link) g_responses[i].tag.used = false;
+}
+static int admission(enum brickwright_hub_link link, struct tag_s *tag)
+{
+  if (!valid_link(link)) return -EINVAL;
+  if (!g_online[link]) return -ENOTCONN;
+  if (g_ticket == UINT64_MAX) return -EOVERFLOW;
+  *tag = (struct tag_s){ .ticket = ++g_ticket, .session = g_sessions[link], .link = link, .used = true };
+  return 0;
+}
 
 static void cancel_outside_lock(bool cancel, btsensor_tx_timer_cancel_t fn,
                                 void *ctx)
@@ -50,10 +69,12 @@ int btsensor_tx_init(void)
   pthread_mutex_lock(&g_lock);
   memset(g_frames, 0, sizeof(g_frames));
   memset(g_responses, 0, sizeof(g_responses));
-  g_frame_head = g_frame_tail = g_response_head = g_response_tail = 0;
+  for (unsigned i = 0; i < TX_DEPTH; i++) g_frames[i].tag.used = false;
+  for (unsigned i = 0; i < RESP_DEPTH; i++) g_responses[i].tag.used = false;
   g_link = BRICKWRIGHT_HUB_LINK_CLASSIC;
   g_selected = g_pumping = false;
-  g_generation++;
+  g_lifetime++;
+  g_online[0] = g_online[1] = false;
   g_sent = g_dropped_oldest = g_dropped_full = 0;
   g_drain_cb = g_timeout_cb = NULL;
   g_drain_ctx = NULL;
@@ -68,9 +89,11 @@ void btsensor_tx_deinit(void)
   bool cancel = g_timer_armed;
   btsensor_tx_timer_cancel_t timer_cancel = g_timer_cancel;
   void *timer_ctx = g_timer_ctx;
-  g_frame_head = g_frame_tail = g_response_head = g_response_tail = 0;
+  for (unsigned i = 0; i < TX_DEPTH; i++) g_frames[i].tag.used = false;
+  for (unsigned i = 0; i < RESP_DEPTH; i++) g_responses[i].tag.used = false;
   g_selected = false;
-  g_generation++;
+  g_lifetime++;
+  g_online[0] = g_online[1] = false;
   g_drain_cb = g_timeout_cb = NULL;
   g_drain_ctx = NULL;
   g_timer_armed = false;
@@ -78,27 +101,38 @@ void btsensor_tx_deinit(void)
   cancel_outside_lock(cancel, timer_cancel, timer_ctx);
 }
 
+void btsensor_tx_link_state(enum brickwright_hub_link link, bool connected, uint32_t generation)
+{
+  if (!valid_link(link)) return;
+  pthread_mutex_lock(&g_lock);
+  if (!connected || !g_online[link] || g_sessions[link] != generation)
+    discard_link(link);
+  g_sessions[link] = generation;
+  g_online[link] = connected;
+  if (!connected && g_selected && g_link == link) g_selected = false;
+  pthread_mutex_unlock(&g_lock);
+  btsensor_tx_on_can_send_now();
+}
+
 void btsensor_tx_set_link(enum brickwright_hub_link link, bool selected)
 {
-  if (link != BRICKWRIGHT_HUB_LINK_CLASSIC && link != BRICKWRIGHT_HUB_LINK_BLE) return;
-  bool pump = false;
+  if (!valid_link(link)) return;
   pthread_mutex_lock(&g_lock);
-  if (!selected && g_selected && g_link == link)
+  if (!selected)
     {
-      g_selected = false;
-      g_frame_head = g_frame_tail;
-      g_response_head = g_response_tail;
-      g_generation++;
+      discard_link(link);
+      g_online[link] = false;
+      g_sessions[link]++;
+      if (g_selected && g_link == link) g_selected = false;
     }
-  else if (selected)
+  else
     {
-      if (!g_selected || g_link != link) g_generation++;
       g_link = link;
       g_selected = true;
-      pump = true;
+      g_online[link] = true;
     }
   pthread_mutex_unlock(&g_lock);
-  if (pump) btsensor_tx_on_can_send_now();
+  if (selected) btsensor_tx_on_can_send_now();
 }
 
 void btsensor_tx_set_rfcomm_cid(uint16_t cid)
@@ -106,95 +140,145 @@ void btsensor_tx_set_rfcomm_cid(uint16_t cid)
   btsensor_tx_set_link(BRICKWRIGHT_HUB_LINK_CLASSIC, cid != 0);
 }
 
-int btsensor_tx_enqueue_response(const char *line)
+int btsensor_tx_enqueue_response_for_link(enum brickwright_hub_link link, const char *line)
 {
-  if (!line) return -EINVAL;
+  if (!line || !valid_link(link)) return -EINVAL;
   size_t len = strnlen(line, BTSENSOR_TX_RESPONSE_MAX_LEN + 1);
   if (len > BTSENSOR_TX_RESPONSE_MAX_LEN) return -E2BIG;
   pthread_mutex_lock(&g_lock);
-  uint8_t next = (g_response_head + 1) % RESP_DEPTH;
-  if (next == g_response_tail) { pthread_mutex_unlock(&g_lock); return -ENOSPC; }
-  memcpy(g_responses[g_response_head].buf, line, len);
-  g_responses[g_response_head].len = (uint16_t)len;
-  g_response_head = next;
+  unsigned count = 0, slot = RESP_DEPTH;
+  for (unsigned i = 0; i < RESP_DEPTH; i++)
+    { if (g_responses[i].tag.used) count++; else slot = i; }
+  if (count == RESP_DEPTH - 1) { pthread_mutex_unlock(&g_lock); return -ENOSPC; }
+  struct tag_s tag;
+  int rc = admission(link, &tag);
+  if (rc) { pthread_mutex_unlock(&g_lock); return rc; }
+  memcpy(g_responses[slot].buf, line, len);
+  g_responses[slot].len = (uint16_t)len;
+  g_responses[slot].tag = tag;
   pthread_mutex_unlock(&g_lock);
   btsensor_tx_on_can_send_now();
   return 0;
 }
 
+int btsensor_tx_enqueue_response(const char *line)
+{
+  if (!line) return -EINVAL;
+  pthread_mutex_lock(&g_lock);
+  enum brickwright_hub_link link = g_link;
+  bool selected = g_selected;
+  pthread_mutex_unlock(&g_lock);
+  return selected ? btsensor_tx_enqueue_response_for_link(link, line) : -ENOTCONN;
+}
+
+int btsensor_tx_try_enqueue_frame_for_link(enum brickwright_hub_link link, const uint8_t *buf, size_t len)
+{
+  if (!buf || !len || len > BTSENSOR_TX_FRAME_MAX_SIZE) return -E2BIG;
+  int result = 0;
+  pthread_mutex_lock(&g_lock);
+  struct tag_s tag;
+  int rc = admission(link, &tag);
+  if (rc) { pthread_mutex_unlock(&g_lock); return rc; }
+  unsigned slot = TX_DEPTH;
+  uint64_t oldest = UINT64_MAX;
+  if (frames_full())
+    {
+      for (unsigned i = 0; i < TX_DEPTH; i++)
+        if (g_frames[i].tag.used && g_frames[i].tag.ticket < oldest)
+          { oldest = g_frames[i].tag.ticket; slot = i; }
+      g_dropped_oldest++;
+      result = -ENOSPC;
+    }
+  else
+    for (unsigned i = 0; i < TX_DEPTH; i++) if (!g_frames[i].tag.used) { slot = i; break; }
+  memcpy(g_frames[slot].buf, buf, len);
+  g_frames[slot].len = (uint16_t)len;
+  g_frames[slot].tag = tag;
+  pthread_mutex_unlock(&g_lock);
+  btsensor_tx_on_can_send_now();
+  return result;
+}
+
 int btsensor_tx_try_enqueue_frame(const uint8_t *buf, size_t len)
 {
   if (!buf || !len || len > BTSENSOR_TX_FRAME_MAX_SIZE) return -E2BIG;
-  int rc = 0;
   pthread_mutex_lock(&g_lock);
-  uint8_t next = (g_frame_head + 1) % TX_DEPTH;
-  if (next == g_frame_tail)
-    {
-      g_frame_tail = (g_frame_tail + 1) % TX_DEPTH;
-      g_dropped_oldest++;
-      rc = -ENOSPC;
-    }
-  memcpy(g_frames[g_frame_head].buf, buf, len);
-  g_frames[g_frame_head].len = (uint16_t)len;
-  g_frame_head = next;
+  enum brickwright_hub_link link = g_link;
+  bool selected = g_selected;
   pthread_mutex_unlock(&g_lock);
-  btsensor_tx_on_can_send_now();
-  return rc;
+  return selected ? btsensor_tx_try_enqueue_frame_for_link(link, buf, len) : -ENOTCONN;
 }
 
 void btsensor_tx_on_can_send_now(void)
 {
-  enum brickwright_hub_link link;
-  uint32_t generation;
+  bool blocked[2] = { false, false };
+  bool retry_available = true;
   pthread_mutex_lock(&g_lock);
-  if (g_pumping || !g_selected) { pthread_mutex_unlock(&g_lock); return; }
+  if (g_pumping) { g_repoll = true; pthread_mutex_unlock(&g_lock); return; }
   g_pumping = true;
-  link = g_link;
-  generation = g_generation;
+  g_repoll = false;
+  uint32_t lifetime = g_lifetime;
   pthread_mutex_unlock(&g_lock);
-
-  if (!brickwright_hub_transport_connected(link))
-    {
-      pthread_mutex_lock(&g_lock);
-      g_pumping = false;
-      pthread_mutex_unlock(&g_lock);
-      return;
-    }
 
   for (;;)
     {
       struct pending_s pending;
-      uint8_t tail;
+      int slot = -1;
       pthread_mutex_lock(&g_lock);
-      if (generation != g_generation || !g_selected || g_link != link)
-        { g_pumping = false; pthread_mutex_unlock(&g_lock); return; }
-      if (!responses_empty())
+      if (lifetime != g_lifetime) { pthread_mutex_unlock(&g_lock); return; }
+      /* Response priority, FIFO per queue, independent blocked destinations. */
+      uint64_t oldest = UINT64_MAX;
+      for (unsigned i = 0; i < RESP_DEPTH; i++)
+        if (g_responses[i].tag.used && !blocked[g_responses[i].tag.link] &&
+            g_responses[i].tag.ticket < oldest)
+          { oldest = g_responses[i].tag.ticket; slot = i; }
+      pending.frame = slot < 0;
+      if (slot >= 0)
         {
-          struct response_s *r = &g_responses[g_response_tail];
-          pending.len = r->len; pending.frame = false; tail = g_response_tail;
-          memcpy(pending.data, r->buf, pending.len);
-        }
-      else if (!frames_empty())
-        {
-          struct frame_s *f = &g_frames[g_frame_tail];
-          pending.len = f->len; pending.frame = true; tail = g_frame_tail;
-          memcpy(pending.data, f->buf, pending.len);
+          pending.tag = g_responses[slot].tag;
+          pending.len = g_responses[slot].len;
+          memcpy(pending.data, g_responses[slot].buf, pending.len);
         }
       else
-        { g_pumping = false; pthread_mutex_unlock(&g_lock); break; }
+        {
+          oldest = UINT64_MAX;
+          for (unsigned i = 0; i < TX_DEPTH; i++)
+            if (g_frames[i].tag.used && !blocked[g_frames[i].tag.link] &&
+                g_frames[i].tag.ticket < oldest)
+              { oldest = g_frames[i].tag.ticket; slot = i; }
+          if (slot >= 0)
+            {
+              pending.tag = g_frames[slot].tag;
+              pending.len = g_frames[slot].len;
+              memcpy(pending.data, g_frames[slot].buf, pending.len);
+            }
+        }
+      if (slot < 0)
+        {
+          if (g_repoll && retry_available)
+            {
+              g_repoll = false; retry_available = false;
+              blocked[0] = blocked[1] = false;
+              pthread_mutex_unlock(&g_lock); continue;
+            }
+          g_pumping = false; pthread_mutex_unlock(&g_lock); break;
+        }
+      enum brickwright_hub_link link = pending.tag.link;
       pthread_mutex_unlock(&g_lock);
-
-      int rc = brickwright_hub_transport_send(link, pending.data, pending.len);
+      int rc = brickwright_hub_transport_connected(link) ?
+               brickwright_hub_transport_send(link, pending.data, pending.len) : -ENOTCONN;
       pthread_mutex_lock(&g_lock);
-      bool same = generation == g_generation && g_selected && g_link == link;
+      if (lifetime != g_lifetime) { pthread_mutex_unlock(&g_lock); return; }
+      struct tag_s *tag = pending.frame ? &g_frames[slot].tag : &g_responses[slot].tag;
+      bool same = tag->used && tag->ticket == pending.tag.ticket &&
+                  tag->session == pending.tag.session && g_online[link] &&
+                  g_sessions[link] == pending.tag.session;
       if (!rc && same)
         {
-          if (pending.frame && g_frame_tail == tail)
-            { g_frame_tail = (g_frame_tail + 1) % TX_DEPTH; g_sent++; }
-          else if (!pending.frame && g_response_tail == tail)
-            g_response_tail = (g_response_tail + 1) % RESP_DEPTH;
+          tag->used = false;
+          if (pending.frame) g_sent++;
         }
-      if (rc || !same) { g_pumping = false; pthread_mutex_unlock(&g_lock); return; }
+      if (rc) blocked[link] = true;
       pthread_mutex_unlock(&g_lock);
     }
 
@@ -291,7 +375,7 @@ bool btsensor_tx_has_consumer(void)
 }
 uint16_t btsensor_tx_get_rfcomm_cid(void)
 {
-  pthread_mutex_lock(&g_lock); bool classic = g_selected && g_link == BRICKWRIGHT_HUB_LINK_CLASSIC; pthread_mutex_unlock(&g_lock); return classic ? 1 : 0;
+  pthread_mutex_lock(&g_lock); bool classic = g_online[BRICKWRIGHT_HUB_LINK_CLASSIC]; pthread_mutex_unlock(&g_lock); return classic ? 1 : 0;
 }
 void btsensor_tx_get_stats(uint32_t *sent, uint32_t *oldest, uint32_t *full)
 {

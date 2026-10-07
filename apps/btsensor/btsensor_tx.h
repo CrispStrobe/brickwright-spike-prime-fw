@@ -48,6 +48,16 @@ void btsensor_tx_set_rfcomm_cid(uint16_t cid);
 
 void btsensor_tx_set_link(enum brickwright_hub_link link, bool selected);
 
+/* Connection-state notifications invalidate queued work for that link only.
+ * Receive-side selection changes the legacy default, never existing entries.
+ */
+void btsensor_tx_link_state(enum brickwright_hub_link link, bool connected,
+                            uint32_t generation);
+int btsensor_tx_enqueue_response_for_link(enum brickwright_hub_link link,
+                                          const char *line);
+int btsensor_tx_try_enqueue_frame_for_link(enum brickwright_hub_link link,
+                                           const uint8_t *buf, size_t len);
+
 /* Enqueue an ASCII response line.  Trailing newline is the caller's
  * responsibility.  Returns -ENOSPC if the response queue is full,
  * -E2BIG if the payload exceeds BTSENSOR_TX_RESPONSE_MAX_LEN.

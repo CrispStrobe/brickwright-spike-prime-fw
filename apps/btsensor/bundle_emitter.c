@@ -320,7 +320,8 @@ static int emit_one_frame(const struct sensor_imu *imu_samples,
 
   g_seq++;
 
-  return btsensor_tx_try_enqueue_frame(g_bundle_buf, off);
+  return btsensor_tx_try_enqueue_frame_for_link(BRICKWRIGHT_HUB_LINK_CLASSIC,
+                                               g_bundle_buf, off);
 }
 
 /* Issue #139: drain a tickful of IMU samples and emit one BUNDLE frame

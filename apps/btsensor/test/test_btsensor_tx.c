@@ -58,7 +58,7 @@ static void *produce(void *argument)
       memcpy(frame, &producer, sizeof(uint32_t));
       memcpy(frame + 4, &sequence, sizeof(sequence));
       int rc = btsensor_tx_try_enqueue_frame(frame, sizeof(frame));
-      assert(rc == 0 || rc == -ENOSPC);
+      assert(rc == 0 || rc == -ENOSPC || rc == -ENOTCONN);
     }
   return NULL;
 }
@@ -130,8 +130,12 @@ int main(void)
   sent_count = 0;
   assert(btsensor_tx_init() == 0);
   const uint8_t telemetry[] = {0xb6, 0x6b, 2};
+  assert(btsensor_tx_try_enqueue_frame(telemetry, sizeof(telemetry)) == -ENOTCONN);
+  send_result = -EAGAIN;
+  btsensor_tx_set_link(BRICKWRIGHT_HUB_LINK_BLE, true);
   assert(btsensor_tx_try_enqueue_frame(telemetry, sizeof(telemetry)) == 0);
   assert(btsensor_tx_enqueue_response("OK\n") == 0);
+  send_result = 0;
   btsensor_tx_set_link(BRICKWRIGHT_HUB_LINK_BLE, true);
   assert(sent_count == 2);
   assert(sent[0].link == BRICKWRIGHT_HUB_LINK_BLE);
