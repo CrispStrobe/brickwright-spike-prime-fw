@@ -340,7 +340,8 @@ async def receive_connection_info(frames, errors, strict=False):
 
 async def le_round_trip(central, advertisement, results: dict, *,
                         periodic=False, leave_subscribed=False,
-                        reconnect_quiet=None, notification_decoder=None) -> None:
+                        reconnect_quiet=None, notification_decoder=None,
+                        distance_step=None) -> None:
     from spike_frames import FrameBuffer
 
     connection = None
@@ -396,6 +397,9 @@ async def le_round_trip(central, advertisement, results: dict, *,
                 quiet_window = await collect_battery_notifications(
                     frames, errors, periodic_receipt, decoder=notification_decoder,
                     allow_initial_battery=notification_decoder is not None and reconnect_quiet is None)
+                if distance_step is not None:
+                    await distance_step.run(frames, errors,
+                        periodic_receipt.setdefault('distance_step', {}))
                 await set_notification_interval(
                     peer, rx, frames, errors, 0,
                     periodic_receipt.setdefault("unsubscribe", {}), decoder=notification_decoder)
@@ -746,6 +750,8 @@ async def main() -> int:
                         help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
     parser.add_argument("--active-port-notifications", action="store_true",
                         help="separate compiled LE fixture: default A/B motors, C color, D 1000mm ultrasonic, E force")
+    parser.add_argument("--le-distance-step", action="store_true",
+                        help="with active ports, change external D input to 250mm while subscribed")
     parser.add_argument("--compiled-board", type=Path,
                         help="direct LE only: receipt-bound offline topology using the supplied Runtime compiled models")
     parser.add_argument("--electrical-qualification", type=Path,
@@ -848,7 +854,10 @@ async def main() -> int:
         parser.error("--observe-guest-clock requires --periodic")
     if arguments.active_port_notifications and not (le_board and arguments.periodic and arguments.reconnect):
         parser.error('--active-port-notifications requires --compiled-board --periodic --reconnect')
+    if arguments.le_distance_step and not arguments.active_port_notifications:
+        parser.error('--le-distance-step requires --active-port-notifications')
     notification_decoder = None
+    distance_step = None
     if arguments.active_port_notifications:
         from active_port_notifications import distance_notification
         notification_decoder = distance_notification
@@ -914,6 +923,10 @@ async def main() -> int:
                                         le_board is not None and not arguments.active_port_notifications)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
+            if arguments.le_distance_step:
+                from le_distance_step import DistanceStep
+                distance_step = DistanceStep(renode, workdir / 'renode.log')
+                notification_decoder = distance_step.decode
             if arguments.observe_guest_clock:
                 from le_clock_probe import GuestClockProbe
                 clock_probe = GuestClockProbe(renode, workdir / 'renode.log',
@@ -936,7 +949,8 @@ async def main() -> int:
                 await le_round_trip(central, advertisement, results,
                                     periodic=arguments.periodic,
                                     leave_subscribed=arguments.periodic,
-                                    notification_decoder=notification_decoder)
+                                    notification_decoder=notification_decoder,
+                                    distance_step=distance_step)
                 if arguments.reconnect:
                     # A second central after the first link ended: the hub must
                     # advertise again and answer again.
