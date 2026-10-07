@@ -253,7 +253,7 @@ bounds are instrumentation limits, not firmware timer or physical radio accuracy
 The sampler is joined during success, failure and cancellation cleanup. Host
 controls cover a stalled/regressed clock, echoed monitor commands, real command
 decoding and cancelled/failed sampler cleanup. Actual instrumented LE results
-remain pending; no observation or cleanup timeout has been increased.
+are recorded below; no observation or cleanup timeout has been increased.
 
 ```sh
 python3 tools/test_le_clock_probe.py
@@ -276,3 +276,48 @@ public model commands before guest loading/execution; guest DCM state and PWM
 are not written. An initial attempt with the default motors attached correctly
 failed the exact battery-only payload comparison. That fixture mismatch remains
 preserved and does not justify accepting extra/malformed notification fields.
+
+## Compiled consumer checkpoint — 2026-10-07
+
+The canonical compiled Runtime source
+[`8f128e66`](https://github.com/CrispStrobe/renode-spike-prime/commit/8f128e66d0be5f83da035eaba9cc4441c0a29a31)
+with Infrastructure `adf40d98062a6b31aae7ef86e1ae5f289eebdc48` passed these
+actual guest scenarios using the same clean protected firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94`. No replacement peripheral source
+was included. NuttX qualifier source was `fa27da11b9654d2e4b54dfb44139cb88975c7d47`;
+Classic peer source was `535ac92ea61d71bc52889a7b89c4d6d20b34e916` and direct LE
+source was `c2b2eebcdb96691668fefddc20bb8c981deb2734`.
+
+| Scenario | Observed result and boundary |
+| --- | --- |
+| Classic electrical motors | PASS: signed/concurrent moves, Stop/replacement, load timeout, explicit unsupported/invalid inputs and terminal drive checks. The declared displacement tolerance remains 20 degrees. |
+| Detach/reconnect | PASS: `ENODEV`, actual guest type 14 → NONE → 14, counters 1 → 2 → 3, CONNECTED clearing and zero bridge demand after 790,987 guest microseconds. Fresh -90-degree displacement was -95.0791 degrees. |
+| Native/Python A–F | PASS: 209 observations covering all six ports, concurrent native/Python activity, Stop and the old unattended-reset boundary. Six position moves stayed within 1.756 degrees of their -30-degree targets, inside the 3-degree limit. Final program clock was 15,997 ms. |
+| Supplied upstream MicroPython 1.26.1 | PASS: basic raw-REPL execution/error/cancellation/recovery, GPIO motor/load/cleanup and filesystem reopening in a fresh process. This is not full SDK, USB bootloader or GUI qualification. |
+| Direct LE, empty A–F | PASS: exact battery-only notifications, unsubscribe silence, active resubscription, fresh-central strict InfoResponse and zero inherited notifications. Seventeen clock observations stopped cleanly; absolute host arrivals share their monotonic time base. |
+
+An earlier instrumented LE run on the original board fixture also passed both
+centrals with 134 clock observations. The preceding timeout remains preserved;
+these passes do not establish its cause or physical radio timing. Initial private
+compiled-package startup failures caused by an omitted root marker are preserved
+separately. Restoring the exact tracked marker supplied the missing initialization
+input; original downloaded artifacts, model code and guest bytes were unchanged.
+
+The exact final Runtime candidate also passed its
+[canonical build and regression CI](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37635759307):
+448 focused peripheral tests and a complete-suite summary of 566 passed / 5
+skipped / 571 total. The raw log additionally reports the pre-existing GIC
+inconclusive case as skipped; do not infer that all discovered tests executed.
+Native translator, board and free ARM guest checks remained enabled.
+
+These results close the declared compiled-model consumer scenarios. They do not
+advance firmware/Lite package pins, qualify an installed GUI, close atomic
+encoder/PWM admission or arbitrary attachment/transport races, establish original
+reference-firmware boot, or prove physical accuracy. The mandatory firmware TI
+fingerprint/matrix gate remains blocked by the official endpoint; no gate is
+waived. Keep Runtime/model merges separate from firmware and package adoption.
+
+The next LE lane should define a separate active-port notification contract from
+our public firmware protocol and exercise attached motors/sensors, concurrent
+traffic and malformed/duplicate records. Preserve this strict battery-only empty
+port scenario rather than accepting arbitrary extra fields to make it pass.
