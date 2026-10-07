@@ -99,7 +99,6 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
     ]
     if motor_runtime:
         lines.append('emulation CreatePrimeElectricalPorts "spike"')
-        lines.append('machine LoadPlatformDescriptionFromString "usart2:\\n    DMARequest -> dma1@7\\n    DMATransmit -> dma1@6"')
     if existing_filesystem is not None:
         lines.append(f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}")
         if motor_runtime:

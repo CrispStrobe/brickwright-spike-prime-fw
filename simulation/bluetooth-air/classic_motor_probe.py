@@ -90,7 +90,8 @@ class MotorPeer:
                         raise AssertionError('Unknown or duplicate Classic reply: ' + value)
                     self.replies[key] = reply
                     self.record['replies'].append(reply)
-        require_reply(self.replies[ident], ident, error)
+        if error is not None:
+            require_reply(self.replies[ident], ident, error)
         return self.replies[ident]
 
     async def model(self, port, action='state', value=0):
@@ -127,6 +128,39 @@ class MotorPeer:
                     return states
                 await asyncio.sleep(.1)
 
+    async def wait_virtual(self, milliseconds):
+        before = await self.model('A')
+        async with asyncio.timeout(120):
+            while (await self.model('A'))['virtual_us'] - before['virtual_us'] < milliseconds * 1000:
+                await asyncio.sleep(.25)
+
+    async def establish_encoder(self, port):
+        # Advertising is not attachment readiness. The real API selects POS
+        # asynchronously and reports EAGAIN until its UART frame arrives.
+        # Every refused attempt is retained and must leave the motor unpowered.
+        started = await self.model(port)
+        for attempt in range(30):
+            ident = 'w{}{:02d}'.format('AB'.index(port), attempt)
+            before = await self.model(port)
+            if before['virtual_us'] - started['virtual_us'] > 3000000:
+                raise AssertionError('Motor encoder did not become ready within 3 guest seconds')
+            self.degrees(ident, port, 30)
+            reply = await self.collect(ident, None)
+            error = reply.get('e', {}).get('code', 0)
+            after = await self.model(port)
+            if error in (-11, -19):
+                require_reply(reply, ident, error)
+                if after['power'] != 0:
+                    raise AssertionError('Not-ready request powered the motor')
+                await self.wait_virtual(100)
+                continue
+            require_reply(reply, ident)
+            self.record['cases'].append({'case': 'encoder-ready-' + port,
+                                        'delta': require_move(before, after, 30)})
+            await self.quiet(150)
+            return
+        raise AssertionError('Motor encoder readiness attempt bound reached')
+
     async def quiet(self, milliseconds=100):
         start = await self.model('A')
         async with asyncio.timeout(60):
@@ -148,6 +182,8 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log):
     record = results.setdefault('classic_motors', {'requests': [], 'replies': [],
                                                   'model_states': [], 'cases': []})
     peer = MotorPeer(dlc, received, renode, renode_log, record)
+    await peer.establish_encoder('A')
+    await peer.establish_encoder('B')
     # Positive and negative encoder-coupled jobs, with independent observations.
     for ident, angle in [('p001', 90), ('p002', -90)]:
         before = await peer.model('A')

@@ -38,6 +38,13 @@ def stage(runtime, output):
             if source.count(old) != 1:
                 raise ValueError('reviewed display-clock wiring changed')
             source = source.replace(old, 'timer12:\n    display: display')
+        if name == 'boards/spike-prime.repl':
+            source += ('\n// NuttX CC2564C HCI UART DMA routing.\n'
+                       'usart2:\n    DMARequest -> dma1@7\n    DMATransmit -> dma1@6\n')
+            source += ('\n// Declared stable external analog inputs, as in the HCI board fixture.\n'
+                       'adc1:\n    init:\n        SetChannelValue 10 0\n'
+                       '        SetChannelValue 11 3100\n        SetChannelValue 8 2048\n'
+                       '        SetChannelValue 3 0\n')
         if 'https://' in source or 'http://' in source:
             raise ValueError('network-dependent platform cannot be staged')
         prepared[name] = source

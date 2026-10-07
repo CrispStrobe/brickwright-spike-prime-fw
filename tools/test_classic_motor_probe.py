@@ -36,10 +36,37 @@ class ScriptSelection(unittest.TestCase):
             self.assertNotIn('include @', script.split('mach create')[0])
             self.assertIn('LoadPlatformDescription @staged/platforms/boards/spike-prime.repl', script)
             self.assertIn('emulation CreatePrimeElectricalPorts "spike"', script)
-            self.assertIn('DMARequest -> dma1@7', script)
-            self.assertIn('DMATransmit -> dma1@6', script)
             self.assertIn('primeStorageMux.primeStorage', script)
             self.assertNotIn('load_littlefs_fixture @fixture', script)
+
+    def test_compiled_topology_preserves_notices_and_records_source_identity(self):
+        from stage_classic_motor_topology import stage, FILES
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory) / 'runtime'
+            output = Path(directory) / 'output'
+            for name in FILES:
+                path = runtime / 'platforms' / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                body = '// SPDX-License-Identifier: MIT\n'
+                if name == 'cpus/stm32f4.repl':
+                    body += 'timer12: Timers.STM32_Timer @ sysbus 0x40001800\n    -> nvic@43\n'
+                    body += '    ApplySVD @https://example.invalid/device.svd\n'
+                if name == 'boards/spike-prime-brick-devices.repl':
+                    body += 'timer12:\n    1 -> display@1\n'
+                path.write_text(body)
+            stage(runtime, output)
+            receipt = json.loads((output / 'topology-receipt.json').read_text())
+            self.assertEqual(set(receipt['files']), set(FILES))
+            for name in FILES:
+                source = (output / 'platforms' / name).read_text()
+                self.assertIn('SPDX-License-Identifier: MIT', source)
+                self.assertNotIn('https://', source)
+                self.assertNotIn('BrickwrightSTM32_Timer', source)
+            board = (output / 'platforms/boards/spike-prime.repl').read_text()
+            self.assertIn('DMARequest -> dma1@7', board)
+            self.assertIn('DMATransmit -> dma1@6', board)
+            with self.assertRaises(ValueError):
+                stage(runtime, output)
 
 
 class ObservationChecks(unittest.TestCase):

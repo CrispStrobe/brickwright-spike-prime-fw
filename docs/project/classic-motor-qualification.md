@@ -20,6 +20,14 @@ synthetic devices, not physical measurements. Fixture actions may set load or
 detach an attachment; they must never write an encoder position, completion,
 firmware memory, pending-job state or return value.
 
+Advertising does not establish motor readiness. An external preparatory phase
+uses distinct request IDs and records `ENODEV` while discovery is incomplete
+and `EAGAIN` while POS-mode selection awaits a UART frame. These rejected
+requests must leave power zero. Readiness is bounded to 30 attempts and three
+guest seconds per port; an accepted 30-degree move must satisfy the same motion
+comparison. The peer retries refused preparation requests only; production
+firmware/API errors are not replaced or hidden.
+
 ## Observable cases
 
 - Positive and negative 90-degree jobs on A, at speed 30 and stop mode brake,
