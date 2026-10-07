@@ -127,7 +127,10 @@ L06 must agree with L01 before changing the motor/attachment interfaces.
 
 The [Classic motor peer contract](classic-motor-qualification.md) defines the
 separate external readiness, motion and error comparisons being developed for
-this lane. A draft harness is not a passing guest qualification record.
+this lane. The complete candidate peer now passes signed/concurrent A/B motion,
+Stop/replacement, loaded timeout and boundary errors; see the exact tested
+source and remaining qualification gates in that contract. Attachment/disconnect
+and the other excluded guest interleavings remain open; L01 is not complete.
 
 **Start:** firmware `apps/btsensor/btsensor_classic.c`,
 `apps/btsensor/btsensor_modern_backend.c`, their `test/` fixtures,

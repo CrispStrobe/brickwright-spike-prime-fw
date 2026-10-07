@@ -111,18 +111,30 @@ not a missing TLS initialization or a successful cancellation. The candidate
 reserves 6 KiB instead of 4 KiB for the system Bluetooth work queue and adds an
 exact resource-policy bound that rejects both the old value and unreviewed
 growth. This adds 2 KiB to that worker's dynamic stack allocation; unchanged
-static RAM usage alone cannot establish runtime heap headroom. Clean guest and
-complete-peer qualification of this candidate is still pending. Assertions
-and the complete peer gate remain enabled.
+static RAM usage alone cannot establish runtime heap headroom. The corrected
+complete peer subsequently passed on the clean candidate. Assertions and the
+complete peer gate remain enabled.
 
 On firmware candidate `92ced1c`, the hook-free complete peer passed signed and
 concurrent motion, Stop/replacement (-182.244 degrees for -180 requested) and
 loaded no-progress (`ETIMEDOUT` after 1,021,052 guest microseconds). It then failed
 the first boundary comparison because the peer incorrectly expected Linux's
 ENOTSUP number instead of the observed pinned NuttX ABI. That failure is retained;
-the corrected complete peer must pass before guest acceptance. This is not an
-additional firmware behavior change. The clean HCI candidate passed build/input,
-linker, TI and resource gates (592,772 flash bytes, 88,144 static RAM bytes).
+the corrected complete peer at `52caf015cca2fe8f13b65a1c4b63210830aa1f4d`
+then passed against the same clean firmware. This is not an additional firmware
+behavior change. Both clean protected profiles passed build/input, linker, TI
+and resource gates (592,772 flash bytes, 88,144 static RAM bytes each).
+
+The corrected complete run measured +95.412/-93.416 degrees for signed 90-degree
+requests, +189.556/-188.682 for concurrent 180-degree requests, and -182.244 for
+the -180-degree replacement after Stop. The fully loaded request failed with
+`ETIMEDOUT` after 1,020,241 guest microseconds with no displacement above one
+degree and power zero. HOLD/stall returned -138 and zero speed returned -22;
+each rejected request left power zero. The shared fixtures observe real modeled
+position/power and public load input; they do not set encoder position, pending
+job state or completion results. The current-source six-motor regression and
+[hosted complete matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
+remain pending at this checkpoint.
 
 Nine host peer tests and the existing Classic/backend host gates passed. Four
 deliberate comparator changes were detected: ignored direction, ignored terminal

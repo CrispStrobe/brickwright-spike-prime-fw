@@ -647,3 +647,29 @@ cold-restart bond reuse and physical qualification remain open.
 The unchanged reference rerun and its limits are recorded in
 [reference captures](imu-reference-captures.md); it captured no modern IMU
 notifications and does not qualify the wire mapping.
+
+## Measured Classic motor candidate — 2026-10-07
+
+The [new external motor contract](classic-motor-qualification.md) records the
+candidate tested firmware `92ced1c5d721e1d4f0f9bc19f5e303b5691b007b` and corrected
+peer `52caf015cca2fe8f13b65a1c4b63210830aa1f4d`. Both clean simulation profiles pass
+compiler/configuration/linker/licence-input/TI and resource gates: 592,772 bytes
+userspace flash, 88,144 bytes static RAM and zero TI payload. Runtime/model pins
+remain unchanged. The system Bluetooth worker now reserves 6 KiB dynamic stack;
+the 4 KiB predecessor reproducibly overwrote TLS during Stop reply handling.
+
+The complete hook-free Classic peer passes signed and concurrent A/B measured
+degree moves, Stop/replacement, loaded no-progress timeout and declared boundary
+errors. It checks exactly-once reply identities, terminal power and displacement
+within the documented tolerance. Nine host peer tests, nine resource tests and
+four comparator mutation checks cover false motion/direction, retained power,
+duplicate replies and false timeout success. Failed setup attempts, immediate
+EAGAIN, Stop assertions and the initial incorrect host errno comparison remain
+preserved privately.
+
+The [canonical hosted matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
+and current-source six-motor regression are pending at this checkpoint. No merge
+or shipped desktop adoption is claimed here. Immediate back-to-back jobs,
+attachment/disconnect cleanup, counter-wrap/rearm guest interleavings, physical
+accuracy and HOLD remain outside this passing external fixture. L01 is partially
+qualified; the untested parts of its acceptance contract remain open.
