@@ -259,3 +259,20 @@ remain pending; no observation or cleanup timeout has been increased.
 python3 tools/test_le_clock_probe.py
 # Add --observe-guest-clock to the existing explicit --periodic --reconnect run.
 ```
+
+For direct LE qualification with a compiled Runtime, use `--compiled-board` and
+the output of `tools/stage_classic_motor_topology.py`. This selects the same
+offline board and aggregate display clock without enabling Classic motor jobs
+or including replacement model source. It requires explicit synthetic storage,
+matching staged-file hashes and the direct LE route; incompatible transport or
+motor options refuse before emulator startup. `--motor-runtime` remains restricted
+to the separate Classic motor scenario. Supplied canonical Runtime bundles must
+retain their tracked `.renode-root` marker so monitor initialization can load.
+Copied platform receipts do not authenticate the supplied Runtime binary.
+
+This battery-only LE scenario starts with empty A–F external ports, matching the
+original scenario. The compiled topology's default motors are detached through
+public model commands before guest loading/execution; guest DCM state and PWM
+are not written. An initial attempt with the default motors attached correctly
+failed the exact battery-only payload comparison. That fixture mismatch remains
+preserved and does not justify accepting extra/malformed notification fields.

@@ -91,12 +91,15 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   dumps=(), existing_filesystem: Path | None = None,
                   imu_fixture: Path | None = None,
                   motor_runtime: Path | None = None,
-                  electrical_qualification: Path | None = None) -> str:
+                  electrical_qualification: Path | None = None,
+                  empty_ports: bool = False) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
     platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
     if electrical_qualification and not motor_runtime:
         raise ValueError('electrical qualification requires explicit motor topology')
+    if empty_ports and not motor_runtime:
+        raise ValueError('empty ports require explicit compiled topology')
     prefix = ([f"include @{electrical_qualification / 'models.cs'}"] if electrical_qualification
               else [] if motor_runtime else [f"include @{DEVICES}"])
     lines = prefix + [
@@ -106,6 +109,10 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
     if motor_runtime:
         command = 'CreateQualificationElectricalPorts' if electrical_qualification else 'CreatePrimeElectricalPorts'
         lines.append(f'emulation {command} "spike"')
+        if empty_ports:
+            # Match the battery-only LE fixture's external input conditions.
+            # This acts on model attachments before loading/running the guest.
+            lines.extend(f'port{name} Detach' for name in 'ABCDEF')
     if existing_filesystem is not None:
         lines.append(f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}")
         if motor_runtime:
@@ -162,15 +169,40 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
     return "\n".join(lines) + "\n"
 
 
+def compiled_le_board(arguments, parser):
+    """Admit a receipt-bound compiled topology without enabling motor jobs."""
+    if arguments.compiled_board is None:
+        return None
+    if any((arguments.motor_runtime, arguments.classic, arguments.imu_probe,
+            arguments.imu_poses, arguments.imu_readiness, arguments.imu_calibration,
+            arguments.lite_extension, arguments.skip_le, arguments.scratch_link,
+            arguments.then)):
+        parser.error('--compiled-board requires a separate direct LE scenario')
+    import re
+    root = arguments.compiled_board.resolve()
+    for path in (root, arguments.existing_filesystem):
+        if path is None or re.search(r"[\s\"'@;\\]", str(path)):
+            parser.error('compiled board requires an explicit filesystem and monitor-safe paths')
+    receipt = json.loads((root / 'topology-receipt.json').read_text())
+    for name in ('boards/spike-prime.repl', 'boards/spike-prime-brick-devices.repl',
+                 'cpus/stm32f413vg.repl', 'cpus/stm32f4.repl'):
+        raw = (root / 'platforms' / name).read_bytes()
+        if (hashlib.sha256(raw).hexdigest() != receipt['files'][name]['stagedSha256']
+                or b'https://' in raw or b'http://' in raw):
+            parser.error('compiled board differs from its offline topology receipt')
+    return root
+
+
 async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        trace=(), callers=(), watches=(), dumps=(),
                        existing_filesystem: Path | None = None,
                        imu_fixture: Path | None = None,
                        motor_runtime: Path | None = None,
-                       electrical_qualification: Path | None = None):
+                       electrical_qualification: Path | None = None,
+                       empty_ports: bool = False):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification))
+                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification, empty_ports))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -695,6 +727,8 @@ async def main() -> int:
     parser.add_argument("--classic", action="store_true")
     parser.add_argument("--motor-runtime", type=Path,
                         help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
+    parser.add_argument("--compiled-board", type=Path,
+                        help="direct LE only: receipt-bound offline topology using the supplied Runtime compiled models")
     parser.add_argument("--electrical-qualification", type=Path,
                         help="Explicit source-compiled candidate from Infrastructure's qualification stager")
     parser.add_argument("--motor-port-layout", type=Path,
@@ -746,6 +780,7 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
                      arguments.imu_readiness, arguments.imu_calibration))
+    le_board = compiled_le_board(arguments, parser)
     if arguments.motor_case != 'all' and not arguments.motor_runtime:
         parser.error("--motor-case requires --motor-runtime")
     if arguments.motor_case == 'detach' and not arguments.motor_port_layout:
@@ -798,8 +833,11 @@ async def main() -> int:
 
     results: dict = {"images": str(arguments.images), "air_tools": str(AIR_TOOLS),
                      "status": "RUNNING", "storage": "initially-erased"}
-    if arguments.motor_runtime:
+    board_runtime = arguments.motor_runtime or le_board
+    if board_runtime:
         results['electrical_model_route'] = 'source-compiled' if electrical_receipt is not None else 'compiled-runtime'
+    if le_board is not None:
+        results['compiled_board_external_ports'] = 'empty-A-F-before-guest'
     if electrical_receipt is not None:
         results['electrical_candidate_receipt'] = electrical_receipt
     if port_layout is not None:
@@ -846,7 +884,8 @@ async def main() -> int:
                                         arguments.port, workdir, arguments.trace_symbol,
                                         arguments.trace_caller, arguments.watch,
                                         arguments.dump, arguments.existing_filesystem,
-                                        imu_fixture, arguments.motor_runtime, arguments.electrical_qualification)
+                                        imu_fixture, board_runtime, arguments.electrical_qualification,
+                                        le_board is not None)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             if arguments.observe_guest_clock:
