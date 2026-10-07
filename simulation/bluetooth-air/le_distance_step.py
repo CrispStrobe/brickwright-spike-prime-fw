@@ -53,7 +53,7 @@ class DistanceStep:
                     raise ValueError('External input receipt exceeds log bound')
                 await asyncio.sleep(.05)
 
-    async def run(self, frames, errors, receipt):
+    async def run(self, frames, errors, receipt, observe=None):
         old = self.expected_mm
         await self.change_input(250, receipt)
         self.expected_mm = 250
@@ -74,4 +74,6 @@ class DistanceStep:
                     continue
                 sample = self.decode(payload)
                 sample.update(frame=frame.hex(), payload=payload.hex(), received_at_host_s=time.monotonic())
+                if observe is not None:
+                    await observe(sample)
                 samples.append(sample)

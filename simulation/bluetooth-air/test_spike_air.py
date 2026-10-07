@@ -341,7 +341,7 @@ async def receive_connection_info(frames, errors, strict=False):
 async def le_round_trip(central, advertisement, results: dict, *,
                         periodic=False, leave_subscribed=False,
                         reconnect_quiet=None, notification_decoder=None,
-                        distance_step=None) -> None:
+                        distance_step=None, motion_context=None) -> None:
     from spike_frames import FrameBuffer
 
     connection = None
@@ -398,8 +398,13 @@ async def le_round_trip(central, advertisement, results: dict, *,
                     frames, errors, periodic_receipt, decoder=notification_decoder,
                     allow_initial_battery=notification_decoder is not None and reconnect_quiet is None)
                 if distance_step is not None:
-                    await distance_step.run(frames, errors,
-                        periodic_receipt.setdefault('distance_step', {}))
+                    if motion_context is not None:
+                        from le_concurrent_motion import run_with_motion
+                        await run_with_motion(*motion_context, frames, errors, distance_step,
+                            periodic_receipt.setdefault('concurrent_motion', {}), classic_round_trip)
+                    else:
+                        await distance_step.run(frames, errors,
+                            periodic_receipt.setdefault('distance_step', {}))
                 await set_notification_interval(
                     peer, rx, frames, errors, 0,
                     periodic_receipt.setdefault("unsubscribe", {}), decoder=notification_decoder)
@@ -488,7 +493,7 @@ async def classic_round_trip(central, results: dict,
                              imu_renode=None, renode_log: Path | None = None,
                              imu_readiness: bool = False, imu_poses: bool = False,
                              imu_calibration: bool = False,
-                             motor_renode=None, motor_case: str = 'all') -> None:
+                             motor_renode=None, motor_case: str = 'all', motor_action=None) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -527,6 +532,8 @@ async def classic_round_trip(central, results: dict,
         results["spp_request"] = request.decode().strip()
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
+        if motor_action is not None:
+            await motor_action(dlc, received)
         if motor_renode is not None:
             from classic_motor_probe import motor_round_trip
             await motor_round_trip(dlc, received, motor_renode, results,
@@ -752,6 +759,8 @@ async def main() -> int:
                         help="separate compiled LE fixture: default A/B motors, C color, D 1000mm ultrasonic, E force")
     parser.add_argument("--le-distance-step", action="store_true",
                         help="with active ports, change external D input to 250mm while subscribed")
+    parser.add_argument("--le-concurrent-motion", action="store_true",
+                        help="with distance step, run real Classic A/B jobs alongside LE")
     parser.add_argument("--compiled-board", type=Path,
                         help="direct LE only: receipt-bound offline topology using the supplied Runtime compiled models")
     parser.add_argument("--electrical-qualification", type=Path,
@@ -856,6 +865,8 @@ async def main() -> int:
         parser.error('--active-port-notifications requires --compiled-board --periodic --reconnect')
     if arguments.le_distance_step and not arguments.active_port_notifications:
         parser.error('--le-distance-step requires --active-port-notifications')
+    if arguments.le_concurrent_motion and not arguments.le_distance_step:
+        parser.error('--le-concurrent-motion requires --le-distance-step')
     notification_decoder = None
     distance_step = None
     if arguments.active_port_notifications:
@@ -904,7 +915,7 @@ async def main() -> int:
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
             imu_fixture = None
-            if arguments.motor_runtime:
+            if arguments.motor_runtime or arguments.le_concurrent_motion:
                 from classic_motor_probe import RENODE_MOTOR_HELPER
                 imu_fixture = workdir / "motor-fixture.py"
                 imu_fixture.write_text(RENODE_MOTOR_HELPER)
@@ -950,7 +961,9 @@ async def main() -> int:
                                     periodic=arguments.periodic,
                                     leave_subscribed=arguments.periodic,
                                     notification_decoder=notification_decoder,
-                                    distance_step=distance_step)
+                                    distance_step=distance_step,
+                                    motion_context=(air, renode, workdir / 'renode.log')
+                                        if arguments.le_concurrent_motion else None)
                 if arguments.reconnect:
                     # A second central after the first link ended: the hub must
                     # advertise again and answer again.

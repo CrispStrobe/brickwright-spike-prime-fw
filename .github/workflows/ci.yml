@@ -39,6 +39,7 @@ jobs:
           python3 tools/test_compiled_le_board.py
           python3 tools/test_active_port_notifications.py
           python3 tools/test_le_distance_step.py
+          python3 tools/test_le_concurrent_motion.py
           python3 tools/test_bluetooth_air_timeouts.py
           python3 tools/test_bluetooth_air_lifecycle.py
           python3 tools/test_classic_motor_probe.py
