@@ -261,15 +261,28 @@ async def set_notification_interval(peer, rx, frames, errors, interval, receipt,
                 raise ValueError("Too many notifications before interval acknowledgement")
 
 
-async def collect_battery_notifications(frames, errors, receipt, decoder=None):
+async def collect_battery_notifications(frames, errors, receipt, decoder=None,
+                                        allow_initial_battery=False):
     from spike_frames import receive_payload, battery_notification
 
     started = time.monotonic()
     receipt["host_started_s"] = started
     samples = receipt["samples"] = []
+    receipt["initial_battery"] = []
     async with asyncio.timeout(90):
-        for _ in range(3):
+        while len(samples) < 3:
             frame, payload = await receive_payload(frames, errors, timeout=60)
+            receipt["last_payload"] = payload.hex()
+            # Discovery may not yet have delivered a coherent ultrasonic frame.
+            # Only this exact battery-only startup record is allowed, before
+            # the first distance sample, bounded by 32 records and the same 90s.
+            if allow_initial_battery and not samples and len(payload) == 5:
+                startup = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+                startup.update(frame=frame.hex(), payload=payload.hex())
+                receipt["initial_battery"].append(startup)
+                if len(receipt["initial_battery"]) > 32:
+                    raise AssertionError("Ultrasonic discovery exceeded startup record bound")
+                continue
             sample = (decoder(payload) if decoder else
                       battery_notification(payload, BATTERY_FIXTURE_PERCENT))
             received = time.monotonic()
@@ -381,7 +394,8 @@ async def le_round_trip(central, advertisement, results: dict, *,
                     peer, rx, frames, errors, 100,
                     periodic_receipt.setdefault("subscribe", {}), decoder=notification_decoder)
                 quiet_window = await collect_battery_notifications(
-                    frames, errors, periodic_receipt, decoder=notification_decoder)
+                    frames, errors, periodic_receipt, decoder=notification_decoder,
+                    allow_initial_battery=notification_decoder is not None and reconnect_quiet is None)
                 await set_notification_interval(
                     peer, rx, frames, errors, 0,
                     periodic_receipt.setdefault("unsubscribe", {}), decoder=notification_decoder)

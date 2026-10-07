@@ -84,6 +84,16 @@ class Collector(unittest.IsolatedAsyncioTestCase):
         receipt = {}
         await scope['collect_battery_notifications'](frames, errors, receipt, decoder=distance_notification)
         self.assertEqual(len(receipt['samples']), 3)
+        frames, errors = self.inputs(BATTERY, ACTIVE, ACTIVE, ACTIVE)
+        startup = {}
+        await scope['collect_battery_notifications'](frames, errors, startup,
+            decoder=distance_notification, allow_initial_battery=True)
+        self.assertEqual(len(startup['initial_battery']), 1)
+        self.assertEqual(len(startup['samples']), 3)
+        frames, errors = self.inputs(*([BATTERY] * 33))
+        with self.assertRaisesRegex(AssertionError, 'startup record bound'):
+            await scope['collect_battery_notifications'](frames, errors, {},
+                decoder=distance_notification, allow_initial_battery=True)
         frames, errors = self.inputs(ACTIVE)
         await scope['expect_notification_quiet'](frames, errors, .01, {}, allowed=1, decoder=distance_notification)
         frames, errors = self.inputs(ACTIVE)
