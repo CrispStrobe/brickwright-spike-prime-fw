@@ -88,19 +88,29 @@ log = logging.getLogger("spike-air-test")
 
 def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   dumps=(), existing_filesystem: Path | None = None,
-                  imu_fixture: Path | None = None) -> str:
+                  imu_fixture: Path | None = None,
+                  motor_runtime: Path | None = None) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
+    devices = motor_runtime / "models.cs" if motor_runtime else DEVICES
+    platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
     lines = [
-        f"include @{DEVICES}",
+        f"include @{devices}",
         "mach create \"spike\"",
-        f"machine LoadPlatformDescription @{PLATFORM}",
+        f"machine LoadPlatformDescription @{platform}",
     ]
+    if motor_runtime:
+        lines.append('emulation CreatePrimeElectricalPorts "spike"')
+        lines.append('machine LoadPlatformDescriptionFromString "usart2:\\n    DMARequest -> dma1@7\\n    DMATransmit -> dma1@6"')
     if existing_filesystem is not None:
-        lines.extend([
-            f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}",
-            f"load_littlefs_fixture @{existing_filesystem}",
-        ])
+        lines.append(f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}")
+        if motor_runtime:
+            # Same validated synthetic NOR fixture and ISPIPeripheral loader;
+            # the staged topology has a different public flash peripheral name.
+            lines.append('python "load_fixture(monitor.Machine[\'sysbus.spi2.primeStorageMux.primeStorage\'], '
+                         f"\'{existing_filesystem}\')\"")
+        else:
+            lines.append(f"load_littlefs_fixture @{existing_filesystem}")
     lines.extend([
         f"sysbus LoadELF @{images / 'nuttx'}",
         f"sysbus LoadELF @{images / 'nuttx_user.elf'}",
@@ -151,10 +161,11 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
 async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        trace=(), callers=(), watches=(), dumps=(),
                        existing_filesystem: Path | None = None,
-                       imu_fixture: Path | None = None):
+                       imu_fixture: Path | None = None,
+                       motor_runtime: Path | None = None):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem, imu_fixture))
+                                    existing_filesystem, imu_fixture, motor_runtime))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -415,7 +426,8 @@ async def classic_round_trip(central, results: dict,
                              legacy_extension: Path | None = None, *,
                              imu_renode=None, renode_log: Path | None = None,
                              imu_readiness: bool = False, imu_poses: bool = False,
-                             imu_calibration: bool = False) -> None:
+                             imu_calibration: bool = False,
+                             motor_renode=None) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
 
@@ -454,6 +466,10 @@ async def classic_round_trip(central, results: dict,
         results["spp_request"] = request.decode().strip()
         results["spp_reply"] = buffer.decode(errors="replace").strip()[-200:]
         assert b"OK PONG" in buffer, "no PONG over SPP"
+        if motor_renode is not None:
+            from classic_motor_probe import motor_round_trip
+            await motor_round_trip(dlc, received, motor_renode, results,
+                                   renode_log=renode_log)
         if imu_renode is not None:
             from imu_probe import imu_round_trip, fusion_round_trip, stationary_round_trip, pose_round_trip
             if imu_poses:
@@ -669,6 +685,8 @@ async def main() -> int:
                         help="explicit validated synthetic LittleFS fixture directory; default is erased flash")
     parser.add_argument("--port", type=int, default=34571)
     parser.add_argument("--classic", action="store_true")
+    parser.add_argument("--motor-runtime", type=Path,
+                        help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
     parser.add_argument("--imu-poses", action="store_true",
@@ -712,6 +730,17 @@ async def main() -> int:
         parser.error("--timeout must be positive")
     imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
                      arguments.imu_readiness, arguments.imu_calibration))
+    if arguments.motor_runtime:
+        if not arguments.classic or imu_modes or arguments.lite_extension:
+            parser.error("--motor-runtime requires a separate --classic motor scenario")
+        arguments.motor_runtime = arguments.motor_runtime.resolve()
+        import re
+        for path in (arguments.motor_runtime, arguments.existing_filesystem):
+            if path is None or re.search(r"[\s\"'@;\\]", str(path)):
+                parser.error("motor scenario requires an explicit filesystem and monitor-safe paths")
+        for name in ("models.cs", "platforms/boards/spike-prime.repl"):
+            if not (arguments.motor_runtime / name).is_file():
+                parser.error("motor runtime must be staged using Runtime tools/stage_prime_runtime.py")
     if arguments.imu_calibration and (not arguments.classic or imu_modes != 1):
         parser.error("--imu-calibration requires --classic and a separate IMU scenario")
     if arguments.imu_probe and not arguments.classic:
@@ -756,6 +785,10 @@ async def main() -> int:
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
             imu_fixture = None
+            if arguments.motor_runtime:
+                from classic_motor_probe import RENODE_MOTOR_HELPER
+                imu_fixture = workdir / "motor-fixture.py"
+                imu_fixture.write_text(RENODE_MOTOR_HELPER)
             if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration:
                 from imu_probe import RENODE_IMU_HELPER
                 imu_fixture = workdir / "imu-fixture.py"
@@ -764,7 +797,7 @@ async def main() -> int:
                                         arguments.port, workdir, arguments.trace_symbol,
                                         arguments.trace_caller, arguments.watch,
                                         arguments.dump, arguments.existing_filesystem,
-                                        imu_fixture)
+                                        imu_fixture, arguments.motor_runtime)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             # Reconnection is a separate full discovery and request on a new peer.
@@ -814,8 +847,9 @@ async def main() -> int:
                                        imu_renode=renode if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration else None,
                                        renode_log=workdir / "renode.log",
                                        imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses,
-                                       imu_calibration=arguments.imu_calibration),
-                    1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (360 if arguments.imu_poses else 240))
+                                       imu_calibration=arguments.imu_calibration,
+                                       motor_renode=renode if arguments.motor_runtime else None),
+                    1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (600 if arguments.motor_runtime else 360 if arguments.imu_poses else 240))
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"

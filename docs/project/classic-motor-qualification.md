@@ -24,7 +24,8 @@ firmware memory, pending-job state or return value.
 
 - Positive and negative 90-degree jobs on A, at speed 30 and stop mode brake,
   acknowledge only after measured signed displacement reaches the requested
-  distance. Allow 20 degrees of overshoot for the 20 ms polling/UART boundary;
+  distance. Allow one degree of encoder quantization and 20 degrees of overshoot
+  for the 20 ms polling/UART boundary;
   record the actual displacement rather than treating a reply as motion proof.
 - Start A and B before collecting either completion. Observe both motors moving,
   then require distinct, exactly-once completions and zero power afterward.
@@ -35,6 +36,8 @@ firmware memory, pending-job state or return value.
 - With load 100%, a degree job must fail with `ETIMEDOUT` after the declared
   one-second no-progress interval and release power. This is a bounded progress
   timeout, not measured physical stall detection.
+- HOLD and explicit stall detection fail with `ENOTSUP`; nonzero degrees at
+  zero speed fail with `EINVAL`. Rejected requests must not power a motor.
 - Attachment loss must fail the pending move and release its ownership. A fresh
   attachment must accept a replacement job. A disconnected peer must leave no
   powered owned motor; reconnection is a separate peer session.

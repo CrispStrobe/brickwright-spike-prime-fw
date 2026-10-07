@@ -36,6 +36,7 @@ jobs:
           python3 tools/test_bluetooth_air_frames.py
           python3 tools/test_bluetooth_air_periodic.py
           python3 tools/test_bluetooth_air_lifecycle.py
+          python3 tools/test_classic_motor_probe.py
           python3 tools/test_imu_probe.py
           python3 tools/test_imu_reference.py
           tools/check_imu_snapshot.sh
