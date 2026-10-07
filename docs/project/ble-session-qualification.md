@@ -93,6 +93,14 @@ all connection races. Untested thread schedules, Classic endpoint lifetime and
 asynchronous originating-session propagation retain the limits stated above.
 
 The full two-profile [mandatory matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37683307104)
-is still pending. Source/documentation CI passed at the tested source. No merge,
-release, desktop pin or installed GUI adoption is claimed by this checkpoint.
+passed both profiles at the tested source, including reviewed inputs/link,
+resource limits, official TI fingerprint verification/exclusion, protected boot,
+retained-program restarts, storage durability and all seven Bluetooth-air modes.
+Profile-specific skips assign the protected/storage tests to `simulation` and
+the Bluetooth suite to `simulation-hci`; neither profile substitutes for the
+other. Source/documentation CI also passed at the tested source.
+
+Subsequent qualification-note edits change documentation only. They do not
+change the tested firmware, harness or dependency pins. A release, desktop pin
+or installed GUI adoption still needs its own consumer qualification.
 Raw build and guest evidence remains in the operator's private evidence archive.
