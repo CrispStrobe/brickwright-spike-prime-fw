@@ -29,6 +29,10 @@ admitted link returns `-ENOTCONN`. Receive-side link changes no longer retarget
 already queued entries. Callback reentry is coalesced into at most one immediate
 retry per pump invocation, preserving a finite refusal bound.
 
+Response priority refers to the response enqueue API. Classic JSON currently
+uses the frame queue, so its terminal replies are not guaranteed admission
+under frame-queue saturation. This remains a separate delivery limitation.
+
 Reproducible host controls:
 
 ```sh
@@ -62,3 +66,11 @@ this source change. A private candidate build is not release qualification and
 does not waive official TI fingerprint revalidation or the mandatory matrix.
 The transport API's existing all-or-error send contract is retained; no new
 partial-byte acceptance or arbitrary oversized-frame guarantee is asserted.
+
+The first private candidate build stopped before compilation because the
+reviewed input inventories retained old hashes for the changed TX implementation,
+header and neutral reply adapter. Those three entries are refreshed for both
+profiles, preserving their existing Apache-2.0 and inherited MIT selections.
+No configuration, compiler runtime, dependency pin, linker-member expectation
+or notice selection is relaxed. The subsequent build must verify the actual
+compiler closure and linker selections; refreshing hashes is not a build pass.

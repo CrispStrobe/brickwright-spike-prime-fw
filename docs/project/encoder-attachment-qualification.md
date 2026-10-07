@@ -449,6 +449,16 @@ on the still-subscribed LE connection. Twenty-two guest-clock observations
 completed and cleanup reported no error. No simultaneous motion, distance
 change or overlap is qualified by this failed run.
 
+That first attempt also contained a harness error: its request IDs were five
+characters, while the Classic parser requires exactly four lowercase letters
+or digits. Harness `5b9e38f` corrects the IDs and rejects invalid IDs before
+sending. Its actual compiled rerun parsed one motor reply but still failed
+with `Invalid RFCOMM text` when modern binary notifications reached Classic.
+Thus the invalid-ID failure and cross-link redirection are distinct findings;
+neither run qualifies simultaneous motion. The candidate correction and
+remaining session/delivery limitations are recorded in
+[TX destination qualification](tx-link-qualification.md).
+
 Source review identifies a concrete routing gap to investigate:
 `apps/btsensor/btsensor_main.c::transport_receive` changes the single selected
 TX link on incoming traffic; `modern_send` enqueues without an explicit BLE
