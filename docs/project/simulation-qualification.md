@@ -676,8 +676,8 @@ a distinct evidence boundary from a newly source-built Runtime.
 The [canonical hosted matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
 is incomplete: HCI ARM compilation passed, then its pinned TI fingerprint-reference
 fetch failed because the official Git server connection timed out. Later hosted
-guest gates did not run in that job; the default profile was still running at
-this checkpoint. Local clean gates and actual guest results remain separate from
+guest gates did not run in either job: the default profile subsequently failed
+at the same fetch step after its ARM build passed. Local clean gates and actual guest results remain separate from
 this hosted failure. TI checks stay mandatory and the failure is preserved.
 No merge or shipped desktop adoption is claimed here. Immediate back-to-back jobs,
 attachment/disconnect cleanup, counter-wrap/rearm guest interleavings, physical

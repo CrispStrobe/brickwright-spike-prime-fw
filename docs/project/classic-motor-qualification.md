@@ -144,7 +144,8 @@ it does not establish new runtime source-to-binary provenance.
 The [hosted complete matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
 is incomplete. Its HCI ARM build passed, then the pinned TI fingerprint-reference
 fetch failed with an official-server connection timeout before later guest gates.
-The default-profile job was still running at this checkpoint. The failure is
+The default-profile job subsequently failed at the same fetch step after its
+ARM build passed. Both hosted jobs therefore remain failed. The failure is
 preserved and the TI exclusion gates remain required. Existing six air regressions
 are also being rerun locally against the staged HCI image; no pass is inferred
 from their historical results.
