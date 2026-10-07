@@ -691,6 +691,12 @@ Stop/restart returns a fresh sequence-one, not-ready snapshot. Calibration
 persistence also passes: bias saved at sequence 441 survives STOP/LOAD/reopen,
 with readiness reset and a fresh sequence-one snapshot. This is guest-VFS
 persistence, not physical power-loss durability. The initial LE reconnect run timed out during
-its final silence observation; the host-only observation-budget correction at
-`02bb2ae` awaits its actual guest run and a new canonical matrix. These results
-must not be promoted to a complete air-matrix or release claim.
+its final silence observation. The corrected LE run at harness
+`02bb2aefdeb640e95be3685589dd5f5fbe2de5d8` now passes against the same firmware:
+three fixture battery records per round, unsubscribe silence, active traffic
+before disconnect and zero inherited notifications across reconnect. The final
+quiet window completes with no late/in-flight notification and no surviving
+owned processes. The five other air results used harness `52caf015`; a new
+complete canonical matrix on the newer harness is still required. Preserve the
+initial timeout and both hosted TI fetch failures; these split local results
+must not be promoted to a complete hosted-matrix or release claim.
