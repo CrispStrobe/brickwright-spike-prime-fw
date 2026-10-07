@@ -1,7 +1,7 @@
 # Classic measured motor guest qualification
 
-This is the L01 test contract, initially proposed on 2026-10-07. It is not a
-passing qualification record. The lane owns the Classic motor peer, its offline
+This is the L01 test contract and partial failure checkpoint from 2026-10-07.
+The complete peer has **not passed**. The lane owns the Classic motor peer, its offline
 adversaries and optional motor topology selection in
 `simulation/bluetooth-air/test_spike_air.py`. It does not change firmware motor
 control, dependency pins or other workers' editor code.
@@ -76,3 +76,48 @@ regression on the qualified source. Run `tools/check_btsensor_classic.sh` and
 completion without motion, opposite direction, duplicate replies, nonzero
 terminal power and success on a stalled move. Record every remaining exclusion;
 do not mark all L01 cases complete from a partial peer pass.
+
+## Actual checkpoint and reproduction
+
+The source-built HCI firmware at `4e326e7a62624acc865002b256230042d1f50d63`
+passed compiler/configuration/linker/notices/TI-exclusion gates, with 592,780
+userspace flash bytes, 88,144 static RAM bytes and zero TI payload bytes. Its
+consumed Runtime/model source pins remain `756b684eee56ba698a931a14b3f4885cb8d8ada6`
+and `fe4ad383c7392527433783fcec455daa7ddc2bb7`. The local experiment used a retained
+qualified managed Runtime; this does not close release source-to-binary provenance.
+No control source or consumer dependency pin changed for this test lane.
+
+With peer source `8523877`, the settled sequence measured +94.081 and -95.412
+degrees for the signed 90-degree requests. The concurrent A/B 180-degree requests
+measured +184.875 and -184.889 degrees, both with power zero at the terminal
+observation. Preparatory 30-degree moves also passed. The same run then reset
+the CPU during Stop/replacement and timed out waiting for replies. The reset's
+cause is under investigation; cancellation, replacement and the later
+no-progress/boundary cases are **not guest-qualified** by this run. Completion
+power zero does not imply instantaneous zero angular velocity or active HOLD.
+
+Eight host tests and the existing Classic/backend host gates passed. Four
+deliberate comparator changes were detected: ignored direction, ignored terminal
+power, accepted duplicate replies and accepted success instead of timeout.
+Source/reuse/origin/safety policy and strict documentation checks passed. All
+setup failures, actual negative results, invocations and raw logs stay private.
+[PR #37](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/37) remains
+the draft implementation/review entry point; it is not a merged capability.
+
+Run `python3 tools/test_classic_motor_probe.py` for the offline adversaries.
+The canonical actual-air command remains `tools/test_bluetooth_air.sh` after
+building/staging the explicit `simulation-hci` profile and reviewed Runtime;
+it runs the new `motors` mode in a separate loopback-only namespace and requires
+the complete motor scenario. It does not weaken that gate for partial results.
+The diagnostic peer accepts `--motor-case motion`, `cancel` or `no-progress`
+with `--motor-runtime` pointing at output from
+`tools/stage_classic_motor_topology.py --runtime "$RENODE_DIR" --output .local/motor-topology`.
+Direct diagnostics must use the same network isolation as the canonical wrapper.
+
+Next work: reproduce the Stop reset with passive assert/hard-fault/reset hooks
+and the own firmware's RAM log, identify the actual failing boundary, add a
+failing host regression where possible, and qualify any source/model fix with
+affected clean guest builds. Separately specify asynchronous fresh-baseline
+admission for immediate sequential jobs, preserving ownership and cancellation.
+Do not solve either failure by substituting guest functions, inventing readings,
+silencing the error comparison or changing reference firmware bytes.
