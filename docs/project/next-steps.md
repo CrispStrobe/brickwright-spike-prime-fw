@@ -137,7 +137,10 @@ source and remaining qualification gates in that contract. Attachment/disconnect
 and the other excluded guest interleavings remain open; L01 is not complete.
 A separate [encoder attachment-snapshot candidate](encoder-attachment-qualification.md)
 adds host coverage for a connection edge during frame collection; it still
-requires clean ARM and guest qualification and does not solve atomic admission.
+needs electrical attachment/ownership qualification and does not solve atomic
+admission. Both clean protected profiles and the Classic motor peer now pass
+on its recorded source; the exact attachment-change interleaving remains
+host-only. Its full air suite and mandatory hosted fingerprint check remain open.
 
 **Start:** firmware `apps/btsensor/btsensor_classic.c`,
 `apps/btsensor/btsensor_modern_backend.c`, their `test/` fixtures,

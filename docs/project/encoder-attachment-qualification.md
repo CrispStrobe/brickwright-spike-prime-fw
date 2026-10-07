@@ -3,8 +3,9 @@
 
 # Encoder attachment snapshot candidate
 
-This is an integration follow-up to [the Classic motor qualification](classic-motor-qualification.md),
-not a merged or guest-qualified capability. It changes the retained NuttX backend;
+This is an unmerged integration follow-up to
+[the Classic motor qualification](classic-motor-qualification.md). Its exact
+attachment-change interleaving is host-tested only. It changes the retained NuttX backend;
 no clean-room or whole-firmware independence claim is made.
 
 ## Problem and contract
@@ -48,18 +49,48 @@ publishing the candidate position before validation. These are host observations
 through the existing I/O seam, not actual ARM/attachment evidence. Retain the
 initial failure and unchanged raw receipts privately.
 
-## Qualification still required
+## Clean ARM and guest regression checkpoint
 
-Run both clean protected profiles with compiler/configuration/linker/resource,
-licence-input and mandatory TI-exclusion gates. The configured inventories update
-only the two changed source-input hashes; their image/link records remain
-historical until these builds run. Do not label them new binary evidence.
+Both protected profiles were rebuilt from
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94`. Compiler/configuration, linker,
+reviewed source-input and notice checks, resource budgets and local TI-exclusion
+checks passed. Userspace flash is 592,860/654,336 bytes and static RAM is
+88,144/98,304 bytes; the synthetic TI payload is zero. This adds 88 flash bytes
+over the qualified predecessor without changing static RAM. The configured
+inventories retain their historical image/link records; the new private build
+receipts are separate evidence and do not rewrite those records.
+
+The complete Classic electrical-motor peer passed on the new HCI image with
+the consumed Runtime/model pins from the Classic qualification. Requested
+signed 90-degree moves produced +94.752/-94.746 degrees; concurrent signed
+180-degree moves produced +183.526/-183.891 degrees. Stop followed by replacement
+produced -182.903 degrees. These satisfy the documented signed displacement
+tolerance. Full load produced `ETIMEDOUT` after 1,018,011 guest microseconds;
+unsupported HOLD/stall and zero-speed rejection checks also passed. Existing
+terminal power and exactly-once completion checks remained enabled.
+
+The default-profile native/Python six-motor regression also passed: 208
+observations through guest clock 15,957 milliseconds, including A–F speed and
+position control, six concurrent motors, native/Python Stop and the long-run
+reset boundary. Signed -30-degree position targets remained within the
+fixture's 3-degree tolerance. This used source-staged models and the retained
+installed native Runtime; it does not qualify a newly assembled desktop package
+or change a consumer dependency pin.
+
+This regression does not exercise the exact attachment-change interleaving:
+that remains host-only. It uses the retained qualified compiled Runtime, not a
+new Runtime source-to-binary qualification. The official TI endpoint still
+times out; the separate mandatory hosted fingerprint revalidation remains
+blocked and has not been waived.
+
+## Qualification still required
 
 Extend the external Classic electrical-motor fixture with public detach and
 reattach inputs, observing real guest results, displacement and released power.
 Require no success across the observed attachment change and a working fresh
-replacement request. Rerun complete Classic-air and native/Python six-motor
-regressions, then the full existing air suite. Record exact firmware, harness and
+replacement request. Rerun the affected motor regressions after any further
+source/model change, and run the full existing air suite on this candidate.
+Record exact firmware, harness and
 model pins and tolerances. Do not copy the predecessor's successful guest results
 onto this source, merge on host tests alone or waive an unavailable TI gate.
 
@@ -71,6 +102,17 @@ its actual GPIO and guest observations. The consumed
 returns from `Tick()` when `Device` is null. The base port's attachment booleans
 are explicitly logical indicators, not electrical ID-pin levels. This source
 inspection identifies a prerequisite; it is not an observed guest-detach failure.
+
+A paused-model probe of this consumed model confirmed the distinction. With
+the ID/UART GPIOs configured as inputs, attached, detached and same-type
+reattached observations all read ID1 high, ID2 low and RX low. The logical
+attachment indicator changed true/false/true and topology generation advanced
+2/3/4. The probe loaded no firmware and advanced no guest time. It establishes
+retained sampled input levels across this sequence, not electrical unplug
+semantics, a guest disconnect failure or a correct detached voltage policy.
+The initial probe used an unavailable machine-child name and failed; the
+corrected probe used the public external port handle. Both receipts remain
+private and unchanged.
 
 Add model controls for attach, detach and same-type reattach that observe the
 ID/UART inputs and H-bridge demand through documented interfaces, including
