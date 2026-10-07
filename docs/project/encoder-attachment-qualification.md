@@ -133,3 +133,57 @@ python3 tools/check_source_policy.py
 python3 tools/check_reuse_licenses.py
 python3 tools/check_source_origin_review.py --require-clearance
 ```
+
+## Electrical detach/reconnect candidate — 2026-10-07
+
+[Infrastructure PR #35](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/35)
+adds synthetic detached ID/RX resolution and read-only bridge-demand observations.
+Its source-compiled controls preserve all 35 existing checks; mutations that
+retain the detached inputs or hide detached bridge demand are both detected.
+[Runtime PR #53](https://github.com/CrispStrobe/renode-spike-prime/pull/53) explicitly
+pins the model candidate for canonical build and complete peripheral tests.
+Neither candidate has been adopted by the shipped desktop package.
+
+An actual ARM guest using clean protected HCI firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94` and namespace-isolated model candidate
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48` passed one external Classic sequence:
+
+- Start a long powered move, then detach through the public model interface.
+  Initial detached bridge demand remains observable; the fixture does not clear it.
+- The interrupted job returns `ENODEV=-19`. In 767,803 guest microseconds the
+  actual DCM confirmed type changes from 14 to NONE, its event counter advances
+  from 1 to 2, CONNECTED clears and bridge demand reaches zero.
+- A new request while absent returns `ENODEV` without drive.
+- Same-type reattachment creates fresh mechanics. Guest discovery advances the
+  counter to 3; a fresh -90-degree job completes at -94.7464 degrees, within the
+  external fixture's 20-degree tolerance, and leaves zero bridge demand.
+- Unsupported HOLD/stall and zero-speed checks retain their explicit errors.
+
+The harness reads guest diagnostics without writing them. Generate the private,
+exact own-kernel debug layout and run the separate scenario after staging models
+with Infrastructure's `tools/stage_electrical_attachment_qualification.py`:
+
+```sh
+python3 tools/collect_legoport_observation_layout.py \
+  --kernel OWN_DEBUG_KERNEL_ELF --output NEW_PRIVATE_LAYOUT_JSON
+# Add to the existing explicit Classic motor invocation:
+# --motor-case detach --electrical-qualification STAGED_CANDIDATE_DIRECTORY
+# --motor-port-layout PRIVATE_LAYOUT_JSON
+python3 tools/test_legoport_observation_layout.py
+python3 tools/test_classic_motor_probe.py
+```
+
+The layout is a hash-bound, six-port read-only diagnostic, not a stable ABI or
+an interface for third-party/reference images. Host adversaries reject mismatched
+hashes, out-of-range memory and invalid offsets. Model controls, canonical build
+results, staged guest results and installed package qualification remain separate.
+The final harness additionally embeds candidate/layout receipts in its private
+results; the successful guest run preserves the pre-metadata harness snapshot.
+
+This closes one ordinary detach/reconnect sequence in the source-compiled model
+context. It does not exercise the exact encoder-read interleaving in the guest,
+arbitrary hotplug races, physical unplug safety, transport-disconnect ownership
+or canonical-consumer adoption. Repeat affected Classic/native/Python guest tests
+on the canonical Runtime candidate, complete the current-source air suite and
+satisfy every mandatory gate before merging. The unavailable official TI
+fingerprint endpoint remains a blocker, not a waived gate.

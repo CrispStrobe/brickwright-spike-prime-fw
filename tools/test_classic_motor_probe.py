@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'simulation/bluetooth-air'))
-from classic_motor_probe import MotorPeer, require_move, require_reply, boundary_jobs
+from classic_motor_probe import MotorPeer, require_move, require_reply, require_disconnect, boundary_jobs
 
 
 class ScriptSelection(unittest.TestCase):
@@ -38,6 +38,13 @@ class ScriptSelection(unittest.TestCase):
             self.assertIn('emulation CreatePrimeElectricalPorts "spike"', script)
             self.assertIn('primeStorageMux.primeStorage', script)
             self.assertNotIn('load_littlefs_fixture @fixture', script)
+            candidate = scope['renode_script'](images, 12345,
+                motor_runtime=Path('staged'), electrical_qualification=Path('candidate'))
+            self.assertIn('include @candidate/models.cs', candidate)
+            self.assertIn('emulation CreateQualificationElectricalPorts "spike"', candidate)
+            self.assertNotIn('emulation CreatePrimeElectricalPorts', candidate)
+            with self.assertRaises(ValueError):
+                scope['renode_script'](images, 12345, electrical_qualification=Path('candidate'))
 
     def test_compiled_topology_preserves_notices_and_records_source_identity(self):
         from stage_classic_motor_topology import stage, FILES
@@ -70,6 +77,19 @@ class ScriptSelection(unittest.TestCase):
 
 
 class ObservationChecks(unittest.TestCase):
+    def test_disconnect_requires_real_guest_edge_and_bridge_release(self):
+        before = {'guest': {'event_counter': 7}}
+        detached = {'virtual_us': 100}
+        after = {'virtual_us': 1000100, 'bridge_drive': 0,
+                 'guest': {'event_counter': 8, 'confirmed_type': 0, 'flags': 0}}
+        self.assertEqual(require_disconnect(before, detached, after), 1000000)
+        for mutation in ({'bridge_drive': 3000}, {'virtual_us': 100}, {'virtual_us': 3000100},
+                         {'guest': dict(after['guest'], event_counter=7)},
+                         {'guest': dict(after['guest'], confirmed_type=14)},
+                         {'guest': dict(after['guest'], flags=1)}):
+            with self.subTest(mutation=mutation), self.assertRaises(AssertionError):
+                require_disconnect(before, detached, dict(after, **mutation))
+
     def test_signed_motion_and_terminal_drive(self):
         before = {'position': 15, 'virtual_us': 100}
         for angle in (90, -90):

@@ -90,16 +90,22 @@ log = logging.getLogger("spike-air-test")
 def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   dumps=(), existing_filesystem: Path | None = None,
                   imu_fixture: Path | None = None,
-                  motor_runtime: Path | None = None) -> str:
+                  motor_runtime: Path | None = None,
+                  electrical_qualification: Path | None = None) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
     platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
-    lines = ([] if motor_runtime else [f"include @{DEVICES}"]) + [
+    if electrical_qualification and not motor_runtime:
+        raise ValueError('electrical qualification requires explicit motor topology')
+    prefix = ([f"include @{electrical_qualification / 'models.cs'}"] if electrical_qualification
+              else [] if motor_runtime else [f"include @{DEVICES}"])
+    lines = prefix + [
         "mach create \"spike\"",
         f"machine LoadPlatformDescription @{platform}",
     ]
     if motor_runtime:
-        lines.append('emulation CreatePrimeElectricalPorts "spike"')
+        command = 'CreateQualificationElectricalPorts' if electrical_qualification else 'CreatePrimeElectricalPorts'
+        lines.append(f'emulation {command} "spike"')
     if existing_filesystem is not None:
         lines.append(f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}")
         if motor_runtime:
@@ -160,10 +166,11 @@ async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        trace=(), callers=(), watches=(), dumps=(),
                        existing_filesystem: Path | None = None,
                        imu_fixture: Path | None = None,
-                       motor_runtime: Path | None = None):
+                       motor_runtime: Path | None = None,
+                       electrical_qualification: Path | None = None):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem, imu_fixture, motor_runtime))
+                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -685,7 +692,11 @@ async def main() -> int:
     parser.add_argument("--classic", action="store_true")
     parser.add_argument("--motor-runtime", type=Path,
                         help="with --classic, qualify measured jobs using a source-staged electrical motor topology")
-    parser.add_argument("--motor-case", choices=('all', 'motion', 'cancel', 'no-progress'), default='all',
+    parser.add_argument("--electrical-qualification", type=Path,
+                        help="Explicit source-compiled candidate from Infrastructure's qualification stager")
+    parser.add_argument("--motor-port-layout", type=Path,
+                        help="Private read-only DCM layout collected from this exact own-kernel ELF")
+    parser.add_argument("--motor-case", choices=('all', 'motion', 'cancel', 'no-progress', 'detach'), default='all',
                         help="select a separate bounded diagnostic motor scenario; CI requires all")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
@@ -732,6 +743,10 @@ async def main() -> int:
                      arguments.imu_readiness, arguments.imu_calibration))
     if arguments.motor_case != 'all' and not arguments.motor_runtime:
         parser.error("--motor-case requires --motor-runtime")
+    if arguments.motor_case == 'detach' and not (arguments.electrical_qualification and arguments.motor_port_layout):
+        parser.error("--motor-case detach requires electrical qualification and a matching own-kernel layout")
+    if (arguments.electrical_qualification or arguments.motor_port_layout) and not arguments.motor_runtime:
+        parser.error("electrical qualification and DCM observations require --motor-runtime")
     if arguments.motor_runtime:
         if not arguments.classic or imu_modes or arguments.lite_extension:
             parser.error("--motor-runtime requires a separate --classic motor scenario")
@@ -743,6 +758,21 @@ async def main() -> int:
         for name in ("platforms/boards/spike-prime.repl",):
             if not (arguments.motor_runtime / name).is_file():
                 parser.error("motor topology must be staged using tools/stage_classic_motor_topology.py")
+    port_layout = None
+    electrical_receipt = None
+    if arguments.electrical_qualification:
+        arguments.electrical_qualification = arguments.electrical_qualification.resolve()
+        if re.search(r"[\s\"'@;\\]", str(arguments.electrical_qualification)):
+            parser.error("electrical qualification requires a monitor-safe path")
+        receipt = json.loads((arguments.electrical_qualification / 'source-receipt.json').read_text())
+        source = (arguments.electrical_qualification / 'models.cs').read_bytes()
+        electrical_receipt = receipt
+        if hashlib.sha256(source).hexdigest() != receipt.get('generatedSha256'):
+            parser.error("source-compiled electrical candidate differs from its receipt")
+    if arguments.motor_port_layout:
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from collect_legoport_observation_layout import load_layout
+        port_layout = load_layout(arguments.motor_port_layout, arguments.images / 'nuttx')
     if arguments.imu_calibration and (not arguments.classic or imu_modes != 1):
         parser.error("--imu-calibration requires --classic and a separate IMU scenario")
     if arguments.imu_probe and not arguments.classic:
@@ -761,6 +791,10 @@ async def main() -> int:
 
     results: dict = {"images": str(arguments.images), "air_tools": str(AIR_TOOLS),
                      "status": "RUNNING", "storage": "initially-erased"}
+    if electrical_receipt is not None:
+        results['electrical_candidate_receipt'] = electrical_receipt
+    if port_layout is not None:
+        results['own_kernel_diagnostic_layout'] = port_layout
     air_hub = microbit = renode = hub = None
     air = Air(f"127.0.0.1:{arguments.hub_port}")
     return_code = 1
@@ -791,6 +825,9 @@ async def main() -> int:
                 from classic_motor_probe import RENODE_MOTOR_HELPER
                 imu_fixture = workdir / "motor-fixture.py"
                 imu_fixture.write_text(RENODE_MOTOR_HELPER)
+                if port_layout:
+                    with imu_fixture.open('a') as fixture:
+                        fixture.write('\n_classic_port_layout = json.loads(' + repr(json.dumps(port_layout)) + ')\n')
             if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration:
                 from imu_probe import RENODE_IMU_HELPER
                 imu_fixture = workdir / "imu-fixture.py"
@@ -799,7 +836,7 @@ async def main() -> int:
                                         arguments.port, workdir, arguments.trace_symbol,
                                         arguments.trace_caller, arguments.watch,
                                         arguments.dump, arguments.existing_filesystem,
-                                        imu_fixture, arguments.motor_runtime)
+                                        imu_fixture, arguments.motor_runtime, arguments.electrical_qualification)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             # Reconnection is a separate full discovery and request on a new peer.
