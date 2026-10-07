@@ -386,6 +386,87 @@ failed on an initial battery-only record. That failure is preserved. The later
 bounded discovery policy is explicit and tested to reject missing distance and
 post-discovery battery-only output; it does not accept arbitrary extra fields.
 No firmware C code, model code, guest bytes or package pin changed for this
-scenario. Dynamic input changes, detach during notification, commanded motor
-motion alongside LE, additional coherent record types, malformed guest requests,
-installed GUI adoption and the mandatory hosted firmware matrix remain open.
+scenario. The following contract adds changing inputs and simultaneous motor
+motion. Detach during notification, additional coherent record types, malformed
+guest requests, installed GUI adoption and the mandatory hosted firmware matrix
+remain separate gates.
+
+## Live distance changes and simultaneous motor jobs
+
+Add `--le-distance-step` to the attached-port scenario to change D's external
+distance input from 1000 to 250 mm while the first central remains subscribed.
+The harness invokes the public sensor model's `SetDistance` and verifies its
+readback. It does not write guest memory, encoder positions, PWM or clocks.
+The guest must subsequently send three exact
+`3c 06 00 00 3e 0d 03 fa 00` payloads. At most 32 exact old-distance records
+are allowed before the first changed record, within the unchanged 90-second
+collection bound. Old values after the first changed record, battery-only
+output, malformed records and a frozen input fail. Resubscription and the fresh
+central must retain 250 mm, with the original silence/reset assertions enabled.
+
+Actual distance-step qualification passed at harness
+`f2b30f90138646b4d6b33cbba4626f64c6c2ee13` using the same firmware and compiled model/Runtime identities as the
+attached-port run. The first collection contained three 1000 mm records; the
+step collection, active resubscription and fresh central each contained three
+250 mm records. No old records were observed in the step transition. Twenty-six
+guest-clock observations completed without error. This qualifies a change in
+the external model input flowing through the real guest notification path, not
+physical sensor dynamics.
+
+The optional `--le-concurrent-motion` contract requires `--le-distance-step`.
+It opens an authenticated/encrypted Classic connection while LE remains active,
+establishes A/B encoder readiness through real jobs, and requests +360 degrees
+on A and -360 on B. It observes both motors moving before changing distance,
+then collects the changed LE records alongside bounded read-only motor
+observations. At least one record must have observations of nonzero power and
+opposite signed speeds exceeding 1 degree/second. Each job must return a valid
+terminal reply, satisfy the existing displacement and released-drive contract,
+and pass the duplicate-reply quiet check. Task scheduling alone is insufficient.
+These multi-field observations are sequential, not an atomic electrical sample.
+The source-only helper observes the same compiled model instances; it supplies
+no replacement peripheral implementation.
+
+Host controls:
+
+```sh
+python3 tools/test_le_distance_step.py
+python3 tools/test_le_concurrent_motion.py
+```
+
+The first verifies transition bounds, frozen-input and post-change regression
+rejection, exact setter readback and integer admission. The second rejects
+missing samples, unpowered motion and wrong speed directions. Earlier payload
+comparator mutations remain required controls. None of these host controls
+alone qualifies the actual concurrent guest scenario.
+
+The first actual concurrent attempt at harness
+`7ee157bc496bfb19948320d823d801323f1539db` **failed** before establishing
+encoder readiness. Classic authentication, encryption, RFCOMM and PING/PONG
+succeeded, but the first motor request received no parsed reply. The bounded
+Classic parser rejected `RFCOMM text line exceeds bound`. The air record shows
+modern periodic notification frames on Classic after it connected, rather than
+on the still-subscribed LE connection. Twenty-two guest-clock observations
+completed and cleanup reported no error. No simultaneous motion, distance
+change or overlap is qualified by this failed run.
+
+Source review identifies a concrete routing gap to investigate:
+`apps/btsensor/btsensor_main.c::transport_receive` changes the single selected
+TX link on incoming traffic; `modern_send` enqueues without an explicit BLE
+destination; `apps/btsensor/btsensor_tx.c` pumps using that mutable selection.
+The observed route change is consistent with this design. It does not alone
+explain every missing motor reply or prove a complete root cause. Do not enlarge
+the Classic parser bound or accept redirected notifications to make the
+concurrency scenario pass.
+
+The next transport lane should preserve each queued message's destination and
+session generation. Modern notifications/replies must stay on their BLE session;
+Classic command and asynchronous motor replies must stay on their Classic
+session. Disconnect/reconnect must invalidate old-session work without redirecting
+or replaying it to the other link or a new central. Retain bounded queues,
+response priority, back-pressure, partial-send handling and callback cleanup.
+Host controls must cover alternating receive traffic, queued work under
+back-pressure, simultaneous disconnect, stale completion, and can-send callback
+reentry. Then clean-build both protected guest profiles and run the existing
+single-link regressions plus this exact compiled concurrent scenario. Compiler,
+resource, source/notice and mandatory TI/matrix gates still apply; no host-only
+success permits firmware merge or desktop adoption.
