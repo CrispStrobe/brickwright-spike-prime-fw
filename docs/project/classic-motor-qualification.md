@@ -182,3 +182,31 @@ affected clean guest builds. Separately specify asynchronous fresh-baseline
 admission for immediate sequential jobs, preserving ownership and cancellation.
 Do not solve either failure by substituting guest functions, inventing readings,
 silencing the error comparison or changing reference firmware bytes.
+
+## Existing LE regression observation budget
+
+The current local run of the existing LE reconnect scenario is **incomplete**:
+it passed the first periodic subscription/unsubscription and reconnect silence,
+then timed out during the final unsubscribe silence observation. Its measured
+pre-subscription reconnect window was 106.871 wall seconds; three subsequent
+samples took 77.419 seconds and the required unsubscribe silence was 112.590
+seconds. Those required observations plus protocol overhead exceed the old
+fixed 300-second per-phase budget. No unexpected notification was recorded in
+the completed silence windows; that is not a complete LE pass or a performance
+qualification.
+
+The host-only candidate at `02bb2ae` adds the already measured reconnect silence
+to the ordinary phase budget, capped at 600 seconds. Ordinary nonperiodic and
+first periodic phases retain their 180/300-second bounds; the overall scenario
+and outer process bounds remain unchanged. Notification content, sample counts,
+quiet-window duration and duplicate/late assertions are unchanged. Firmware and
+model bytes do not change. The correction is in
+`simulation/bluetooth-air/spike_timeouts.py`; three offline tests include the
+actual LE caller and detect restoring its old fixed timeout. The corrected
+actual run is queued after the remaining baseline scenarios and has not passed
+at this checkpoint.
+
+Because this is a later harness change, it requires affected guest qualification
+and a new hosted source candidate after the external TI fetch is available.
+Rerunning the old matrix alone cannot qualify this newer harness. Preserve the
+initial local timeout and both hosted fetch failures.
