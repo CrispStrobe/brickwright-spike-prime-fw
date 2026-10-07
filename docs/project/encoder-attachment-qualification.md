@@ -244,7 +244,9 @@ Require an actual current-source air run and preserve the original failure.
 
 The optional `--observe-guest-clock` diagnostic now implements that preparation
 for `--periodic --reconnect`. It reads `ElapsedVirtualTime` through the owned
-monitor and records host before/after windows every five seconds. Reads have
+monitor and records host before/after windows every five seconds. These use
+the same host monotonic time base as the collector's start and absolute record
+arrival timestamps, permitting direct observation-window correlation. Reads have
 three-second bounds and a 256-sample cap; regression, malformed values and no
 observed progress for fifteen host seconds fail the diagnostic. These host
 bounds are instrumentation limits, not firmware timer or physical radio accuracy.

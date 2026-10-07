@@ -91,6 +91,9 @@ class Subscription(unittest.IsolatedAsyncioTestCase):
             window = await collect(frames, errors, receipt)
             self.assertAlmostEqual(window, 30.4)
             self.assertGreater(window, 30)
+            self.assertEqual(receipt['host_started_s'], 0)
+            self.assertEqual([x['received_at_host_s'] for x in receipt['samples']],
+                             [7.7, 15.3, 22.9])
         finally:
             scope['time'] = original_time
 

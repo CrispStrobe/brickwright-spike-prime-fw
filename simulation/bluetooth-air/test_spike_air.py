@@ -232,13 +232,16 @@ async def collect_battery_notifications(frames, errors, receipt):
     from spike_frames import receive_payload, battery_notification
 
     started = time.monotonic()
+    receipt["host_started_s"] = started
     samples = receipt["samples"] = []
     async with asyncio.timeout(90):
         for _ in range(3):
             frame, payload = await receive_payload(frames, errors, timeout=60)
             sample = battery_notification(payload, BATTERY_FIXTURE_PERCENT)
+            received = time.monotonic()
             sample.update(frame=frame.hex(), payload=payload.hex(),
-                          received_after_s=time.monotonic() - started)
+                          received_after_s=received - started,
+                          received_at_host_s=received)
             samples.append(sample)
     # Observe several measured host intervals after unsubscribe/reconnect.
     # This is a bounded silence check, not a claim about RF or timer accuracy.
