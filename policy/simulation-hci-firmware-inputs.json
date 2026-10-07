@@ -157,7 +157,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_modern_backend.h",
-      "sha256": "acdc93beb6bee100e8a7a48bff7bdb5993800a9cea91085a9cec11a0077bcf9b",
+      "sha256": "68baf7319fefdedba4ca3fbfe6f6f4f65effff6412857f084d0b7f00cc4ab658",
       "spdx": [
         "Apache-2.0"
       ],

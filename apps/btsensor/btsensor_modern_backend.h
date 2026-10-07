@@ -19,7 +19,8 @@ struct btsensor_modern_backend_io
 /* Newly consumed mode-2 INT32 position for synchronized UART motors.
  * No cached/fabricated feedback; -EAGAIN until a matching frame exists.
  * -ESTALE if a DCM connection change is detected during collection. Output
- * remains zero on failure. This is not an atomic read-and-PWM transaction.
+ * remains zero on read failure after valid arguments. Invalid arguments
+ * return -EINVAL without an output guarantee. This is not atomic read-and-PWM.
  * The LUMP frame ABI does not expose its capture timestamp. */
 int btsensor_modern_backend_encoder(uint8_t port, int32_t *degrees);
 int btsensor_modern_backend_encoder_with_io(

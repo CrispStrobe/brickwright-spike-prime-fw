@@ -21,6 +21,8 @@ return `ESTALE` and leave the output zero. A failed closing device-info read
 propagates its error without publishing a position. A later stable attachment
 can supply a new frame. Ordinary missing feedback still returns `EAGAIN`;
 unsupported mode/type and malformed frames retain their explicit errors.
+The zero-output guarantee covers reads with valid arguments; invalid arguments
+return `EINVAL` with no output guarantee, preserving the existing API.
 No cached frame, PWM demand or ownership state is introduced by this change.
 
 The edge counter is not an absolute physical identity or a LUMP synchronization
