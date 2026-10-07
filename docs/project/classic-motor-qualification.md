@@ -150,6 +150,13 @@ preserved and the TI exclusion gates remain required. Existing six air regressio
 are also being rerun locally against the staged HCI image; no pass is inferred
 from their historical results.
 
+After the official endpoint is reachable, rerun the failed jobs of the same
+immutable matrix source (`52caf015cca2fe8f13b65a1c4b63210830aa1f4d`) and retain
+the failed attempt. Documentation-only follow-ups do not require another ARM
+source candidate. Do not waive the TI gate, substitute an unreviewed reference,
+or merge before all required guest/peer gates pass. A later executable or harness
+change needs its own affected qualification.
+
 Nine host peer tests and the existing Classic/backend host gates passed. Four
 deliberate comparator changes were detected: ignored direction, ignored terminal
 power, accepted duplicate replies and accepted success instead of timeout.
