@@ -66,5 +66,8 @@
 #define CONFIG_BT_LONG_WQ_PRIO 10
 #define CONFIG_BT_LONG_WQ_INIT_PRIO 50
 #define CONFIG_BRICKWRIGHT_DELAYED_WORK_SLOTS 8
-#define CONFIG_BRICKWRIGHT_SYSTEM_WORKQUEUE_STACK_SIZE 4096
+/* Classic Stop replies traverse cancellation, RPC framing, the transmit pump
+ * and RFCOMM on this worker. 4 KiB let ARM exception saves overwrite TLS;
+ * reserve 6 KiB including nested syscall/exception frames. */
+#define CONFIG_BRICKWRIGHT_SYSTEM_WORKQUEUE_STACK_SIZE 6144
 #endif
