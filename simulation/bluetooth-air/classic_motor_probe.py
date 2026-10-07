@@ -191,6 +191,7 @@ async def motor_round_trip(dlc, received, renode, results, *, renode_log):
         await peer.collect(ident)
         after = await peer.model('A')
         record['cases'].append({'case': ident, 'delta': require_move(before, after, angle)})
+        await peer.quiet(150)
     before = [await peer.model(port) for port in 'AB']
     peer.degrees('p003', 'A', 180)
     peer.degrees('p004', 'B', -180)

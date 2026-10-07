@@ -125,6 +125,10 @@ L06 must agree with L01 before changing the motor/attachment interfaces.
 
 ## L01 — Couple Classic degree jobs to guest motors
 
+The [Classic motor peer contract](classic-motor-qualification.md) defines the
+separate external readiness, motion and error comparisons being developed for
+this lane. A draft harness is not a passing guest qualification record.
+
 **Start:** firmware `apps/btsensor/btsensor_classic.c`,
 `apps/btsensor/btsensor_modern_backend.c`, their `test/` fixtures,
 `simulation/bluetooth-air/test_spike_air.py`, and Runtime

@@ -28,6 +28,16 @@ guest seconds per port; an accepted 30-degree move must satisfy the same motion
 comparison. The peer retries refused preparation requests only; production
 firmware/API errors are not replaced or hidden.
 
+An actual initial run completed preparatory A/B moves and the first positive
+move, then the immediate negative command returned `EAGAIN`: the previous job
+had consumed the last queued encoder frame. Immediate back-to-back operation
+is therefore **not qualified**. The remaining comparison uses an explicit
+150 ms guest-time settling/fresh-feedback interval between sequential jobs.
+This does not change firmware or retry a failed accepted case. A future fix
+needs a bounded asynchronous fresh-baseline contract, ownership/cancellation
+adversaries and affected guest builds; it must not invent or reuse a stale
+encoder baseline across attachment changes.
+
 ## Observable cases
 
 - Positive and negative 90-degree jobs on A, at speed 30 and stop mode brake,

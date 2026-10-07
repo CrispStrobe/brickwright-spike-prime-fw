@@ -122,6 +122,45 @@ class ReplyChecks(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             peer.degrees('p001', 'B', 90)
 
+    async def test_preparation_retries_only_unpowered_not_ready_responses(self):
+        for codes, power, fails in [([-19, -11, 0], 0, False),
+                                    ([-11], 30, True), ([-16], 0, True)]:
+            peer = self.peer()
+            peer.record.update(cases=[])
+            clock, position = 0, 0
+            responses = iter(codes)
+
+            async def model(port):
+                nonlocal clock
+                clock += 1000
+                return {'port': port, 'position': position, 'power': power,
+                        'virtual_us': clock}
+
+            async def collect(ident, error):
+                nonlocal position
+                self.assertIsNone(error)
+                code = next(responses)
+                if code == 0:
+                    position += 30
+                    return {'i': ident, 'r': None}
+                return {'i': ident, 'e': {'code': code}}
+
+            async def wait(*unused):
+                pass
+
+            peer.model, peer.collect = model, collect
+            peer.wait_virtual, peer.quiet = wait, wait
+            with self.subTest(codes=codes, power=power):
+                if fails:
+                    with self.assertRaises(AssertionError):
+                        await peer.establish_encoder('A')
+                    self.assertEqual(len(self.packets), 1)
+                else:
+                    await peer.establish_encoder('A')
+                    self.assertEqual(len(self.packets), 3)
+                    self.assertEqual(len(peer.sent), 3)
+                    self.assertEqual(peer.record['cases'][0]['delta'], 30)
+
 
 if __name__ == '__main__':
     unittest.main()
