@@ -120,6 +120,14 @@ int main(void)
   assert(count == 2 && observed[1].link == ble && !strcmp(observed[1].text, "FRESH-TOKEN"));
 
   reset();
+  refusal[classic] = -ESTALE;
+  assert(btsensor_tx_enqueue_response_for_link(classic, "CLASSIC-RETRY") == 0);
+  assert(!btsensor_tx_response_queue_empty() && count == 0);
+  refusal[classic] = 0;
+  btsensor_tx_on_can_send_now();
+  assert(count == 1 && observed[0].link == classic && !strcmp(observed[0].text, "CLASSIC-RETRY"));
+
+  reset();
   assert(btsensor_tx_enqueue_response_for_link(classic, "RETRY") == 0);
   refusal[classic] = 0;
   reenter = true;

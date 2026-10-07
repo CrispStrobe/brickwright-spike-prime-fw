@@ -56,7 +56,10 @@ with tempfile.TemporaryDirectory(prefix='ble-session-mutations-') as directory:
     before = 'brickwright_hub_transport_send_ble(pending.tag.ble_identity, pending.data, pending.len)'
     after = '(brickwright_hub_transport_capture_ble(&pending.tag.ble_identity), ' + before + ')'
     assert original.count(before) == 1
-    for name, candidate in [('baseline', original), ('recapture-at-send', original.replace(before, after))]:
+    before_scope = 'bool stale_ble = link == BRICKWRIGHT_HUB_LINK_BLE && rc == -ESTALE;'
+    assert original.count(before_scope) == 1
+    for name, candidate in [('baseline', original), ('recapture-at-send', original.replace(before, after)),
+                           ('discard-classic-refusal', original.replace(before_scope, 'bool stale_ble = rc == -ESTALE;'))]:
         source.write_text(candidate)
         run(source, ROOT / 'apps/btsensor/test/test_btsensor_tx_links.c', name,
             [ROOT / 'apps/btsensor', COMPAT / 'include'])

@@ -12,7 +12,7 @@ make this notification fail, but replacement cannot substitute its connection
 object for the retained one. The identity counter never resets; exhaustion
 refuses traffic rather than reusing an earlier identity.
 
-The TX queue drops an exact stale ticket without counting it as sent, blocking
+The TX queue drops an exact stale BLE ticket without counting it as sent, blocking
 fresh BLE work or discarding Classic work. Back-pressure retains the original
 identity. Legacy immediate BLE sends capture the current identity once and use
 the same guarded handoff. The transport API retains its all-or-error semantics.
@@ -39,9 +39,10 @@ The actual adapter is compiled against neutral connection/notification test
 boundaries. Controls cover queued-old-token rejection before notification,
 disconnect/reconnect within notification, reference counts before and after the
 handoff, argument errors, no-connection errors, a synthetic counter-exhaustion
-initial condition, and independent Classic progress. Three compiled mutations
+initial condition, and independent Classic progress. Four compiled mutations
 must fail assertions: ignore identity, omit the final reference, or recapture
-the current identity at queue send. Compilation failure is not detection;
+the current identity at queue send, or discard a Classic refusal as stale BLE.
+Compilation failure is not detection;
 executables are bounded to ten seconds. These are host controls, not guest proof.
 
 Both configured input inventories refresh only the three changed Apache-2.0
@@ -56,3 +57,9 @@ capturing the current session only when their completion enqueues is insufficien
 Terminal reply capacity, registration/callback ordering and drain/timer races
 remain separate work. These finite controls establish neither physical safety,
 whole-firmware independence nor general equivalence to another runtime.
+
+Review found that the first candidate applied its new stale-drop rule to
+Classic as well. A new control failed on that candidate when Classic returned
+`-ESTALE`; the corrected rule drops only stale BLE tickets and preserves the
+Classic refusal for retry. The failed comparison and superseded build results
+remain preserved. Fresh qualification is required for the corrected source.

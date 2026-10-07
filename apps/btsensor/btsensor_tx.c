@@ -276,6 +276,7 @@ void btsensor_tx_on_can_send_now(void)
                brickwright_hub_transport_send_ble(pending.tag.ble_identity, pending.data, pending.len) :
                brickwright_hub_transport_connected(link) ?
                brickwright_hub_transport_send(link, pending.data, pending.len) : -ENOTCONN;
+      bool stale_ble = link == BRICKWRIGHT_HUB_LINK_BLE && rc == -ESTALE;
       pthread_mutex_lock(&g_lock);
       if (lifetime != g_lifetime) { pthread_mutex_unlock(&g_lock); return; }
       struct tag_s *tag = pending.frame ? &g_frames[slot].tag : &g_responses[slot].tag;
@@ -284,12 +285,12 @@ void btsensor_tx_on_can_send_now(void)
                   g_sessions[link] == pending.tag.session;
       /* A refused stale BLE token cannot become writable again. Drop only its
        * exact ticket; preserve a replacement enqueued during the send call. */
-      if ((!rc || rc == -ESTALE) && same)
+      if ((!rc || stale_ble) && same)
         {
           tag->used = false;
           if (pending.frame && !rc) g_sent++;
         }
-      if (rc && rc != -ESTALE) blocked[link] = true;
+      if (rc && !stale_ble) blocked[link] = true;
       pthread_mutex_unlock(&g_lock);
     }
 
