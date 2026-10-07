@@ -147,9 +147,9 @@ fetch failed with an official-server connection timeout before later guest gates
 The default-profile job subsequently failed at the same fetch step after its
 ARM build passed. Both hosted jobs therefore remain failed. The failure is
 preserved and the TI exclusion gates remain required. The existing air regressions are also being rerun locally against the staged
-HCI image. Scratch Link, Classic/raw fusion and stationary readiness passed on
-this candidate. Stationary readiness became true at sample 261; Stop/restart
-returned a fresh sequence-one, not-ready snapshot. Poses, calibration persistence
+HCI image. Scratch Link, Classic/raw fusion, stationary readiness and the six-face/gyro
+pose/base-axis scenario passed on this candidate. Stationary readiness became true at sample 261; Stop/restart
+returned a fresh sequence-one, not-ready snapshot. Calibration persistence
 and the corrected LE reconnect scenario remain pending. These local results do
 not replace the incomplete hosted matrix.
 
@@ -215,3 +215,50 @@ Because this is a later harness change, it requires affected guest qualification
 and a new hosted source candidate after the external TI fetch is available.
 Rerunning the old matrix alone cannot qualify this newer harness. Preserve the
 initial local timeout and both hosted fetch failures.
+
+
+## Follow-up task: immediate sequential admission
+
+This is a proposed contract, not implemented behavior. Start at
+`apps/btsensor/btsensor_classic.c` (`start_degrees` and the pending-job timer),
+`apps/btsensor/btsensor_modern_backend.c` (encoder polling and ownership), their
+host fixtures and the external peer above. The initial baseline poll currently
+returns `EAGAIN` when the previous move consumed the last UART frame. The passing
+fixture's 150 ms settling interval deliberately avoids this gap.
+
+A successor must accept an otherwise valid degree request into an unpowered,
+bounded baseline-wait state when fresh feedback is temporarily unavailable.
+Use a one-second guest-time admission limit and the existing 20 ms polling
+interval as the initial declared contract; qualify these bounds explicitly.
+Do not block the Bluetooth worker or retry the user's request at the host.
+The request retains its identity, port/session ownership and exactly-once reply
+through admission and motion. Invalid/unsupported requests still fail before
+admission, and another request for that occupied port returns `EBUSY`.
+
+Before applying PWM, require feedback from the same live attachment and session
+that admitted the request. A fresh sample must establish the baseline without
+counting prior displacement toward the new target. A detached, replaced or
+unsynchronized device must never contribute a cached baseline. If the existing
+device interface cannot distinguish attachment generations, add and test that
+interface in coordination with L02 before claiming this protection. Waiting
+expires with `ETIMEDOUT` and zero commanded power. Missing devices and malformed
+frames retain their explicit errors. The motion progress timeout starts when
+powered motion begins, separately from the admission limit.
+
+Stop or disconnect during admission must remove the waiting job without later
+powering it. Preserve the existing explicit-Stop success reply convention.
+A stale timer, cancellation, frame or disconnected session must not finish or
+stop a replacement owner. Failure to arm either the admission or motion timer
+must release ownership, leave power zero and resolve each affected request once.
+Keep other ports active while one port awaits feedback.
+
+Acceptance requires host adversaries for delayed/missing/malformed feedback,
+Stop/disconnect while waiting, detach/replacement, stale callbacks, timer failure
+and deadline/counter boundaries. Then run actual ARM immediate +90/-90 sequences
+without the fixture settling delay, admission cancellation/replacement and
+concurrent A/B activity, observing displacement and terminal power. Rerun both
+clean protected profiles, the complete Classic peer and all existing air and
+six-motor regressions. Restoring immediate `EAGAIN`, admitting an old attachment
+sample or applying power before baseline must be detected by targeted mutations.
+Publish exact tested sources, observed admission latency and remaining exclusions;
+do not infer physical safety or full L01 completion from these finite cases.
