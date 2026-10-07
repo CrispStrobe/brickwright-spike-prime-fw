@@ -212,8 +212,12 @@ comparison is not a fresh guest execution or canonical-consumer qualification.
 
 ### LE timing qualification gap
 
-The current-source diagnostic air sequence passed the complete Classic motor,
-Scratch Link, Classic IMU, pose and stationary/readiness cases. The LE case failed
+The diagnostic air sequence on firmware source
+`4ca642c376ea6b35845d09669e18cbeb43ca6a94` and harness
+`8409fa9cf9967e0a7dd66a2c926e70e750253ecd` passed the complete Classic motor,
+Scratch Link, Classic IMU, pose and stationary/readiness cases. The newer compiled
+admission/edge assertions have separate host checks; fresh guest results must
+identify their own tested harness revision. The LE case failed
 inside its unchanged 90-second three-record collector after resubscription before
 disconnect. Its first three battery records, unsubscribe acknowledgement/silence
 and resubscribe acknowledgement passed; only two active records arrived inside
