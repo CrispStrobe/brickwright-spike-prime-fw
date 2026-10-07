@@ -61,6 +61,25 @@ regressions, then the full existing air suite. Record exact firmware, harness an
 model pins and tolerances. Do not copy the predecessor's successful guest results
 onto this source, merge on host tests alone or waive an unavailable TI gate.
 
+## Detach-fixture prerequisite
+
+Before treating the public model's `Detach()` as an electrical unplug, qualify
+its actual GPIO and guest observations. The consumed
+[electrical-port model](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/blob/fe4ad383c7392527433783fcec455daa7ddc2bb7/src/Emulator/Peripherals/Peripherals/UART/LegoLpf2ElectricalPort.cs)
+returns from `Tick()` when `Device` is null. The base port's attachment booleans
+are explicitly logical indicators, not electrical ID-pin levels. This source
+inspection identifies a prerequisite; it is not an observed guest-detach failure.
+
+Add model controls for attach, detach and same-type reattach that observe the
+ID/UART inputs and H-bridge demand through documented interfaces, including
+when no motor object remains. Establish the detached input policy from the
+board/driver contract; do not guess levels or write guest connection state.
+Then require a real guest DCM disconnect edge, fresh discovery on reattach,
+released bridge demand and isolation of a replacement from the old job. Logical
+topology generation alone cannot establish that these electrical/guest effects
+occurred. Keep the exact read-time interleaving host-only unless a natural guest
+run actually observes it; ordinary detach error handling is a separate result.
+
 Reproduce the host checks with:
 
 ```sh
