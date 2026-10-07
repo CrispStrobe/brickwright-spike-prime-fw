@@ -132,9 +132,22 @@ the -180-degree replacement after Stop. The fully loaded request failed with
 degree and power zero. HOLD/stall returned -138 and zero speed returned -22;
 each rejected request left power zero. The shared fixtures observe real modeled
 position/power and public load input; they do not set encoder position, pending
-job state or completion results. The current-source six-motor regression and
-[hosted complete matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
-remain pending at this checkpoint.
+job state or completion results.
+
+The current-source native/Python six-motor regression passed all 208 observations
+through 15,957 guest milliseconds: A–F speed and position control, simultaneous
+six-port activity, native/Python Stop and the unattended-radio reset boundary.
+Each -30-degree position result was within the existing three-degree tolerance.
+This used the retained installed native Runtime with source-staged pinned models;
+it does not establish new runtime source-to-binary provenance.
+
+The [hosted complete matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
+is incomplete. Its HCI ARM build passed, then the pinned TI fingerprint-reference
+fetch failed with an official-server connection timeout before later guest gates.
+The default-profile job was still running at this checkpoint. The failure is
+preserved and the TI exclusion gates remain required. Existing six air regressions
+are also being rerun locally against the staged HCI image; no pass is inferred
+from their historical results.
 
 Nine host peer tests and the existing Classic/backend host gates passed. Four
 deliberate comparator changes were detected: ignored direction, ignored terminal

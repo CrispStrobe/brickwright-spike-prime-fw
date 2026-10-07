@@ -667,9 +667,19 @@ duplicate replies and false timeout success. Failed setup attempts, immediate
 EAGAIN, Stop assertions and the initial incorrect host errno comparison remain
 preserved privately.
 
+The current-source six-motor regression passes all 208 observations through
+15,957 guest milliseconds: native A–F speed and position, concurrent six-port
+activity, native/Python cancellation and the long-run reset regression boundary.
+Its retained installed native Runtime with source-staged pinned models remains
+a distinct evidence boundary from a newly source-built Runtime.
+
 The [canonical hosted matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37595428652)
-and current-source six-motor regression are pending at this checkpoint. No merge
-or shipped desktop adoption is claimed here. Immediate back-to-back jobs,
+is incomplete: HCI ARM compilation passed, then its pinned TI fingerprint-reference
+fetch failed because the official Git server connection timed out. Later hosted
+guest gates did not run in that job; the default profile was still running at
+this checkpoint. Local clean gates and actual guest results remain separate from
+this hosted failure. TI checks stay mandatory and the failure is preserved.
+No merge or shipped desktop adoption is claimed here. Immediate back-to-back jobs,
 attachment/disconnect cleanup, counter-wrap/rearm guest interleavings, physical
 accuracy and HOLD remain outside this passing external fixture. L01 is partially
 qualified; the untested parts of its acceptance contract remain open.
