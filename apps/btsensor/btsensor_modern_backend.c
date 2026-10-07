@@ -142,20 +142,24 @@ int btsensor_modern_backend_encoder_with_io(
     uint8_t port, int32_t *degrees,
     const struct btsensor_modern_backend_io *io)
 {
-  struct legoport_info_s attached;
+  struct legoport_info_s attached, after;
   struct lump_device_info_s info;
   struct lump_data_frame_s frame;
   int rc, fd;
+  int32_t candidate = 0;
   bool received = false;
   if (!degrees || !io || !io->open || !io->ioctl || !io->close ||
       port >= BOARD_LEGOPORT_COUNT) return -EINVAL;
   *degrees = 0;
   fd = port_open(port, io);
   if (fd < 0) return fd;
-  rc = validate_motor(fd, io);
-  if (rc < 0) return rc;
+  /* Bracket validation and frame collection with the DCM edge counter.
+   * A same-type replacement may restore type/flags while changing identity. */
   memset(&attached, 0, sizeof(attached));
   rc = io->ioctl(fd, LEGOPORT_GET_DEVICE_INFO, (unsigned long)&attached, io->context);
+  if (rc < 0) return rc;
+  if (!(attached.flags & LEGOPORT_FLAG_CONNECTED)) return -ENODEV;
+  rc = validate_motor(fd, io);
   if (rc < 0) return rc;
   if (!(attached.flags & LEGOPORT_FLAG_IS_UART)) return -ENOTSUP;
   memset(&info, 0, sizeof(info));
@@ -177,10 +181,19 @@ int btsensor_modern_backend_encoder_with_io(
     if (frame.len != 4) return -EPROTO;
     uint32_t raw = (uint32_t)frame.data[0] | ((uint32_t)frame.data[1] << 8) |
                    ((uint32_t)frame.data[2] << 16) | ((uint32_t)frame.data[3] << 24);
-    *degrees = raw <= INT32_MAX ? (int32_t)raw : -(int32_t)(~raw) - 1;
+    candidate = raw <= INT32_MAX ? (int32_t)raw : -(int32_t)(~raw) - 1;
     received = true;
   }
-  return received ? 0 : -EAGAIN;
+  if (!received) return -EAGAIN;
+  memset(&after, 0, sizeof(after));
+  rc = io->ioctl(fd, LEGOPORT_GET_DEVICE_INFO, (unsigned long)&after, io->context);
+  if (rc < 0) return rc;
+  if (after.event_counter != attached.event_counter ||
+      after.device_type != attached.device_type ||
+      !(after.flags & LEGOPORT_FLAG_CONNECTED) ||
+      !(after.flags & LEGOPORT_FLAG_IS_UART)) return -ESTALE;
+  *degrees = candidate;
+  return 0;
 }
 
 int btsensor_modern_backend_encoder(uint8_t port, int32_t *degrees)

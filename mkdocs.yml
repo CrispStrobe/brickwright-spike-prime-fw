@@ -57,6 +57,7 @@ nav:
       - project/ti-service-pack.md
       - project/simulated-bluetooth-air.md
       - project/classic-motor-qualification.md
+      - project/encoder-attachment-qualification.md
       - project/classic-protocol.md
       - project/ble-protocol.md
       - project/imu-reference-captures.md

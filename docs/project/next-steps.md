@@ -135,6 +135,9 @@ this lane. The complete candidate peer now passes signed/concurrent A/B motion,
 Stop/replacement, loaded timeout and boundary errors; see the exact tested
 source and remaining qualification gates in that contract. Attachment/disconnect
 and the other excluded guest interleavings remain open; L01 is not complete.
+A separate [encoder attachment-snapshot candidate](encoder-attachment-qualification.md)
+adds host coverage for a connection edge during frame collection; it still
+requires clean ARM and guest qualification and does not solve atomic admission.
 
 **Start:** firmware `apps/btsensor/btsensor_classic.c`,
 `apps/btsensor/btsensor_modern_backend.c`, their `test/` fixtures,
