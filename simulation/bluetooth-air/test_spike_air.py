@@ -92,10 +92,8 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   motor_runtime: Path | None = None) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
-    devices = motor_runtime / "models.cs" if motor_runtime else DEVICES
     platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
-    lines = [
-        f"include @{devices}",
+    lines = ([] if motor_runtime else [f"include @{DEVICES}"]) + [
         "mach create \"spike\"",
         f"machine LoadPlatformDescription @{platform}",
     ]
@@ -738,9 +736,9 @@ async def main() -> int:
         for path in (arguments.motor_runtime, arguments.existing_filesystem):
             if path is None or re.search(r"[\s\"'@;\\]", str(path)):
                 parser.error("motor scenario requires an explicit filesystem and monitor-safe paths")
-        for name in ("models.cs", "platforms/boards/spike-prime.repl"):
+        for name in ("platforms/boards/spike-prime.repl",):
             if not (arguments.motor_runtime / name).is_file():
-                parser.error("motor runtime must be staged using Runtime tools/stage_prime_runtime.py")
+                parser.error("motor topology must be staged using tools/stage_classic_motor_topology.py")
     if arguments.imu_calibration and (not arguments.classic or imu_modes != 1):
         parser.error("--imu-calibration requires --classic and a separate IMU scenario")
     if arguments.imu_probe and not arguments.classic:

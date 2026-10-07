@@ -49,9 +49,8 @@ fi
 # Source-only motor models reuse the Runtime's licensed topology and public
 # electrical attachment interface. Keep each invocation's staging for receipts.
 motor_stage_parent=$(mktemp -d "$root/.local/bluetooth-air-results/motor-runtime.XXXXXX")
-python3 "$renode_dir/tools/stage_prime_runtime.py" \
-    --infrastructure "$renode_dir/src/Infrastructure" \
-    --output "$motor_stage_parent/staged" --aggregate-display-clock
+python3 "$root/tools/stage_classic_motor_topology.py" \
+    --runtime "$renode_dir" --output "$motor_stage_parent/staged"
 for mode in le scratch classic stationary poses calibration motors; do
     run_limit=900s
     case "$mode" in

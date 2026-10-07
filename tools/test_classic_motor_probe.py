@@ -3,13 +3,43 @@
 # Copyright (c) 2026 Brickwright contributors
 """Synthetic adversaries for the actual Classic motor peer's observations."""
 import asyncio
+import ast
+import json
 from pathlib import Path
 import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'simulation/bluetooth-air'))
 from classic_motor_probe import MotorPeer, require_move, require_reply
+
+
+class ScriptSelection(unittest.TestCase):
+    def test_motor_topology_is_explicit_and_default_board_is_preserved(self):
+        root = Path(__file__).resolve().parents[1]
+        source = root / 'simulation/bluetooth-air/test_spike_air.py'
+        node = next(n for n in ast.parse(source.read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == 'renode_script')
+        scope = dict(Path=Path, json=json, ROOT=root, DEVICES=Path('default.cs'),
+                     PLATFORM=Path('default.repl'), MILESTONES=())
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), scope)
+        with tempfile.TemporaryDirectory() as directory:
+            images = Path(directory)
+            (images / 'manifest.json').write_text(json.dumps({'reset_pc': '0x08008001',
+                                                             'initial_sp': '0x20008000'}))
+            default = scope['renode_script'](images, 12345)
+            self.assertIn('include @default.cs', default)
+            self.assertNotIn('CreatePrimeElectricalPorts', default)
+            script = scope['renode_script'](images, 12345,
+                        existing_filesystem=Path('fixture'), motor_runtime=Path('staged'))
+            self.assertNotIn('include @', script.split('mach create')[0])
+            self.assertIn('LoadPlatformDescription @staged/platforms/boards/spike-prime.repl', script)
+            self.assertIn('emulation CreatePrimeElectricalPorts "spike"', script)
+            self.assertIn('DMARequest -> dma1@7', script)
+            self.assertIn('DMATransmit -> dma1@6', script)
+            self.assertIn('primeStorageMux.primeStorage', script)
+            self.assertNotIn('load_littlefs_fixture @fixture', script)
 
 
 class ObservationChecks(unittest.TestCase):
