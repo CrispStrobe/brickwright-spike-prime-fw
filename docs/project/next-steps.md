@@ -65,10 +65,14 @@ full NuttX embedded Python and separately supplied upstream MicroPython routes
 all exercised the shared hub/arena. This closes the earlier absence of installed
 GUI evidence for those tested routes, not every new firmware feature.
 
-Firmware PR #34 is newer than that tested desktop package. Its retained restart,
-virtual Bluetooth and LittleFS results require an explicit source-profile/pin
-refresh and actual installed GUI qualification before being advertised in a new
-desktop build. Lite G01 owns that adoption; Runtime
+The subsequent Lite [PR #695](https://github.com/CrispStrobe/brickwright-lite/pull/695)
+adoption merged at `0faacb84211a5d6df8b4d3ed8ed9127c14b76fc5`, with reviewed
+head `2b36862fb39f34a990eb296c734e9e800ed884c8`. Retained native/Python restart,
+Stop ownership and installed Code-tab/shared-arena qualification are recorded in
+[the updated consumer handover](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/SPIKE-STATUS-AND-LANES.md).
+This is a separate finite desktop qualification; it does not adopt the newer
+Classic Bluetooth motor candidate or close release provenance. Keep the desktop
+profile, firmware test candidate and source heads distinct. Runtime
 [task lanes](https://github.com/CrispStrobe/renode-spike-prime/blob/0bb3f3e40ec8e84afe6c7a63a03374a5a0553969/docs/SPIKE-STATUS-AND-LANES.md)
 and Infrastructure
 [model lanes](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/blob/5a519ce5d9b5122bcf2ecedcbfd6f49d2735bbeb/docs/SPIKE-STATUS-AND-LANES.md)
