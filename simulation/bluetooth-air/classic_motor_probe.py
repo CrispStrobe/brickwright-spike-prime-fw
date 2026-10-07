@@ -114,6 +114,9 @@ class MotorPeer:
         self.sent = set()
 
     def send(self, ident, method, params):
+        if (not isinstance(ident, str) or len(ident) != 4 or
+                any(c not in '0123456789abcdefghijklmnopqrstuvwxyz' for c in ident)):
+            raise ValueError('Classic request id must be four lowercase alphanumeric characters')
         if ident in self.sent:
             raise ValueError('Request id reused')
         self.sent.add(ident)

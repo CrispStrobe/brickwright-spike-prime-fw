@@ -21,11 +21,11 @@ async def run_with_motion(air, renode, log, frames, errors, step, receipt, class
 
     async def exercise(dlc, received):
         peer = MotorPeer(dlc, received, renode, log, record)
-        await peer.establish_encoder('A', tag='la')
-        await peer.establish_encoder('B', tag='lb')
+        await peer.establish_encoder('A', tag='a')
+        await peer.establish_encoder('B', tag='b')
         before = [await peer.model(port) for port in 'AB']
-        peer.degrees('lm001', 'A', 360)
-        peer.degrees('lm002', 'B', -360)
+        peer.degrees('l001', 'A', 360)
+        peer.degrees('l002', 'B', -360)
         receipt['moving_before_distance_change'] = await peer.moving('A', 'B')
 
         async def observe(sample):
@@ -33,8 +33,8 @@ async def run_with_motion(air, renode, log, frames, errors, step, receipt, class
             sample['motors_observed_at_host_s'] = time.monotonic()
 
         async def replies():
-            await peer.collect('lm001')
-            await peer.collect('lm002')
+            await peer.collect('l001')
+            await peer.collect('l002')
 
         async with asyncio.TaskGroup() as tasks:
             tasks.create_task(replies())

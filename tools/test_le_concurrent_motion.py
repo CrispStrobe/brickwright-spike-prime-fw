@@ -9,9 +9,19 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'simulation/bluetooth-air'))
 from le_concurrent_motion import require_overlap
+from classic_motor_probe import MotorPeer
 
 
 class Overlap(unittest.TestCase):
+    def test_invalid_ids_are_rejected_before_any_transport_write(self):
+        class DLC:
+            def write(self, data):
+                raise AssertionError('Invalid request reached transport')
+        peer = MotorPeer(DLC(), None, None, None, dict(requests=[]))
+        for ident in ('la000', 'lm001', '', 'A001', 'a_01', 1):
+            with self.assertRaisesRegex(ValueError, 'four lowercase'):
+                peer.send(ident, 'scratch.motor_stop', {})
+
     def test_opposite_powered_motion_is_required_in_sample_observations(self):
         good = dict(motor_observations=[dict(power=30, speed=100), dict(power=-30, speed=-100)])
         require_overlap([good])
