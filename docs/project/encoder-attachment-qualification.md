@@ -210,14 +210,23 @@ a retained logical attachment and missing/malformed bridge observers. The strict
 comparison passes the exact preserved earlier guest observations. That offline
 comparison is not a fresh guest execution or canonical-consumer qualification.
 
+A fresh guest sequence using harness
+`ebfdb03d350e22a5ff8fadd29af23b79216cdc00`, the same clean firmware image and
+the namespace-isolated model candidate passed these stricter detach/rediscovery
+assertions. A separate actual invocation against the retained older compiled
+model refused with zero motor requests and zero observed motor power. The latter
+is an expected negative admission result, not positive qualification of the new
+compiled model. The six-port native/Python scenario also passed with staged
+candidate models; compiled-consumer adoption remains separate.
+
 ### LE timing qualification gap
 
 The diagnostic air sequence on firmware source
 `4ca642c376ea6b35845d09669e18cbeb43ca6a94` and harness
 `8409fa9cf9967e0a7dd66a2c926e70e750253ecd` passed the complete Classic motor,
-Scratch Link, Classic IMU, pose and stationary/readiness cases. The newer compiled
-admission/edge assertions have separate host checks; fresh guest results must
-identify their own tested harness revision. The LE case failed
+Scratch Link, Classic IMU, pose, stationary/readiness and calibration
+save/reopen cases. Fresh compiled admission/edge results above identify their
+own later tested harness revision. The LE case failed
 inside its unchanged 90-second three-record collector after resubscription before
 disconnect. Its first three battery records, unsubscribe acknowledgement/silence
 and resubscribe acknowledgement passed; only two active records arrived inside
@@ -232,3 +241,19 @@ negative checks for missing/malformed records, clock stalls/regression and leake
 notifications. Do not simply increase a wall timeout to turn this failure green,
 force guest time, replace firmware callbacks or infer physical radio timing.
 Require an actual current-source air run and preserve the original failure.
+
+The optional `--observe-guest-clock` diagnostic now implements that preparation
+for `--periodic --reconnect`. It reads `ElapsedVirtualTime` through the owned
+monitor and records host before/after windows every five seconds. Reads have
+three-second bounds and a 256-sample cap; regression, malformed values and no
+observed progress for fifteen host seconds fail the diagnostic. These host
+bounds are instrumentation limits, not firmware timer or physical radio accuracy.
+The sampler is joined during success, failure and cancellation cleanup. Host
+controls cover a stalled/regressed clock, echoed monitor commands, real command
+decoding and cancelled/failed sampler cleanup. Actual instrumented LE results
+remain pending; no observation or cleanup timeout has been increased.
+
+```sh
+python3 tools/test_le_clock_probe.py
+# Add --observe-guest-clock to the existing explicit --periodic --reconnect run.
+```

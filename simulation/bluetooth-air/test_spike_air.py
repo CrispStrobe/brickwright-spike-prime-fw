@@ -718,6 +718,8 @@ async def main() -> int:
                         help="after the first LE round trip, require a second one")
     parser.add_argument("--periodic", action="store_true",
                         help="with --reconnect, verify battery notifications, unsubscribe and connection reset")
+    parser.add_argument("--observe-guest-clock", action="store_true",
+                        help="with --periodic, record bounded read-only guest-clock progress beside host arrivals")
     parser.add_argument("--skip-le", action="store_true",
                         help="make no LE connection (Classic only)")
     parser.add_argument("--scratch-link", type=int, metavar="PORT",
@@ -785,6 +787,8 @@ async def main() -> int:
         parser.error("--reconnect requires the direct LE path")
     if arguments.periodic and not arguments.reconnect:
         parser.error("--periodic requires --reconnect on the direct LE path")
+    if arguments.observe_guest_clock and not arguments.periodic:
+        parser.error("--observe-guest-clock requires --periodic")
     arguments.images = arguments.images.resolve()
     workdir = arguments.workdir or Path(tempfile.mkdtemp(prefix="spike-air-"))
     workdir.mkdir(parents=True, exist_ok=True)
@@ -798,6 +802,7 @@ async def main() -> int:
     if port_layout is not None:
         results['own_kernel_diagnostic_layout'] = port_layout
     air_hub = microbit = renode = hub = None
+    clock_probe = None
     air = Air(f"127.0.0.1:{arguments.hub_port}")
     return_code = 1
     try:
@@ -841,6 +846,11 @@ async def main() -> int:
                                         imu_fixture, arguments.motor_runtime, arguments.electrical_qualification)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
+            if arguments.observe_guest_clock:
+                from le_clock_probe import GuestClockProbe
+                clock_probe = GuestClockProbe(renode, workdir / 'renode.log',
+                                              results.setdefault('guest_clock_diagnostics', {}))
+                clock_probe.start()
             # Reconnection is a separate full discovery and request on a new peer.
             if arguments.then:
                 await serve_and_run(air, arguments, results)
@@ -898,6 +908,9 @@ async def main() -> int:
             if "MILESTONE daemon_wait_for_stop" not in (workdir / "renode.log").read_text(errors="replace"):
                 raise AssertionError("Firmware did not reach daemon readiness")
             results["script_sha256"] = hashlib.sha256((workdir / "spike-air.resc").read_bytes()).hexdigest()
+            if clock_probe is not None:
+                await clock_probe.stop()
+                clock_probe.require_complete()
             results["status"] = "PASS"
             return_code = 0
     except Exception as error:  # report, then fail
@@ -908,6 +921,8 @@ async def main() -> int:
         results["status"] = "FAIL: cancelled"
         raise
     finally:
+        if clock_probe is not None:
+            await clock_probe.stop()
         if hub is not None:
             results["hub_hci_commands"] = [f"0x{op:04x}" for op in hub.controller.commands]
             results["hub_vendor_commands"] = hub.controller.vendor_commands
