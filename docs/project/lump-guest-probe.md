@@ -4,7 +4,8 @@
 # Protected userspace UART refusal probe
 
 This candidate extends the [UART session prerequisite](lump-session-qualification.md)
-with a real userspace syscall probe. Actual ARM execution is pending; host
+with a real userspace syscall probe. The corrected ordinary simulation profile
+has passed actual ARM execution, and both corrected matrix profiles passed. Host
 self-controls are not a guest result. The one-shot `port simulation-poll-probe`
 command and its implementation are included only when the existing protected
 TI-free simulation and LUMP options are enabled. Hardware builds omit the command,
@@ -77,10 +78,10 @@ existing protected regressions. Both clean profiles and all mandatory compiler,
 linker-member, resource and TI-exclusion gates remain required. The inventories
 add the two BSD-3-Clause probe inputs and prospective selected object, refresh
 the modified utility/boot inputs and notices, and reproduce both historical
-generated ROMFS hashes before deriving the candidate hashes. The new object's
-byte hash is explicitly unmeasured until actual compilation; existing image and
-archive byte hashes remain historical. No measured build or guest pass follows
-from the prospective inventory.
+generated ROMFS hashes before deriving the candidate hashes. The initial inventory
+represented the new object byte hash as unmeasured. The qualification update below records its measured hash from both profiles; other
+image/archive hashes remain historical. A prospective inventory alone did not
+establish a build or guest pass.
 
 New probe, controls, fixture and documentation use BSD-3-Clause. Retained utility,
 boot-script, kernel and dependency notices remain applicable. This is not a
@@ -99,12 +100,53 @@ exit-on-failure. This is a startup regression, not a successful syscall result.
 The corrected startup places diagnostics after normal services and omits automatic
 probe execution from HCI fixtures. The startup control fails against the original
 ordering and passes the correction. Both historical ROMFS baselines were reproduced
-before updating the corrected generated-input hashes. A new clean affected-profile
-matrix is required; host controls alone do not qualify the correction.
+before updating the corrected generated-input hashes. The correction required
+a new clean affected-profile matrix; its result is recorded below. Host controls
+alone did not qualify it.
+
+## Corrected matrix qualification
+
+Tested firmware source: `87280884d15178ff5e1e6eb88545fb2d41441e1d`.
+The following `e25c6d49928375128ead29447786fc0b529382c9` head changes only
+startup-test comments, with unchanged firmware compiler inputs.
+[Corrected matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37755707865),
+[ordinary simulation job](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37755707865/job/113239602306):
+completed successfully. The dedicated refusal test passed in 21.33 host seconds;
+its actual observer requires all nine guest checks and the ELF-resolved read-only
+address. This is not a measured guest-time or physical-device timing result.
+
+That job also passed the compiler-input/notices and selected-member checks,
+protected resource and zero-TI-payload gates, protected boot regressions, actual
+ARM retained-program restarts, interrupted program storage and empty filesystem
+seed checks. Its only skipped scenarios belong to the separate HCI profile.
+Both matrix profiles completed successfully. The
+[HCI job](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37755707865/job/113239601931)
+passed its applicable input/link/resource/TI gates, transport bridge and seven complete air reports:
+LE/reconnect/periodic, Scratch Link, Classic/IMU, stationary readiness, poses,
+calibration and measured motors. All seven reports identify the same four firmware
+files by hash. HCI compiles the probe but does not execute its dedicated syscall
+fixture. The raw HCI log retains a background `ConnectionResetError` diagnostic;
+passing peer reports do not establish complete helper-teardown ownership.
+
+The actual selected probe object measured 13312 bytes, SHA-256
+`ab5cda6b09be02714418d5d67bf0c28ba30a9bd84c094a08948a49c4fa6e1dcd`.
+Both profiles measured userspace flash 596508/654336 bytes and static RAM
+88880/98304 bytes. These are userspace static measurements, not kernel RAM or
+stack/heap high-water marks. Existing historical image/archive inventory hashes
+remain historical and do not identify these newly built images.
+
+The test consumes the existing immutable Runtime
+`756b684eee56ba698a931a14b3f4885cb8d8ada6` and Infrastructure
+`fe4ad383c7392527433783fcec455daa7ddc2bb7` pair. It does not adopt or qualify the
+separate external-DATA-budget candidates in
+[Infrastructure PR #36](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/36)
+and [Runtime PR #54](https://github.com/CrispStrobe/renode-spike-prime/pull/54).
+Those candidates need compiled model and affected firmware qualification before
+an active-session experiment relies on them.
 
 ## Remaining boundary
 
-Even a passing inactive probe establishes only those protected syscall refusals
+The passing inactive probe establishes only those protected syscall refusals
 and output checks. It does not demonstrate a successful active session poll,
 shared-queue consumption under known DATA, invalid-call non-consumption, reset,
 same-type resynchronization, partial boot failure, physical MPU traps or hardware

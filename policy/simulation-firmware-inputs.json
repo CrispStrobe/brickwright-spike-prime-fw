@@ -34775,7 +34775,7 @@
         "zm_state.cROOT.nuttx-apps.system.zmodem_1.o": "1c6a61051304667b295386de8458fa3bd5e6c264aa5b551c33c47c7dfabfc4f4",
         "zm_utils.cROOT.nuttx-apps.system.zmodem_1.o": "2ec8dcfdcf52afdec696a09c437b8645327858300563a374cef28b5bf4b95a06",
         "zm_watchdog.cROOT.nuttx-apps.system.zmodem_1.o": "71360fafea7da686aae02410dfb53c966cd84a8f4d65271c58f6410ce6768004",
-        "lumpprobe.cROOT.apps.port_1.o": null
+        "lumpprobe.cROOT.apps.port_1.o": "ab5cda6b09be02714418d5d67bf0c28ba30a9bd84c094a08948a49c4fa6e1dcd"
       }
     },
     "libproxies.a": {
@@ -35091,7 +35091,7 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-08: simulation-only protected port refusal probe adds two compiler inputs and one selected libapps object; configurations, dependency pins and resource/TI gates are unchanged. Probe startup follows services in non-HCI simulation and is omitted from HCI startup. Historical image/archive hashes remain historical. The new object hash is unmeasured for this corrected candidate until the affected clean matrix completes. Preserve the original failed source/run separately; source and generated ROMFS input hashes describe this candidate, not an observed guest pass.",
+  "current_source_update_note": "2026-10-08: corrected protected probe matrix37755707865 passed both profiles and seven HCI air peers at source87280884d15178ff5e1e6eb88545fb2d41441e1d. The actual syscall-refusal probe passed in the ordinary profile. Record the measured13312-byte probe object only; existing image/archive hashes remain historical. Firmware compiler inputs, configurations, dependency pins and mandatory gates are unchanged by this evidence update. Original failed source9f597a047f92d4bafc07f300e04d96c2aa5dba6b/run37751297921 remains recorded separately. No active-session/reset/non-consumption or physical accuracy claim.",
   "current_linker_additions": {
     "observed_ci_run": 37265813475,
     "profile": "simulation",
@@ -35108,8 +35108,12 @@
     "byte_hash_scope": "New member byte hashes are from the cached historical reviewed ARM archive at a8c4c5f24c4f242158704f15ebedde115946223b, not this candidate build. Current candidate selection was observed in both clean CI builds; source inputs/grants are already in this inventory. Current build qualification is recorded separately."
   },
   "lump_probe_candidate": {
-    "scope": "Prospective selection, not observed ARM execution. Configuration and dependency pins unchanged. Exact selected-member gate remains enabled. Existing image/archive byte hashes are historical; new object byte hash is unmeasured, represented by null until actual compilation.",
+    "scope": "Both clean corrected ARM profiles compiled the selected probe object at source87280884d15178ff5e1e6eb88545fb2d41441e1d and passed matrix37755707865. The dedicated refusal syscall guest probe executed only in simulation; HCI compiles it but omits automatic execution. Configuration, dependencies and selected-member sets are unchanged. This single object byte hash is now measured; other image/archive byte hashes remain historical. See docs/project/lump-guest-probe.md for exact evidence and limitations.",
     "expected_member": "lumpprobe.cROOT.apps.port_1.o",
+    "measured_object_bytes": 13312,
+    "tested_source": "87280884d15178ff5e1e6eb88545fb2d41441e1d",
+    "qualification_run": "https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37755707865",
+    "dedicated_guest_probe_executed": true,
     "selected_licence": "BSD-3-Clause",
     "generated_romfs_baseline_reproduced": "4ca1a0d6857dcdea015a25d2662605b85f75e937ee59b91f562e2f40cdd76490",
     "generated_romfs_candidate": "13e1b08fb9bc3fb82cd840625b1590d7c065497d088cc1298fc315170787a714"
