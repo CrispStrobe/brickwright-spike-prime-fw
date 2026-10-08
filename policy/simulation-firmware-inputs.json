@@ -267,7 +267,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.c",
-      "sha256": "93354f99805ac48d0b5162fa96ff803d44664a49bf964dd1d97d0c764db46a53",
+      "sha256": "159e2c3845e513b3a39eb0d9cdf47f43d4751b7cbeafd7844540d0764deea177",
       "spdx": [
         "Apache-2.0"
       ],

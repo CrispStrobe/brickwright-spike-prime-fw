@@ -135,3 +135,17 @@ Keep this candidate unmerged until the local comparison boundary is resolved.
 Host controls alone do not authorize merging firmware. No desktop pin, package
 or installed GUI adoption is included. Direct production timer/guest scheduling
 qualification remains a future task until an actual application caller is added.
+
+## Pending inactive-timer fast-path comparison
+
+A follow-up avoids entering the timer reconciler when the locked state has
+neither an installed timer nor a timed registration. An already running
+reconciler remains responsible for concurrent desired-state changes. This
+removes an unnecessary mutex round trip from ordinary transport pumps where
+no drain timer is registered; it does not change encoder admission or add
+host retries. Existing threaded/reentrant drain controls, five targeted
+mutations, transport controls and sanitizers passed locally for this change.
+Fresh clean ARM builds, the mandatory matrix and unchanged compiled guest
+comparisons are pending. The earlier source-specific results above do not
+qualify this follow-up, and the local failures remain preserved. No causal
+explanation or merge clearance is claimed from the host controls.

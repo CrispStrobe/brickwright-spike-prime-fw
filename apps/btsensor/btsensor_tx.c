@@ -100,6 +100,18 @@ static void reconcile_timer(void)
     }
 }
 
+/* Called with g_lock held. With no installed/desired timer, preserve the
+ * transport-only fast path: the application does not currently register drain
+ * timers. Any concurrent registration reconciles its own state; an operation
+ * already in flight remains responsible for changes made during its callback. */
+static void unlock_and_reconcile_timer(void)
+{
+  bool needed = !g_timer_pumping &&
+                (g_timer_id || (g_drain_id && g_drain_timeout));
+  pthread_mutex_unlock(&g_lock);
+  if (needed) reconcile_timer();
+}
+
 static void clear_drain_locked(void)
 {
   g_drain_id = 0; g_drain_cb = NULL; g_drain_ctx = NULL;
@@ -154,8 +166,7 @@ int btsensor_tx_init(void)
   g_online[0] = g_online[1] = false;
   g_sent = g_dropped_oldest = g_dropped_full = 0;
   clear_drain_locked();
-  pthread_mutex_unlock(&g_lock);
-  reconcile_timer();
+  unlock_and_reconcile_timer();
   return 0;
 }
 
@@ -168,8 +179,7 @@ void btsensor_tx_deinit(void)
   g_lifetime++;
   g_online[0] = g_online[1] = false;
   clear_drain_locked();
-  pthread_mutex_unlock(&g_lock);
-  reconcile_timer();
+  unlock_and_reconcile_timer();
 }
 
 void btsensor_tx_link_state(enum brickwright_hub_link link, bool connected, uint32_t generation)
@@ -368,8 +378,7 @@ void btsensor_tx_on_can_send_now(void)
       cb = g_drain_cb; ctx = g_drain_ctx; id = g_drain_id;
       clear_drain_locked();
     }
-  pthread_mutex_unlock(&g_lock);
-  reconcile_timer();
+  unlock_and_reconcile_timer();
   if (cb) cb(id, 0, ctx);
 }
 
@@ -413,8 +422,7 @@ int btsensor_tx_arm_post_drain_callback(btsensor_tx_drain_cb_t cb, void *ctx,
       g_drain_id = id; g_drain_cb = cb; g_drain_ctx = ctx;
       g_drain_timeout = timeout_ms;
     }
-  pthread_mutex_unlock(&g_lock);
-  reconcile_timer();
+  unlock_and_reconcile_timer();
   if (drained) cb(id, 0, ctx);
   return 0;
 }
@@ -440,8 +448,7 @@ bool btsensor_tx_clear_post_drain_callback(uint64_t registration)
   pthread_mutex_lock(&g_lock);
   bool canceled = registration && g_drain_id == registration;
   if (canceled) clear_drain_locked();
-  pthread_mutex_unlock(&g_lock);
-  reconcile_timer();
+  unlock_and_reconcile_timer();
   return canceled;
 }
 
