@@ -162,6 +162,12 @@ struct legoport_lump_send_arg_s
 
 #define LEGOPORT_LUMP_GET_STATUS_EX _LEGOPORTIOC(0x000C)
 
+/* Session-bearing DATA poll; arg: struct lump_data_session_frame_s *.
+ * Same consuming queue and errors as POLL_DATA. Defined in board_lump.h.
+ */
+
+#define LEGOPORT_LUMP_POLL_DATA_SESSION _LEGOPORTIOC(0x000D)
+
 /* H-bridge PWM port driver (Issue #80, integrated into the legoport
  * chardev because LUMP SYNC drives the H-bridge for sensors that
  * advertise NEEDS_SUPPLY_PIN1/PIN2).

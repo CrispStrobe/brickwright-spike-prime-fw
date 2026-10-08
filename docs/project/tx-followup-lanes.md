@@ -101,6 +101,10 @@ also involves `boards/spike-prime-hub/include/board_lump.h`,
 `boards/spike-prime-hub/src/stm32_legoport_chardev.c` and
 `boards/spike-prime-hub/src/stm32_legoport_pwm.c`.
 
+The [UART session prerequisite](lump-session-qualification.md) records an additive
+feedback identity candidate; conditional motor start and the bounded wait remain
+open.
+
 The [drain candidate record](drain-registration-qualification.md) preserves a
 local sequential-command failure despite a passing canonical matrix. Reproduce
 with immutable candidate/baseline images, identical external inputs and actual

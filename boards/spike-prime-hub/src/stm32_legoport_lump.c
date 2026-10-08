@@ -64,6 +64,7 @@
 
 #include "spike_prime_hub.h"
 #include "stm32_legoport_uart_hw.h"
+#include "lump_data_queue.h"
 
 #ifdef CONFIG_LEGO_LUMP
 
@@ -250,11 +251,7 @@ struct lump_engine_s
    */
 
   mutex_t  dq_lock;
-  struct lump_data_frame_s dq[LUMP_DATA_QUEUE];
-  uint8_t  dq_head;
-  uint8_t  dq_tail;
-  uint8_t  dq_count;
-  uint32_t dq_dropped;
+  struct lump_data_queue_s dq;
 
   /* `lump_attach()` callback set, served by the kthread (lock-released
    * before fire to avoid deadlock — same-port re-entry is rejected by
@@ -306,7 +303,7 @@ struct lump_engine_s
  ****************************************************************************/
 
 static struct lump_engine_s g_lump[BOARD_LEGOPORT_COUNT];
-static bool g_lump_initialized;
+static bool g_lump_registration_started;
 
 /****************************************************************************
  * Forward Declarations
@@ -424,10 +421,8 @@ static void lump_reset_session_state(struct lump_engine_s *e)
   nxmutex_unlock(&e->tx_lock);
 
   nxmutex_lock(&e->dq_lock);
-  e->dq_head    = 0;
-  e->dq_tail    = 0;
-  e->dq_count   = 0;
-  e->dq_dropped = 0;
+  lump_data_queue_invalidate(&e->dq);
+  e->dq.dropped = 0;
   nxmutex_unlock(&e->dq_lock);
 }
 
@@ -986,24 +981,11 @@ static int lump_parse_msg(struct lump_engine_s *e)
           /* Push into the user-facing data queue (drop oldest if full). */
 
           nxmutex_lock(&e->dq_lock);
-          if (e->dq_count == LUMP_DATA_QUEUE)
-            {
-              e->dq_tail = (uint8_t)((e->dq_tail + 1) % LUMP_DATA_QUEUE);
-              e->dq_count--;
-              e->dq_dropped++;
-            }
-          struct lump_data_frame_s *slot = &e->dq[e->dq_head];
-          slot->mode = data_mode;
-          slot->len  = payload;
-          memset(slot->reserved, 0, sizeof(slot->reserved));
-          memcpy(slot->data, &e->rx_msg[1], payload);
-          if (payload < LUMP_MAX_PAYLOAD)
-            {
-              memset(slot->data + payload, 0,
-                     LUMP_MAX_PAYLOAD - payload);
-            }
-          e->dq_head = (uint8_t)((e->dq_head + 1) % LUMP_DATA_QUEUE);
-          e->dq_count++;
+          struct lump_data_frame_s frame = {0};
+          frame.mode = data_mode;
+          frame.len = payload;
+          memcpy(frame.data, &e->rx_msg[1], payload);
+          lump_data_queue_push(&e->dq, &frame);
           nxmutex_unlock(&e->dq_lock);
 
           /* Fire `on_data` callback.  Snapshot the cb under tx_lock so
@@ -1260,6 +1242,19 @@ static int lump_sync(struct lump_engine_s *e)
         {
           return ret;
         }
+    }
+
+  /* Publish a new, non-reused DATA session before exposing SYNCED.
+   * Queue operations and invalidation use this same mutex. Exhaustion
+   * fails closed rather than publishing a reused session identity.
+   */
+
+  nxmutex_lock(&e->dq_lock);
+  ret = lump_data_queue_begin(&e->dq);
+  nxmutex_unlock(&e->dq_lock);
+  if (ret < 0)
+    {
+      return ret;
     }
 
   /* 7. Mark synced.  Phase 2 enters keepalive idle; Phase 3 will run
@@ -1717,6 +1712,14 @@ static int lump_kthread_entry(int argc, FAR char *argv[])
       lump_reset_session_state(e);
       ret = lump_run_session(e);
 
+      /* Invalidate before UART release, error callbacks or backoff. A poll
+       * already holding dq_lock may finish first; all later polls refuse.
+       */
+
+      nxmutex_lock(&e->dq_lock);
+      lump_data_queue_invalidate(&e->dq);
+      nxmutex_unlock(&e->dq_lock);
+
       /* Bump the lifetime err counter on every session-ending error
        * (sync failure, no-DATA timeout, watchdog stall, parse fault
        * propagated from `lump_data_loop`, etc.).  Does not include
@@ -1902,7 +1905,7 @@ int lump_get_status_full(int port, struct lump_status_full_s *out)
   out->bad_msg_count = e->bad_msg_count;
 
   nxmutex_lock(&e->dq_lock);
-  out->dq_dropped   = e->dq_dropped;
+  out->dq_dropped   = e->dq.dropped;
   nxmutex_unlock(&e->dq_lock);
 
   /* Stack high-water — needs CONFIG_STACK_COLORATION (set in defconfig).
@@ -2157,7 +2160,8 @@ int lump_send_data(int port, uint8_t mode, const uint8_t *buf, size_t len)
  * `LEGOPORT_LUMP_POLL_DATA` ioctl.  Returns -EAGAIN if empty.
  */
 
-int lump_pop_data_frame(int port, struct lump_data_frame_s *out)
+int lump_pop_data_session_frame(int port,
+                               struct lump_data_session_frame_s *out)
 {
   if (port < 0 || port >= BOARD_LEGOPORT_COUNT || out == NULL)
     {
@@ -2165,19 +2169,25 @@ int lump_pop_data_frame(int port, struct lump_data_frame_s *out)
     }
 
   struct lump_engine_s *e = &g_lump[port];
-
   nxmutex_lock(&e->dq_lock);
-  if (e->dq_count == 0)
-    {
-      nxmutex_unlock(&e->dq_lock);
-      return -EAGAIN;
-    }
-  *out       = e->dq[e->dq_tail];
-  e->dq_tail = (uint8_t)((e->dq_tail + 1) % LUMP_DATA_QUEUE);
-  e->dq_count--;
+  int ret = lump_data_queue_pop(&e->dq, out);
   nxmutex_unlock(&e->dq_lock);
+  return ret;
+}
 
-  return OK;
+int lump_pop_data_frame(int port, struct lump_data_frame_s *out)
+{
+  if (out == NULL)
+    {
+      return -EINVAL;
+    }
+  struct lump_data_session_frame_s snapshot;
+  int ret = lump_pop_data_session_frame(port, &snapshot);
+  if (ret == 0)
+    {
+      *out = snapshot.frame;
+    }
+  return ret;
 }
 
 /****************************************************************************
@@ -2186,10 +2196,17 @@ int lump_pop_data_frame(int port, struct lump_data_frame_s *out)
 
 int stm32_legoport_lump_register(void)
 {
-  if (g_lump_initialized)
+  if (g_lump_registration_started)
     {
       return -EALREADY;
     }
+
+  /* Bring-up is boot-thread-only. Do not reinitialize live port mutexes,
+   * threads or session counters if an earlier partial bring-up failed.
+   * Recovery from such a failure requires a reboot.
+   */
+
+  g_lump_registration_started = true;
 
   for (int p = 0; p < BOARD_LEGOPORT_COUNT; p++)
     {
@@ -2244,8 +2261,6 @@ int stm32_legoport_lump_register(void)
         }
       e->dcm_cb_registered = true;
     }
-
-  g_lump_initialized = true;
 
   syslog(LOG_INFO,
          "lump: 6 kthreads pre-created, DCM handoff registered\n");

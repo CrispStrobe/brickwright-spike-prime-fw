@@ -431,6 +431,28 @@ static int legoport_cdev_ioctl(FAR struct file *filep, int cmd,
           return OK;
         }
 
+      case LEGOPORT_LUMP_POLL_DATA_SESSION:
+        {
+          FAR struct lump_data_session_frame_s *user =
+              (FAR struct lump_data_session_frame_s *)arg;
+          struct lump_data_session_frame_s frame;
+          if (user == NULL)
+            {
+              return -EINVAL;
+            }
+          if (!board_user_out_ok(user, sizeof(*user)))
+            {
+              return -EFAULT;
+            }
+          int rc = lump_pop_data_session_frame(priv->port, &frame);
+          if (rc < 0)
+            {
+              return rc;
+            }
+          memcpy(user, &frame, sizeof(frame));
+          return OK;
+        }
+
       case LEGOPORT_LUMP_GET_STATUS_EX:
         {
           FAR struct lump_status_full_s *user =

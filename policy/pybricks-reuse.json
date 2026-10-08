@@ -739,7 +739,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "5e09382ce0f50a0aebbcb90a1d6a944564d17f06fd2668f3da675506cf58655c"
+      "sha256": "34a2ccc606549e8228310c7e4b9e4b4d996d28729205aea0c894a007a06a4180"
     },
     {
       "path": "boards/spike-prime-hub/include/board_lump.h",
@@ -750,7 +750,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "fa816bc50726b6edf33ce8f84477f49d1cbf13b0a153f877b63647eb2732975d"
+      "sha256": "b2718177771c8f9160744ca9af869a87a017f4e6a9b77cda6b5cf2bfa745bbf5"
     },
     {
       "path": "boards/spike-prime-hub/include/board_sound.h",
@@ -873,7 +873,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "b4bad0073a8e7a2e4ee1b26faeffe8a2e4f67e2abfce28eed4e20bb897b534dc"
+      "sha256": "ea9738cb2492ce9212c523850d8eca330e98f03fbecbb4a7ab36847032c0d2c8"
     },
     {
       "path": "boards/spike-prime-hub/src/stm32_legoport_pwm.c",
