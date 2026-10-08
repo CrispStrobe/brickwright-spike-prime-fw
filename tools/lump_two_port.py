@@ -20,14 +20,24 @@ class TwoPortFixture(object):
             advance,ports[name],clock,observe=observers[name]) for name in ('E','F')}
         self.requests=0
 
-    def pending(self, name, distance, session):
+    def pending(self, name, distance, session, checkpoint="direct-check"):
         f=self.fixtures[name]
         def unchanged():
             state=f.observe()
             return state if (state is not None and state['active'] and state['count']==1
                 and state['frame']==f.frame(distance) and state['session']==session
                 and not state['dropped']) else None
-        return f.wait(unchanged,200,name+' unchanged pending payload/session')
+        description='%s unchanged pending payload/session checkpoint=%s request=%d distance=%d session=%d' % (name,checkpoint,self.requests,distance,session)
+        try:
+            return f.wait(unchanged,200,description)
+        except AssertionError as failure:
+            try:
+                diagnostic='queue=%r modelState=%s timeouts=%d transmitted=%d budget=%d drive=%d' % (
+                    f.observe(),f.port.State,int(f.port.Timeouts),int(f.port.TransmittedFrames),
+                    int(f.port.DataReportsRemaining),int(f.port.BridgeDrive))
+            except Exception as sampling_error:
+                diagnostic='diagnostic sampling failed: %s' % sampling_error
+            raise AssertionError('%s; %s' % (failure,diagnostic))
 
     def poll(self, name, distance, invalid=False):
         f=self.fixtures[name]
@@ -48,30 +58,30 @@ class TwoPortFixture(object):
         f.attach();e.attach()
         sf=f.emit(1111)['session'];se=e.emit(2222)['session']
         if self.poll('F',1111)!=sf:raise AssertionError('F admitted identity mismatch')
-        self.pending('E',2222,se)
+        self.pending('E',2222,se,'after-F1111-poll')
         if self.poll('E',2222)!=se:raise AssertionError('E admitted identity mismatch')
         f.emit(3333);e.emit(4444)
         if self.poll('E',4444)!=se:raise AssertionError('E live identity changed')
-        self.pending('F',3333,sf)
+        self.pending('F',3333,sf,'after-E4444-poll')
         if self.poll('F',3333)!=sf:raise AssertionError('F live identity changed')
         f.emit(5555);e.emit(6666)
         if self.poll('E',6666,invalid=True)!=se:raise AssertionError('E refusal batch identity changed')
-        self.pending('F',5555,sf)
-        self.empty('E');self.pending('F',5555,sf)
+        self.pending('F',5555,sf,'after-E-invalid-batch')
+        self.empty('E');self.pending('F',5555,sf,'after-E-empty-before-detach')
         e.emit(7777);e.port.Detach()
         def inactive():
             state=e.observe()
             return state if state is not None and not state['active'] and state['count']==0 else None
         e.wait(inactive,5000,'E actual queue invalidation')
         detached_ms=e.last_wait_ms
-        self.pending('F',5555,sf)
-        self.empty('E');self.pending('F',5555,sf)
+        self.pending('F',5555,sf,'after-E-detach')
+        self.empty('E');self.pending('F',5555,sf,'after-E-empty-after-detach')
         if self.poll('F',5555)!=sf:raise AssertionError('E detach changed F identity')
         e.attach();replacement=e.emit(8888)['session']
         if replacement<=se:raise AssertionError('E replacement identity did not progress')
         f.emit(9999)
         if self.poll('E',8888)!=replacement:raise AssertionError('E replacement reply identity mismatch')
-        self.pending('F',9999,sf)
+        self.pending('F',9999,sf,'after-E-replacement-poll')
         if self.poll('F',9999)!=sf:raise AssertionError('E replacement changed F identity')
         self.empty('E');self.empty('F')
         if any(int(x.port.BridgeDrive)!=0 for x in (e,f)):

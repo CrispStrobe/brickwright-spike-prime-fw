@@ -69,6 +69,22 @@ class Contract(unittest.TestCase):
             e.observe=corrupt
             with self.subTest(field=field),self.assertRaisesRegex(AssertionError,'unchanged pending'):
                 f.pending('E',123,1)
+    def test_failure_identifies_expected_frame_and_actual_queue(self):
+        w=DualWorker();f=w.fixture();e=f.fixtures['E'];e.attach();e.emit(123)
+        with self.assertRaisesRegex(AssertionError,'distance=456 session=1.*queue=.*modelState=Streaming'):
+            f.pending('E',456,1)
+
+    def test_sampling_failure_does_not_mask_original_deadline(self):
+        w=DualWorker();f=w.fixture();e=f.fixtures['E'];e.attach();e.emit(123)
+        original=e.observe;calls=[0]
+        def observe():
+            calls[0]+=1
+            if calls[0]>21:raise ValueError('secondary sampling fault')
+            return original()
+        e.observe=observe
+        with self.assertRaisesRegex(AssertionError,'Guest deadline:.*checkpoint=after-detach.*secondary sampling fault'):
+            f.pending('E',456,1,'after-detach')
+
     def test_distinct_ports_and_observers_required(self):
         w=DualWorker();p=w.workers['E'].port;o=w.workers['E'].observe
         with self.assertRaises(ValueError):pair.TwoPortFixture(BASE,OUT,w.read,w.write,lambda:True,w.advance,

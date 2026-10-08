@@ -52,6 +52,24 @@ request, 200-ms emission/admission and cooperative host deadline bounds remain.
 RunFor cannot be interrupted by those cooperative checks. Robot retains its
 600-second timeout; no new hard process or mailbox cancellation claim follows.
 
+## First actual guest result
+
+[Matrix 37850880928](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37850880928)
+at source `4132beeb31efa769fcf8b11131659e913c3ddbcd` fails the ordinary profile's
+new experiment. The retained F-only scenario passes first; a subsequent F pending
+payload/session witness reaches its guest deadline. The original message lacks
+the expected distance/phase and does not identify which pending witness failed.
+This is not evidence of successful E/F isolation or an established watchdog,
+consumption or invalidation cause. Original raw logs remain preserved privately.
+Source-policy and documentation CI pass at that exact source; they do not turn
+the guest failure into qualification. The companion HCI result remains separate.
+
+The follow-up adds a checkpoint label/request ordinal, expected distance/session and the observed queue plus
+public model state, timeout/frame/budget/drive counters to that failure. A secondary
+diagnostic-sampling exception preserves the original deadline message. It does
+not change firmware, external inputs, success comparisons or deadlines. Require
+actual execution of this diagnostic revision before choosing a behaviour fix.
+
 ## Controls and actual acceptance
 
 ```sh
