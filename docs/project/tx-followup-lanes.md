@@ -31,6 +31,12 @@ without placing their payload on a replacement connection or the other link.
 Preserve the existing all-or-error contract or explicitly implement and test
 partial acceptance; do not interpret a positive byte count as a refusal.
 
+Carry that lifetime through downstream queued/deferred send work and completion
+callbacks, not only the adapter's immediate send call. Reusing a channel object
+must not let old pending work or an old completion act on its new connection.
+Document the ownership boundary at the transport implementation as well as the
+wrapper; a mutex around wrapper admission alone is not sufficient evidence.
+
 Acceptance: force disconnect/reconnect between pending-copy and final admission,
 including same-link replacement and simultaneous other-link traffic. No stale
 bytes reach the replacement peer. Exercise disconnect/reentry from the fake
@@ -82,3 +88,35 @@ Each registration produces at most one permitted completion and replacement
 waits remain live. A mutation removing identity validation must be detected.
 Qualify affected ARM callers after any source change; host controls alone do
 not authorize firmware merge or desktop adoption.
+
+## T04 — Qualify degree-command readiness between jobs { #degree-readiness }
+
+Owner repository: `CrispStrobe/brickwright-spike-prime-fw`.
+Entry points: `apps/btsensor/btsensor_classic.c`,
+`apps/btsensor/btsensor_modern_backend.c`,
+`simulation/bluetooth-air/classic_motor_probe.py`.
+
+The [drain candidate record](drain-registration-qualification.md) preserves a
+local sequential-command failure despite a passing canonical matrix. Reproduce
+with immutable candidate/baseline images, identical external inputs and actual
+compiled Runtime/model identities. Record refusals as replies, separately from
+accepted jobs; do not infer admission from sending a request. Attribute the
+readiness boundary before declaring the TX change safe.
+
+Specify whether a degree command without a fresh baseline frame is immediately
+refused with `-EAGAIN`, or enters a bounded asynchronous readiness wait. A
+refusal must produce exactly one error and no motor action. A wait needs an
+explicit deadline, connection origin, ownership and cancel/disconnect semantics;
+never fabricate or silently reuse a stale encoder sample. Document the caller's
+retry policy, unique request identities and maximum attempts if immediate
+refusal remains the contract.
+
+Acceptance: cover immediately consecutive degree jobs, simultaneous A/B jobs
+followed by cancellation/replacement, missing and delayed UART frames, repeated
+refusal, disconnect and readiness timeout. Preserve all original failed runs.
+Distinguish unchanged-input regression from any newly specified retry/readiness
+scenario; both need explicit outcomes. Cancellation coverage must first observe
+admitted motion and then prove stop and replacement behavior. Mutations that
+power a refused motor, accept stale feedback, duplicate replies or omit the
+readiness bound must fail. Run both protected builds and mandatory gates for
+firmware changes, with affected compiled guest scenarios and exact source pins.

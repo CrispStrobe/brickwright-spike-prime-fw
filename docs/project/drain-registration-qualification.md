@@ -90,8 +90,45 @@ header selections and notices remain intact. New test/tool/documentation
 components use BSD-3-Clause. This is not a whole-firmware independence or licence
 clearance claim.
 
-Fresh clean protected builds, mandatory input/link/resource/official-TI matrix
-and affected compiled guest regressions are pending. Host controls alone do not
-authorize merging firmware. No desktop pin, package or installed GUI adoption is
-included. Direct production timer/guest scheduling qualification remains a
-future task until an actual application caller is added.
+## Candidate qualification record
+
+Tested source: `a2dbe8b75db1b58872f161488a951f9475d4f2ec`.
+[Source and documentation CI](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37703135304)
+and the [complete protected matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37703134582)
+passed. Both clean ARM profiles passed compiler-input, linker, resource and
+zero-TI-payload gates, including the official 40-chunk fingerprint control.
+The HCI job executed all seven air modes; the non-HCI job executed protected
+boot, retained program restarts, interrupted program storage and empty-seed
+checks. Profile-inapplicable steps were skipped, not credited as executed twice.
+
+Clean candidate resource measurements were 595876 flash bytes for `simulation`
+and 595892 for `simulation-hci`, against 654336; both used 88848 RAM bytes
+against 98304. Local host controls also passed AddressSanitizer and
+UndefinedBehaviorSanitizer. These are candidate measurements, not a desktop
+package adoption record.
+
+Additional local compiled-Renode qualification remains blocked. The unchanged
+Classic all-motor scenario twice returned `-EAGAIN` for the long degree move
+used to test cancellation, before admitting motor motion; the probe then timed
+out waiting for motion. In a matched baseline/candidate comparison, the older
+`e6f10f9ae8e47ae070693e966e03a7b3d3e18d35` firmware passed and this candidate
+failed. A second unchanged baseline run also passed. That local comparison
+used Runtime
+`8f128e66d0be5f83da035eaba9cc4441c0a29a31` and Infrastructure
+`adf40d98062a6b31aae7ef86e1ae5f289eebdc48`, distinct from the workflow's
+pinned matrix context. This does not establish causation or equivalence across
+those contexts. Preserve the failure; the green matrix does not erase it.
+
+The encoder backend deliberately refuses admission until a fresh matching UART
+frame is available. Initial readiness does not guarantee a fresh frame for a
+later command. See [T04](tx-followup-lanes.md#degree-readiness)
+for the unresolved sequencing contract. Do not weaken movement, cancellation,
+reply or timing assertions to turn the original failed scenario into a pass.
+Two earlier local attempts failed before guest execution because the host
+configuration/history destination was not writable; those are environment
+failures, separately retained from the observed command refusal.
+
+Keep this candidate unmerged until the local comparison boundary is resolved.
+Host controls alone do not authorize merging firmware. No desktop pin, package
+or installed GUI adoption is included. Direct production timer/guest scheduling
+qualification remains a future task until an actual application caller is added.
