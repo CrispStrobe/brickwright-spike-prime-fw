@@ -73,11 +73,40 @@ mutations fail assertions: validate only the legacy size, consume before the
 range check, and copy output after a refused poll. This is host driver/control
 coverage, not ARM privilege/MPU or guest syscall qualification.
 
-Required before merge: exact-source CI and both protected clean ARM profiles,
-compiler-input/link/resource/official TI-exclusion gates, and affected compiled
-guest scenarios. Direct guest qualification of the new ioctl and reset/session
-transition remains necessary before a consumer relies on this API. Preserve
-original failures and state exactly which boundary was exercised.
+## Compiled regression checkpoint
+
+Firmware source: `c47639d104c780f73d5ad548dffc316416019c63`.
+Control/documentation head: `31494669e413b705418ce13500488b76611564ec`;
+that follow-up changes only tests, their CI invocation and this document, with
+firmware compiler inputs unchanged.
+[Control CI](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37738082741)
+passed both enabled checks.
+[The protected matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37737419637)
+passed both clean ARM profiles, including compiler-input/notices, selected linker
+members, resource and zero-TI-payload gates. Both profiles passed the official
+40-chunk fingerprint control; the new frame-size assertions compiled on ARM.
+
+The HCI profile emitted seven complete PASS reports for LE/reconnect/periodic,
+Scratch Link, Classic/IMU, stationary readiness, poses, calibration and measured
+motors. All seven reports identify the same four kernel/userspace files by hash.
+The other profile passed protected boot, actual ARM program restarts, interrupted
+program storage and the empty filesystem seed. Only profile-inapplicable steps
+were skipped. Both profiles measured userspace flash 595720/654336 bytes and
+static RAM 88848/98304 bytes; these are userspace measurements, not kernel RAM
+measurements or physical-hardware qualification.
+
+The air helper again logged background peer-reset diagnostics while the reports
+and job passed. Original logs retain those diagnostics; complete helper teardown
+ownership is not claimed, and no dependency pin was changed to hide them.
+
+Production callers still use the legacy poll. These compiled guest passes
+exercise the changed shared queue through existing callers, not a new guest
+session-ioctl consumer or injected partial bring-up failure. Direct guest
+qualification of the new ioctl, invalid output and reset/session transition is
+still required before a consumer relies on it. No arbitrary back-to-back motor
+admission, physical accuracy or full equivalence follows from this checkpoint.
+Final documentation CI and exact-head merge review remain required; no unchanged
+ARM matrix rerun is needed for documentation-only changes.
 
 New queue/control/documentation components use BSD-3-Clause. Retained driver
 and ABI attribution and MIT selections remain in place. The compiler-input
