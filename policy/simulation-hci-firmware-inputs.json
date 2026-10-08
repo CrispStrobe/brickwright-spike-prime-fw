@@ -1834,7 +1834,7 @@
     },
     {
       "path": "boards/spike-prime-hub/include/board_legoport.h",
-      "sha256": "5e09382ce0f50a0aebbcb90a1d6a944564d17f06fd2668f3da675506cf58655c",
+      "sha256": "34a2ccc606549e8228310c7e4b9e4b4d996d28729205aea0c894a007a06a4180",
       "spdx": [
         "MIT"
       ],
@@ -1863,7 +1863,7 @@
     },
     {
       "path": "boards/spike-prime-hub/include/board_lump.h",
-      "sha256": "fa816bc50726b6edf33ce8f84477f49d1cbf13b0a153f877b63647eb2732975d",
+      "sha256": "b2718177771c8f9160744ca9af869a87a017f4e6a9b77cda6b5cf2bfa745bbf5",
       "spdx": [
         "MIT"
       ],
@@ -2000,6 +2000,17 @@
         "Apache-2.0"
       ],
       "basis": "Legacy Apache source grant."
+    },
+    {
+      "path": "boards/spike-prime-hub/src/lump_data_queue.h",
+      "sha256": "a7d7e77e1b05fdaf563b311cc4f29a83afa112fd3129a85ae8acb86bb2ae8c78",
+      "spdx": [
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause"
+      ],
+      "basis": "Newly authored session queue, explicit per-file SPDX; notice and grant retained."
     },
     {
       "path": "boards/spike-prime-hub/src/spike_prime_hub.h",
@@ -2188,7 +2199,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/stm32_legoport_chardev.c",
-      "sha256": "33882e19bdbec191887a398074cb8f04980bfda98018b83c0f1269cfd324e0f6",
+      "sha256": "beb49503942bb256c73829e9a94f7b2d77a6627f6df8ce047fea9dec68e987fa",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -2197,7 +2208,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/stm32_legoport_lump.c",
-      "sha256": "b4bad0073a8e7a2e4ee1b26faeffe8a2e4f67e2abfce28eed4e20bb897b534dc",
+      "sha256": "ea9738cb2492ce9212c523850d8eca330e98f03fbecbb4a7ab36847032c0d2c8",
       "spdx": [
         "MIT",
         "MIT"
@@ -34979,7 +34990,7 @@
     "licenses/MbedTLS-3.6.2-LICENSE.txt": "9b405ef4c89342f5eae1dd828882f931747f71001cfba7d114801039b52ad09b",
     "licenses/GCC-GPL-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
     "licenses/GCC-Runtime-Exception-3.1.txt": "28e85c5aa4af9b4f1dfe6b4817aa3eefb3eaaee7fd735045016f29ccf50276a1",
-    "licenses/Simulation-Firmware-NOTICES.txt": "9cf189fb2222dbcb2ed8b3b1c511c5814c4fdd3e74556d6707d8a065b6860d90",
+    "licenses/Simulation-Firmware-NOTICES.txt": "339cc0b5a98e132e3c9f29a69cb8cb6054191ddbbd0e71139ef3385106df82a6",
     "licenses/GCC-ARM-Runtime-NOTICES.txt": "975b22fed2a2eb275f072d80ab53fb0c70cbc2078320697d16d79a4bafedbe67",
     "licenses/LEGO-UART-MIT.txt": "06e9c467eba8633b8b677525e4ee51466b67cd2d651463eb4fa5d419ba45ca7d",
     "licenses/Fusion-MIT.txt": "deea99a9e5920dc1cb5bfd7730fba6ca3fdab691bde7760aa1642e65c650ccca",

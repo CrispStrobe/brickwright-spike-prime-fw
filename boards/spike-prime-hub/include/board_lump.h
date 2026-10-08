@@ -135,6 +135,28 @@ struct lump_data_frame_s
   uint8_t  data[LUMP_MAX_PAYLOAD];
 };
 
+/* Additive session-bearing snapshot for LEGOPORT_LUMP_POLL_DATA_SESSION.
+ * The legacy frame and ioctl retain their layout/number. A nonzero session
+ * identifies one completed UART synchronization on this port during this boot;
+ * it is never reused. It is not a connection token, timestamp or motor owner.
+ * This snapshot alone does not authorize a later PWM write.
+ */
+
+struct lump_data_session_frame_s
+{
+  uint64_t session;
+  struct lump_data_frame_s frame;
+  uint32_t reserved;  /* zero; explicit tail keeps the ABI 48 bytes */
+};
+
+/* Both polls consume the same ring. Returns -EAGAIN while unsynchronized or
+ * empty; errors leave output unchanged. Session end/reset discards queued DATA.
+ */
+
+int lump_pop_data_frame(int port, struct lump_data_frame_s *out);
+int lump_pop_data_session_frame(int port,
+                               struct lump_data_session_frame_s *out);
+
 #define LUMP_DATA_QUEUE   16    /* engine-side DATA frame ring depth */
 
 /* Per-port engine state codes — surfaced via `lump_status_full_s::state`
