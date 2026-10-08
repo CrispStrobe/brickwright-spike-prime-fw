@@ -35,3 +35,9 @@ Actual protected userspace refuses invalid session poll outputs
     Execute Command    include @${CURDIR}/lump_probe.py
     ${proof}=    Execute Command    check_lump_probe ${result.strip()} ${readonly.strip()}
     Should Contain    ${proof}    LUMP protected refusal probe passed: checks=511
+    # The real console is USB CDC; USART2 is HCI. Observe only the guest-owned
+    # publication, never inject a request or write diagnostic guest RAM.
+    Execute Command    include @${CURDIR}/lump_requests.py
+    ${requests}=    Execute Command    sysbus GetSymbolAddress "g_bw_lump_request"
+    ${batch}=    Execute Command    check_lump_requests ${requests.strip()}
+    Should Contain    ${batch}    LUMP protected fixed request batch passed: requests=6

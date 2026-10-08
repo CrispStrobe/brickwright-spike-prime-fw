@@ -1093,7 +1093,7 @@
     },
     {
       "path": "apps/port/lumpprobe.c",
-      "sha256": "c6d004658c23f560b84f6a5589d6ae381cf62467d6f9f5d0e62ba954b00bfec0",
+      "sha256": "0bbc9c0a2c6406a7b32c08a7b6d6ec4584d2be05f127ece8b0a352bc8845d786",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -1104,7 +1104,7 @@
     },
     {
       "path": "apps/port/lumpprobe.h",
-      "sha256": "c555ecb28554f47fb9fbf26dfffba6c1398549301ef68fa90bc706979154e559",
+      "sha256": "ee8695a0e4637a6e54dfec9fb259692fcabda5282fcc99621db8ae7aab38792f",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -1115,7 +1115,7 @@
     },
     {
       "path": "apps/port/port_main.c",
-      "sha256": "79254b5a8aca9cca030f280fc49114bdc02252aeb051c7cddcfa5e9e3e29c186",
+      "sha256": "4b06b942ebbeaab393f1d619fb7a4027578db1a28920208be6b493056fd63757",
       "spdx": [],
       "selected_licences": [
         "MIT"

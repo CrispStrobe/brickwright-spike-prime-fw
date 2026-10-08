@@ -934,9 +934,14 @@ int main(int argc, FAR char *argv[])
 
 #if defined(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK) && \
     defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_LEGO_LUMP)
+  if (strcmp(argv[1], "simulation-session-request") == 0)
+    {
+      return argc == 3 ? bw_lump_request_run(argv[2]) : 1;
+    }
   if (strcmp(argv[1], "simulation-poll-probe") == 0)
     {
-      return argc == 2 ? bw_lump_probe_run() : 1;
+      if (argc != 2 || bw_lump_probe_run() != 0) return 1;
+      return bw_lump_request_startup();
     }
 #endif
 

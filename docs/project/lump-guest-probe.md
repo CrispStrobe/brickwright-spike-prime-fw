@@ -163,3 +163,7 @@ The separately tracked [replacement Runtime/model pair qualification](lpf2-budge
 advances only test-host pins to exercise the external DATA-budget prerequisite.
 It requires fresh affected guest regressions and does not replace this earlier
 pair's evidence or establish active-session behavior.
+
+The next candidate adds [fixed userspace requests](live-session-requests.md) for
+live experiments. Its host controls and new inactive guest-publication fixture are separate
+from the previously qualified source; actual new guest execution is required.
