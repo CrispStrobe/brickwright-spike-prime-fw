@@ -1,13 +1,16 @@
 {
   "air_files_sha256": {
-    "tools/bw-air/AIR.md": "0e14d00078a396e390ef27a52a64229db5833d754b62d88b31aae02dc333f70b",
+    "tools/bw-air/AIR.md": "2d7b146609a2e2fefcd8110d0ac5499164d1c298747f5e64b8cb6c9d48d8d5a7",
+    "tools/bw-air/LICENSE.BSD-3-Clause": "522a3bd6d8f2993a428dfbbd7940a85f4cea8c602bb387fc6074ca41e42a1d55",
+    "tools/bw-air/STREAM-LIFECYCLE.md": "b365069d0d8a2b7ad9df48dd45ead9072bbae8e69eeb23a85165251f4c05a09e",
     "tools/bw-air/airhub.py": "4137a19eb96460c707fa2aae546aaa15d63468d9c77976ae6f8a0e501ad65226",
     "tools/bw-air/bumble_air.py": "6ae0a07d525102b27ba694d691e27d2f734f406f1f0331f749f2e87213124edf",
-    "tools/bw-air/hci_node.py": "3c2133baa50384c8b630cf6c1e027dd3066004953a3cc4cdf475fe402687ba74",
+    "tools/bw-air/hci_node.py": "4576f990961b7749f595c35e3cdb0556afa2a797624bd7866fac8473fd6300b8",
+    "tools/bw-air/requirements-test.txt": "9132220762ca74ec694175a0bbb10ce8f82a08026d13fe58c93d29c7ec3a8eaf",
     "tools/bw-air/scratch_link_node.py": "38bc5fa04dd648c9157c9e4584cf11193e7bd188215f4aaa7e745c18f5840280",
-    "tools/bw-air/test_air.py": "f4af0737dc10146537ca9c0f51ec61ebb98d4d1376f4002700e2bcfd0a57eba0"
+    "tools/bw-air/test_air.py": "cd51106689cd5c0e966eaca12d0aff9a466a0239f6ff1d37efdf7f3d774f418a"
   },
-  "air_tree": "a4433f41b44a0e3e6e47bddeda0c770dcd83a959",
+  "air_tree": "6fad8dcd231400c0112d7319544fa334440422be",
   "limits": [
     "Package grants and installed notice files were reviewed; this is not an exhaustive audit of every binary dependency.",
     "libusb-package includes LGPL libusb; libusb1 supplies the LGPL grant alongside GPL COPYING text.",
@@ -215,7 +218,7 @@
     }
   ],
   "requirements_sha256": "b43bcef93a7d0d202be79357b2352f8171e4a4a93b35e3cc2f911df6ebd3472d",
-  "runtime_commit": "8f7696aac606d8de90c1a6a0930e48655f03530a",
+  "runtime_commit": "b34becc947ac9c998881bb018dfe2cec4b1398b2",
   "schema": 1,
   "scope": "Host-only Bluetooth-air test dependencies; no ARM or WASM inclusion"
 }

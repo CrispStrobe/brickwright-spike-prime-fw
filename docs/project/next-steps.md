@@ -19,6 +19,12 @@ points, adversaries and guest acceptance criteria. Refresh its status before
 starting L02 so these completed steps are not repeated. The baseline inventory
 below remains historical; do not silently substitute its older dependency pins.
 
+The separate [HCI lifecycle qualification](hci-lifecycle-qualification.md) records
+Runtime `b34becc947ac9c998881bb018dfe2cec4b1398b2`, unchanged Infrastructure
+`1253d925accca23dfda66d5bca61e78498dcb64f`, complete affected guest/air checks
+and the explicit abort-versus-flush boundary. Read that newer dependency record
+before using the historical baseline pins below.
+
 ## Established baseline
 
 [Brickwright firmware PR #34](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/34)
