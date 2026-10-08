@@ -90,7 +90,7 @@ header selections and notices remain intact. New test/tool/documentation
 components use BSD-3-Clause. This is not a whole-firmware independence or licence
 clearance claim.
 
-## Candidate qualification record
+## Earlier candidate qualification record
 
 Tested source: `a2dbe8b75db1b58872f161488a951f9475d4f2ec`.
 [Source and documentation CI](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37703135304)
@@ -101,13 +101,13 @@ The HCI job executed all seven air modes; the non-HCI job executed protected
 boot, retained program restarts, interrupted program storage and empty-seed
 checks. Profile-inapplicable steps were skipped, not credited as executed twice.
 
-Clean candidate resource measurements were 595876 flash bytes for `simulation`
+Private clean candidate resource measurements were 595876 flash bytes for `simulation`
 and 595892 for `simulation-hci`, against 654336; both used 88848 RAM bytes
 against 98304. Local host controls also passed AddressSanitizer and
 UndefinedBehaviorSanitizer. These are candidate measurements, not a desktop
 package adoption record.
 
-Additional local compiled-Renode qualification remains blocked. The unchanged
+Additional local compiled-Renode qualification of that source failed. The unchanged
 Classic all-motor scenario twice returned `-EAGAIN` for the long degree move
 used to test cancellation, before admitting motor motion; the probe then timed
 out waiting for motion. In a matched baseline/candidate comparison, the older
@@ -131,21 +131,69 @@ Two earlier local attempts failed before guest execution because the host
 configuration/history destination was not writable; those are environment
 failures, separately retained from the observed command refusal.
 
-Keep this candidate unmerged until the local comparison boundary is resolved.
+That source was held unmerged. The follow-up below records a new candidate;
+its results do not erase these earlier failures.
 Host controls alone do not authorize merging firmware. No desktop pin, package
 or installed GUI adoption is included. Direct production timer/guest scheduling
 qualification remains a future task until an actual application caller is added.
 
-## Pending inactive-timer fast-path comparison
+## Inactive-timer fast-path candidate
 
-A follow-up avoids entering the timer reconciler when the locked state has
+Tested source: `4801bee3c96c7c47e1af1b0fa872c4cc7491c425`.
+The follow-up avoids entering the timer reconciler when the locked state has
 neither an installed timer nor a timed registration. An already running
 reconciler remains responsible for concurrent desired-state changes. This
 removes an unnecessary mutex round trip from ordinary transport pumps where
-no drain timer is registered; it does not change encoder admission or add
-host retries. Existing threaded/reentrant drain controls, five targeted
-mutations, transport controls and sanitizers passed locally for this change.
-Fresh clean ARM builds, the mandatory matrix and unchanged compiled guest
-comparisons are pending. The earlier source-specific results above do not
-qualify this follow-up, and the local failures remain preserved. No causal
-explanation or merge clearance is claimed from the host controls.
+no drain timer is registered. It does not change encoder admission, add host
+retries, implement the future readiness wait, or establish why the earlier
+candidate failed.
+
+[Exact-source CI](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37728718579)
+passed both enabled checks. Local actual-TX threaded/reentrant controls, five
+assertion-detected mutations, affected TX/Classic/command/BLE controls and
+mutations, ASan/UBSan, source/origin/reuse policy and strict documentation
+checks passed. Only the changed TX implementation hash was refreshed in each
+protected compiler-input inventory; retained licences, dependency pins,
+link/resource limits and official TI requirements were preserved.
+
+Two unchanged compiled-Renode Classic/all runs passed, including signed moves,
+simultaneous A/B activity, cancellation/replacement, no-progress and boundary
+errors. Separate detach/reconnect and overlapping BLE/Classic motor scenarios
+also passed. The confirmation was planned before acquisition; qualification
+would stop on the first failed case. The harness, model, command order,
+assertions and timeouts were unchanged. The saved settings-template hash matched
+the earlier baseline/candidate comparison, and the cached Runtime DLL and
+external air-tool bytes matched their recorded pins. Request scheduling remains
+host asynchronous; this is not a replay at bit-identical guest input instants.
+
+The local consumer used Runtime `8f128e66d0be5f83da035eaba9cc4441c0a29a31`
+and Infrastructure `adf40d98062a6b31aae7ef86e1ae5f289eebdc48`, with the
+layout collected from the new own kernel. Private clean builds of both profiles
+passed; each measured 595936 flash bytes and 88848 static RAM bytes against
+654336 and 98304. The canonical build measurements were 595736 flash bytes for `simulation`
+and 595720 for `simulation-hci`, with 88848 static RAM bytes in each. These are separate build contexts, not a claim of
+byte-identical binaries or full source-to-binary clearance.
+
+[The mandatory matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37728733591)
+passed both protected profiles, including compiler-input, linker, resource,
+zero-TI-payload and official 40-chunk fingerprint controls. The HCI job emitted
+seven complete top-level `PASS` reports for LE/reconnect/periodic, Scratch Link,
+Classic/IMU, stationary readiness, poses, calibration and measured motors. The
+other profile passed protected boot, actual ARM program restarts, interrupted
+storage and the empty seed. Only profile-inapplicable steps were skipped.
+These are fresh results for this source; the older matrix was not reused.
+
+The pinned air helper logged a background peer-reset diagnostic after a passing
+Scratch Link report; later modes and the job passed. That diagnostic is retained,
+and complete helper teardown ownership is not claimed. No Runtime/tool pin was
+changed to hide it. Final documentation checks and exact-head merge review remain
+required; documentation-only changes do not require another unchanged ARM build.
+
+These finite passes do not establish reliable arbitrary back-to-back command
+admission, physical accuracy, complete equivalence or desktop adoption. T04
+still requires the declared one-second unpowered firmware wait, conditional
+attachment/session/owner admission and actual guest qualification; no host
+retry workaround is included. Direct production drain timer/clock integration,
+Classic deferred endpoint lifetime, asynchronous producer origin/terminal
+capacity and installed GUI/package adoption remain separate work. Raw receipts,
+failed attempts and environment details are retained privately.

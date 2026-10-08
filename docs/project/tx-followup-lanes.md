@@ -1,10 +1,11 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 <!-- Copyright (c) 2026 Brickwright contributors -->
 
-# Follow-up contracts after queued-destination qualification
+# TX follow-up contracts and qualification records
 
-These are proposed work, not implemented or qualified capabilities. Start from
-the current reviewed firmware head and consult
+These contracts distinguish bounded implemented slices from remaining work.
+Use the linked qualification records for exact tested sources and limits. Start
+from the current reviewed firmware head and consult
 `CrispStrobe/brickwright-spike-prime-fw/docs/project/tx-link-qualification.md`.
 Do not credit queue-time generation capture with atomic transport admission.
 Preserve retained attribution, compiler-input inventories and mandatory gates.
@@ -94,29 +95,57 @@ not authorize firmware merge or desktop adoption.
 Owner repository: `CrispStrobe/brickwright-spike-prime-fw`.
 Entry points: `apps/btsensor/btsensor_classic.c`,
 `apps/btsensor/btsensor_modern_backend.c`,
-`simulation/bluetooth-air/classic_motor_probe.py`.
+`simulation/bluetooth-air/classic_motor_probe.py`. The conditional board boundary
+also involves `boards/spike-prime-hub/include/board_lump.h`,
+`boards/spike-prime-hub/src/stm32_legoport_lump.c`,
+`boards/spike-prime-hub/src/stm32_legoport_chardev.c` and
+`boards/spike-prime-hub/src/stm32_legoport_pwm.c`.
 
 The [drain candidate record](drain-registration-qualification.md) preserves a
 local sequential-command failure despite a passing canonical matrix. Reproduce
 with immutable candidate/baseline images, identical external inputs and actual
 compiled Runtime/model identities. Record refusals as replies, separately from
-accepted jobs; do not infer admission from sending a request. Attribute the
-readiness boundary before declaring the TX change safe.
+accepted jobs; do not infer admission from sending a request. Distinguish a
+finite passing comparison from a demonstrated causal explanation or a robust
+readiness implementation.
 
-Specify whether a degree command without a fresh baseline frame is immediately
-refused with `-EAGAIN`, or enters a bounded asynchronous readiness wait. A
-refusal must produce exactly one error and no motor action. A wait needs an
-explicit deadline, connection origin, ownership and cancel/disconnect semantics;
-never fabricate or silently reuse a stale encoder sample. Document the caller's
-retry policy, unique request identities and maximum attempts if immediate
-refusal remains the contract.
+Follow the existing [immediate sequential admission contract](classic-motor-qualification.md#follow-up-task-immediate-sequential-admission):
+an otherwise valid request enters an unpowered baseline wait with a one-second
+guest-time limit and 20 ms polling. Do not retry the user's request at the host,
+block the Bluetooth worker, or substitute cached feedback. Invalid/unsupported
+requests retain explicit immediate errors; another request for an occupied port
+returns `EBUSY`. Start the motion progress timeout only when motion starts.
+
+Qualify the synchronization epoch and conditional board admission first,
+including reset/queue invalidation and ABI compatibility. Then wire the backend
+reservation and Classic wait; each checkpoint must state whether it is only a
+host control or has actual guest integration. Preserve compiler-input manifests,
+notices and resource gates for changes to retained drivers.
+
+First provide a side-effect-free reservation and a conditional start boundary
+that checks the originating live connection, current port owner, attachment and
+UART synchronization identity. Coordinate the kernel/model boundary with L02:
+separate read-time identity validation and an unconditional PWM ioctl cannot
+prove atomic admission. A DCM device-type edge counter alone does not identify
+every UART resynchronization. A changed owner or epoch must refuse the start
+without powering or stopping its replacement. Do not wire a deferred
+unconditional `tagged_operation` as a substitute for this boundary.
+
+Carry T01's connection lifetime and T02's originating reply admission through
+the wait and subsequent job. Stop/disconnect cancels the waiting job without
+later motor action; explicit Stop retains its existing success convention.
+Admission expiry returns `ETIMEDOUT` with zero commanded power. Failure to arm
+either timer releases the reservation and resolves the affected request once.
+Keep other ports running while one port awaits a baseline.
 
 Acceptance: cover immediately consecutive degree jobs, simultaneous A/B jobs
 followed by cancellation/replacement, missing and delayed UART frames, repeated
-refusal, disconnect and readiness timeout. Preserve all original failed runs.
-Distinguish unchanged-input regression from any newly specified retry/readiness
+admission expiry, disconnect, timer-arm failure, stale callbacks and clock/epoch
+boundaries. Preserve all original failed runs.
+Distinguish unchanged-input regression from any newly specified readiness-wait
 scenario; both need explicit outcomes. Cancellation coverage must first observe
 admitted motion and then prove stop and replacement behavior. Mutations that
-power a refused motor, accept stale feedback, duplicate replies or omit the
-readiness bound must fail. Run both protected builds and mandatory gates for
-firmware changes, with affected compiled guest scenarios and exact source pins.
+restore immediate `EAGAIN` for a valid waiting request, power before baseline,
+accept stale feedback, duplicate replies or omit the readiness bound must fail.
+Run both protected builds and mandatory gates for firmware changes, with
+affected compiled guest scenarios and exact source pins.
