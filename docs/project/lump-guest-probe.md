@@ -158,3 +158,8 @@ stimuli, and qualify active identity, invalidation and replacement without queue
 or session writes. A controlled external UART burst is needed to prove exact
 non-consumption; continuous identical samples cannot do so. Conditional kernel
 PWM admission and the one-second/20 ms readiness wait remain separate open work.
+
+The separately tracked [replacement Runtime/model pair qualification](lpf2-budget-pair-qualification.md)
+advances only test-host pins to exercise the external DATA-budget prerequisite.
+It requires fresh affected guest regressions and does not replace this earlier
+pair's evidence or establish active-session behavior.
