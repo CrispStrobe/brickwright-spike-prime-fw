@@ -5,8 +5,9 @@
 
 This extends the [qualified inactive mailbox](live-session-mailbox.md) with an
 external-input experiment. Host controls and the ordinary protected guest profile
-pass at the source recorded below; the companion HCI profile is pending. It
-changes no firmware C input, configuration or dependency pin. The inactive
+pass at the source recorded below. The complete ordinary/HCI matrix and
+seven-peer report audit pass. It changes no firmware C input, configuration or
+dependency pin. The inactive
 matrix alone does not qualify these new scenarios.
 
 ## Observable experiment
@@ -72,8 +73,8 @@ waits for the actual ring to become inactive and empty, rather than assuming
 500 ms is enough for DCM/UART teardown. A missing witness fails before request
 submission. Phase and actual-record details now accompany empty-poll failures.
 The result records the simulated milliseconds waited for invalidation. These
-stronger observations passed in the ordinary guest run recorded below; whole
-matrix qualification still requires the companion HCI profile.
+stronger observations passed in the ordinary guest run recorded below, with
+the companion HCI regressions passing in the same complete matrix.
 
 Each report must consume exactly one model DATA budget and advance its transmitted
 frame count by one, without loss of Streaming or a model timeout. UART delivery
@@ -107,7 +108,7 @@ ordinary-only experiment and retains its seven air scenarios. Require both
 profiles' complete compiler/linker/notice/resource/TI gates and all applicable
 guest checks before adopting a whole-matrix result. Raw receipts remain private.
 The completed ordinary profile establishes the finite active experiment below;
-it does not substitute for the remaining HCI checks.
+the companion HCI profile separately preserves the existing seven air scenarios.
 
 Requests have a one-simulated-second bound; synchronization and observed teardown
 have five seconds each. Report emission and subsequent queue admission each have
@@ -124,7 +125,7 @@ reference image or hardware input is acquired or required by this experiment.
 New components use BSD-3-Clause; reused topology notices and retained firmware
 attribution remain. No whole-firmware independence claim follows.
 
-## Observed ordinary protected guest result
+## Completed protected guest qualification
 
 [Matrix 37816489598](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37816489598)
 tests source `d5aa2b45a773917e5c96b02b18538d8c9e562515`, with Runtime
@@ -133,7 +134,9 @@ tests source `d5aa2b45a773917e5c96b02b18538d8c9e562515`, with Runtime
 [job](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37816489598/job/113446339095)
 passes all its applicable steps, including actual ARM protected userspace,
 inactive mailbox refusals, active F DATA and retained-program restarts. The
-companion HCI job is still pending; this is not yet whole-matrix qualification.
+companion [HCI job](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37816489598/job/113446339552)
+also completed successfully. The strict audit requires exactly two profiles, all
+applicable mandatory steps and only the declared profile-specific skips; it passes.
 
 The active fixture passed eight requests using five externally emitted reports.
 The first guest session was 1 and the replacement session was 2. Actual queue
@@ -150,7 +153,30 @@ The ordinary profile measures 597,900/654,336 bytes of userspace flash and
 object is 28,236 bytes, SHA256
 `d8aad74de697747a89b5692789310669d9cf75357a6992bf8d711648750a8f92`.
 These are this build's static measurements, not heap/stack high-water marks.
+The HCI profile measures 597,908/654,336 bytes of userspace flash and the same
+89,320/98,304 bytes of static RAM, with zero TI payload and the identical probe
+object. Both profiles pass compiler, linker, attribution, resource and TI gates.
+
+Seven HCI peer reports pass: direct LE, Scratch Link, IMU acquisition, stationary
+readiness, poses, calibration persistence and Classic motors. All identify the
+same four firmware files and the exact Runtime above; the motor report uses
+the compiled electrical model. The report verifier rejects three negative
+controls: a missing report, conflicting image identity and wrong Runtime. These
+are verifier controls, separate from the actual comparison-code mutations.
+
+The HCI log also preserves a background `PacedSink._drain`
+`ConnectionResetError` traceback after a peer report. The reported peer
+assertions and required job steps pass despite that diagnostic; these results
+do not qualify helper teardown or prove that background tasks always terminate
+cleanly. A separate Runtime helper-lifecycle regression must distinguish expected
+connection closure from in-flight delivery failure before closing this gap.
+
 Source-policy and documentation checks also pass at this exact tested source.
+Subsequent qualification/handover commits change only Markdown, leaving all
+compiled firmware, configuration, dependency, observer and Robot inputs unchanged.
+Raw logs, the original failure, report identities and audit receipts are preserved
+privately. This qualifies this finite F-only external-input experiment, not the
+remaining per-port/program/reset/GUI or physical capabilities listed above.
 
 ## Next bounded experiment: two-port isolation
 

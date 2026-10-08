@@ -11,8 +11,8 @@ private receipts belong in the operator's private agent instructions.
 
 The [inactive protected-worker mailbox](live-session-mailbox.md) is merged and
 qualified. The separate [active F DATA experiment](active-session-qualification.md)
-records its exact candidate, completed ordinary guest checks and remaining
-companion-profile gate. It uses actual externally emitted UART DATA and a
+records its exact tested source, completed ordinary guest checks and passing
+companion HCI profile. It uses actual externally emitted UART DATA and a
 read-only own-kernel queue witness; it does not broaden the program sensor API.
 That record also gives a bounded two-port isolation follow-up with source entry
 points, adversaries and guest acceptance criteria. Refresh its status before
