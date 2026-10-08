@@ -129,6 +129,10 @@ unchanged. This is not a whole-firmware independence or licence-clearance claim.
 
 ## Next implementation boundary
 
+The [protected refusal probe candidate](lump-guest-probe.md) adds a one-shot
+simulation userspace caller for fixed invalid-output and inactive-poll checks.
+It does not yet supply an active-session/reset guest result or motor authority.
+
 Use a snapshot's session at an atomic conditional board start boundary, coordinated
 with current attachment and PWM ownership. A separate identity read followed by
 an unconditional PWM write cannot satisfy this requirement. Then add side-effect-free

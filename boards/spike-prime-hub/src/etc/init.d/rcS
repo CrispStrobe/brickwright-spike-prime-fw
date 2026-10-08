@@ -32,3 +32,13 @@ btsensor start
 /* Autonomous programs acquire their own ports; do not pre-claim A/B. */
 drivebase start
 #endif
+
+#if defined(CONFIG_APP_PORT) && defined(CONFIG_LEGO_LUMP) && \
+    defined(CONFIG_BUILD_PROTECTED) && \
+    defined(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK) && \
+    !defined(CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI)
+/* NSH stops the script on failure: diagnostics follow normal service startup.
+ * HCI fixtures can attach F before boot; do not probe their motor descriptors.
+ */
+port simulation-poll-probe
+#endif

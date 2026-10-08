@@ -12760,3 +12760,12 @@ Files: boards/spike-prime-hub/src/lump_data_queue.h
  */
 
 The BSD-3-Clause grant is retained in licenses/Brickwright-BSD-3-Clause.txt.
+
+
+Files: apps/port/lumpprobe.c, apps/port/lumpprobe.h
+
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 Brickwright contributors
+ */
+
+The BSD-3-Clause grant is retained in licenses/Brickwright-BSD-3-Clause.txt.

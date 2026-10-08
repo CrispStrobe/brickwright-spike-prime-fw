@@ -1092,8 +1092,30 @@
       "basis": "Inherited spike-nx root MIT grant or inventoried MIT interpreter; generated ROMFS retains init-script origins."
     },
     {
+      "path": "apps/port/lumpprobe.c",
+      "sha256": "c6d004658c23f560b84f6a5589d6ae381cf62467d6f9f5d0e62ba954b00bfec0",
+      "spdx": [
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause"
+      ],
+      "basis": "New Brickwright-authored simulation diagnostic. Full grant: licenses/Brickwright-BSD-3-Clause.txt; no whole-firmware independence claim."
+    },
+    {
+      "path": "apps/port/lumpprobe.h",
+      "sha256": "c555ecb28554f47fb9fbf26dfffba6c1398549301ef68fa90bc706979154e559",
+      "spdx": [
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause"
+      ],
+      "basis": "New Brickwright-authored simulation diagnostic. Full grant: licenses/Brickwright-BSD-3-Clause.txt; no whole-firmware independence claim."
+    },
+    {
       "path": "apps/port/port_main.c",
-      "sha256": "f06ea3ebc5ee4fab18c64b168c0a34cfc37253087832a44f01952da154062ea2",
+      "sha256": "79254b5a8aca9cca030f280fc49114bdc02252aeb051c7cddcfa5e9e3e29c186",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1954,7 +1976,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/etc/init.d/rcS",
-      "sha256": "35cfaf9c92294b61ab203da8e4627d8087ef9dc1e582f9d81aafcef023565d80",
+      "sha256": "45eb04a68ed4ec20331e21d136ea758e03a1182de9af69e2bc83022fee6a303a",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -1963,7 +1985,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/etctmp.c",
-      "sha256": "4ca1a0d6857dcdea015a25d2662605b85f75e937ee59b91f562e2f40cdd76490",
+      "sha256": "13e1b08fb9bc3fb82cd840625b1590d7c065497d088cc1298fc315170787a714",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -34752,7 +34774,8 @@
         "zm_send.cROOT.nuttx-apps.system.zmodem_1.o": "7ac2659ee3b58c5df525980bc7521d920ab80b8d7a55304ff59ba2ed15a62cf1",
         "zm_state.cROOT.nuttx-apps.system.zmodem_1.o": "1c6a61051304667b295386de8458fa3bd5e6c264aa5b551c33c47c7dfabfc4f4",
         "zm_utils.cROOT.nuttx-apps.system.zmodem_1.o": "2ec8dcfdcf52afdec696a09c437b8645327858300563a374cef28b5bf4b95a06",
-        "zm_watchdog.cROOT.nuttx-apps.system.zmodem_1.o": "71360fafea7da686aae02410dfb53c966cd84a8f4d65271c58f6410ce6768004"
+        "zm_watchdog.cROOT.nuttx-apps.system.zmodem_1.o": "71360fafea7da686aae02410dfb53c966cd84a8f4d65271c58f6410ce6768004",
+        "lumpprobe.cROOT.apps.port_1.o": "ab5cda6b09be02714418d5d67bf0c28ba30a9bd84c094a08948a49c4fa6e1dcd"
       }
     },
     "libproxies.a": {
@@ -34990,7 +35013,7 @@
     "licenses/MbedTLS-3.6.2-LICENSE.txt": "9b405ef4c89342f5eae1dd828882f931747f71001cfba7d114801039b52ad09b",
     "licenses/GCC-GPL-3.0.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
     "licenses/GCC-Runtime-Exception-3.1.txt": "28e85c5aa4af9b4f1dfe6b4817aa3eefb3eaaee7fd735045016f29ccf50276a1",
-    "licenses/Simulation-Firmware-NOTICES.txt": "339cc0b5a98e132e3c9f29a69cb8cb6054191ddbbd0e71139ef3385106df82a6",
+    "licenses/Simulation-Firmware-NOTICES.txt": "79458b1d83dfca4266182ab0f27f5861450723fa1e69c8ce4642590bd0a75b20",
     "licenses/GCC-ARM-Runtime-NOTICES.txt": "975b22fed2a2eb275f072d80ab53fb0c70cbc2078320697d16d79a4bafedbe67",
     "licenses/LEGO-UART-MIT.txt": "06e9c467eba8633b8b677525e4ee51466b67cd2d651463eb4fa5d419ba45ca7d",
     "licenses/Fusion-MIT.txt": "deea99a9e5920dc1cb5bfd7730fba6ca3fdab691bde7760aa1642e65c650ccca",
@@ -35068,7 +35091,7 @@
   "capabilities": {
     "motorPorts": 6
   },
-  "current_source_update_note": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification. Candidate encoder attachment guard updates the two reviewed source-input hashes only; existing image/link evidence remains historical until both clean profiles and affected guests are qualified.",
+  "current_source_update_note": "2026-10-08: corrected protected probe matrix37755707865 passed both profiles and seven HCI air peers at source87280884d15178ff5e1e6eb88545fb2d41441e1d. The actual syscall-refusal probe passed in the ordinary profile. Record the measured13312-byte probe object only; existing image/archive hashes remain historical. Firmware compiler inputs, configurations, dependency pins and mandatory gates are unchanged by this evidence update. Original failed source9f597a047f92d4bafc07f300e04d96c2aa5dba6b/run37751297921 remains recorded separately. No active-session/reset/non-consumption or physical accuracy claim.",
   "current_linker_additions": {
     "observed_ci_run": 37265813475,
     "profile": "simulation",
@@ -35083,5 +35106,17 @@
     ],
     "selected_licence": "Apache-2.0",
     "byte_hash_scope": "New member byte hashes are from the cached historical reviewed ARM archive at a8c4c5f24c4f242158704f15ebedde115946223b, not this candidate build. Current candidate selection was observed in both clean CI builds; source inputs/grants are already in this inventory. Current build qualification is recorded separately."
-  }
+  },
+  "lump_probe_candidate": {
+    "scope": "Both clean corrected ARM profiles compiled the selected probe object at source87280884d15178ff5e1e6eb88545fb2d41441e1d and passed matrix37755707865. The dedicated refusal syscall guest probe executed only in simulation; HCI compiles it but omits automatic execution. Configuration, dependencies and selected-member sets are unchanged. This single object byte hash is now measured; other image/archive byte hashes remain historical. See docs/project/lump-guest-probe.md for exact evidence and limitations.",
+    "expected_member": "lumpprobe.cROOT.apps.port_1.o",
+    "measured_object_bytes": 13312,
+    "tested_source": "87280884d15178ff5e1e6eb88545fb2d41441e1d",
+    "qualification_run": "https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37755707865",
+    "dedicated_guest_probe_executed": true,
+    "selected_licence": "BSD-3-Clause",
+    "generated_romfs_baseline_reproduced": "4ca1a0d6857dcdea015a25d2662605b85f75e937ee59b91f562e2f40cdd76490",
+    "generated_romfs_candidate": "13e1b08fb9bc3fb82cd840625b1590d7c065497d088cc1298fc315170787a714"
+  },
+  "historical_source_update_note_before_lump_probe": "2026-10-03: current compiler-input hashes include licensed MIT fusion/calibration modifications and one new local Apache-2.0 imu_timestamp.h (3246 paths). Configuration, license selections and selected archive-member sets remain unchanged. images and archive byte hashes retain the previous recorded build as historical reference; they are not hashes of this modified source build. New build and runtime evidence is recorded separately in PLAN.md. Historical origin-scan and inherited baseline hashes remain unchanged. Scheduler watch stop additionally waits for the outstanding poll round before descriptor close; current source hashes reflect this change, while the image/archive byte hashes remain historical. 2026-10-03: imu_main now reserves a single producer during task startup, preserves pending stop requests, stops draining on shutdown, retries interrupted polls and resets stationarity without zero-rate initialization. Current source hashes cover these local MIT modifications; original grants, inherited hashes and historical binary evidence are unchanged. 2026-10-03: one local Apache-2.0 imu_service.h raises selected input count to3247. Current hashes include MIT producer timing/service and local Apache command/TX changes. Historical image/archive byte evidence remains unchanged; actual current build qualification is recorded separately. 2026-10-05: reviewed local workflow restart/errno, Classic measured degree/ownership and MIT calibration persistence/threshold changes. Original grants and historical image/archive hashes remain intact; current source candidate needs separate ARM linker and runtime qualification. Candidate encoder attachment guard updates the two reviewed source-input hashes only; existing image/link evidence remains historical until both clean profiles and affected guests are qualified."
 }

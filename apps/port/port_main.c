@@ -32,6 +32,11 @@
 
 #include <arch/board/board_legoport.h>
 
+#if defined(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK) && \
+    defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_LEGO_LUMP)
+#  include "lumpprobe.h"
+#endif
+
 #ifdef CONFIG_LEGO_LUMP
 #  include <arch/board/board_lump.h>
 #endif
@@ -926,6 +931,14 @@ int main(int argc, FAR char *argv[])
       usage();
       return 0;
     }
+
+#if defined(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK) && \
+    defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_LEGO_LUMP)
+  if (strcmp(argv[1], "simulation-poll-probe") == 0)
+    {
+      return argc == 2 ? bw_lump_probe_run() : 1;
+    }
+#endif
 
   if (strcmp(argv[1], "list") == 0)
     {
