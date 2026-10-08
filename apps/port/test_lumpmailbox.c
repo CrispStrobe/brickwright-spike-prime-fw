@@ -86,6 +86,17 @@ int main(void)
   assert(g_bw_lump_request_mailbox.reply_result == 0);
   g_bw_lump_request_mailbox.request_seq = 0; bw_lump_request_mailbox_step();
   assert(g_bw_lump_request_mailbox.reply_seq == UINT32_MAX && calls == 1);
+  /* Independent port dispatch controls, using a fresh host-only ordinal. */
+  g_bw_lump_request_mailbox.request_seq = g_bw_lump_request_mailbox.reply_seq = 0;
+  expected_path = "/dev/legoport4";
+  counters("data"); submit(1, 1, 8);
+  assert(opens == 1 && calls == 1 && closes == 1);
+  assert(g_bw_lump_request.selector == 8 && g_bw_lump_request.records[0].result == 0);
+  counters("data"); submit(2, 1, 9);
+  assert(opens == 1 && calls == 6 && closes == 1);
+  assert(g_bw_lump_request.selector == 9 && g_bw_lump_request.records[5].result == 0);
+  counters("reject"); submit(3, 1, 10);
+  assert(!opens && g_bw_lump_request_mailbox.reply_result == -EINVAL);
   puts("Request mailbox C controls PASS");
   return 0;
 }

@@ -173,7 +173,7 @@ static int request_run(const char *operation, bool emit, uint32_t *publication)
 {
   static const char *const names[] =
     {"poll", "legacy", "null", "readonly", "kernel", "wrap",
-     "legacy-tail", "invalid-then-poll"};
+     "legacy-tail", "invalid-then-poll", "poll-e", "invalid-then-poll-e"};
   unsigned selected = sizeof(names) / sizeof(names[0]);
   if (!operation) return -EINVAL;
   size_t length = 0;
@@ -197,8 +197,9 @@ static int request_run(const char *operation, bool emit, uint32_t *publication)
     {.magic = UINT32_C(0x42575251), .version = 1, .state = 1,
      .sequence = sequence, .selector = selected};
   __sync_synchronize();
+  unsigned kind = selected < 8 ? selected : selected == 8 ? 0 : 7;
   errno = 0;
-  int fd = open("/dev/legoport5", O_RDONLY);
+  int fd = open(selected < 8 ? "/dev/legoport5" : "/dev/legoport4", O_RDONLY);
   int open_error = errno;
   g_bw_lump_request.open_result = fd;
   g_bw_lump_request.open_error = open_error;
@@ -216,10 +217,10 @@ static int request_run(const char *operation, bool emit, uint32_t *publication)
     {0, (uintptr_t)g_bw_lump_probe_readonly, UINT32_C(0x20000000),
      UINTPTR_MAX - 15, UINT32_C(0x20050000) - 36};
   unsigned calls = 0;
-  if (selected >= 2)
+  if (kind >= 2)
     {
-      unsigned first = selected == 7 ? 0 : selected - 2;
-      unsigned end = selected == 7 ? 5 : first + 1;
+      unsigned first = kind == 7 ? 0 : kind - 2;
+      unsigned end = kind == 7 ? 5 : first + 1;
       for (unsigned i = first; i < end; i++)
         {
           errno = 0;
@@ -229,7 +230,7 @@ static int request_run(const char *operation, bool emit, uint32_t *publication)
           request_reply(operation, ++calls, result, error, NULL, 0, emit);
         }
     }
-  if (selected < 2 || selected == 7)
+  if (kind < 2 || kind == 7)
     {
       union
       {
@@ -237,7 +238,7 @@ static int request_run(const char *operation, bool emit, uint32_t *publication)
         struct lump_data_frame_s legacy;
       } output;
       memset(&output, 0xa5, sizeof(output));
-      bool legacy = selected == 1;
+      bool legacy = kind == 1;
       void *buffer = legacy ? (void *)&output.legacy : (void *)&output.session;
       errno = 0;
       int result = ioctl(fd, legacy ? LEGOPORT_LUMP_POLL_DATA :
@@ -276,7 +277,7 @@ void bw_lump_request_mailbox_step(void)
 {
   static const char *const names[] =
     {"poll", "legacy", "null", "readonly", "kernel", "wrap",
-     "legacy-tail", "invalid-then-poll"};
+     "legacy-tail", "invalid-then-poll", "poll-e", "invalid-then-poll-e"};
   if (__sync_lock_test_and_set(&g_mailbox_busy, 1)) return;
   uint32_t seq = g_bw_lump_request_mailbox.request_seq;
   uint32_t previous = g_bw_lump_request_mailbox.reply_seq;
@@ -292,7 +293,7 @@ void bw_lump_request_mailbox_step(void)
   int result = -EINVAL;
   uint32_t publication = 0;
   if (seq == previous + 1 &&
-      magic == UINT32_C(0x42574c52) && version == 1 && selector < 8)
+      magic == UINT32_C(0x42574c52) && version == 1 && selector < 10)
     {
       result = request_run(names[selector], false, &publication);
     }

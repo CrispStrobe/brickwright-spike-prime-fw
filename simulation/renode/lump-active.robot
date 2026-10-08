@@ -53,3 +53,11 @@ Actual protected userspace consumes external DATA with session identity
     ${active}=    Execute Command    check_lump_active ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
     Log To Console    ${active}
     Should Contain    ${active}    LUMP active F session fixture passed:
+
+    # Keep the original F-only fixture above, then reset its external inputs.
+    Execute Command    portF Detach
+    Execute Command    emulation RunFor "5.0"
+    Execute Command    include @${CURDIR}/../../tools/lump_two_port.py
+    ${pair}=    Execute Command    check_lump_two_port ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
+    Log To Console    ${pair}
+    Should Contain    ${pair}    LUMP two-port isolation fixture passed:

@@ -24,7 +24,7 @@ class Contract(unittest.TestCase):
         with self.assertRaises(RuntimeError): submit(BASE,0,self.read,self.write,True)
         self.assertEqual(len(self.writes),4)
     def test_rejected_requests_never_write(self):
-        for base,op,paused in [(0,0,True),(BASE+1,0,True),(0x20040000-28,0,True),(True,0,True),(BASE,-1,True),(BASE,8,True),(BASE,True,True),(BASE,0,False)]:
+        for base,op,paused in [(0,0,True),(BASE+1,0,True),(0x20040000-28,0,True),(True,0,True),(BASE,-1,True),(BASE,10,True),(BASE,True,True),(BASE,0,False)]:
             with self.subTest(base=base,op=op,paused=paused),self.assertRaises(ValueError): submit(base,op,self.read,self.write,paused)
         self.words[BASE+8]=self.words[BASE+16]=MAX_SEQUENCE
         with self.assertRaises(OverflowError): submit(BASE,0,self.read,self.write,True)

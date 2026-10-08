@@ -41,7 +41,7 @@ struct bw_lump_request_result
   struct bw_lump_request_record records[6];
 };
 extern volatile struct bw_lump_request_result g_bw_lump_request;
-/* Fixed, bounded requests on F; replies are observations, not test verdicts. */
+/* Fixed, bounded requests: selectors 0..7 on F, 8 poll/9 invalid batch on E; replies are observations, not test verdicts. */
 int bw_lump_request_run(const char *operation);
 int bw_lump_request_startup(void);
 /* Only request_* words are host-writable while paused. reply_seq is committed

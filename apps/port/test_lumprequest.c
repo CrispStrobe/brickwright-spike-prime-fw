@@ -25,9 +25,10 @@ static int request_ioctl(int, int, unsigned long);
 
 static const char *scenario;
 static unsigned opens, closes, calls;
+static const char *expected_path = "/dev/legoport5";
 static int request_open(const char *path, int flags)
 {
-  assert(!strcmp(path, "/dev/legoport5") && flags == O_RDONLY);
+  assert(!strcmp(path, expected_path) && flags == O_RDONLY);
   assert(strcmp(scenario, "reject") != 0);
   assert(++opens == 1);
   if (!strcmp(scenario, "observe-invalidated-reply"))
@@ -74,13 +75,15 @@ int main(int argc, char **argv)
 {
   assert(argc == 3); scenario = argv[2];
   const char *operation = !strcmp(argv[1], "<null>") ? NULL : argv[1];
+  if (operation && (!strcmp(operation, "poll-e") || !strcmp(operation, "invalid-then-poll-e")))
+    expected_path = "/dev/legoport4";
   int result = !strcmp(scenario, "startup") ? bw_lump_request_startup() : bw_lump_request_run(operation);
   if (!strcmp(scenario, "reject")) assert(opens == 0 && calls == 0 && closes == 0);
   else if (!strcmp(scenario, "open-fail")) assert(opens == 1 && calls == 0 && closes == 0);
   else
     {
       assert(opens == 1 && closes == 1);
-      assert(calls == (!strcmp(operation, "invalid-then-poll") ? 6u : 1u));
+      assert(calls == ((!strcmp(operation, "invalid-then-poll") || !strcmp(operation, "invalid-then-poll-e")) ? 6u : 1u));
     }
   if (!strcmp(scenario, "reject")) assert(g_bw_lump_request.state == 0);
   else
@@ -99,9 +102,9 @@ int main(int argc, char **argv)
           for (unsigned i = 0; i < calls; i++)
             {
               const volatile struct bw_lump_request_record *r = &g_bw_lump_request.records[i];
-              if (!strcmp(operation, "invalid-then-poll") && i < 5)
+              if ((!strcmp(operation, "invalid-then-poll") || !strcmp(operation, "invalid-then-poll-e")) && i < 5)
                 assert(r->result == -1 && r->error == (i == 0 ? EINVAL : EFAULT) && r->length == 0);
-              else if (!strcmp(operation, "poll") || !strcmp(operation, "legacy") || i == 5)
+              else if (!strcmp(operation, "poll") || !strcmp(operation, "poll-e") || !strcmp(operation, "legacy") || i == 5)
                 {
                   assert(r->length == (!strcmp(operation, "legacy") ? 36u : 48u));
                   assert(r->result == (!strcmp(scenario, "data") ? 0 : -1));

@@ -31,7 +31,7 @@ def main():
         variants={'baseline':source,
                   'repeat-admission':source.replace('!seq || seq <= previous','!seq'),
                   'keep-old-reply-live':source.replace('g_bw_lump_request_mailbox.reply_seq = 0;', '(void)0;'),
-                  'ignore-version':source.replace('version == 1 && selector < 8','((void)version, true) && selector < 8'),
+                  'ignore-version':source.replace('version == 1 && selector < 10','((void)version, true) && selector < 10'),
                   'ignore-core-owner':source.replace('if (__sync_lock_test_and_set(&g_request_busy, 1)) return -EBUSY;', '(void)__sync_lock_test_and_set(&g_request_busy, 1);')}
         for name,text in variants.items():
             assert name=='baseline' or text!=source

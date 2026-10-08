@@ -439,3 +439,5 @@ including the separate controller-service-pack licence/distribution decision.
 defects; a release review explicitly decides go/no-go. Absent hardware, deliver
 the reproducible experiment plan and leave physical gates open. Current source
 remains simulation-only and no flashable artifacts are published by these lanes.
+
+The next E/F diagnostic candidate is specified in [two-port isolation](two-port-isolation.md). Host controls are separate from pending actual protected-guest qualification.
