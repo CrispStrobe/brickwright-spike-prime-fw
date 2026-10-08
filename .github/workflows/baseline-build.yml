@@ -193,6 +193,11 @@ jobs:
         run: |
           python3 tools/stage_classic_motor_topology.py \
             --runtime "$RENODE_DIR" --output .local/lump-active-topology
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$PWD:/work" -w /work nuttx-builder \
+            python3 tools/collect_lump_queue_layout.py \
+            --kernel .local/firmware-images/brickwright/nuttx \
+            --output .local/firmware-images/lump-queue-layout.json
           PATH="$RENODE_TEST_VENV/bin:$PATH" "$RENODE_DIR/renode-test" \
             --results-dir .local/renode-lump-active-results --stop-on-error \
             simulation/renode/lump-active.robot

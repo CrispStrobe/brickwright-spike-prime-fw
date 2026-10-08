@@ -19,6 +19,7 @@ class SyntheticWorker:
         self.writes=[];self.inputs=[];self.paused=True;self.complete=True
         self.port=SimpleNamespace(State='Detached',BridgeDrive=0,Timeouts=0,
             TransmittedFrames=0,DataReportsRemaining=0,SelectedMode=0)
+        self.dropped=0
         self.port.Attach=self.attach;self.port.Detach=self.detach
         self.port.SetDataReportBudget=self.budget
     def attach(self, name):
@@ -59,13 +60,16 @@ class SyntheticWorker:
         words += [0]*(100-len(words))
         self.words.update({OUT+i*4:v for i,v in enumerate(words)})
         self.words.update({BASE+16:seq,BASE+20:0,BASE+24:self.sequence,BASE+28:op})
+    def observe(self):
+        return {'active':self.port.State=='Streaming' or bool(self.queue),'session':self.session,
+            'count':len(self.queue),'frame':self.queue[0] if self.queue else None,'dropped':self.dropped}
     def fixture(self):
-        return api.ActiveSessionFixture(BASE,OUT,self.read,self.write,lambda:self.paused,self.advance,self.port,lambda:0)
+        return api.ActiveSessionFixture(BASE,OUT,self.read,self.write,lambda:self.paused,self.advance,self.port,lambda:0,observe=self.observe)
 
 class Contract(unittest.TestCase):
     def test_exact_sequence_and_write_capability(self):
         w=SyntheticWorker();result=w.fixture().run()
-        self.assertEqual(result,{'firstSession':1,'replacementSession':2,'requests':8,'externalReports':5})
+        self.assertEqual(result,{'firstSession':1,'replacementSession':2,'requests':8,'externalReports':5,'detachWaitMs':0})
         self.assertEqual(len(w.writes),32)
         self.assertEqual([v for a,v in w.writes if a==BASE+12],[7,0,1,0,0,0,0,0])
         self.assertEqual([v for a,v in w.writes if a==BASE+8],list(range(1,9)))
@@ -75,15 +79,21 @@ class Contract(unittest.TestCase):
             with self.subTest(fault=fault),self.assertRaises(AssertionError):SyntheticWorker(fault).fixture().run()
     def test_detach_discards_old_frame(self):
         w=SyntheticWorker('retain-detached')
-        with self.assertRaisesRegex(AssertionError,'empty'):w.fixture().run()
+        with self.assertRaisesRegex(AssertionError,'invalidation'):w.fixture().run()
     def test_admission_before_any_input_or_guest_write(self):
         for kind in ('running','pending','overlap'):
             w=SyntheticWorker()
             if kind=='running':w.paused=False
             if kind=='pending':w.words[BASE+8]=1
             with self.subTest(kind=kind),self.assertRaises((ValueError,RuntimeError)):
-                api.ActiveSessionFixture(BASE,BASE if kind=='overlap' else OUT,w.read,w.write,lambda:w.paused,w.advance,w.port)
+                api.ActiveSessionFixture(BASE,BASE if kind=='overlap' else OUT,w.read,w.write,lambda:w.paused,w.advance,w.port,observe=w.observe)
             self.assertEqual(w.writes,[]);self.assertEqual(w.inputs,[])
+    def test_no_request_without_queue_admission_witness(self):
+        w=SyntheticWorker();f=w.fixture();f.observe=lambda:None
+        with self.assertRaisesRegex(AssertionError,'queue admission'):f.run()
+        self.assertEqual(w.writes,[])
+        self.assertEqual(w.words[BASE+8],0)
+
     def test_no_fabricated_completion_on_guest_timeout(self):
         w=SyntheticWorker();w.complete=False
         with self.assertRaisesRegex(AssertionError,'Guest deadline'):w.fixture().run()

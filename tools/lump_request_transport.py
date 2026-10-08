@@ -113,11 +113,13 @@ def mc_check_lump_mailbox(mailbox, output):
 class ActiveSessionFixture(object):
     """External electrical inputs plus the declared request ABI; no queue writes."""
     def __init__(self, mailbox, output, read, write, paused, advance, port,
-                 clock=time.time):
+                 clock=time.time, observe=None):
         self.mailbox, self.output = extent(mailbox,32), extent(output,400)
         if max(mailbox,output) < min(mailbox+32,output+400):
             raise ValueError('Request/result extents overlap')
         self.read,self.write,self.paused,self.advance,self.port,self.clock = read,write,paused,advance,port,clock
+        if observe is None: raise ValueError('Read-only own-kernel queue observer required')
+        self.observe,self.phase=observe,'admission'
         self.require_paused()
         if unsigned(read(mailbox+8)) != unsigned(read(mailbox+16)):
             raise RuntimeError('A diagnostic request is outstanding')
@@ -131,7 +133,9 @@ class ActiveSessionFixture(object):
             self.require_paused()
             if self.clock()-started > 120: raise AssertionError('Host deadline: '+description)
             result=predicate()
-            if result: return result
+            if result:
+                self.last_wait_ms=elapsed
+                return result
             if elapsed == limit_ms: break
             self.advance(10)
         raise AssertionError('Guest deadline: '+description)
@@ -158,6 +162,7 @@ class ActiveSessionFixture(object):
         self.require_paused()
         if str(self.port.State)!='Streaming': raise AssertionError('F lost synchronization')
         if int(self.port.BridgeDrive)!=0: raise AssertionError('Sensor fixture observed motor drive')
+        self.phase='emit-%d' % distance
         before=int(self.port.TransmittedFrames)
         timeouts=int(self.port.Timeouts)
         self.port.Device.SetDistance(distance)
@@ -169,6 +174,11 @@ class ActiveSessionFixture(object):
         if (str(self.port.State)!='Streaming' or int(self.port.Timeouts)!=timeouts
                 or int(self.port.TransmittedFrames)!=before+1):
             raise AssertionError('External DATA emission or synchronization changed')
+        def admitted():
+            state=self.observe()
+            return state if (state is not None and state['active'] and state['count']==1
+                and state['frame']==self.frame(distance) and not state['dropped']) else None
+        return self.wait(admitted,200,'actual F queue admission '+str(distance))
 
     @staticmethod
     def frame(distance):
@@ -192,45 +202,60 @@ class ActiveSessionFixture(object):
 
     def empty(self):
         expected=[{'result':-1,'errno':11,'data':b'\xa5'*48}]
-        if self.request(0)!=expected: raise AssertionError('Expected unchanged empty session poll')
+        actual=self.request(0)
+        if actual!=expected:
+            raise AssertionError('Expected unchanged empty session poll: phase=%s actual=%r queue=%r' % (self.phase,actual,self.observe()))
 
     def run(self):
         self.attach()
-        self.emit(1111)
+        admitted=self.emit(1111)
         first=self.success(self.request(7),1111,invalid=True)
+        if first!=admitted['session']:raise AssertionError('Admitted session changed during invalid batch')
+        self.phase='empty-after-invalid-batch'
         self.empty()
         self.emit(2222)
         self.success(self.request(1),2222,legacy=True)
+        self.phase='empty-after-legacy'
         self.empty()
         self.emit(3333)
         stable=self.success(self.request(0),3333)
         if stable!=first: raise AssertionError('Identity changed within a live F session')
         self.emit(4444)
         self.port.Detach()
-        # Exercise actual teardown; prior guest-ring residency is not witnessed.
-        self.advance(500)
-        self.require_paused()
+        self.phase='detach-invalidation'
+        def inactive():
+            state=self.observe()
+            return state if state is not None and not state['active'] and state['count']==0 else None
+        self.wait(inactive,5000,'actual F queue invalidation after detach')
+        detach_wait=self.last_wait_ms
         self.empty()
         self.attach()
         self.emit(5555)
         replaced=self.success(self.request(0),5555)
         if replaced<=first: raise AssertionError('Same-type replacement reused an F identity')
+        self.phase='empty-after-replacement'
         self.empty()
         if int(self.port.BridgeDrive)!=0: raise AssertionError('Sensor fixture left motor drive')
-        return {'firstSession':first,'replacementSession':replaced,'requests':8,'externalReports':5}
+        return {'firstSession':first,'replacementSession':replaced,'requests':8,'externalReports':5,'detachWaitMs':detach_wait}
 
 
-def mc_check_lump_active(mailbox, output):
+def mc_check_lump_active(mailbox, output, layout_path, kernel_path, queue_symbol):
     """Actual F inputs and worker requests on a separately staged compiled board."""
     from Antmicro.Renode.Core import EmulationManager
     from Antmicro.Renode.Time import TimeInterval
     from System import UInt64, UInt32
+    import hashlib
+    import json
+    with open(str(kernel_path).lstrip('@'),'rb') as source: digest=hashlib.sha256(source.read()).hexdigest()
+    with open(str(layout_path).lstrip('@')) as source: layout=json.load(source)
     machine=monitor.Machine
+    observer=LumpQueueObserver(layout,digest,int(str(queue_symbol),0),
+        lambda address:int(machine.SystemBus.ReadByte(UInt64(address))),lambda:machine.IsPaused)
     port=machine['sysbus.uart9.portF']
     advance=lambda ms:EmulationManager.Instance.CurrentEmulation.RunFor(TimeInterval.FromMilliseconds(UInt64(ms)))
     fixture=ActiveSessionFixture(int(str(mailbox),0),int(str(output),0),
         lambda address:int(machine.SystemBus.ReadDoubleWord(UInt64(address))),
         lambda address,value:machine.SystemBus.WriteDoubleWord(UInt64(address),UInt32(value)),
-        lambda:machine.IsPaused,advance,port)
+        lambda:machine.IsPaused,advance,port,observe=observer.snapshot)
     result=fixture.run()
     print('LUMP active F session fixture passed: %r' % result)

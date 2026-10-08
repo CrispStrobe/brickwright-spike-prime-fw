@@ -47,7 +47,9 @@ Actual protected userspace consumes external DATA with session identity
     # External attachment and DATA budgets affect the model only. The only
     # guest writes remain the four declared ELF-resolved mailbox request words.
     ${mailbox}=    Execute Command    sysbus GetSymbolAddress "g_bw_lump_request_mailbox"
+    Execute Command    include @${CURDIR}/../../tools/lump_queue_observer.py
     Execute Command    include @${CURDIR}/../../tools/lump_request_transport.py
-    ${active}=    Execute Command    check_lump_active ${mailbox.strip()} ${requests.strip()}
+    ${queue}=    Execute Command    sysbus GetSymbolAddress "g_lump"
+    ${active}=    Execute Command    check_lump_active ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
     Log To Console    ${active}
     Should Contain    ${active}    LUMP active F session fixture passed:
