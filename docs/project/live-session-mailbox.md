@@ -147,3 +147,7 @@ GUI adoption and physical fidelity remain separate tasks.
 
 New diagnostic components use BSD-3-Clause. Retained firmware/dependency
 attribution and obligations remain; no whole-firmware independence claim follows.
+
+The separately [qualified active F experiment](active-session-qualification.md)
+has its own controls, exact source and complete guest matrix. Its finite result
+does not generalize the inactive mailbox qualification to other ports or callers.

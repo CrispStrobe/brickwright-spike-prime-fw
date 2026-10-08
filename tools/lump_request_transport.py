@@ -108,3 +108,154 @@ def mc_check_lump_mailbox(mailbox, output):
         expected.append({'result':-1,'errno':11,'data':b'\xa5'*(36 if selector==1 else 48)})
         if observed['records'] != expected: raise AssertionError('Guest diagnostic calls failed: %r' % observed)
         print('LUMP protected mailbox roundtrip passed: selector=%d sequence=%d publication=%d' % (selector,sequence,response['publication']))
+
+
+class ActiveSessionFixture(object):
+    """External electrical inputs plus the declared request ABI; no queue writes."""
+    def __init__(self, mailbox, output, read, write, paused, advance, port,
+                 clock=time.time, observe=None):
+        self.mailbox, self.output = extent(mailbox,32), extent(output,400)
+        if max(mailbox,output) < min(mailbox+32,output+400):
+            raise ValueError('Request/result extents overlap')
+        self.read,self.write,self.paused,self.advance,self.port,self.clock = read,write,paused,advance,port,clock
+        if observe is None: raise ValueError('Read-only own-kernel queue observer required')
+        self.observe,self.phase=observe,'admission'
+        self.require_paused()
+        if unsigned(read(mailbox+8)) != unsigned(read(mailbox+16)):
+            raise RuntimeError('A diagnostic request is outstanding')
+
+    def require_paused(self):
+        if not self.paused(): raise ValueError('Active fixture requires paused emulation')
+
+    def wait(self, predicate, limit_ms, description):
+        started=self.clock()
+        for elapsed in range(0,limit_ms+1,10):
+            self.require_paused()
+            if self.clock()-started > 120: raise AssertionError('Host deadline: '+description)
+            result=predicate()
+            if result:
+                self.last_wait_ms=elapsed
+                return result
+            if elapsed == limit_ms: break
+            self.advance(10)
+        raise AssertionError('Guest deadline: '+description)
+
+    def request(self, selector):
+        self.require_paused()
+        seq=submit(self.mailbox,selector,self.read,self.write,True)
+        response=self.wait(lambda:reply(self.mailbox,seq,selector,self.read),1000,'mailbox reply')
+        if response['result'] != 0: raise AssertionError('Guest request refused: %r' % response)
+        observed=publication(self.output,response['publication'],selector,self.read)
+        if observed['state'] != 2 or observed['open_result'] < 0 or observed['open_errno'] or observed['close_result'] or observed['close_errno']:
+            raise AssertionError('Guest request lifecycle failed: %r' % observed)
+        return observed['records']
+
+    def attach(self):
+        self.require_paused()
+        self.port.Attach('ultrasonic')
+        self.port.SetDataReportBudget(0)
+        self.wait(lambda:str(self.port.State)=='Streaming',5000,'genuine F synchronization')
+        if int(self.port.Device.TypeId)!=62 or int(self.port.SelectedMode)!=0:
+            raise AssertionError('Unexpected synchronized F device or mode')
+
+    def emit(self, distance):
+        self.require_paused()
+        if str(self.port.State)!='Streaming': raise AssertionError('F lost synchronization')
+        if int(self.port.BridgeDrive)!=0: raise AssertionError('Sensor fixture observed motor drive')
+        self.phase='emit-%d' % distance
+        before=int(self.port.TransmittedFrames)
+        timeouts=int(self.port.Timeouts)
+        self.port.Device.SetDistance(distance)
+        self.port.SetDataReportBudget(1)
+        self.wait(lambda:int(self.port.DataReportsRemaining)==0,200,'one external DATA report')
+        # Allow normal UART/DMA and kernel scheduling to deliver the emitted bytes.
+        self.advance(10)
+        self.require_paused()
+        if (str(self.port.State)!='Streaming' or int(self.port.Timeouts)!=timeouts
+                or int(self.port.TransmittedFrames)!=before+1):
+            raise AssertionError('External DATA emission or synchronization changed')
+        def admitted():
+            state=self.observe()
+            return state if (state is not None and state['active'] and state['count']==1
+                and state['frame']==self.frame(distance) and not state['dropped']) else None
+        return self.wait(admitted,200,'actual F queue admission '+str(distance))
+
+    @staticmethod
+    def frame(distance):
+        return b'\x00\x02\x00\x00'+struct.pack('<H',distance)+b'\x00'*30
+
+    def success(self, records, distance, legacy=False, invalid=False):
+        faults=[{'result':-1,'errno':22 if i==0 else 14,'data':b''} for i in range(5)] if invalid else []
+        if len(records)!=len(faults)+1 or records[:len(faults)]!=faults:
+            raise AssertionError('Unexpected invalid-call record sequence')
+        record=records[-1]
+        if record['result'] or record['errno']: raise AssertionError('Expected queued DATA: %r' % record)
+        data=record['data']
+        if legacy:
+            if data!=self.frame(distance): raise AssertionError('Legacy DATA mismatch')
+            return None
+        if len(data)!=48: raise AssertionError('Session DATA extent mismatch')
+        session=struct.unpack('<Q',data[:8])[0]
+        if not session or data[8:]!=self.frame(distance)+b'\x00'*4:
+            raise AssertionError('Session identity, payload or reserved bytes mismatch')
+        return session
+
+    def empty(self):
+        expected=[{'result':-1,'errno':11,'data':b'\xa5'*48}]
+        actual=self.request(0)
+        if actual!=expected:
+            raise AssertionError('Expected unchanged empty session poll: phase=%s actual=%r queue=%r' % (self.phase,actual,self.observe()))
+
+    def run(self):
+        self.attach()
+        admitted=self.emit(1111)
+        first=self.success(self.request(7),1111,invalid=True)
+        if first!=admitted['session']:raise AssertionError('Admitted session changed during invalid batch')
+        self.phase='empty-after-invalid-batch'
+        self.empty()
+        self.emit(2222)
+        self.success(self.request(1),2222,legacy=True)
+        self.phase='empty-after-legacy'
+        self.empty()
+        self.emit(3333)
+        stable=self.success(self.request(0),3333)
+        if stable!=first: raise AssertionError('Identity changed within a live F session')
+        self.emit(4444)
+        self.port.Detach()
+        self.phase='detach-invalidation'
+        def inactive():
+            state=self.observe()
+            return state if state is not None and not state['active'] and state['count']==0 else None
+        self.wait(inactive,5000,'actual F queue invalidation after detach')
+        detach_wait=self.last_wait_ms
+        self.empty()
+        self.attach()
+        self.emit(5555)
+        replaced=self.success(self.request(0),5555)
+        if replaced<=first: raise AssertionError('Same-type replacement reused an F identity')
+        self.phase='empty-after-replacement'
+        self.empty()
+        if int(self.port.BridgeDrive)!=0: raise AssertionError('Sensor fixture left motor drive')
+        return {'firstSession':first,'replacementSession':replaced,'requests':8,'externalReports':5,'detachWaitMs':detach_wait}
+
+
+def mc_check_lump_active(mailbox, output, layout_path, kernel_path, queue_symbol):
+    """Actual F inputs and worker requests on a separately staged compiled board."""
+    from Antmicro.Renode.Core import EmulationManager
+    from Antmicro.Renode.Time import TimeInterval
+    from System import UInt64, UInt32
+    import hashlib
+    import json
+    with open(str(kernel_path).lstrip('@'),'rb') as source: digest=hashlib.sha256(source.read()).hexdigest()
+    with open(str(layout_path).lstrip('@')) as source: layout=json.load(source)
+    machine=monitor.Machine
+    observer=LumpQueueObserver(layout,digest,int(str(queue_symbol),0),
+        lambda address:int(machine.SystemBus.ReadByte(UInt64(address))),lambda:machine.IsPaused)
+    port=machine['sysbus.uart9.portF']
+    advance=lambda ms:EmulationManager.Instance.CurrentEmulation.RunFor(TimeInterval.FromMilliseconds(UInt64(ms)))
+    fixture=ActiveSessionFixture(int(str(mailbox),0),int(str(output),0),
+        lambda address:int(machine.SystemBus.ReadDoubleWord(UInt64(address))),
+        lambda address,value:machine.SystemBus.WriteDoubleWord(UInt64(address),UInt32(value)),
+        lambda:machine.IsPaused,advance,port,observe=observer.snapshot)
+    result=fixture.run()
+    print('LUMP active F session fixture passed: %r' % result)

@@ -13,6 +13,17 @@ code. It is not a complete clean-room firmware or a dependency-free rewrite.
 See [provenance](provenance.md), the repository's `THIRD_PARTY.md` and the
 [configured-build qualification](simulation-qualification.md).
 
+## Recent bounded sensor qualification
+
+The [protected worker mailbox](live-session-mailbox.md) has completed inactive
+request qualification. The [active F DATA record](active-session-qualification.md)
+separately records actual external ultrasonic input, invalid-call non-consumption,
+legacy/session shared consumption, detach invalidation and same-type replacement.
+Read its exact source, profile completion status and dependency pins before
+adopting it. These diagnostics do not generalize the program API's fixed sensor
+ports, establish arbitrary A–F isolation or qualify installed GUI integration.
+The older capability and build measurements below retain their original scope.
+
 ## Firmware boundaries
 
 | Firmware | Relationship and current evidence |
