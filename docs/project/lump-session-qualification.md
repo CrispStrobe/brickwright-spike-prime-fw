@@ -47,6 +47,7 @@ than silently substitute a legacy frame for conditional admission.
 
 ```sh
 python3 tools/check_lump_data_queue.py
+python3 tools/check_lump_session_ioctl.py
 LUMP_TEST_CFLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
   python3 tools/check_lump_data_queue.py
 ```
@@ -58,7 +59,19 @@ schedule orders session replacement between two polls; a concurrent producer and
 consumer check that returned payload/session pairs stay bound. Five compiled
 mutations must fail assertions, rather than compilation: reuse identities,
 retain old frames, admit unsynchronized DATA, publish a wrong identity and wrap
-at exhaustion. These host controls do not execute the ioctl or a NuttX kthread.
+at exhaustion. The queue controls do not execute a NuttX kthread.
+
+A separate Linux host control compiles the complete actual character driver and
+its unchanged protected pointer-range checker with neutral NuttX service headers.
+Only unrelated service calls and the engine pop boundary are stubbed; the pop
+boundary uses the actual queue helper. It maps an unoccupied test range with
+`MAP_FIXED_NOREPLACE`, never replacing host mappings. Invalid, overflowing,
+read-only and legacy-sized output ranges must return before consuming a frame.
+It checks refusal output preservation, shared legacy/session consumption and
+session replacement through the actual ioctl switch. Three additional compiled
+mutations fail assertions: validate only the legacy size, consume before the
+range check, and copy output after a refused poll. This is host driver/control
+coverage, not ARM privilege/MPU or guest syscall qualification.
 
 Required before merge: exact-source CI and both protected clean ARM profiles,
 compiler-input/link/resource/official TI-exclusion gates, and affected compiled
