@@ -30,11 +30,93 @@ static enum brickwright_hub_link g_link;
 static bool g_selected, g_pumping, g_repoll, g_online[2];
 static uint32_t g_sessions[2], g_lifetime, g_sent, g_dropped_oldest, g_dropped_full;
 static uint64_t g_ticket;
-static btsensor_tx_drain_cb_t g_drain_cb, g_timeout_cb;
+static btsensor_tx_drain_cb_t g_drain_cb;
 static void *g_drain_ctx, *g_timer_ctx;
 static btsensor_tx_timer_start_t g_timer_start;
 static btsensor_tx_timer_cancel_t g_timer_cancel;
-static bool g_timer_armed;
+static uint64_t g_drain_counter, g_drain_id, g_timer_id;
+static uint32_t g_drain_timeout;
+static bool g_timer_pumping;
+static btsensor_tx_timer_cancel_t g_installed_cancel;
+static void *g_installed_ctx;
+
+/* A single reconciler serializes external timer operations without holding the
+ * queue lock. Reentrant/concurrent changes update the desired registration;
+ * the owner reconciles them after its current operation returns. Never reset
+ * this ownership flag during init/deinit while an operation is in flight. */
+static void reconcile_timer(void)
+{
+  pthread_mutex_lock(&g_lock);
+  if (g_timer_pumping) { pthread_mutex_unlock(&g_lock); return; }
+  g_timer_pumping = true;
+  for (;;)
+    {
+      uint64_t desired = g_drain_timeout ? g_drain_id : 0;
+      if (g_timer_id == desired)
+        {
+          g_timer_pumping = false;
+          pthread_mutex_unlock(&g_lock);
+          return;
+        }
+      if (g_timer_id)
+        {
+          uint64_t old = g_timer_id;
+          btsensor_tx_timer_cancel_t cancel = g_installed_cancel;
+          void *ctx = g_installed_ctx;
+          g_timer_id = 0;
+          pthread_mutex_unlock(&g_lock);
+          cancel(old, ctx);
+          pthread_mutex_lock(&g_lock);
+          continue;
+        }
+      uint64_t id = desired;
+      uint32_t delay = g_drain_timeout;
+      btsensor_tx_timer_start_t start = g_timer_start;
+      void *timer_ctx = g_timer_ctx;
+      g_timer_id = id;
+      g_installed_cancel = g_timer_cancel;
+      g_installed_ctx = timer_ctx;
+      pthread_mutex_unlock(&g_lock);
+      int rc = start(delay, id, timer_ctx);
+      pthread_mutex_lock(&g_lock);
+      btsensor_tx_drain_cb_t failed = NULL;
+      void *failed_ctx = NULL;
+      if (rc < 0)
+        {
+          if (g_timer_id == id) g_timer_id = 0;
+          if (g_drain_id == id)
+            {
+              failed = g_drain_cb; failed_ctx = g_drain_ctx;
+              g_drain_id = 0; g_drain_cb = NULL; g_drain_ctx = NULL;
+              g_drain_timeout = 0;
+            }
+        }
+      if (failed)
+        {
+          pthread_mutex_unlock(&g_lock);
+          failed(id, rc, failed_ctx);
+          pthread_mutex_lock(&g_lock);
+        }
+    }
+}
+
+/* Called with g_lock held. With no installed/desired timer, preserve the
+ * transport-only fast path: the application does not currently register drain
+ * timers. Any concurrent registration reconciles its own state; an operation
+ * already in flight remains responsible for changes made during its callback. */
+static void unlock_and_reconcile_timer(void)
+{
+  bool needed = !g_timer_pumping &&
+                (g_timer_id || (g_drain_id && g_drain_timeout));
+  pthread_mutex_unlock(&g_lock);
+  if (needed) reconcile_timer();
+}
+
+static void clear_drain_locked(void)
+{
+  g_drain_id = 0; g_drain_cb = NULL; g_drain_ctx = NULL;
+  g_drain_timeout = 0;
+}
 
 static bool valid_link(enum brickwright_hub_link link)
 { return link == BRICKWRIGHT_HUB_LINK_CLASSIC || link == BRICKWRIGHT_HUB_LINK_BLE; }
@@ -46,6 +128,12 @@ static bool responses_empty(void)
 static bool frames_full(void) { return frame_count() == TX_DEPTH - 1; }
 static void discard_link(enum brickwright_hub_link link)
 {
+  bool discarded = false;
+  for (unsigned i = 0; i < TX_DEPTH; i++)
+    discarded |= g_frames[i].tag.used && g_frames[i].tag.link == link;
+  for (unsigned i = 0; i < RESP_DEPTH; i++)
+    discarded |= g_responses[i].tag.used && g_responses[i].tag.link == link;
+  if (discarded) clear_drain_locked();
   for (unsigned i = 0; i < TX_DEPTH; i++) if (g_frames[i].tag.link == link) g_frames[i].tag.used = false;
   for (unsigned i = 0; i < RESP_DEPTH; i++) if (g_responses[i].tag.link == link) g_responses[i].tag.used = false;
 }
@@ -65,12 +153,6 @@ static int admission(enum brickwright_hub_link link, struct tag_s *tag)
   return 0;
 }
 
-static void cancel_outside_lock(bool cancel, btsensor_tx_timer_cancel_t fn,
-                                void *ctx)
-{
-  if (cancel && fn) fn(ctx);
-}
-
 int btsensor_tx_init(void)
 {
   pthread_mutex_lock(&g_lock);
@@ -83,29 +165,21 @@ int btsensor_tx_init(void)
   g_lifetime++;
   g_online[0] = g_online[1] = false;
   g_sent = g_dropped_oldest = g_dropped_full = 0;
-  g_drain_cb = g_timeout_cb = NULL;
-  g_drain_ctx = NULL;
-  g_timer_armed = false;
-  pthread_mutex_unlock(&g_lock);
+  clear_drain_locked();
+  unlock_and_reconcile_timer();
   return 0;
 }
 
 void btsensor_tx_deinit(void)
 {
   pthread_mutex_lock(&g_lock);
-  bool cancel = g_timer_armed;
-  btsensor_tx_timer_cancel_t timer_cancel = g_timer_cancel;
-  void *timer_ctx = g_timer_ctx;
   for (unsigned i = 0; i < TX_DEPTH; i++) g_frames[i].tag.used = false;
   for (unsigned i = 0; i < RESP_DEPTH; i++) g_responses[i].tag.used = false;
   g_selected = false;
   g_lifetime++;
   g_online[0] = g_online[1] = false;
-  g_drain_cb = g_timeout_cb = NULL;
-  g_drain_ctx = NULL;
-  g_timer_armed = false;
-  pthread_mutex_unlock(&g_lock);
-  cancel_outside_lock(cancel, timer_cancel, timer_ctx);
+  clear_drain_locked();
+  unlock_and_reconcile_timer();
 }
 
 void btsensor_tx_link_state(enum brickwright_hub_link link, bool connected, uint32_t generation)
@@ -140,6 +214,7 @@ void btsensor_tx_set_link(enum brickwright_hub_link link, bool selected)
     }
   pthread_mutex_unlock(&g_lock);
   if (selected) btsensor_tx_on_can_send_now();
+  else reconcile_timer();
 }
 
 void btsensor_tx_set_rfcomm_cid(uint16_t cid)
@@ -295,19 +370,16 @@ void btsensor_tx_on_can_send_now(void)
     }
 
   btsensor_tx_drain_cb_t cb = NULL;
-  btsensor_tx_timer_cancel_t timer_cancel = NULL;
-  void *ctx = NULL, *timer_ctx = NULL;
-  bool cancel = false;
+  void *ctx = NULL;
+  uint64_t id = 0;
   pthread_mutex_lock(&g_lock);
   if (g_drain_cb && responses_empty() && frames_empty())
     {
-      cb = g_drain_cb; ctx = g_drain_ctx; cancel = g_timer_armed;
-      timer_cancel = g_timer_cancel; timer_ctx = g_timer_ctx;
-      g_drain_cb = g_timeout_cb = NULL; g_drain_ctx = NULL; g_timer_armed = false;
+      cb = g_drain_cb; ctx = g_drain_ctx; id = g_drain_id;
+      clear_drain_locked();
     }
-  pthread_mutex_unlock(&g_lock);
-  cancel_outside_lock(cancel, timer_cancel, timer_ctx);
-  if (cb) cb(ctx);
+  unlock_and_reconcile_timer();
+  if (cb) cb(id, 0, ctx);
 }
 
 bool btsensor_tx_response_queue_empty(void)
@@ -317,67 +389,67 @@ bool btsensor_tx_frame_ring_empty(void)
 bool btsensor_tx_frame_ring_full(void)
 { pthread_mutex_lock(&g_lock); bool v = frames_full(); pthread_mutex_unlock(&g_lock); return v; }
 
-void btsensor_tx_set_timer_ops(btsensor_tx_timer_start_t start,
+int btsensor_tx_set_timer_ops(btsensor_tx_timer_start_t start,
                                btsensor_tx_timer_cancel_t cancel, void *ctx)
 {
+  if ((!start) != (!cancel)) return -EINVAL;
   pthread_mutex_lock(&g_lock);
-  bool do_cancel = g_timer_armed;
-  btsensor_tx_timer_cancel_t old_cancel = g_timer_cancel;
-  void *old_ctx = g_timer_ctx;
-  g_timer_armed = false; g_timer_start = start; g_timer_cancel = cancel; g_timer_ctx = ctx;
+  if (g_drain_id || g_timer_id || g_timer_pumping)
+    { pthread_mutex_unlock(&g_lock); return -EBUSY; }
+  g_timer_start = start; g_timer_cancel = cancel; g_timer_ctx = ctx;
   pthread_mutex_unlock(&g_lock);
-  cancel_outside_lock(do_cancel, old_cancel, old_ctx);
-}
-
-int btsensor_tx_arm_post_drain_callback(btsensor_tx_drain_cb_t cb,
-                                        btsensor_tx_drain_cb_t timeout_cb,
-                                        void *ctx, uint32_t timeout_ms)
-{
-  if (!cb) return -EINVAL;
-  pthread_mutex_lock(&g_lock);
-  if (g_drain_cb) { pthread_mutex_unlock(&g_lock); return -EBUSY; }
-  g_drain_cb = cb; g_timeout_cb = timeout_cb; g_drain_ctx = ctx;
-  btsensor_tx_timer_start_t start = g_timer_start;
-  void *timer_ctx = g_timer_ctx;
-  bool drained = responses_empty() && frames_empty();
-  if (drained)
-    {
-      g_drain_cb = g_timeout_cb = NULL;
-      g_drain_ctx = NULL;
-    }
-  pthread_mutex_unlock(&g_lock);
-  if (drained) { cb(ctx); return 0; }
-  if (timeout_ms && timeout_cb && start)
-    {
-      int rc = start(timeout_ms, timer_ctx);
-      pthread_mutex_lock(&g_lock);
-      if (rc < 0 && g_drain_cb == cb) { g_drain_cb = g_timeout_cb = NULL; g_drain_ctx = NULL; }
-      else if (!rc && g_drain_cb == cb) g_timer_armed = true;
-      pthread_mutex_unlock(&g_lock);
-      if (rc < 0) return rc;
-    }
   return 0;
 }
 
-void btsensor_tx_on_drain_timeout(void)
+int btsensor_tx_arm_post_drain_callback(btsensor_tx_drain_cb_t cb, void *ctx,
+                                        uint32_t timeout_ms,
+                                        uint64_t *registration)
 {
+  if (!registration) return -EINVAL;
+  *registration = 0;
+  if (!cb) return -EINVAL;
   pthread_mutex_lock(&g_lock);
-  btsensor_tx_drain_cb_t cb = g_timeout_cb;
-  void *ctx = g_drain_ctx;
-  g_timer_armed = false; g_drain_cb = g_timeout_cb = NULL; g_drain_ctx = NULL;
-  pthread_mutex_unlock(&g_lock);
-  if (cb) cb(ctx);
+  if (g_drain_id) { pthread_mutex_unlock(&g_lock); return -EBUSY; }
+  bool drained = responses_empty() && frames_empty();
+  if (!drained && timeout_ms && !g_timer_start)
+    { pthread_mutex_unlock(&g_lock); return -ENOTSUP; }
+  if (g_drain_counter == UINT64_MAX)
+    { pthread_mutex_unlock(&g_lock); return -EOVERFLOW; }
+  uint64_t id = ++g_drain_counter;
+  *registration = id;
+  if (!drained)
+    {
+      g_drain_id = id; g_drain_cb = cb; g_drain_ctx = ctx;
+      g_drain_timeout = timeout_ms;
+    }
+  unlock_and_reconcile_timer();
+  if (drained) cb(id, 0, ctx);
+  return 0;
 }
 
-void btsensor_tx_clear_post_drain_callback(void)
+void btsensor_tx_on_drain_timeout(uint64_t registration)
 {
   pthread_mutex_lock(&g_lock);
-  bool cancel = g_timer_armed;
-  btsensor_tx_timer_cancel_t fn = g_timer_cancel;
-  void *ctx = g_timer_ctx;
-  g_timer_armed = false; g_drain_cb = g_timeout_cb = NULL; g_drain_ctx = NULL;
+  btsensor_tx_drain_cb_t cb = NULL;
+  void *ctx = NULL;
+  if (registration && g_drain_id == registration && g_timer_id == registration)
+    {
+      cb = g_drain_cb; ctx = g_drain_ctx;
+      g_timer_id = 0;
+      clear_drain_locked();
+    }
   pthread_mutex_unlock(&g_lock);
-  cancel_outside_lock(cancel, fn, ctx);
+  if (cb) cb(registration, -ETIMEDOUT, ctx);
+  reconcile_timer();
+}
+
+bool btsensor_tx_clear_post_drain_callback(uint64_t registration)
+{
+  pthread_mutex_lock(&g_lock);
+  bool canceled = registration && g_drain_id == registration;
+  if (canceled) clear_drain_locked();
+  unlock_and_reconcile_timer();
+  return canceled;
 }
 
 bool btsensor_tx_has_consumer(void)

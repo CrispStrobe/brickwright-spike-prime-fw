@@ -267,7 +267,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.c",
-      "sha256": "0e9e8bad491e4fa0d48a213165d42d21af35884676173aaa57b815c3c9482880",
+      "sha256": "159e2c3845e513b3a39eb0d9cdf47f43d4751b7cbeafd7844540d0764deea177",
       "spdx": [
         "Apache-2.0"
       ],
@@ -278,7 +278,7 @@
     },
     {
       "path": "apps/btsensor/btsensor_tx.h",
-      "sha256": "93588596bfaabcc767fa73837b12828c83a448a4b7b92721e9723df78e181bb7",
+      "sha256": "2955c667e36e7b1cb99c274fe08a48da480cac9332042c81fe51dfad2a51d921",
       "spdx": [],
       "selected_licences": [
         "MIT"

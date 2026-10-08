@@ -115,40 +115,38 @@ bool btsensor_tx_frame_ring_empty(void);
 
 bool btsensor_tx_frame_ring_full(void);
 
-/* Post-drain single-shot callback.
+/* Identity-bearing, single-shot drain registration. Success reports empty
+ * local queues, not remote receipt or physical delivery. The callback receives
+ * 0 on drain, -ETIMEDOUT on expiry, or the negative timer-start error. Admission
+ * returns 0 even if a synchronous terminal callback has already run; negative
+ * returns mean no registration was admitted. *registration is set before any
+ * callback. Identities never reset/reuse; exhaustion fails with -EOVERFLOW.
  *
- * Stores `cb(ctx)` to fire once both the response queue and the frame
- * ring are empty AND no can-send-now request is pending.  The hook is
- * checked at the end of every btsensor_tx_on_can_send_now() invocation;
- * if the conditions are satisfied the registered callback is cleared
- * and invoked exactly once.
- *
- * An optional daemon timer fires `timeout_cb(ctx)` if the drain has not
- * completed.  Timer operations are injected so this module has no Bluetooth
- * stack or scheduler dependency.
- *
- * `btsensor_tx_clear_post_drain_callback()` cancels both the drain hook
- * and the timer (e.g. on RFCOMM CHANNEL_CLOSED, shell exit, deinit).
- *
- * All functions must run on the daemon owner thread.  Returns 0 on success
- * or -EBUSY if a callback is already armed.
+ * Backend start/cancel calls are serialized outside the queue mutex and may
+ * reenter this API. A failed start must not leave a timer armed. Cancellation
+ * may leave a queued expiry, which must carry its original registration id.
+ * Clear, init/deinit and disconnect discard cancel without a terminal callback.
+ * A stale clear/expiry cannot affect a replacement registration. Backend/context
+ * ownership must remain valid until its start/cancel operation returns.
  */
+typedef void (*btsensor_tx_drain_cb_t)(uint64_t registration, int result, void *ctx);
+typedef int (*btsensor_tx_timer_start_t)(uint32_t timeout_ms,
+                                        uint64_t registration, void *ctx);
+typedef void (*btsensor_tx_timer_cancel_t)(uint64_t registration, void *ctx);
 
-typedef void (*btsensor_tx_drain_cb_t)(void *ctx);
-typedef int (*btsensor_tx_timer_start_t)(uint32_t timeout_ms, void *ctx);
-typedef void (*btsensor_tx_timer_cancel_t)(void *ctx);
-
-void btsensor_tx_set_timer_ops(btsensor_tx_timer_start_t start,
-                               btsensor_tx_timer_cancel_t cancel,
-                               void *ctx);
-
-int  btsensor_tx_arm_post_drain_callback(btsensor_tx_drain_cb_t cb,
-                                         btsensor_tx_drain_cb_t timeout_cb,
-                                         void *ctx,
-                                         uint32_t timeout_ms);
-
-void btsensor_tx_clear_post_drain_callback(void);
-void btsensor_tx_on_drain_timeout(void);
+/* Returns -EBUSY while a registration or timer operation owns the provider.
+ * Non-null start and cancel must be supplied together. */
+int btsensor_tx_set_timer_ops(btsensor_tx_timer_start_t start,
+                               btsensor_tx_timer_cancel_t cancel, void *ctx);
+int btsensor_tx_arm_post_drain_callback(btsensor_tx_drain_cb_t cb, void *ctx,
+                                        uint32_t timeout_ms,
+                                        uint64_t *registration);
+/* True means cancellation won and no callback can claim this registration.
+ * False includes an already claimed callback; this is not a callback join.
+ * Keep callback context alive until cancellation wins or its callback returns.
+ * Init/deinit likewise do not join previously claimed callbacks. */
+bool btsensor_tx_clear_post_drain_callback(uint64_t registration);
+void btsensor_tx_on_drain_timeout(uint64_t registration);
 
 /* Telemetry counters.  Pass NULL for any counter you don't need.
  * - frames_sent:          successful neutral-transport sends

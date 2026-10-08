@@ -257,6 +257,8 @@ jobs:
           tools/check_btsensor_tx.sh
           tools/check_btsensor_tx_links.sh
           tools/check_ble_session.sh
+          tools/check_btsensor_tx_drain.sh
+          python3 tools/prove_btsensor_tx_drain_mutations.py
           python3 tools/prove_ble_session_mutations.py
           python3 tools/prove_btsensor_tx_links_mutations.py
           tools/check_btsensor_scheduler.sh
