@@ -58,7 +58,12 @@ The host controls compile the actual probe with neutral syscall doubles and
 cover fourteen success/failure/output-corruption scenarios. Two compiled probe
 mutations must fail assertions: ignoring changed output and ignoring invalid
 pointer refusal. Separate validator controls reject corrupt/missing publications,
-guest failures and incorrect ELF addresses. These are host probe/validator controls,
+guest failures and incorrect ELF addresses. Read-only host API doubles also execute
+the actual observer through boot progress, failed/invalid states, guest and host
+timeouts, invalid ELF ranges and paused-execution requirements. They expose no
+bus write method. Three observer mutations must fail assertions: skipping terminal
+validation, removing the host timeout and removing the guest timeout. These are
+host probe/validator controls,
 not actual guest kernel mutations. Boot preprocessing verifies that the command
 is included in both simulation modes and absent from the physical mode.
 
