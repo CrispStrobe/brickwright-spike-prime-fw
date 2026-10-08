@@ -1,0 +1,87 @@
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<!-- Copyright (c) 2026 Brickwright contributors -->
+
+# Fixed userspace requests for live LPF2 experiments
+
+The simulation-only `port simulation-session-request OPERATION` command exposes
+bounded actual userspace calls on port F. It is compiled only when protected
+build, LUMP and the TI-free simulation selection are all enabled. It is a test
+interface, not a program SDK or a motor authority interface.
+
+The command opens F read-only, performs at most six nonblocking poll ioctls,
+prints bounded observations and closes its descriptor. A batch keeps that one
+exclusive descriptor throughout. It accepts no caller-supplied address, ioctl
+number, queue write, counter value or monitor command. Invalid, missing or
+32-byte-or-longer operation names are rejected before opening a port.
+
+| Operation | Actual request | Reply bytes |
+| --- | --- | --- |
+| `poll` | Session-bearing DATA poll | All 48 output bytes |
+| `legacy` | Legacy DATA poll, sharing the same queue | All 36 output bytes |
+| `null` | Session poll with null output | None |
+| `readonly` | Session poll with the existing user-flash test object | None |
+| `kernel` | Session poll with the fixed kernel-RAM test address | None |
+| `wrap` | Session poll with the fixed wrapping test range | None |
+| `legacy-tail` | Session poll with only 36 bytes left in user RAM | None |
+| `invalid-then-poll` | The five refusals above, then one valid session poll | Last request's 48 bytes |
+
+The invalid addresses are the existing protected refusal probe's fixed test
+cases. Valid output is filled with `a5` before the syscall. On the ARM target,
+the session ABI is little-endian: an eight-byte session, the 36-byte legacy frame
+and four reserved bytes. A successful session must come from the guest; the host
+does not seed or repair it. Errors and untouched bytes remain observable.
+
+Each reply is a complete ASCII line:
+
+```text
+BW_LUMP_REQUEST v=1 op=OPERATION step=N rc=RESULT errno=ERROR bytes=HEX_OR_DASH
+BW_LUMP_REQUEST_END v=1 op=OPERATION calls=N close_rc=RESULT close_errno=ERROR
+```
+
+Reply bytes are lowercase hex of the exact fixed-size buffer; invalid-pointer
+requests use `-`. An open failure emits only `BW_LUMP_REQUEST_OPEN v=1 op=OPERATION rc=-1 errno=ERROR`
+and exits with failure, without issuing a poll. It has no completion/end line.
+The end line is emitted after descriptor close. Return code zero
+means the diagnostic completed and closed its descriptor, even if a poll returned
+an error. It is not a PASS verdict. The external fixture must check every syscall
+result, errno, output byte, ordering and final close before declaring a result.
+
+## Qualification contract
+
+`python3 tools/test_lump_requests.py` compiles the actual request core with syscall
+doubles. Eighteen baseline invocations cover rejected input before I/O, open and
+close failures, legacy/session output, empty buffers, the five fixed faults and a
+successful synthetic batch. Two compiled mutations test lost errno and a close
+between batch requests. These are host controls, not kernel or ARM results.
+
+The existing ordinary-simulation startup invokes the original refusal diagnostic,
+then the new batch. The enhanced `simulation/renode/lump-probe.robot` captures
+UART before boot and checks all six request lines and the final close in order.
+The inactive expected results are EINVAL for null, EFAULT for the other four,
+then EAGAIN with all 48 sentinel bytes unchanged. HCI compiles the command but
+does not run this startup diagnostic. The new source needs a clean two-profile
+matrix with its compiler/link/notice/resource/TI gates before adoption. Prior
+successful matrices qualify their original source, not this new command.
+
+## Next live-session fixture
+
+First qualify this request core and its inactive UART receipts on the actual
+protected guest. Then prove an external caller can invoke the command through
+the real console/program transport with normal services running; startup entry
+alone does not qualify interactive upload or cancellation.
+
+Use the already qualified external DATA-budget model interface to deliver a
+bounded, distinct frame to a genuinely synchronized F. Preserve raw UART and
+budget observations; do not write engine queues, session counters or guest RAM.
+Run the invalid-then-poll batch with one known queued frame and require the valid
+poll to return that same frame and a nonzero guest session. Check subsequent
+empty polls, shared legacy consumption, detach/reset and same-type replacement.
+Any competing consumer, resynchronization or watchdog expiry must be recorded;
+it cannot be treated as proof of invalid-call non-consumption.
+
+Active DATA consumption, reset identities, readiness waiting, conditional PWM
+admission, installed GUI adoption and physical fidelity remain outside the
+inactive fixture. Keep application images, raw execution receipts and machine
+locations private. Retained firmware attribution and obligations remain; these
+new diagnostic components use BSD-3-Clause without a whole-firmware independence
+claim.

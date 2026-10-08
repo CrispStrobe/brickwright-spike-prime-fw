@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -134,4 +135,86 @@ int bw_lump_probe_run(void)
     }
   g_bw_lump_probe.checks |= 1u << 8;
   return finish(-1, 0, 0, 0);
+}
+
+/* Fixed simulation-only requests, not arbitrary ioctl numbers or pointers.
+ * A batch keeps the exclusive descriptor until all refusals and its final poll
+ * have completed. The reply records observations; it does not declare PASS.
+ */
+static void request_reply(const char *operation, unsigned step, int result,
+                          int error, const void *bytes, size_t length)
+{
+  printf("BW_LUMP_REQUEST v=1 op=%s step=%u rc=%d errno=%d bytes=",
+         operation, step, result, error);
+  if (bytes)
+    {
+      const uint8_t *data = bytes;
+      for (size_t i = 0; i < length; i++) printf("%02x", data[i]);
+    }
+  else printf("-");
+  printf("\n");
+}
+
+int bw_lump_request_run(const char *operation)
+{
+  static const char *const names[] =
+    {"poll", "legacy", "null", "readonly", "kernel", "wrap",
+     "legacy-tail", "invalid-then-poll"};
+  unsigned selected = sizeof(names) / sizeof(names[0]);
+  if (!operation) return 1;
+  size_t length = 0;
+  while (length < 32 && operation[length]) length++;
+  if (length == 32) return 1;
+  for (unsigned i = 0; i < sizeof(names) / sizeof(names[0]); i++)
+    if (strcmp(operation, names[i]) == 0) { selected = i; break; }
+  if (selected == sizeof(names) / sizeof(names[0])) return 1;
+
+  int fd = open("/dev/legoport5", O_RDONLY);
+  if (fd < 0)
+    {
+      int error = errno;
+      printf("BW_LUMP_REQUEST_OPEN v=1 op=%s rc=-1 errno=%d\n", operation, error);
+      return 1;
+    }
+  const uintptr_t invalid[] =
+    {0, (uintptr_t)g_bw_lump_probe_readonly, UINT32_C(0x20000000),
+     UINTPTR_MAX - 15, UINT32_C(0x20050000) - 36};
+  unsigned calls = 0;
+  if (selected >= 2)
+    {
+      unsigned first = selected == 7 ? 0 : selected - 2;
+      unsigned end = selected == 7 ? 5 : first + 1;
+      for (unsigned i = first; i < end; i++)
+        {
+          errno = 0;
+          int result = ioctl(fd, LEGOPORT_LUMP_POLL_DATA_SESSION,
+                             (unsigned long)invalid[i]);
+          int error = errno;
+          request_reply(operation, ++calls, result, error, NULL, 0);
+        }
+    }
+  if (selected < 2 || selected == 7)
+    {
+      union
+      {
+        struct lump_data_session_frame_s session;
+        struct lump_data_frame_s legacy;
+      } output;
+      memset(&output, 0xa5, sizeof(output));
+      bool legacy = selected == 1;
+      void *buffer = legacy ? (void *)&output.legacy : (void *)&output.session;
+      errno = 0;
+      int result = ioctl(fd, legacy ? LEGOPORT_LUMP_POLL_DATA :
+                                     LEGOPORT_LUMP_POLL_DATA_SESSION,
+                         (unsigned long)buffer);
+      int error = errno;
+      request_reply(operation, ++calls, result, error, buffer,
+                    legacy ? sizeof(output.legacy) : sizeof(output.session));
+    }
+  errno = 0;
+  int result = close(fd);
+  int error = errno;
+  printf("BW_LUMP_REQUEST_END v=1 op=%s calls=%u close_rc=%d close_errno=%d\n",
+         operation, calls, result, error);
+  return result == 0 ? 0 : 1;
 }

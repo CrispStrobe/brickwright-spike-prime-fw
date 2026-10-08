@@ -20,4 +20,6 @@ struct bw_lump_probe_result
 };
 extern volatile struct bw_lump_probe_result g_bw_lump_probe;
 int bw_lump_probe_run(void);
+/* Fixed, bounded requests on F; replies are observations, not test verdicts. */
+int bw_lump_request_run(const char *operation);
 #endif
