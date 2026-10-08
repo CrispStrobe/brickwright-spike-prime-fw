@@ -13,6 +13,8 @@ cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/p
 "$output/storage"
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/test/service_test.c -pthread -o "$output/service"
 "$output/service"
+cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -DBW_SIM_SESSION_DIAGNOSTICS=1 apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/test/service_test.c -pthread -o "$output/service-diagnostic"
+"$output/service-diagnostic"
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/hubprogram/include -Iboards/spike-prime-hub/include apps/hubprogram/motor.c tests/hubprogram/control_test.c -o "$output/control"
 "$output/control"
 mp=third_party/micropython-embed

@@ -99,3 +99,8 @@ inactive fixture. Keep application images, raw execution receipts and machine
 locations private. Retained firmware attribution and obligations remain; these
 new diagnostic components use BSD-3-Clause without a whole-firmware independence
 claim.
+
+A separate [diagnostic mailbox candidate](live-session-mailbox.md) connects these
+fixed operations to the existing guest worker without USB-console assumptions.
+Its transport, exhaustion and concurrency controls require their own fresh guest
+qualification; they do not extend the earlier startup-only evidence.

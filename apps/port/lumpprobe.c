@@ -22,6 +22,9 @@
 
 volatile struct bw_lump_probe_result g_bw_lump_probe;
 volatile struct bw_lump_request_result g_bw_lump_request;
+volatile struct bw_lump_request_mailbox g_bw_lump_request_mailbox;
+static uint32_t g_request_busy, g_mailbox_busy;
+_Static_assert(sizeof(struct bw_lump_request_mailbox) == 32, "request mailbox ABI");
 _Static_assert(sizeof(struct bw_lump_request_record) == 60, "request record ABI");
 _Static_assert(sizeof(struct bw_lump_request_result) == 400, "request publication ABI");
 const uint8_t g_bw_lump_probe_readonly[48] = {0x42};
@@ -166,22 +169,30 @@ static void request_reply(const char *operation, unsigned step, int result,
   printf("\n");
 }
 
-static int request_run(const char *operation, bool emit)
+static int request_run(const char *operation, bool emit, uint32_t *publication)
 {
   static const char *const names[] =
     {"poll", "legacy", "null", "readonly", "kernel", "wrap",
      "legacy-tail", "invalid-then-poll"};
   unsigned selected = sizeof(names) / sizeof(names[0]);
-  if (!operation) return 1;
+  if (!operation) return -EINVAL;
   size_t length = 0;
   while (length < 32 && operation[length]) length++;
-  if (length == 32) return 1;
+  if (length == 32) return -EINVAL;
   for (unsigned i = 0; i < sizeof(names) / sizeof(names[0]); i++)
     if (strcmp(operation, names[i]) == 0) { selected = i; break; }
-  if (selected == sizeof(names) / sizeof(names[0])) return 1;
+  if (selected == sizeof(names) / sizeof(names[0])) return -EINVAL;
 
+  if (__sync_lock_test_and_set(&g_request_busy, 1)) return -EBUSY;
+  if (g_bw_lump_request.sequence == UINT32_MAX)
+    {
+      __sync_lock_release(&g_request_busy);
+      return -EOVERFLOW;
+    }
   uint32_t sequence = g_bw_lump_request.sequence + 1;
-  if (!sequence) sequence = 1;
+  /* Invalidate the old terminal snapshot before any aggregate field changes. */
+  g_bw_lump_request.state = 1;
+  __sync_synchronize();
   g_bw_lump_request = (struct bw_lump_request_result)
     {.magic = UINT32_C(0x42575251), .version = 1, .state = 1,
      .sequence = sequence, .selector = selected};
@@ -197,7 +208,9 @@ static int request_run(const char *operation, bool emit)
       __sync_synchronize();
       g_bw_lump_request.state = 3;
       if (emit) printf("BW_LUMP_REQUEST_OPEN v=1 op=%s rc=-1 errno=%d\n", operation, error);
-      return 1;
+      if (publication) *publication = sequence;
+      __sync_lock_release(&g_request_busy);
+      return error ? -error : -EIO;
     }
   const uintptr_t invalid[] =
     {0, (uintptr_t)g_bw_lump_probe_readonly, UINT32_C(0x20000000),
@@ -243,16 +256,51 @@ static int request_run(const char *operation, bool emit)
   g_bw_lump_request.state = 2;
   if (emit) printf("BW_LUMP_REQUEST_END v=1 op=%s calls=%u close_rc=%d close_errno=%d\n",
          operation, calls, result, error);
-  return result == 0 ? 0 : 1;
+  if (publication) *publication = sequence;
+  __sync_lock_release(&g_request_busy);
+  return result == 0 ? 0 : error ? -error : -EIO;
 }
 
 int bw_lump_request_run(const char *operation)
 {
-  return request_run(operation, true);
+  return request_run(operation, true, NULL) == 0 ? 0 : 1;
 }
 
 int bw_lump_request_startup(void)
 {
   /* USB CDC is not connected in the startup fixture. Never wait on stdout. */
-  return request_run("invalid-then-poll", false);
+  return request_run("invalid-then-poll", false, NULL) == 0 ? 0 : 1;
+}
+
+void bw_lump_request_mailbox_step(void)
+{
+  static const char *const names[] =
+    {"poll", "legacy", "null", "readonly", "kernel", "wrap",
+     "legacy-tail", "invalid-then-poll"};
+  if (__sync_lock_test_and_set(&g_mailbox_busy, 1)) return;
+  uint32_t seq = g_bw_lump_request_mailbox.request_seq;
+  uint32_t previous = g_bw_lump_request_mailbox.reply_seq;
+  if (!seq || seq <= previous) goto done;
+  uint32_t magic = g_bw_lump_request_mailbox.request_magic;
+  uint32_t version = g_bw_lump_request_mailbox.request_version;
+  uint32_t selector = g_bw_lump_request_mailbox.request_selector;
+  __sync_synchronize();
+  if (seq != g_bw_lump_request_mailbox.request_seq) goto done;
+  /* An old sequence must not attest fields being replaced by this request. */
+  g_bw_lump_request_mailbox.reply_seq = 0;
+  __sync_synchronize();
+  int result = -EINVAL;
+  uint32_t publication = 0;
+  if (seq == previous + 1 &&
+      magic == UINT32_C(0x42574c52) && version == 1 && selector < 8)
+    {
+      result = request_run(names[selector], false, &publication);
+    }
+  g_bw_lump_request_mailbox.reply_result = result;
+  g_bw_lump_request_mailbox.reply_publication_seq = publication;
+  g_bw_lump_request_mailbox.reply_selector = selector;
+  __sync_synchronize();
+  g_bw_lump_request_mailbox.reply_seq = seq;
+done:
+  __sync_lock_release(&g_mailbox_busy);
 }

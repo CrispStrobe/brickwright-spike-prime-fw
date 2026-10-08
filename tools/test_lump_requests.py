@@ -60,7 +60,7 @@ def main():
             (root/name).write_bytes((ROOT/'apps/port'/name).read_bytes())
         source=(ROOT/'apps/port/lumpprobe.c').read_text()
         variants = {'baseline': source,
-                    'startup-writes-console': source.replace('return request_run("invalid-then-poll", false);', 'return request_run("invalid-then-poll", true);'),
+                    'startup-writes-console': source.replace('return request_run("invalid-then-poll", false, NULL) == 0 ? 0 : 1;', 'return request_run("invalid-then-poll", true, NULL) == 0 ? 0 : 1;'),
                     'lost-errno': source.replace('result, error, NULL, 0, emit);', 'result, ((void)error, 0), NULL, 0, emit);'),
                     'close-between-requests': source.replace('request_reply(operation, ++calls, result, error, NULL, 0, emit);', 'request_reply(operation, ++calls, result, error, NULL, 0, emit); if (selected == 7 && calls == 1) (void)close(fd);')}
         for name, text in variants.items():

@@ -30,12 +30,16 @@ static int request_open(const char *path, int flags)
   assert(!strcmp(path, "/dev/legoport5") && flags == O_RDONLY);
   assert(strcmp(scenario, "reject") != 0);
   assert(++opens == 1);
+  if (!strcmp(scenario, "observe-invalidated-reply"))
+    assert(g_bw_lump_request_mailbox.reply_seq == 0);
+  if (!strcmp(scenario, "open-no-errno")) return -1;
   if (!strcmp(scenario, "open-fail")) { errno = EBUSY; return -1; }
   return 42;
 }
 static int request_close(int fd)
 {
   assert(fd == 42 && opens == 1 && ++closes == 1);
+  if (!strcmp(scenario, "close-no-errno")) return -1;
   if (!strcmp(scenario, "close-fail")) { errno = EIO; return -1; }
   return 0;
 }

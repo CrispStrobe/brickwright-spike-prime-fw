@@ -9,6 +9,10 @@
 static pid_t task_create(const char *,int,int,int (*)(int,char **),char **);
 #include "../service.c"
 static unsigned saves,loads,releases;
+#ifdef BW_SIM_SESSION_DIAGNOSTICS
+static unsigned diagnostics;
+void bw_lump_request_mailbox_step(void) { diagnostics++; }
+#endif
 static pid_t task_create(const char *n,int p,int s,int (*f)(int,char **),char **a) {
   (void)n;(void)p;(void)s;(void)f;(void)a;return 1;
 }
@@ -116,6 +120,10 @@ int main(void) {
   packet[2]=9;assert(bw_program_service_request(1,packet,8,reply)==-EBUSY && releases==i);
   g_python_active=0;assert(bw_program_service_request(1,packet,8,reply)==0 && releases>i);
   restart_transport();
+#ifdef BW_SIM_SESSION_DIAGNOSTICS
+  g_program.state=BW_PROGRAM_READY;g_program.error=0;
+  assert(bw_program_service_poll()==-ECANCELED && diagnostics==1);
+#endif
   puts("service: fixed storage slot, transport guards, oversized mailbox rejection and retained-program restart passed");
   return 0;
 }

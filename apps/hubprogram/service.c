@@ -11,6 +11,14 @@
 #include <time.h>
 #include <string.h>
 #include "debug.h"
+#ifdef BW_SIM_SESSION_DIAGNOSTICS
+#include "../port/lumpprobe.h"
+#endif
+static void simulation_diagnostic_step(void) {
+#ifdef BW_SIM_SESSION_DIAGNOSTICS
+  bw_lump_request_mailbox_step();
+#endif
+}
 /* Fixed-slot SAVE/LOAD feature discovery; debug transport version stays 1. */
 const uint32_t g_bw_program_storage_abi=1u;
 volatile struct bw_program_debug g_bw_program_debug={.magic=0x42574e50u,.version=1};
@@ -87,6 +95,7 @@ static void *worker(void *arg) {
   (void)arg;
   for(;;) {
     struct timespec pause={0,10000000}; unsigned run;
+    simulation_diagnostic_step();
     pthread_mutex_lock(&g_lock);
     tick_locked();
     run=g_program.state==BW_PROGRAM_RUNNING && g_program.language && !g_program.ending && !g_python_active;
@@ -151,6 +160,7 @@ int bw_program_service_stop(void) {
 }
 int bw_program_service_poll(void) {
   int rc;
+  simulation_diagnostic_step();
   pthread_mutex_lock(&g_lock);tick_locked();
   rc=g_program.state==BW_PROGRAM_RUNNING ? 0 : g_program.error ? g_program.error : -ECANCELED;
   pthread_mutex_unlock(&g_lock);return rc;
