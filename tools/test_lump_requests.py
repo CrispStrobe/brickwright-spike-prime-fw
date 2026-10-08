@@ -45,6 +45,7 @@ def check(executable):
     assert 'step=6 rc=0 errno=0 bytes=8070605040302010' in batch[5]
     assert batch[6] == 'BW_LUMP_REQUEST_END v=1 op=invalid-then-poll calls=6 close_rc=0 close_errno=0'
     assert run('poll', 'close-fail', 1)[-1].endswith('close_rc=-1 close_errno=5')
+    assert run('invalid-then-poll', 'startup') == []
 
 
 def main():
@@ -59,8 +60,9 @@ def main():
             (root/name).write_bytes((ROOT/'apps/port'/name).read_bytes())
         source=(ROOT/'apps/port/lumpprobe.c').read_text()
         variants = {'baseline': source,
-                    'lost-errno': source.replace('result, error, NULL, 0);', 'result, ((void)error, 0), NULL, 0);'),
-                    'close-between-requests': source.replace('request_reply(operation, ++calls, result, error, NULL, 0);', 'request_reply(operation, ++calls, result, error, NULL, 0); if (selected == 7 && calls == 1) (void)close(fd);')}
+                    'startup-writes-console': source.replace('return request_run("invalid-then-poll", false);', 'return request_run("invalid-then-poll", true);'),
+                    'lost-errno': source.replace('result, error, NULL, 0, emit);', 'result, ((void)error, 0), NULL, 0, emit);'),
+                    'close-between-requests': source.replace('request_reply(operation, ++calls, result, error, NULL, 0, emit);', 'request_reply(operation, ++calls, result, error, NULL, 0, emit); if (selected == 7 && calls == 1) (void)close(fd);')}
         for name, text in variants.items():
             assert name == 'baseline' or text != source
             (root/'lumpprobe.c').write_text(text)

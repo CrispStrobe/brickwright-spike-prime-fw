@@ -43,4 +43,5 @@ struct bw_lump_request_result
 extern volatile struct bw_lump_request_result g_bw_lump_request;
 /* Fixed, bounded requests on F; replies are observations, not test verdicts. */
 int bw_lump_request_run(const char *operation);
+int bw_lump_request_startup(void);
 #endif

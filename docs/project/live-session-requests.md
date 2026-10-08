@@ -50,13 +50,14 @@ result, errno, output byte, ordering and final close before declaring a result.
 ## Qualification contract
 
 `python3 tools/test_lump_requests.py` compiles the actual request core with syscall
-doubles. Eighteen baseline invocations cover rejected input before I/O, open and
+doubles. Nineteen baseline invocations cover rejected input before I/O, open and
 close failures, legacy/session output, empty buffers, the five fixed faults and a
-successful synthetic batch. Two compiled mutations test lost errno and a close
-between batch requests. These are host controls, not kernel or ARM results.
+successful synthetic batch and silent startup. Three compiled mutations test lost errno, a close
+between batch requests and accidental console output from startup. These are host controls, not kernel or ARM results.
 
 The existing ordinary-simulation startup invokes the original refusal diagnostic,
-then the new batch. The enhanced `simulation/renode/lump-probe.robot` reads the
+then the new batch with text output disabled so an unattached USB console cannot
+block the diagnostic. The interactive command retains its text replies. The enhanced `simulation/renode/lump-probe.robot` reads the
 ELF-resolved `g_bw_lump_request` publication through the bounded, read-only
 `simulation/renode/lump_requests.py` observer. The 400-byte version-one record
 contains sequence, operation selector, open/close results and six ordered

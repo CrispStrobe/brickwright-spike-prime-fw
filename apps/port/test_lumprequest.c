@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 {
   assert(argc == 3); scenario = argv[2];
   const char *operation = !strcmp(argv[1], "<null>") ? NULL : argv[1];
-  int result = bw_lump_request_run(operation);
+  int result = !strcmp(scenario, "startup") ? bw_lump_request_startup() : bw_lump_request_run(operation);
   if (!strcmp(scenario, "reject")) assert(opens == 0 && calls == 0 && closes == 0);
   else if (!strcmp(scenario, "open-fail")) assert(opens == 1 && calls == 0 && closes == 0);
   else

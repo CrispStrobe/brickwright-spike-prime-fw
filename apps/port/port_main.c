@@ -941,7 +941,7 @@ int main(int argc, FAR char *argv[])
   if (strcmp(argv[1], "simulation-poll-probe") == 0)
     {
       if (argc != 2 || bw_lump_probe_run() != 0) return 1;
-      return bw_lump_request_run("invalid-then-poll");
+      return bw_lump_request_startup();
     }
 #endif
 

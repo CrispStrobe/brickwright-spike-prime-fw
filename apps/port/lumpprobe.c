@@ -145,7 +145,7 @@ int bw_lump_probe_run(void)
  * have completed. The reply records observations; it does not declare PASS.
  */
 static void request_reply(const char *operation, unsigned step, int result,
-                          int error, const void *bytes, size_t length)
+                          int error, const void *bytes, size_t length, bool emit)
 {
   volatile struct bw_lump_request_record *record =
     &g_bw_lump_request.records[step - 1];
@@ -154,6 +154,7 @@ static void request_reply(const char *operation, unsigned step, int result,
   record->length = length;
   for (size_t i = 0; i < length; i++) record->bytes[i] = ((const uint8_t *)bytes)[i];
   g_bw_lump_request.calls = step;
+  if (!emit) return;
   printf("BW_LUMP_REQUEST v=1 op=%s step=%u rc=%d errno=%d bytes=",
          operation, step, result, error);
   if (bytes)
@@ -165,7 +166,7 @@ static void request_reply(const char *operation, unsigned step, int result,
   printf("\n");
 }
 
-int bw_lump_request_run(const char *operation)
+static int request_run(const char *operation, bool emit)
 {
   static const char *const names[] =
     {"poll", "legacy", "null", "readonly", "kernel", "wrap",
@@ -195,7 +196,7 @@ int bw_lump_request_run(const char *operation)
       int error = open_error;
       __sync_synchronize();
       g_bw_lump_request.state = 3;
-      printf("BW_LUMP_REQUEST_OPEN v=1 op=%s rc=-1 errno=%d\n", operation, error);
+      if (emit) printf("BW_LUMP_REQUEST_OPEN v=1 op=%s rc=-1 errno=%d\n", operation, error);
       return 1;
     }
   const uintptr_t invalid[] =
@@ -212,7 +213,7 @@ int bw_lump_request_run(const char *operation)
           int result = ioctl(fd, LEGOPORT_LUMP_POLL_DATA_SESSION,
                              (unsigned long)invalid[i]);
           int error = errno;
-          request_reply(operation, ++calls, result, error, NULL, 0);
+          request_reply(operation, ++calls, result, error, NULL, 0, emit);
         }
     }
   if (selected < 2 || selected == 7)
@@ -231,7 +232,7 @@ int bw_lump_request_run(const char *operation)
                          (unsigned long)buffer);
       int error = errno;
       request_reply(operation, ++calls, result, error, buffer,
-                    legacy ? sizeof(output.legacy) : sizeof(output.session));
+                    legacy ? sizeof(output.legacy) : sizeof(output.session), emit);
     }
   errno = 0;
   int result = close(fd);
@@ -240,7 +241,18 @@ int bw_lump_request_run(const char *operation)
   g_bw_lump_request.close_error = error;
   __sync_synchronize();
   g_bw_lump_request.state = 2;
-  printf("BW_LUMP_REQUEST_END v=1 op=%s calls=%u close_rc=%d close_errno=%d\n",
+  if (emit) printf("BW_LUMP_REQUEST_END v=1 op=%s calls=%u close_rc=%d close_errno=%d\n",
          operation, calls, result, error);
   return result == 0 ? 0 : 1;
+}
+
+int bw_lump_request_run(const char *operation)
+{
+  return request_run(operation, true);
+}
+
+int bw_lump_request_startup(void)
+{
+  /* USB CDC is not connected in the startup fixture. Never wait on stdout. */
+  return request_run("invalid-then-poll", false);
 }
