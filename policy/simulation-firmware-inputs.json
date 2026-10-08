@@ -1093,7 +1093,7 @@
     },
     {
       "path": "apps/port/lumpprobe.c",
-      "sha256": "f638ed203264d29c078abccee4ecc4366e0a4eb099cbcfe92be8f9f91c6142c7",
+      "sha256": "326f719bdcac147158c0297ca3b8e53be9dd84746b4a87661611627670ecf042",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -1104,7 +1104,7 @@
     },
     {
       "path": "apps/port/lumpprobe.h",
-      "sha256": "e2f27d9369ccbc260e0c475a660514cfd8c5a7336188049625457fdef3ce9a1c",
+      "sha256": "3c5105d56de150973fbb803f0d1f273fb7651e4436c6f0bf35c7648d6d9a33d8",
       "spdx": [
         "BSD-3-Clause"
       ],

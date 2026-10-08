@@ -16,7 +16,6 @@ Actual protected userspace refuses invalid session poll outputs
     Execute Command    include @${CURDIR}/SpikePrimeDevices.cs
     Execute Command    mach create
     Execute Command    machine LoadPlatformDescription ${PLATFORM}
-    ${uart}=    Create Terminal Tester    sysbus.usart2    timeout=20    defaultPauseEmulation=true
     # This platform has no attached UART device on F. No DATA/queue writes.
     File Should Exist    ${EXISTING_FILESYSTEM}/receipt.json
     Execute Command    include @${CURDIR}/../../tools/renode_load_littlefs_fixture.py
@@ -36,13 +35,9 @@ Actual protected userspace refuses invalid session poll outputs
     Execute Command    include @${CURDIR}/lump_probe.py
     ${proof}=    Execute Command    check_lump_probe ${result.strip()} ${readonly.strip()}
     Should Contain    ${proof}    LUMP protected refusal probe passed: checks=511
-    # The existing NSH entry runs the fixed batch after publishing the original
-    # refusal result. Match every complete line, in order, through descriptor close.
-    Wait For Line On Uart    ^BW_LUMP_REQUEST v=1 op=invalid-then-poll step=1 rc=-1 errno=22 bytes=-$    testerId=${uart}    treatAsRegex=true    pauseEmulation=true
-    FOR    ${step}    IN RANGE    2    6
-        Wait For Line On Uart    ^BW_LUMP_REQUEST v=1 op=invalid-then-poll step=${step} rc=-1 errno=14 bytes=-$    testerId=${uart}    treatAsRegex=true    pauseEmulation=true    matchNextLine=true
-    END
-    ${sentinel}=    Evaluate    'a5' * 48
-    Wait For Line On Uart    ^BW_LUMP_REQUEST v=1 op=invalid-then-poll step=6 rc=-1 errno=11 bytes=${sentinel}$    testerId=${uart}    treatAsRegex=true    pauseEmulation=true    matchNextLine=true
-    Wait For Line On Uart    ^BW_LUMP_REQUEST_END v=1 op=invalid-then-poll calls=6 close_rc=0 close_errno=0$    testerId=${uart}    treatAsRegex=true    pauseEmulation=true    matchNextLine=true
-    Log To Console    LUMP protected fixed request batch passed: requests=6 exclusive_fd=true
+    # The real console is USB CDC; USART2 is HCI. Observe only the guest-owned
+    # publication, never inject a request or write diagnostic guest RAM.
+    Execute Command    include @${CURDIR}/lump_requests.py
+    ${requests}=    Execute Command    sysbus GetSymbolAddress "g_bw_lump_request"
+    ${batch}=    Execute Command    check_lump_requests ${requests.strip()}
+    Should Contain    ${batch}    LUMP protected fixed request batch passed: requests=6

@@ -21,6 +21,9 @@
 #endif
 
 volatile struct bw_lump_probe_result g_bw_lump_probe;
+volatile struct bw_lump_request_result g_bw_lump_request;
+_Static_assert(sizeof(struct bw_lump_request_record) == 60, "request record ABI");
+_Static_assert(sizeof(struct bw_lump_request_result) == 400, "request publication ABI");
 const uint8_t g_bw_lump_probe_readonly[48] = {0x42};
 _Static_assert(sizeof(struct bw_lump_probe_result) == 32, "probe ABI");
 _Static_assert(sizeof(struct lump_data_session_frame_s) == 48, "session ABI");
@@ -144,6 +147,13 @@ int bw_lump_probe_run(void)
 static void request_reply(const char *operation, unsigned step, int result,
                           int error, const void *bytes, size_t length)
 {
+  volatile struct bw_lump_request_record *record =
+    &g_bw_lump_request.records[step - 1];
+  record->result = result;
+  record->error = error;
+  record->length = length;
+  for (size_t i = 0; i < length; i++) record->bytes[i] = ((const uint8_t *)bytes)[i];
+  g_bw_lump_request.calls = step;
   printf("BW_LUMP_REQUEST v=1 op=%s step=%u rc=%d errno=%d bytes=",
          operation, step, result, error);
   if (bytes)
@@ -169,10 +179,22 @@ int bw_lump_request_run(const char *operation)
     if (strcmp(operation, names[i]) == 0) { selected = i; break; }
   if (selected == sizeof(names) / sizeof(names[0])) return 1;
 
+  uint32_t sequence = g_bw_lump_request.sequence + 1;
+  if (!sequence) sequence = 1;
+  g_bw_lump_request = (struct bw_lump_request_result)
+    {.magic = UINT32_C(0x42575251), .version = 1, .state = 1,
+     .sequence = sequence, .selector = selected};
+  __sync_synchronize();
+  errno = 0;
   int fd = open("/dev/legoport5", O_RDONLY);
+  int open_error = errno;
+  g_bw_lump_request.open_result = fd;
+  g_bw_lump_request.open_error = open_error;
   if (fd < 0)
     {
-      int error = errno;
+      int error = open_error;
+      __sync_synchronize();
+      g_bw_lump_request.state = 3;
       printf("BW_LUMP_REQUEST_OPEN v=1 op=%s rc=-1 errno=%d\n", operation, error);
       return 1;
     }
@@ -214,6 +236,10 @@ int bw_lump_request_run(const char *operation)
   errno = 0;
   int result = close(fd);
   int error = errno;
+  g_bw_lump_request.close_result = result;
+  g_bw_lump_request.close_error = error;
+  __sync_synchronize();
+  g_bw_lump_request.state = 2;
   printf("BW_LUMP_REQUEST_END v=1 op=%s calls=%u close_rc=%d close_errno=%d\n",
          operation, calls, result, error);
   return result == 0 ? 0 : 1;

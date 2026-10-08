@@ -9,7 +9,8 @@ build, LUMP and the TI-free simulation selection are all enabled. It is a test
 interface, not a program SDK or a motor authority interface.
 
 The command opens F read-only, performs at most six nonblocking poll ioctls,
-prints bounded observations and closes its descriptor. A batch keeps that one
+publishes bounded observations and closes its descriptor. It also attempts
+text replies through its normal standard output. A batch keeps that one
 exclusive descriptor throughout. It accepts no caller-supplied address, ioctl
 number, queue write, counter value or monitor command. Invalid, missing or
 32-byte-or-longer operation names are rejected before opening a port.
@@ -31,7 +32,7 @@ the session ABI is little-endian: an eight-byte session, the 36-byte legacy fram
 and four reserved bytes. A successful session must come from the guest; the host
 does not seed or repair it. Errors and untouched bytes remain observable.
 
-Each reply is a complete ASCII line:
+When standard output is connected, each reply is a complete ASCII line:
 
 ```text
 BW_LUMP_REQUEST v=1 op=OPERATION step=N rc=RESULT errno=ERROR bytes=HEX_OR_DASH
@@ -55,8 +56,20 @@ successful synthetic batch. Two compiled mutations test lost errno and a close
 between batch requests. These are host controls, not kernel or ARM results.
 
 The existing ordinary-simulation startup invokes the original refusal diagnostic,
-then the new batch. The enhanced `simulation/renode/lump-probe.robot` captures
-UART before boot and checks all six request lines and the final close in order.
+then the new batch. The enhanced `simulation/renode/lump-probe.robot` reads the
+ELF-resolved `g_bw_lump_request` publication through the bounded, read-only
+`simulation/renode/lump_requests.py` observer. The 400-byte version-one record
+contains sequence, operation selector, open/close results and six ordered
+60-byte syscall records (result, saved errno, length and 48 output bytes).
+State 1 is running, 2 is completed including syscall errors, and 3 is open failure.
+The observer requires the complete startup sequence 1, stable state/sequence,
+correct ELF RAM extent and every expected result and output byte. It has no
+write interface. Host controls reject corrupted fields, ranges, state and timeouts.
+
+The configured console is USB CDC, while USART2 is Bluetooth HCI. A cancelled
+queued prototype run targeted the wrong UART and did not execute the guest;
+its source is retained in history. This fixture qualifies guest publications,
+not UART replies or interactive USB transport.
 The inactive expected results are EINVAL for null, EFAULT for the other four,
 then EAGAIN with all 48 sentinel bytes unchanged. HCI compiles the command but
 does not run this startup diagnostic. The new source needs a clean two-profile
@@ -65,7 +78,7 @@ successful matrices qualify their original source, not this new command.
 
 ## Next live-session fixture
 
-First qualify this request core and its inactive UART receipts on the actual
+First qualify this request core and its inactive guest publications on the actual
 protected guest. Then prove an external caller can invoke the command through
 the real console/program transport with normal services running; startup entry
 alone does not qualify interactive upload or cancellation.

@@ -78,5 +78,36 @@ int main(int argc, char **argv)
       assert(opens == 1 && closes == 1);
       assert(calls == (!strcmp(operation, "invalid-then-poll") ? 6u : 1u));
     }
+  if (!strcmp(scenario, "reject")) assert(g_bw_lump_request.state == 0);
+  else
+    {
+      assert(g_bw_lump_request.magic == UINT32_C(0x42575251));
+      assert(g_bw_lump_request.version == 1 && g_bw_lump_request.sequence == 1);
+      assert(g_bw_lump_request.calls == calls);
+      if (!strcmp(scenario, "open-fail"))
+        assert(g_bw_lump_request.state == 3 && g_bw_lump_request.open_result == -1 &&
+               g_bw_lump_request.open_error == EBUSY);
+      else
+        {
+          assert(g_bw_lump_request.state == 2 && g_bw_lump_request.open_result == 42);
+          assert(g_bw_lump_request.close_result == (!strcmp(scenario, "close-fail") ? -1 : 0));
+          assert(g_bw_lump_request.close_error == (!strcmp(scenario, "close-fail") ? EIO : 0));
+          for (unsigned i = 0; i < calls; i++)
+            {
+              const volatile struct bw_lump_request_record *r = &g_bw_lump_request.records[i];
+              if (!strcmp(operation, "invalid-then-poll") && i < 5)
+                assert(r->result == -1 && r->error == (i == 0 ? EINVAL : EFAULT) && r->length == 0);
+              else if (!strcmp(operation, "poll") || !strcmp(operation, "legacy") || i == 5)
+                {
+                  assert(r->length == (!strcmp(operation, "legacy") ? 36u : 48u));
+                  assert(r->result == (!strcmp(scenario, "data") ? 0 : -1));
+                  assert(r->error == (!strcmp(scenario, "data") ? 0 : EAGAIN));
+                  if (strcmp(scenario, "data"))
+                    for (unsigned j = 0; j < r->length; j++) assert(r->bytes[j] == 0xa5);
+                }
+              else assert(r->result == -1 && r->length == 0);
+            }
+        }
+    }
   return result;
 }

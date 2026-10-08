@@ -20,6 +20,27 @@ struct bw_lump_probe_result
 };
 extern volatile struct bw_lump_probe_result g_bw_lump_probe;
 int bw_lump_probe_run(void);
+/* Guest-owned read-only diagnostic publication; never a host command mailbox.
+ * state: 0 absent, 1 running, 2 completed (including syscall/close errors),
+ * 3 open failed. Observer checks sequence/state before and after its read.
+ * A record contains exact syscall result, saved errno and 0/36/48 output bytes.
+ */
+struct bw_lump_request_record
+{
+  int32_t result;
+  uint32_t error, length;
+  uint8_t bytes[48];
+};
+struct bw_lump_request_result
+{
+  uint32_t magic, version, state, sequence, selector, calls;
+  int32_t open_result;
+  uint32_t open_error;
+  int32_t close_result;
+  uint32_t close_error;
+  struct bw_lump_request_record records[6];
+};
+extern volatile struct bw_lump_request_result g_bw_lump_request;
 /* Fixed, bounded requests on F; replies are observations, not test verdicts. */
 int bw_lump_request_run(const char *operation);
 #endif
