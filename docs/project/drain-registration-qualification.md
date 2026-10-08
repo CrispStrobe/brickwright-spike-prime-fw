@@ -118,6 +118,9 @@ used Runtime
 `adf40d98062a6b31aae7ef86e1ae5f289eebdc48`, distinct from the workflow's
 pinned matrix context. This does not establish causation or equivalence across
 those contexts. Preserve the failure; the green matrix does not erase it.
+Separate candidate detach/reconnect and overlapping BLE/Classic motor scenarios
+passed in that local compiled context. They add bounded coverage and do not
+resolve or replace the failed all-motor cancellation scenario.
 
 The encoder backend deliberately refuses admission until a fresh matching UART
 frame is available. Initial readiness does not guarantee a fresh frame for a
