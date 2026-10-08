@@ -12,7 +12,7 @@ The pair is recorded in [Runtime PR #54](https://github.com/CrispStrobe/renode-s
 and [Infrastructure PR #36](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/36).
 No guest firmware compiler input, configuration, physical target or installed
 desktop consumer pin changes. The affected NuttX guest matrix passed for this pair;
-the separate upstream-MicroPython application qualification remains pending.
+the separate upstream-MicroPython application checks also passed as described below.
 
 The existing source-built Runtime installer still verifies the exact gitlink,
 all submodules and support-library pins before compiling. Its build receipts
@@ -60,6 +60,14 @@ The earlier [protected refusal qualification](lump-guest-probe.md) consumed the
 previous pair and remains separate evidence. This replacement matrix
 qualifies only its observed regressions; it does not establish active-session DATA
 polls, invalid-call non-consumption, reset identities, atomic PWM admission,
-physical fidelity or stock/reference firmware boot. Separately supplied upstream
-MicroPython application execution also needs its own candidate qualification
-before adopting the revised offline support source profile.
+physical fidelity or stock/reference firmware boot. The separately supplied upstream MicroPython 1.26.1 application subsequently
+passed bounded UART upload/completion/error/cancellation/recovery, GPIO motor
+load/cleanup and fresh-process storage checks through the compiled Runtime pair.
+The offline source package separately passed the same contract on the earlier
+Renode 1.16.1 executable, after its executable and fourteen native libraries
+matched their historical hashes. An initial attempt to load source models into
+the full fork failed before guest boot with duplicate `ILpf2Device`; it is retained
+as a setup failure, not a successful source-route test. Source overlays belong to
+the older Runtime; the full fork uses compiled models without source includes.
+These checks do not qualify the full MicroPython SDK or installed desktop GUI.
+Application inputs, exact private receipts and raw logs remain private.
