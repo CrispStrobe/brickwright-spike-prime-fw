@@ -48,6 +48,7 @@ than silently substitute a legacy frame for conditional admission.
 ```sh
 python3 tools/check_lump_data_queue.py
 python3 tools/check_lump_session_ioctl.py
+python3 tools/check_lump_registration.py
 LUMP_TEST_CFLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
   python3 tools/check_lump_data_queue.py
 ```
@@ -72,6 +73,18 @@ session replacement through the actual ioctl switch. Three additional compiled
 mutations fail assertions: validate only the legacy size, consume before the
 range check, and copy output after a refused poll. This is host driver/control
 coverage, not ARM privilege/MPU or guest syscall qualification.
+
+The registration control compiles the actual, unchanged driver registration
+function with neutral engine fields and faulting host service doubles. Thirteen
+fresh-process scenarios cover successful registration and failures at each of
+the six thread-creation and six handoff-registration calls. After each outcome,
+three retries must return `EALREADY` without changing engine bytes, session
+sentinels or service-call counts. Two compiled mutations must fail assertions:
+removing the retry guard (all thirteen scenarios), and setting the started flag
+only after complete success (all twelve failure scenarios). The latter mutation
+also retains the successful-registration positive control. This does not run a
+NuttX thread, inject failure into an actual ARM boot, or test concurrent bring-up;
+registration remains a boot-thread-only interface. It adds no firmware inputs.
 
 ## Compiled regression checkpoint
 
