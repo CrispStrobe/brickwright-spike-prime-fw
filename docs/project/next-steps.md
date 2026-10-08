@@ -7,6 +7,18 @@ before choosing a lane. Public documentation contains repository paths and
 public evidence only. Machine access, private images, operational commands and
 private receipts belong in the operator's private agent instructions.
 
+## Sensor lane checkpoint — 2026-10-08
+
+The [inactive protected-worker mailbox](live-session-mailbox.md) is merged and
+qualified. The separate [active F DATA experiment](active-session-qualification.md)
+records its exact candidate, completed ordinary guest checks and remaining
+companion-profile gate. It uses actual externally emitted UART DATA and a
+read-only own-kernel queue witness; it does not broaden the program sensor API.
+That record also gives a bounded two-port isolation follow-up with source entry
+points, adversaries and guest acceptance criteria. Refresh its status before
+starting L02 so these completed steps are not repeated. The baseline inventory
+below remains historical; do not silently substitute its older dependency pins.
+
 ## Established baseline
 
 [Brickwright firmware PR #34](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/34)
