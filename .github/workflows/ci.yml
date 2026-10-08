@@ -50,6 +50,8 @@ jobs:
           python3 tools/check_lump_guest_probe.py
           python3 tools/test_lump_probe_contract.py
           python3 tools/test_lump_requests.py
+          python3 tools/test_lump_mailbox.py
+          python3 tools/test_lump_request_transport.py
           python3 tools/test_lump_request_observer.py
           python3 tools/test_imu_probe.py
           python3 tools/test_imu_reference.py

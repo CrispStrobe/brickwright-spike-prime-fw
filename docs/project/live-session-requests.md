@@ -73,14 +73,25 @@ its source is retained in history. This fixture qualifies guest publications,
 not UART replies or interactive USB transport.
 The inactive expected results are EINVAL for null, EFAULT for the other four,
 then EAGAIN with all 48 sentinel bytes unchanged. HCI compiles the command but
-does not run this startup diagnostic. The new source needs a clean two-profile
-matrix with its compiler/link/notice/resource/TI gates before adoption. Prior
-successful matrices qualify their original source, not this new command.
+does not run this startup diagnostic.
+
+The startup-only request core was qualified at source
+`25e29ebac0ad84829b909664dcc92e9037c08d5d` in
+[two-profile matrix 37791490061](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37791490061)
+and merged in [PR #45](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/45).
+Both protected profiles passed their compiler, linker, notice, resource and
+TI-exclusion gates. Each used 597580 of 654336 userspace flash bytes and 89280
+of 98304 static RAM bytes; TI hits were zero. Their 24976-byte probe objects
+matched SHA256 `11cfd83757900eab821360ac7b7a83c245b1dd85db70a04bb52f2637f60901f1`.
+The ordinary profile passed the original refusal diagnostic, six-call startup
+publication and retained program/storage regressions. All seven HCI peer reports
+passed. This qualifies inactive startup observations only; later mailbox or
+active-session changes require their own affected guest qualification.
 
 ## Next live-session fixture
 
-First qualify this request core and its inactive guest publications on the actual
-protected guest. Then prove an external caller can invoke the command through
+The inactive startup qualification above is complete. Next prove an external
+caller can invoke the fixed operations through
 the real console/program transport with normal services running; startup entry
 alone does not qualify interactive upload or cancellation.
 
@@ -99,3 +110,8 @@ inactive fixture. Keep application images, raw execution receipts and machine
 locations private. Retained firmware attribution and obligations remain; these
 new diagnostic components use BSD-3-Clause without a whole-firmware independence
 claim.
+
+A separate [diagnostic mailbox candidate](live-session-mailbox.md) connects these
+fixed operations to the existing guest worker without USB-console assumptions.
+Its transport, exhaustion and concurrency controls require their own fresh guest
+qualification; they do not extend the earlier startup-only evidence.

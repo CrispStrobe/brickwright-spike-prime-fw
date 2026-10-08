@@ -861,7 +861,7 @@
     },
     {
       "path": "apps/hubprogram/service.c",
-      "sha256": "c33b20706d6ced01d365fab29d3378f35ef7c1ae7e9a78e9a4fc5f4dd620e49e",
+      "sha256": "cc8937617e6255a14672de3a6960d1fab600a8c6c6a6ac645e59f25b945a1d04",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -1093,7 +1093,7 @@
     },
     {
       "path": "apps/port/lumpprobe.c",
-      "sha256": "0bbc9c0a2c6406a7b32c08a7b6d6ec4584d2be05f127ece8b0a352bc8845d786",
+      "sha256": "f703b6205408232ae8038d55c8d60047e73a0a4f00f9f244b7f3058d285a7abc",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -1104,7 +1104,7 @@
     },
     {
       "path": "apps/port/lumpprobe.h",
-      "sha256": "ee8695a0e4637a6e54dfec9fb259692fcabda5282fcc99621db8ae7aab38792f",
+      "sha256": "61e4e471fabbb90ef553fe398722b8ab25022929c64ca53151454c8b5a53bc85",
       "spdx": [
         "BSD-3-Clause"
       ],

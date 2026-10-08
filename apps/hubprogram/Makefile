@@ -7,6 +7,10 @@ STACKSIZE = 4096
 MODULE = $(CONFIG_APP_HUBPROGRAM)
 MAINSRC = hubprogram_main.c
 CSRCS = program.c upload.c storage.c motor.c device.c service.c
+# Explicit simulation-only integration; ordinary host controls omit this flag.
+ifeq ($(CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK)$(CONFIG_BUILD_PROTECTED)$(CONFIG_LEGO_LUMP)$(CONFIG_APP_PORT),yyyy)
+CFLAGS += -DBW_SIM_SESSION_DIAGNOSTICS=1
+endif
 BRICKWRIGHT_ROOT := $(abspath $(APPDIR)/..)
 MICROPY_DIR := $(BRICKWRIGHT_ROOT)/third_party/micropython-embed
 CSRCS += brickwright_module.c python_output.c

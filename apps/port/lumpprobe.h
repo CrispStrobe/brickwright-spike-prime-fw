@@ -44,4 +44,16 @@ extern volatile struct bw_lump_request_result g_bw_lump_request;
 /* Fixed, bounded requests on F; replies are observations, not test verdicts. */
 int bw_lump_request_run(const char *operation);
 int bw_lump_request_startup(void);
+/* Only request_* words are host-writable while paused. reply_seq is committed
+ * last by the guest. Monotonic sequences never wrap; reboot resets the slot.
+ */
+struct bw_lump_request_mailbox
+{
+  uint32_t request_magic, request_version, request_seq, request_selector;
+  uint32_t reply_seq;
+  int32_t reply_result;
+  uint32_t reply_publication_seq, reply_selector;
+};
+extern volatile struct bw_lump_request_mailbox g_bw_lump_request_mailbox;
+void bw_lump_request_mailbox_step(void);
 #endif
