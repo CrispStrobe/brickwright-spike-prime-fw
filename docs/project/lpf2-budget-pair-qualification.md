@@ -11,7 +11,8 @@ This candidate explicitly changes the test Runtime/Infrastructure pins from
 The pair is recorded in [Runtime PR #54](https://github.com/CrispStrobe/renode-spike-prime/pull/54)
 and [Infrastructure PR #36](https://github.com/CrispStrobe/renode-infrastructure-spike-prime/pull/36).
 No guest firmware compiler input, configuration, physical target or installed
-desktop consumer pin changes. Test guest execution is pending for this pair.
+desktop consumer pin changes. The affected NuttX guest matrix passed for this pair;
+the separate upstream-MicroPython application qualification remains pending.
 
 The existing source-built Runtime installer still verifies the exact gitlink,
 all submodules and support-library pins before compiling. Its build receipts
@@ -28,16 +29,36 @@ cases. A separate host-observer race fix in Infrastructure changes test code and
 documentation only; this qualification deliberately retains the immutable
 model-tested pair above.
 
-Run the existing `Firmware build and simulation` workflow at the exact candidate
-source. Both profiles must pass compiler/linker/notice/resource/TI gates; ordinary
-simulation must pass protected boot, syscall refusals, retained program restarts
-and storage checks. HCI must pass its transport bridge and all seven air peers with
-a common four-file firmware identity. Preserve original failures and raw logs
-privately. Do not repeat an unchanged successful matrix for later prose updates.
+## Actual affected guest qualification
+
+[Run 37775158539](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37775158539)
+passed both profiles at firmware source
+`3238f2ba9d0e2f5574ad86c1a4672693353a358b`, with the exact pair above. Both
+passed compiler/linker/notice/resource/TI gates. Ordinary simulation passed
+protected boot, the protected-userspace syscall refusal probe, retained program
+restarts, interrupted storage and the source-generated empty filesystem seed.
+HCI passed its transport bridge and all seven complete air reports: LE,
+Scratch Link, IMU acquisition, stationary samples, poses, calibration and Classic
+motors. The seven reports identify the same four firmware files and the expected
+Runtime revision. The report verifier also rejected missing-report,
+conflicting-image and wrong-Runtime negative controls. These controls test the
+verifier; they are separate from the three compiled model mutations.
+
+Both profiles measured userspace flash 596,508/654,336 bytes, static RAM
+88,880/98,304 bytes and zero TI payload. Both compiled the 13,312-byte refusal
+probe object with SHA256
+`ab5cda6b09be02714418d5d67bf0c28ba30a9bd84c094a08948a49c4fa6e1dcd`.
+The dedicated refusal probe ran only in ordinary simulation, not HCI. These
+measurements do not establish kernel heap usage or physical-device safety.
+
+The earlier failures remain recorded separately. Raw logs and derived receipts
+are retained privately. This later documentation update changes no compiled
+source, guest configuration or dependency pin; it does not require another
+unchanged ARM matrix.
 
 The earlier [protected refusal qualification](lump-guest-probe.md) consumed the
-previous pair and remains separate evidence. A passing replacement matrix would
-qualify only its observed regressions; it would not establish active-session DATA
+previous pair and remains separate evidence. This replacement matrix
+qualifies only its observed regressions; it does not establish active-session DATA
 polls, invalid-call non-consumption, reset identities, atomic PWM admission,
 physical fidelity or stock/reference firmware boot. Separately supplied upstream
 MicroPython application execution also needs its own candidate qualification
