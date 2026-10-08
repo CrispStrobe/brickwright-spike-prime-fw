@@ -8,12 +8,13 @@ ROOT=Path(__file__).resolve().parents[1]
 SCRIPT=ROOT/'boards/spike-prime-hub/src/etc/init.d/rcS'
 with tempfile.TemporaryDirectory() as directory:
     include=Path(directory);(include/'nuttx').mkdir();(include/'nuttx/config.h').write_text('')
-    def commands(simulation,virtual_hci,hub=True,bluetooth=True):
+    def commands(simulation,virtual_hci,hub=True,bluetooth=True,probe=False):
         defines=['CONFIG_APP_DRIVEBASE']
         if hub:defines.append('CONFIG_APP_HUBPROGRAM')
         if bluetooth:defines.append('CONFIG_APP_BTSENSOR')
         if simulation:defines.append('CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK')
         if virtual_hci:defines.append('CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI')
+        if probe:defines.extend(['CONFIG_APP_PORT','CONFIG_LEGO_LUMP','CONFIG_BUILD_PROTECTED'])
         result=subprocess.check_output(['cc','-E','-P','-x','c','-I'+str(include),*['-D'+name for name in defines],str(SCRIPT)],text=True)
         return [line.strip() for line in result.splitlines() if line.strip()]
     for simulation,virtual_hci,expected in [(False,False,True),(True,False,False),(True,True,True)]:
@@ -23,6 +24,9 @@ with tempfile.TemporaryDirectory() as directory:
         assert 'drivebase start' not in actual,actual
     assert commands(True,False,hub=False)==['drivebase start']
     assert commands(False,False,bluetooth=False)==['hubprogram serve']
+    assert commands(True,False,probe=True)[0]=='port simulation-poll-probe'
+    assert commands(True,True,probe=True)[0]=='port simulation-poll-probe'
+    assert 'port simulation-poll-probe' not in commands(False,False,probe=True)
 defconfig=(ROOT/'boards/spike-prime-hub/configs/simulation/defconfig').read_text().splitlines()
 assert 'CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK=y' in defconfig
 assert '# CONFIG_APP_BTSENSOR_SIM_VIRTUAL_HCI is not set' in defconfig
