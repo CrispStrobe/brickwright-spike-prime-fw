@@ -3,9 +3,9 @@
 
 # Simulation-only session request transport
 
-This candidate extends the [fixed request core](live-session-requests.md) with
-an explicit diagnostic mailbox. It prepares live LPF2 experiments; host controls
-are implemented, while its fresh protected guest qualification remains pending.
+This extends the [fixed request core](live-session-requests.md) with an explicit
+diagnostic mailbox. The inactive protected-guest transport and host controls
+passed the qualification below. It prepares live LPF2 experiments.
 It does not implement USB, BLE or a public program SDK.
 
 The existing hubprogram worker services requests before taking its application
@@ -109,9 +109,34 @@ batch/session/legacy operations through the real worker. It requires all three
 sequence-correlated actual protected-guest replies, exact refusal errors,
 unchanged sentinel output and successful descriptor close. Fresh clean builds of
 both simulation profiles and all compiler/link/notice/resource/TI/guest gates are
-required before adoption. No fresh guest result is claimed in this candidate.
+required before adoption.
 
-After this inactive transport passes, synchronize a genuinely attached F and
+### Completed inactive guest qualification
+
+Source `95a24712f1875bb12e1ec1125373fa5335c23675` passed
+[two-profile matrix 37795457573](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37795457573).
+The ordinary profile passed the original refusal probe and startup batch, then
+all three sequence-correlated mailbox roundtrips through the real protected
+program worker. It also passed retained program restarts and storage regressions.
+HCI compiled the same diagnostic object, omitted the inactive guest test, and
+passed all seven Bluetooth-air peer reports. Those reports identify the same
+four firmware files and Runtime `8f7696aac606d8de90c1a6a0930e48655f03530a`.
+The report verifier rejected missing-report, conflicting-image and wrong-Runtime
+negative controls; those are verifier controls, separate from compiled C mutations.
+
+Both profiles passed compiler, linker, notice, resource and TI-exclusion gates.
+Ordinary simulation used 597892 of 654336 userspace flash bytes; HCI used 597908.
+Both used 89320 of 98304 static RAM bytes and contained zero TI payload. Both
+28236-byte probe objects matched SHA256
+`d8aad74de697747a89b5692789310669d9cf75357a6992bf8d711648750a8f92`.
+These static measurements do not establish stack/heap high-water marks.
+Subsequent baseline-merge and qualification-documentation changes leave the
+compiler, configuration, dependency, Robot and transport inputs unchanged.
+Raw logs and receipts are retained privately. This result qualifies the inactive
+worker request path, not active DATA, USB/BLE upload, cross-reset identities,
+embedded-Python poll-hook scheduling under a running program or GUI adoption.
+
+Next synchronize a genuinely attached F and
 use the qualified model's bounded external DATA emission control. Check distinct
 frame survival across invalid calls, shared legacy consumption, empty polls,
 session loss, same-type replacement and per-port isolation. Any competing
