@@ -27,8 +27,8 @@ with tempfile.TemporaryDirectory() as directory:
     # NSH aborts rcS on a failed command. A diagnostic must not prevent normal
     # services starting, including in fixtures with intentionally absent ports.
     assert commands(True,False,probe=True)==['hubprogram serve','port simulation-poll-probe']
-    # HCI scenarios may attach F before boot; never run the unattached-F probe
-    # there or interfere with motor ownership through its descriptor cleanup.
+    # HCI scenarios may attach F before boot; omit the unattached-F diagnostic
+    # there rather than compete for the port's exclusive descriptor.
     assert commands(True,True,probe=True)==['hubprogram serve','btsensor start']
     assert 'port simulation-poll-probe' not in commands(False,False,probe=True)
 defconfig=(ROOT/'boards/spike-prime-hub/configs/simulation/defconfig').read_text().splitlines()
