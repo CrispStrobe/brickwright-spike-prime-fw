@@ -24,8 +24,12 @@ with tempfile.TemporaryDirectory() as directory:
         assert 'drivebase start' not in actual,actual
     assert commands(True,False,hub=False)==['drivebase start']
     assert commands(False,False,bluetooth=False)==['hubprogram serve']
-    assert commands(True,False,probe=True)[0]=='port simulation-poll-probe'
-    assert commands(True,True,probe=True)[0]=='port simulation-poll-probe'
+    # NSH aborts rcS on a failed command. A diagnostic must not prevent normal
+    # services starting, including in fixtures with intentionally absent ports.
+    assert commands(True,False,probe=True)==['hubprogram serve','port simulation-poll-probe']
+    # HCI scenarios may attach F before boot; never run the unattached-F probe
+    # there or interfere with motor ownership through its descriptor cleanup.
+    assert commands(True,True,probe=True)==['hubprogram serve','btsensor start']
     assert 'port simulation-poll-probe' not in commands(False,False,probe=True)
 defconfig=(ROOT/'boards/spike-prime-hub/configs/simulation/defconfig').read_text().splitlines()
 assert 'CONFIG_APP_BTSENSOR_SIM_NO_SERVICE_PACK=y' in defconfig

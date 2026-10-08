@@ -11,7 +11,10 @@ TI-free simulation and LUMP options are enabled. Hardware builds omit the comman
 implementation and boot invocation. Configuration selections and dependency pins
 remain unchanged; there is no new daemon or host request interface.
 
-The simulation boot script invokes the command before program/radio services.
+The non-HCI simulation boot script invokes the command after normal services.
+NSH aborts a startup script on command failure, so a diagnostic refusal must not
+prevent program startup. The HCI profile compiles the command but does not invoke
+it automatically: its fixtures can attach a motor on F before boot.
 It opens port F read-only, requires the observed device to be disconnected,
 and makes fixed ioctl calls. It never sets PWM, changes a mode, resets an engine,
 writes feedback or reserves a motor. A failed probe publishes failure and returns;
@@ -65,7 +68,8 @@ bus write method. Three observer mutations must fail assertions: skipping termin
 validation, removing the host timeout and removing the guest timeout. These are
 host probe/validator controls,
 not actual guest kernel mutations. Boot preprocessing verifies that the command
-is included in both simulation modes and absent from the physical mode.
+is invoked after services in non-HCI simulation, omitted from HCI startup and
+absent from physical builds.
 
 The canonical `Firmware build and simulation` workflow now includes
 `simulation/renode/lump-probe.robot` for the `simulation` profile, alongside the
@@ -81,6 +85,22 @@ from the prospective inventory.
 New probe, controls, fixture and documentation use BSD-3-Clause. Retained utility,
 boot-script, kernel and dependency notices remain applicable. This is not a
 whole-firmware independence or licence-clearance claim.
+
+## First hosted failure and correction
+
+Source `9f597a047f92d4bafc07f300e04d96c2aa5dba6b` compiled both protected
+profiles and passed their input/link/resource/TI gates in
+[the first matrix](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37751297921).
+Its non-HCI job failed the existing board-isolated userspace milestone before
+the new probe test ran: invoking the probe before `hubprogram serve` allowed its
+missing-device refusal to abort NSH startup. Later tests were not executed under
+exit-on-failure. This is a startup regression, not a successful syscall result.
+
+The corrected startup places diagnostics after normal services and omits automatic
+probe execution from HCI fixtures. The startup control fails against the original
+ordering and passes the correction. Both historical ROMFS baselines were reproduced
+before updating the corrected generated-input hashes. A new clean affected-profile
+matrix is required; host controls alone do not qualify the correction.
 
 ## Remaining boundary
 
