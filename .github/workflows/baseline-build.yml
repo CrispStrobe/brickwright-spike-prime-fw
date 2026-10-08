@@ -188,6 +188,15 @@ jobs:
             --results-dir .local/renode-lump-probe-results --stop-on-error \
             simulation/renode/lump-probe.robot
 
+      - name: Execute active F DATA through actual protected userspace
+        if: matrix.profile == 'simulation'
+        run: |
+          python3 tools/stage_classic_motor_topology.py \
+            --runtime "$RENODE_DIR" --output .local/lump-active-topology
+          PATH="$RENODE_TEST_VENV/bin:$PATH" "$RENODE_DIR/renode-test" \
+            --results-dir .local/renode-lump-active-results --stop-on-error \
+            simulation/renode/lump-active.robot
+
       - name: Execute retained program restarts through the actual ARM service
         if: matrix.profile == 'simulation'
         run: |

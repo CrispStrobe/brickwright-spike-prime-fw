@@ -147,3 +147,6 @@ GUI adoption and physical fidelity remain separate tasks.
 
 New diagnostic components use BSD-3-Clause. Retained firmware/dependency
 attribution and obligations remain; no whole-firmware independence claim follows.
+
+The next [active F experiment](active-session-qualification.md) has separate
+controls and guest gates; its candidate status does not broaden this result.
