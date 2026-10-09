@@ -3,7 +3,8 @@
 
 # Explicit ultrasonic program readers — candidate
 
-This candidate is unqualified source. It is separate from the E/F diagnostic
+This candidate has hosted compiler controls but remains unqualified for merge.
+It is separate from the E/F diagnostic
 and does not establish Code-tab, installed GUI or physical support. Existing
 sensor selectors1–6 keep their fixed C/D/E behavior. The instruction layout and
 sensor callback ABI are unchanged.
@@ -69,7 +70,25 @@ boundaries, native polarity/unknown values, preserved legacy behavior, wrong
 mode/type/length, unchanged error output, repeated caught ESTALE, mixed
 legacy/explicit reads and restart recovery. Five actual C-source mutants must
 fail assertions in the intended new control functions; compilation/setup failure
-is not detection. No host result is claimed until that CI completes.
+is not detection. These controls and all five assertion-detected C-source
+mutants passed hosted
+[CI37903744205](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37903744205)
+on source `0a046f7315c0f1d851ef0307d2f568b9955eaa5d`. The preceding CI failed
+on a misleading-indentation warning in the host fixture reset loop; its fix
+retained compiler warnings and assertions. No compiler ran locally.
+
+The separate `simulation/renode/program-sensors.robot` candidate uses the real
+ARM service mailbox, external UART E/F reports and an exact-ELF read-only queue
+observer. Its native cases cover opposite polarities, unknown wait/cancellation,
+identical-payload replacement rejection and retained START recovery. Embedded
+Python cases cover exact E/F values, unknown, missing DATA, three caught stale
+reads and recovery after release. Uploads occur with external inputs detached;
+fresh attachment follows upload to avoid exhausting the DATA silence interval.
+The report cap is24, execution bound60 guest seconds after startup, and each
+transmission/admission/consumption has a200-ms bound. Only program mailbox
+request fields are written in guest memory. These are proposed assertions,
+not guest results. Wrong-type and additional conditional cases still need
+actual guest coverage before merge.
 
 Before merge, bind changed compiler inputs and licence notices, perform source
 review and clean both protected builds, all applicable guest/air regressions,
