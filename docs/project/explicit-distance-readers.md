@@ -184,12 +184,11 @@ firmware's legacy compiler behavior and refuse unsupported addressed reads.
 Consumer pins and current UI advertisement are unchanged by this firmware lane.
 
 
-## Live Runtime adapter qualification candidate
+## Qualified live Runtime adapter
 
 Branch `qualify/addressed-runtime-capability-20261009` explicitly advances the
 Runtime test input to `413380963e54b64f94f18d26466e1c6e941be8d2`; Infrastructure
-remains `1253d925accca23dfda66d5bca61e78498dcb64f`. This is a new qualification
-candidate, not an already-qualified dependency adoption. Existing clean firmware,
+remains `1253d925accca23dfda66d5bca61e78498dcb64f`. This exact Runtime test input passed the new clean qualification matrix. Existing clean firmware,
 resource, TI-exclusion and all peer gates remain mandatory.
 
 After the real E/F program scenario, the ordinary guest includes the exact
@@ -198,6 +197,14 @@ the ELF-resolved own mailbox/marker and actual userspace image hash, legacy
 absence and foreign-hash refusal. It starts no listener and writes no guest
 memory. A publication interrupted while odd is retried with at most20 finite
 10-ms guest intervals; no incomplete frame or substituted result is accepted.
-Public qualification is pending this candidate's new two-profile matrix and
-Runtime checks. No desktop pin, E/F topology chooser or physical claim follows
+Tested firmware source `c99412b39a97e5ca74c90fdde2ef84d282794fc2` passed
+both profiles in [matrix37934995031](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37934995031).
+The actual snapshot probe reported live1, legacy0 and foreign refusal with zero
+publication retries. All existing compiler/resource/TI, E/F program and seven
+air-peer gates passed. [CI37934996453](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37934996453)
+also passed. The Runtime source passed both automatic full model runs
+[37934453106](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37934453106)
+and [37934812110](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37934812110),
+plus [air lifecycle37934812176](https://github.com/CrispStrobe/renode-spike-prime/actions/runs/37934812176).
+These finite adapter/guest checks do not establish consumer topology support. No desktop pin, E/F topology chooser or physical claim follows
 from the host controls alone.
