@@ -72,6 +72,7 @@ jobs:
           python3 tools/test_firmware_inputs.py
           python3 tools/check_source_origin_review.py --require-clearance
           python3 tools/audit_repository_history.py --output /tmp/firmware-history-review.json --require-clean
+          python3 tools/test_addressed_sensor_marker.py
           python3 tools/test_origin_audit.py
           python3 tools/test_orientation_filter.py
 

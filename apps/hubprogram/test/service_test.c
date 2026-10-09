@@ -81,6 +81,7 @@ static void six_port_wrappers(void) {
   g_program.state=BW_PROGRAM_RUNNING;g_program.owned=0;
   g_program.io.motor=fixture_motor;g_program.io.position=fixture_position;g_program.io.done=fixture_done;
   assert(g_bw_program_storage_abi==1u && g_bw_program_debug.version==1);
+  assert(g_bw_program_addressed_sensor_abi==1u);
   for(unsigned port=0;port<6;port++) {
     assert(bw_program_service_motor(port,300)==(port==3 ? -ENODEV : 0));
     assert(bw_program_service_position(port,90,300)==(port==4 ? -ENOENT : 0));

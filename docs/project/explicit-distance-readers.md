@@ -26,6 +26,47 @@ negative/out-of-range values fail before unsigned conversion, and overflowing
 integer conversion remains an explicit error. Keyword arguments are not added.
 A successful read returns signed millimetres, including-1 for unknown.
 
+## Qualified addressed-reader discovery
+
+A separate read-only four-byte symbol, `g_bw_program_addressed_sensor_abi`,
+contains1 in the own protected userspace ELF. Version1 denotes the additive
+addressed ultrasonic reader interface described above, including native tokens
+and the two-argument embedded-Python API. It does not declare attached devices,
+GUI support, sample age or qualification on every port. Debug version1 and
+`g_bw_program_storage_abi` cannot establish this feature.
+
+`tools/check_addressed_sensor_marker.py nuttx/nuttx_user.elf` requires a unique
+four-byte global read-only symbol aligned inside userspace flash, an ARM32
+little-endian executable, a global OBJECT in an allocated nonwritable section, one matching file-backed
+load mapping without physical aliases and value1. NuttX can merge constants
+into `.text` and mark the load segment RWE; section flags and OBJECT metadata,
+not segment write permission alone, establish this read-only constant.
+It records the exact userspace ELF SHA256. Both protected build profiles run this
+gate; the ordinary E/F program fixture also reads the actual guest marker without
+writing it. Synthetic malformed symbols, ELF headers, mapping overlaps,
+RAM/writable/unbacked placement and unsupported values must be refused.
+The service roots the object with a volatile read so section garbage collection
+cannot silently remove discovery.
+
+Consumers must verify the packaged ELF and bind the discovered address/version
+to that exact image before reading the same value in a live session. An absent
+or unsupported marker provides no addressed capability; keep legacy D readers
+available. Separately require a declared ultrasonic topology; the firmware adapter
+validates the selected port/type before returning a scalar distance. Tested source `6648a21548dcc3c40e000cd13374d113f7d85d3c` passed both clean
+profiles in [matrix37916873239](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37916873239).
+Both actual ELF marker gates and the ordinary live marker/E/F scenario passed.
+[CI37916873278](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37916873278)
+passed seven synthetic marker control groups and nine assertion-detected C
+source mutants, including a corrupted marker. Ordinary/HCI userspace flash was
+598416/598424 bytes against654336; static RAM89376 against98304, TI payload0.
+The ordinary scenario retained18 external reports,205 mailbox requests, six
+native E conditional trials, cancellation/restart and three caught sticky stale
+reads over24680 guest milliseconds. Summaries are source-emitted observations,
+not independent wire reconstruction. The superseded initial matrix was cancelled
+while queued after the merged-text validation correction; it supplies no guest
+evidence. Consumer adoption remains separate. No GUI or package pin changes are
+included here.
+
 ## Session, consumption and lifecycle
 
 The explicit reader uses `/dev/legoportN`, type62/mode0 and the existing
