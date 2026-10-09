@@ -65,3 +65,11 @@ Actual protected userspace consumes external DATA with session identity
     ${pair}=    Execute Command    check_lump_two_port ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
     Log To Console    ${pair}
     Should Contain    ${pair}    LUMP two-port isolation fixture passed:
+
+    # Retain the qualified E-replacement experiment, then reverse fixed roles.
+    Execute Command    portE Detach
+    Execute Command    portF Detach
+    Execute Command    emulation RunFor "5.0"
+    ${reverse}=    Execute Command    check_lump_reverse ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
+    Log To Console    ${reverse}
+    Should Contain    ${reverse}    LUMP reverse two-port isolation fixture passed:
