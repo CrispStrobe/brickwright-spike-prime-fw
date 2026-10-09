@@ -27,6 +27,9 @@ Its ordinary profile passes bounded continued F DATA during E detach/replacement
 exact ordered queue/session observations and a separate DATA-silence control.
 The HCI profile skips that fixture and passes its separate air regressions. This
 extends diagnostic coverage only; the program sensor API is unchanged.
+The reverse role order also passes: E keeps its queued DATA/session while F
+is detached and replaced. This still covers only fixed E/F diagnostics; it
+does not generalize the program sensor API.
 The older capability and build measurements below retain their original scope.
 
 ## Firmware boundaries

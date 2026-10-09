@@ -200,11 +200,12 @@ This still leaves arbitrary A–F combinations, cross-reset identity, concurrent
 program readers, atomic PWM ownership, installed GUI/arena adoption and physical
 behaviour unqualified. No reference image is used or required.
 
-## Reverse-role candidate — 2026-10-09
+## Reverse-role qualification — 2026-10-09
 
 The next candidate preserves the qualified E-replacement scenario above and
 adds the reverse: E survives while F detaches and reconnects. Actual guest
-qualification of this new candidate is pending. It changes the test harness,
+qualification of both role orders now passes at source
+`c790ae28e4e3aeb9737a08cf0b46f5ccb688067c`. It changes the test harness,
 controls and Robot invocation; firmware C, configuration, dependency pins and
 fixed mailbox selectors are unchanged.
 
@@ -240,3 +241,39 @@ compiler/linker/attribution/TI gates and exact-head CI at the new source. Do not
 credit host controls as guest coverage. This still does not cover arbitrary
 A–F pairs, concurrent readers, cross-reset identity, program API/GUI adoption
 or physical behaviour.
+
+### Completed reverse-role evidence
+
+[Matrix 37900518232](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37900518232)
+passes both complete protected profiles at source
+`c790ae28e4e3aeb9737a08cf0b46f5ccb688067c`.
+[Exact-source CI 37900519439](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37900519439)
+passes source-policy and documentation. The ordinary profile runs the retained
+F-only/silence controls and both E/F role orders; HCI deliberately skips those
+fixtures and runs separate air regressions. Dependency pins are unchanged from
+the completed original record above.
+
+The reversed ordinary guest scenario passes 21 requests and 16 external reports,
+including seven continued E DATA reports. F identity progresses from 5 to 6;
+E retains identity 3. F detach invalidation takes 710 simulated milliseconds;
+ordered quiet drains take 220 and 80 milliseconds from last admission. The
+original E-replacement scenario repeats its prior 21/16/7 result and 730-ms
+invalidation with 240/80-ms drains. The separate F silence control again passes
+at 770 ms. These finite observations do not generalize physical timing.
+
+Every required guest, compiler/linker, resource and TI-exclusion gate passes.
+The ordinary/HCI profiles measure 597,980/597,972 bytes of userspace flash,
+both with 89,320 bytes static RAM and zero TI payload bytes. Both probe objects
+are 28,480 bytes with the same SHA256 as the original completed record. These
+are candidate-specific static measurements. Seven peer reports pass with
+common four-image identities and the exact Runtime pin. The HCI diagnostic
+scan has no matching failure patterns and records one abandoned packet: this
+retains abort-and-join, not a flush guarantee.
+
+The source-emitted original/silence/reverse summaries pass a verifier with
+20 corrupt-summary controls. They do not independently reconstruct UART traffic.
+All fifteen pair/thirteen feeder controls, prior eight comparison mutations
+and three new routing mutations pass. Raw logs and integration review remain
+private; no independence claim follows. Arbitrary port pairs, concurrent
+readers, cross-reset identity, program sensor API/GUI adoption and physical
+behaviour remain unqualified.
