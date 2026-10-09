@@ -37,7 +37,10 @@ GUI support, sample age or qualification on every port. Debug version1 and
 
 `tools/check_addressed_sensor_marker.py nuttx/nuttx_user.elf` requires a unique
 four-byte global read-only symbol aligned inside userspace flash, an ARM32
-little-endian executable, one nonwritable file-backed load mapping and value1.
+little-endian executable, a global OBJECT in an allocated nonwritable section, one matching file-backed
+load mapping without physical aliases and value1. NuttX can merge constants
+into `.text` and mark the load segment RWE; section flags and OBJECT metadata,
+not segment write permission alone, establish this read-only constant.
 It records the exact userspace ELF SHA256. Both protected build profiles run this
 gate; the ordinary E/F program fixture also reads the actual guest marker without
 writing it. Synthetic malformed symbols, ELF headers, mapping overlaps,
