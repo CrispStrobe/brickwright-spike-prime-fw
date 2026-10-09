@@ -82,13 +82,22 @@ ARM service mailbox, external UART E/F reports and an exact-ELF read-only queue
 observer. Its native cases cover opposite polarities, unknown wait/cancellation,
 identical-payload replacement rejection and retained START recovery. Embedded
 Python cases cover exact E/F values, unknown, missing DATA, three caught stale
-reads and recovery after release. Uploads occur with external inputs detached;
+reads, wrong-type refusal and recovery after release. Six conditional trials
+cover below/above, equality boundaries and unknown values; each checks the
+actual branch PC and requires consumption of its admitted DATA. Uploads occur with external inputs detached;
 fresh attachment follows upload to avoid exhausting the DATA silence interval.
 The report cap is24, execution bound60 guest seconds after startup, and each
 transmission/admission/consumption has a200-ms bound. Only program mailbox
 request fields are written in guest memory. These are proposed assertions,
-not guest results. Wrong-type and additional conditional cases still need
-actual guest coverage before merge.
+not guest results. The first actual fixture attempt in
+[matrix37906760086](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37906760086)
+failed before sensor completion with a monitor paused-state binding error.
+Earlier ordinary guest tests passed. The revised fixture binds observer
+callbacks outside its comprehension, captures the hub explicitly and prints
+tracebacks on failure. This is a candidate correction, not a confirmed root
+cause or guest pass; retry qualification remains required. Three additional
+host C-source mutants target comparison polarity, unknown rejection and
+conditional direction. Their assertion detection remains pending hosted CI.
 
 Before merge, bind changed compiler inputs and licence notices, perform source
 review and clean both protected builds, all applicable guest/air regressions,

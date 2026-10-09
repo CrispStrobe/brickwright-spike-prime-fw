@@ -43,44 +43,56 @@ raise OSError(116)
 
 
 def mc_check_program_sensors(base, layout_path, kernel_path, queue_symbol):
+    try:
+        check_program_sensor_inputs(base, layout_path, kernel_path, queue_symbol)
+    except Exception:
+        import traceback
+        print(traceback.format_exc())
+        raise
+
+
+def check_program_sensor_inputs(base, layout_path, kernel_path, queue_symbol):
     import hashlib
     import json
     from Antmicro.Renode.Core import EmulationManager
     from Antmicro.Renode.Time import TimeInterval
     from System import UInt64
-    machine = monitor.Machine
+    hub_machine = monitor.Machine
     started = time.time()
     elapsed = [0]
     reports = [0]
-    if not machine.IsPaused:
+    if not hub_machine.IsPaused:
         raise AssertionError('Program sensor fixture requires paused guest')
     with open(str(kernel_path).lstrip('@'), 'rb') as source:
         digest = hashlib.sha256(source.read()).hexdigest()
     with open(str(layout_path).lstrip('@')) as source:
         layout = json.load(source)
+    # Bind monitor objects outside the comprehension, as in the qualified
+    # two-port fixture. Avoid relying on nested monitor-scope name resolution.
+    read8 = lambda address, hub=hub_machine: int(hub.SystemBus.ReadByte(UInt64(address)))
+    paused = lambda hub=hub_machine: hub.IsPaused
     observers = {name: LumpQueueObserver(layout, digest, int(str(queue_symbol), 0),
-        lambda address: int(machine.SystemBus.ReadByte(UInt64(address))),
-        lambda: machine.IsPaused, index) for name, index in (('E', 4), ('F', 5))}
+                 read8, paused, index) for name, index in (('E', 4), ('F', 5))}
     ports = {}
     for name in ('E', 'F'):
-        matches = [str(path) for path in machine.GetAllNames()
+        matches = [str(path) for path in hub_machine.GetAllNames()
                    if str(path).endswith('.port' + name)]
         if len(matches) != 1:
             raise AssertionError('Missing or ambiguous external port ' + name)
-        ports[name] = machine[matches[0]]
+        ports[name] = hub_machine[matches[0]]
 
     def advance():
         if elapsed[0] + 20 > 60000 or time.time() - started > 575:
             raise AssertionError('Program sensor fixture exceeded bounded execution')
         EmulationManager.Instance.CurrentEmulation.RunFor(TimeInterval.FromMilliseconds(UInt64(20)))
         elapsed[0] += 20
-        if not machine.IsPaused:
+        if not hub_machine.IsPaused:
             raise AssertionError('RunFor did not pause sensor fixture')
         for port in ports.values():
             if int(port.BridgeDrive) != 0:
                 raise AssertionError('Sensor program applied motor drive')
 
-    client = ProgramWorkflow(machine, base, advance)
+    client = ProgramWorkflow(hub_machine, base, advance)
     client.wait(lambda state: True, description='program worker publication')
 
     def wait(predicate, limit_ms, description):
@@ -99,14 +111,15 @@ def mc_check_program_sensors(base, layout_path, kernel_path, queue_symbol):
             raise AssertionError('Sensor program lost external DATA')
         return state
 
-    def attach(name):
+    def attach(name, device='ultrasonic'):
         port = ports[name]
         if str(port.State) != 'Detached':
             raise AssertionError('Attachment requires declared detached port')
-        port.Attach('ultrasonic')
+        port.Attach(device)
         port.SetDataReportBudget(0)
         wait(lambda: str(port.State) == 'Streaming', 5000, name + ' synchronization')
-        if int(port.Device.TypeId) != 62 or int(port.SelectedMode) != 0:
+        expected_type = 62 if device == 'ultrasonic' else 61
+        if int(port.Device.TypeId) != expected_type or int(port.SelectedMode) != 0:
             raise AssertionError('Unexpected ultrasonic identity/mode')
         def active():
             state = queue(name)
@@ -155,7 +168,7 @@ def mc_check_program_sensors(base, layout_path, kernel_path, queue_symbol):
             raise AssertionError('Wrong program error: %r' % result)
         return result
 
-    def prepare(ident, payload, python=False, names=('E', 'F')):
+    def prepare(ident, payload, python=False, names=('E', 'F'), device='ultrasonic'):
         # Upload can take longer than a DATA-silent attachment stays active.
         # Reset only external inputs while terminal; attach after upload so
         # each trial starts with explicitly empty, freshly synchronized queues.
@@ -163,7 +176,7 @@ def mc_check_program_sensors(base, layout_path, kernel_path, queue_symbol):
             if str(ports[name].State) != 'Detached':
                 detach(name)
         client.upload(ident, payload, python=python)
-        return {name: attach(name) for name in names}
+        return {name: attach(name, device) for name in names}
 
     # Opposite polarity and independent ports; each consumes its exact report.
     ident = 0x3501
@@ -207,6 +220,44 @@ for port in (b.E,b.F):
     unchanged_empty_sessions()
     client.start(ident, allow_unwind=True); terminal(ident)
     unchanged_empty_sessions()
+    # Reject a synchronized color device through the actual Python callback.
+    ident = 0x3508
+    wrong_type = b"""import brickwright as b
+try:
+    b.sensor(1,b.F)
+except OSError as e:
+    if e.args[0]!=19: raise
+else:
+    raise OSError(74)
+"""
+    color_session = prepare(ident, payload_bytes(wrong_type), python=True,
+                            names=('F',), device='color')['F']
+    client.start(ident, allow_unwind=True); terminal(ident)
+    color = queue('F')
+    if (color is None or not color['active'] or color['count'] or
+            color['session'] != color_session or str(ports['F'].State) != 'Streaming' or
+            int(ports['F'].Device.TypeId) != 61):
+        raise AssertionError('Wrong-type trial lost its synchronized color identity')
+    # Each true/false conditional chooses a different finite WAIT witness.
+    # Known/unknown DATA must be consumed, so missing DATA cannot masquerade as
+    # the false comparison. The target skips the 500-ms false-path WAIT.
+    conditional_trials = ((0x121, 1000, 999, True),
+                          (0x121, 1000, 1000, False),
+                          (0x122, 1000, 1001, True),
+                          (0x122, 1000, 1000, False),
+                          (0x121, 65535, 65535, False),
+                          (0x122, 0, 65535, False))
+    for trial, (selector, threshold, distance, takes_jump) in enumerate(conditional_trials):
+        ident = 0x3520 + trial
+        prepare(ident, native_instructions([(5, selector, threshold, 3),
+                (2, 500, 0, 0), (4, 4, 0, 0), (2, 500, 0, 0), (0, 0, 0, 0)]),
+                names=('E',))
+        emit('E', distance); client.start(ident); consumed('E')
+        witness = client.wait(lambda x: x['id'] == ident and x['state'] == 2 and
+                              x['pc'] in (2, 4), 200, 'conditional WAIT witness')
+        if witness['pc'] != (4 if takes_jump else 2):
+            raise AssertionError('Conditional selected the wrong branch: %r' % witness)
+        client.exchange(4, ident); terminal(ident, 4)
     # A fresh native reader binds F; an identical replacement payload is stale.
     ident = 0x3504
     prepare(ident, native_instructions([(3, 0x129, 100, 0), (0, 0, 0, 0)]), names=('F',))
@@ -237,4 +288,6 @@ for port in (b.E,b.F):
         firstE=first_e, firstF=first_f, nativeF=bound_f, replacedF=replaced_f,
         pythonF=python_bound, pythonReplacementF=python_replacement,
         externalReports=reports[0], requests=client.submissions, guestMs=elapsed[0],
-        nativeCancellation=True, nativeRetainedRestart=True, caughtStaleReads=3))
+        nativeCancellation=True, nativeRetainedRestart=True, caughtStaleReads=3,
+        synchronizedNoData=True, wrongTypeRejected=True,
+        nativeConditionalTrials=len(conditional_trials)))
