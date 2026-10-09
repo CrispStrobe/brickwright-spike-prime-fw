@@ -15,7 +15,8 @@
 #undef ioctl
 
 static struct lump_data_frame_s frames[6][32];
-static unsigned head[6], tail[6], polls, writes, brakes, closes;
+static unsigned head[6], tail[6], polls, writes, brakes, closes, session_polls;
+static uint64_t sessions[6];
 static int fail_op, fail_errno, open_error, synced=1, type_id=48;
 static int port_type[6], unavailable[6];
 static unsigned port_writes[6], port_brakes[6], selections[6];
@@ -39,6 +40,13 @@ int fixture_ioctl(int fd,unsigned long op,...) {
     info->flags=synced ? LUMP_FLAG_SYNCED : 0;return 0;
   }
   if(op==LEGOPORT_LUMP_SELECT) {selections[port]++;return 0;}
+  if(op==LEGOPORT_LUMP_POLL_DATA_SESSION) {
+    struct lump_data_session_frame_s *sample=(void *)arg;
+    session_polls++;
+    if(head[port]==tail[port]) {errno=EAGAIN;return -1;}
+    memset(sample,0,sizeof(*sample));sample->session=sessions[port];
+    sample->frame=frames[port][head[port]++];return 0;
+  }
   if(op==LEGOPORT_LUMP_POLL_DATA) {
     polls++;
     if(head[port]==tail[port]) {errno=EAGAIN;return -1;}
@@ -57,7 +65,8 @@ static void queue(unsigned port,int mode,int32_t degrees) {
 static struct bw_program_io reset(void) {
   struct bw_program_io io;
   bw_device_release();memset(head,0,sizeof(head));memset(tail,0,sizeof(tail));
-  polls=writes=brakes=closes=0;fail_op=fail_errno=open_error=0;synced=1;type_id=48;
+  polls=writes=brakes=closes=session_polls=0;
+  for(unsigned i=0;i<6;i++)sessions[i]=1;fail_op=fail_errno=open_error=0;synced=1;type_id=48;
   memset(port_type,0,sizeof(port_type));memset(unavailable,0,sizeof(unavailable));
   memset(port_writes,0,sizeof(port_writes));memset(port_brakes,0,sizeof(port_brakes));
   memset(selections,0,sizeof(selections));
@@ -187,4 +196,55 @@ static void six_port_tests(void) {
   assert(io.done(NULL,5)==-ENODEV && io.brake(NULL,5)==-ENODEV);
   bw_device_release();assert(selections[5]==selected && port_writes[5]==written_before && port_brakes[5]==braked);
 }
-int main(void) {struct bw_program_io io;bw_device_init(&io);motor_tests();device_tests();sensor_tests();six_port_tests();puts("hubprogram motor/device tests passed");return 0;}
+static void distance_frame(unsigned port,int mode,unsigned raw,unsigned len) {
+  queue(port,mode,(int32_t)raw);frames[port][tail[port]-1].len=(uint8_t)len;
+}
+static void explicit_sensor_tests(void) {
+  struct bw_program_io io=reset();int32_t value;unsigned before;
+  type_id=62;
+  for(unsigned port=0;port<6;port++) {
+    distance_frame(port,0,300+port,2);value=-999;
+    assert(!io.sensor(NULL,0x101+(port<<3),&value) && value==(int32_t)(300+port));
+    value=-999;assert(io.sensor(NULL,0x102+(port<<3),&value)==-EAGAIN && value==-999);
+  }
+  assert(session_polls==12 && !writes && !brakes);
+  const unsigned invalid[]={0,7,0x100,0x103,0x107,0x128,0x12b,0x130,0x141,UINT32_MAX};
+  before=session_polls;
+  for(unsigned i=0;i<sizeof(invalid)/sizeof(invalid[0]);i++) {
+    value=-999;assert(io.sensor(NULL,invalid[i],&value)==-EINVAL && value==-999);
+  }
+  assert(io.sensor(NULL,0x101,NULL)==-EINVAL && session_polls==before);
+  /* Explicit reads never substitute a recent legacy cached value. */
+  distance_frame(3,0,444,2);assert(!io.sensor(NULL,1,&value) && value==444);
+  value=-999;assert(io.sensor(NULL,0x119,&value)==-EAGAIN && value==-999);
+  distance_frame(3,0,555,2);assert(!io.sensor(NULL,0x119,&value) && value==555);
+  /* Replacement with identical payload still latches ESTALE, even if caught. */
+  sessions[3]=2;distance_frame(3,0,555,2);value=-999;
+  assert(io.sensor(NULL,0x119,&value)==-ESTALE && value==-999);
+  before=session_polls;distance_frame(3,0,666,2);
+  assert(io.sensor(NULL,0x11a,&value)==-ESTALE && value==-999 && session_polls==before);
+  assert(!io.sensor(NULL,1,&value) && value==666);value=-999;
+  assert(io.sensor(NULL,0x119,&value)==-ESTALE && value==-999);
+  bw_device_release();distance_frame(3,0,777,2);
+  assert(!io.sensor(NULL,0x119,&value) && value==777);
+  io=reset();type_id=62;
+  /* Failed first frame does not bind a session; successful unknown does. */
+  sessions[4]=0;distance_frame(4,0,100,2);value=-999;
+  assert(io.sensor(NULL,0x121,&value)==-EPROTO && value==-999);
+  sessions[4]=7;distance_frame(4,1,100,2);
+  assert(io.sensor(NULL,0x121,&value)==-EPROTO && value==-999);
+  distance_frame(4,0,100,1);assert(io.sensor(NULL,0x121,&value)==-EPROTO && value==-999);
+  distance_frame(4,0,100,LUMP_MAX_PAYLOAD+1);assert(io.sensor(NULL,0x121,&value)==-EPROTO && value==-999);
+  sessions[4]=8;distance_frame(4,0,65535,2);assert(!io.sensor(NULL,0x121,&value) && value==-1);
+  sessions[4]=9;distance_frame(4,1,100,1);value=-999;
+  assert(io.sensor(NULL,0x121,&value)==-ESTALE && value==-999);
+  /* Wrong type and syscall failures preserve output and cause no PWM. */
+  type_id=48;value=-999;before=session_polls;
+  assert(io.sensor(NULL,0x129,&value)==-ENODEV && value==-999 && session_polls==before);
+  type_id=62;synced=0;assert(io.sensor(NULL,0x129,&value)==-EAGAIN && value==-999);synced=1;
+  fail_op=LEGOPORT_LUMP_POLL_DATA_SESSION;fail_errno=EIO;
+  assert(io.sensor(NULL,0x129,&value)==-EIO && value==-999);fail_op=0;
+  assert(!writes && !brakes);
+  bw_device_release();
+}
+int main(void) {struct bw_program_io io;bw_device_init(&io);explicit_sensor_tests();motor_tests();device_tests();sensor_tests();six_port_tests();puts("hubprogram motor/device tests passed");return 0;}

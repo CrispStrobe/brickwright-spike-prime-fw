@@ -48,13 +48,15 @@
     },
     {
       "path": "genhdr/qstrdefs.generated.h",
-      "sha256": "e350c7a036266ddbe678d202b82b44d632fbb10f250e7a3b19fc718a8b3fa911",
+      "sha256": "d115c7ead0c97a8cc306f3359cadc9820b2612054b5a0f3532189e964b4a9f6a",
       "generation_inputs": [
         "apps/hubprogram/micropython/mpconfigport.h",
-        "apps/hubprogram/micropython/embed.mk"
+        "apps/hubprogram/micropython/embed.mk",
+        "tools/update_micropython_port_qstrs.py"
       ],
       "kind": "generated embed/configuration output",
-      "licence": "MIT"
+      "licence": "MIT",
+      "extension_note": "Retained MIT table extended with four C-F port constants by BSD-3-Clause updater; original rows/static pool unchanged and QDEF1 remains sorted."
     },
     {
       "path": "genhdr/root_pointers.h",
@@ -1687,7 +1689,8 @@
     "licenses/Brickwright-BSD-3-Clause.txt"
   ],
   "modifications": [
-    "py/smallint.h: remove cited Stack Overflow formula; include BSD-3-Clause integer-width component previously implemented from a mathematical contract."
+    "py/smallint.h: remove cited Stack Overflow formula; include BSD-3-Clause integer-width component previously implemented from a mathematical contract.",
+    "genhdr/qstrdefs.generated.h: reproducible four-constant C-F port extension via tools/update_micropython_port_qstrs.py, preserving original generated rows/static ABI pool and retained MIT grant."
   ],
   "scope": "Vendored source/configuration inventory, not a whole-image linker audit.",
   "notice_sha256": {

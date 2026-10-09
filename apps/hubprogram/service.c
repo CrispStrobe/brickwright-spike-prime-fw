@@ -186,6 +186,8 @@ int bw_program_service_done(unsigned port) {
 }
 int bw_program_service_sensor(unsigned predicate,int32_t *value) {
   int rc;
-  pthread_mutex_lock(&g_lock);rc=g_program.io.sensor(NULL,predicate,value);
+  pthread_mutex_lock(&g_lock);
+  if(g_program.state!=BW_PROGRAM_RUNNING || !value || !g_program.io.sensor)rc=-EINVAL;
+  else rc=g_program.io.sensor(NULL,predicate,value);
   pthread_mutex_unlock(&g_lock);return rc;
 }

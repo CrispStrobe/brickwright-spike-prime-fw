@@ -3,6 +3,7 @@
  */
 #include "device.h"
 #include "motor.h"
+#include "sensor_selector.h"
 #include <arch/board/board_legoport.h>
 #include <arch/board/board_lump.h>
 #include <errno.h>
@@ -22,6 +23,10 @@ struct port_state {
 };
 static struct port_state g_ports[BW_PROGRAM_PORT_COUNT];
 static uint64_t g_now;
+/* Explicit readers bind a synchronization session independently of cached
+ * legacy samples/control state. Only release/init clears a stale binding. */
+static uint64_t g_sensor_sessions[BW_PROGRAM_PORT_COUNT];
+static unsigned char g_sensor_stale[BW_PROGRAM_PORT_COUNT];
 static int call(int fd,int op,unsigned long arg) { return ioctl(fd,op,arg)<0 ? -errno : 0; }
 static int is_motor(unsigned type) {
   return type==48 || type==49 || type==46 || type==65;
@@ -134,8 +139,29 @@ static int done(void *ctx,unsigned port) {
   if(p->braking)return p->speed>=-20 && p->speed<=20;
   return !p->control.active;
 }
+static int explicit_distance(unsigned port,int32_t *value) {
+  struct lump_data_session_frame_s sample;
+  uint16_t raw; int rc;
+  if(g_sensor_stale[port])return -ESTALE;
+  rc=open_port(port,62,0);if(rc<0)return rc;
+  memset(&sample,0,sizeof(sample));
+  rc=call(g_ports[port].fd,LEGOPORT_LUMP_POLL_DATA_SESSION,(unsigned long)&sample);
+  if(rc<0)return rc;
+  if(!sample.session)return -EPROTO;
+  if(g_sensor_sessions[port] && sample.session!=g_sensor_sessions[port]) {
+    g_sensor_stale[port]=1;return -ESTALE;
+  }
+  if(sample.frame.mode!=0 || sample.frame.len<2 || sample.frame.len>LUMP_MAX_PAYLOAD)return -EPROTO;
+  raw=(uint16_t)sample.frame.data[0]|((uint16_t)sample.frame.data[1]<<8);
+  g_sensor_sessions[port]=sample.session;
+  *value=raw==UINT16_MAX ? -1 : (int32_t)raw;
+  return 0;
+}
+
 static int sensor(void *ctx,unsigned predicate,int32_t *value) {
   unsigned port,type; int mode,rc; (void)ctx;
+  if(!value || !bw_sensor_predicate(predicate))return -EINVAL;
+  if(predicate>=0x100)return explicit_distance((predicate-0x100)>>3,value);
   if(predicate==1 || predicate==2) {port=3;type=62;mode=0;}
   else if(predicate==3) {port=4;type=63;mode=1;}
   else if(predicate>=4 && predicate<=6) {port=2;type=61;mode=predicate==4 ? 0 : 1;}
@@ -146,6 +172,8 @@ static int sensor(void *ctx,unsigned predicate,int32_t *value) {
 }
 void bw_device_init(struct bw_program_io *io) {
   unsigned i; g_now=0; memset(g_ports,0,sizeof(g_ports));
+  memset(g_sensor_sessions,0,sizeof(g_sensor_sessions));
+  memset(g_sensor_stale,0,sizeof(g_sensor_stale));
   for(i=0;i<BW_PROGRAM_PORT_COUNT;i++) {g_ports[i].fd=-1;g_ports[i].mode=-1;}
   *io=(struct bw_program_io){speed,position,done,brake,sensor,NULL};
 }
@@ -173,6 +201,8 @@ int bw_device_tick(uint64_t now) {
 }
 void bw_device_release(void) {
   unsigned i;
+  memset(g_sensor_sessions,0,sizeof(g_sensor_sessions));
+  memset(g_sensor_stale,0,sizeof(g_sensor_stale));
   for(i=0;i<BW_PROGRAM_PORT_COUNT;i++) {
     if(g_ports[i].fd>=0) {
       if(is_motor(g_ports[i].type))(void)brake(NULL,i);

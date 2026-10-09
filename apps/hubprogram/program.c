@@ -2,11 +2,13 @@
  * Copyright (c) 2026 Brickwright contributors
  */
 #include "program.h"
+#include "sensor_selector.h"
 #include <errno.h>
 #include <string.h>
 static int between(int32_t v, int32_t low, int32_t high) { return v >= low && v <= high; }
 static int predicate(int32_t selector, int32_t value)
 {
+  selector = (int32_t)bw_sensor_predicate((unsigned)selector);
   if (selector == 1 || selector == 2) return between(value, 0, 65535);
   if (selector == 3) return between(value, 0, 1);
   if (selector == 4) return between(value, 0, 255);
@@ -90,6 +92,7 @@ static int condition(struct bw_program *p, int selector, int threshold)
   int rc=p->io.sensor(p->io.context,(unsigned)selector,&value);
   if (rc==-EAGAIN) return 0;
   if (rc<0) return rc;
+  selector=(int)bw_sensor_predicate((unsigned)selector);
   if ((selector==1 || selector==2) && value<0) return 0;
   if (selector==1 || selector==5) return value<threshold;
   if (selector==2 || selector==6) return value>threshold;
