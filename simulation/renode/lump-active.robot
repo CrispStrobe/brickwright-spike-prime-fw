@@ -57,7 +57,11 @@ Actual protected userspace consumes external DATA with session identity
     # Keep the original F-only fixture above, then reset its external inputs.
     Execute Command    portF Detach
     Execute Command    emulation RunFor "5.0"
+    Execute Command    include @${CURDIR}/../../tools/lump_data_feeder.py
     Execute Command    include @${CURDIR}/../../tools/lump_two_port.py
+    ${silence}=    Execute Command    check_lump_silence ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
+    Log To Console    ${silence}
+    Should Contain    ${silence}    LUMP F DATA silence control passed:
     ${pair}=    Execute Command    check_lump_two_port ${mailbox.strip()} ${requests.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
     Log To Console    ${pair}
     Should Contain    ${pair}    LUMP two-port isolation fixture passed:

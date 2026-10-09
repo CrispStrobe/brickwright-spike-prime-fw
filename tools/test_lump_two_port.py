@@ -52,11 +52,12 @@ class DualWorker:
 class Contract(unittest.TestCase):
     def test_interleaving_and_equal_cross_port_identities(self):
         w=DualWorker();result=w.fixture().run()
-        self.assertEqual(result,{'ports':['E','F'],'requests':12,'externalReports':9,
+        self.assertEqual(result,{'ports':['E','F'],'requests':16,'externalReports':11,'keepaliveReports':2,
+            'quietDrainMs':[50,30],
             'firstE':1,'replacementE':2,'stableF':1,'detachWaitMs':0})
-        self.assertEqual([v for a,v in w.writes if a==BASE+12],[0,8,8,0,9,8,8,0,8,0,8,0])
-        self.assertEqual([v for a,v in w.writes if a==BASE+8],list(range(1,13)))
-        self.assertEqual(len(w.writes),48)
+        self.assertEqual([v for a,v in w.writes if a==BASE+12],[0,8,8,0,9,8,8,0,0,0,0,0,8,0,8,0])
+        self.assertEqual([v for a,v in w.writes if a==BASE+8],list(range(1,17)))
+        self.assertEqual(len(w.writes),64)
     def test_cross_port_faults(self):
         for fault in ('swapped-replies','cross-consumption','invalidate-other','reuse-replacement'):
             with self.subTest(fault=fault),self.assertRaises(AssertionError):DualWorker(fault).fixture().run()
@@ -90,6 +91,58 @@ class Contract(unittest.TestCase):
         with self.assertRaises(ValueError):pair.TwoPortFixture(BASE,OUT,w.read,w.write,lambda:True,w.advance,
             {'E':p,'F':p},{'E':o,'F':o})
         self.assertEqual(w.writes,[])
+    def test_silence_control_needs_guest_invalidation_without_e_activity(self):
+        w=DualWorker();f=w.fixture();port=f.fixtures['F'];original=port.observe
+        def observe():
+            state=original()
+            if f.elapsed_ms>=700:
+                w.workers['F'].queue=[]
+                state.update(active=False,count=0,frame=None)
+            return state
+        port.observe=observe
+        result=f.run_silence()
+        self.assertEqual(result,{'silentSession':1,'invalidationMs':680,
+            'externalReports':1,'requests':1,'modelTimeouts':0,
+            'modelStateAtInvalidation':'Streaming','eStateAtInvalidation':'Detached'})
+        self.assertEqual(w.workers['E'].inputs,[])
+        w=DualWorker();f=w.fixture()
+        with self.assertRaisesRegex(AssertionError,'silence invalidation'):f.run_silence()
+    def test_drain_rejects_reordered_duplicate_and_missing_reports(self):
+        for fault in ('reordered','duplicate','missing'):
+            w=DualWorker();f=w.fixture();port=f.fixtures['F'];port.attach();port.emit(5555)
+            feed=pair.BoundedDataFeeder(port,1,[5555],9001,simulated_time=lambda:f.elapsed_ms)
+            feed.advance(10);distances=feed.settle()
+            q=w.workers['F'].queue
+            if fault=='reordered':q.reverse()
+            elif fault=='duplicate':q[1]=q[0]
+            else:q.pop()
+            with self.subTest(fault=fault),self.assertRaises(AssertionError):f.drain(feed,distances)
+
+    def test_slow_e_replacement_uses_multiple_bounded_f_reports(self):
+        w=DualWorker();original=w.workers['E'].port.Attach;calls=[0];ready=[None]
+        original_advance=w.advance
+        f=w.fixture()
+        def attach(name):
+            original(name);calls[0]+=1
+            if calls[0]==2:
+                w.workers['E'].port.State='Attached';ready[0]=f.elapsed_ms+2000
+        def advance(ms):
+            original_advance(ms)
+            if ready[0] is not None and f.elapsed_ms+ms>=ready[0]:w.workers['E'].port.State='Streaming'
+        w.workers['E'].port.Attach=attach
+        # The fixture already holds the original bound method: wrap both shared
+        # clock callbacks so every step still advances its common time once.
+        for fixture in f.fixtures.values():
+            def step(ms):
+                advance(ms);f.elapsed_ms+=ms
+            fixture.advance=step
+        result=f.run()
+        self.assertGreaterEqual(result['keepaliveReports'],11)
+        self.assertLessEqual(result['keepaliveReports'],24)
+        self.assertEqual(result['requests'],14+result['keepaliveReports'])
+        self.assertEqual(result['externalReports'],9+result['keepaliveReports'])
+        self.assertEqual(result['stableF'],1)
+
     def test_comparison_mutants_are_assertion_detected(self):
         source=Path(pair.__file__).read_text()
         variants={
