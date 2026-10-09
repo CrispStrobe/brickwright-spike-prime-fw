@@ -199,3 +199,44 @@ use BSD-3-Clause; existing firmware/model attribution and licences remain.
 This still leaves arbitrary A–F combinations, cross-reset identity, concurrent
 program readers, atomic PWM ownership, installed GUI/arena adoption and physical
 behaviour unqualified. No reference image is used or required.
+
+## Reverse-role candidate — 2026-10-09
+
+The next candidate preserves the qualified E-replacement scenario above and
+adds the reverse: E survives while F detaches and reconnects. Actual guest
+qualification of this new candidate is pending. It changes the test harness,
+controls and Robot invocation; firmware C, configuration, dependency pins and
+fixed mailbox selectors are unchanged.
+
+`TwoPortFixture.run(survivor='E')` attaches E then F and performs the same bounded
+external sequence with roles reversed. F polls use existing selectors 0/7;
+E polls use 8/9. F's refused and empty polls must preserve E's original
+payload/count/session. F detach must invalidate its admitted report while
+continued E DATA is admitted without drops. Drain E's original and appended
+reports in exact order/session to empty. F replacement identity must increase
+within F while E retains its identity; after every second-window E read, F's
+replacement payload/session must remain pending. Final correlated polls and
+unchanged empty sentinels must pass on both ports.
+
+The same shared simulated clock, twelve-report cap, admission comparisons,
+400-ms quiet-drain bound and paused four-word request boundary apply. The
+original default result schema is unchanged; the reverse summary uses
+`firstF`, `replacementF` and `stableE`. Robot explicitly detaches both models
+and advances five simulated seconds after the original scenario before
+constructing the reverse fixture; it does not overwrite guest state.
+
+Fifteen pair host controls and thirteen feeder controls pass. Mirrored
+adversaries cover swapped replies, cross-consumption, survivor invalidation,
+reused replacement identity and slow replacement. Three additional mutations
+of survivor/feeder/drain routing must fail assertions; a delayed E drain checks
+that the E clock path enforces the quiet bound. One first routing mutation
+control escaped a fast-only witness; adding the delayed-drain adversary exposed
+it. That initial control failure is retained privately. The prior eight
+comparison mutations remain required; setup exceptions do not count.
+
+Acceptance requires fresh ordinary ARM guest execution of both role orders,
+plus the complete two-profile matrix, retained guest/air checks, resource,
+compiler/linker/attribution/TI gates and exact-head CI at the new source. Do not
+credit host controls as guest coverage. This still does not cover arbitrary
+A–F pairs, concurrent readers, cross-reset identity, program API/GUI adoption
+or physical behaviour.

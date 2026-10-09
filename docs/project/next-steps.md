@@ -24,8 +24,9 @@ at source `e6e79a801b94116f775ede21b2b1cf18bfda1bd4` in
 [matrix 37890739377](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37890739377).
 The ordinary profile runs its continued-DATA and separate silence controls;
 the HCI profile runs separate air regressions. This closes the finite diagnostic
-slice. L02 still needs other port pairs, symmetric replacement, concurrent
-readers and program/API integration; do not repeat the completed E/F scenario
+slice. The reverse-role replacement candidate now has host controls and a pending
+guest fixture; refresh its qualification before repeating it. L02 still needs
+other port pairs, concurrent readers and program/API integration; do not repeat the completed E/F scenario
 or describe arbitrary A–F coverage.
 
 The separate [HCI lifecycle qualification](hci-lifecycle-qualification.md) records

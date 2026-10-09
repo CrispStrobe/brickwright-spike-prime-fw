@@ -57,8 +57,9 @@ class TwoPortFixture(object):
         if actual!=[{'result':-1,'errno':11,'data':b'\xa5'*48}]:
             raise AssertionError(name+' empty poll changed output or returned DATA')
 
-    def sustained_window(self, session, seed, first_distance, operation):
-        e,f=self.fixtures['E'],self.fixtures['F']
+    def sustained_window(self, session, seed, first_distance, operation, survivor='F'):
+        replaced='E' if survivor=='F' else 'F'
+        e,f=self.fixtures[replaced],self.fixtures[survivor]
         feeder=BoundedDataFeeder(f,session,seed,first_distance,simulated_time=lambda:self.elapsed_ms)
         original=e.advance
         e.advance=feeder.advance
@@ -71,16 +72,17 @@ class TwoPortFixture(object):
         self.quiet_drains.append(feeder)
         return feeder,distances
 
-    def drain(self, feeder, distances, e_pending=None):
-        f=self.fixtures['F'];original=f.advance
+    def drain(self, feeder, distances, e_pending=None, survivor='F'):
+        replaced='E' if survivor=='F' else 'F'
+        f=self.fixtures[survivor];original=f.advance
         f.advance=feeder.drain_step
         try:
             for index,distance in enumerate(distances):
-                if self.poll('F',distance)!=feeder.session:
-                    raise AssertionError('Continued DATA drain changed F identity')
+                if self.poll(survivor,distance)!=feeder.session:
+                    raise AssertionError('Continued DATA drain changed '+survivor+' identity')
                 f.wait(lambda:feeder.check(distances[index+1:]),200,'ordered continued DATA drain')
-                if e_pending is not None:self.pending('E',e_pending[0],e_pending[1],'after-F-keepalive-drain')
-            self.empty('F')
+                if e_pending is not None:self.pending(replaced,e_pending[0],e_pending[1],'after-'+survivor+'-keepalive-drain')
+            self.empty(survivor)
             feeder.drain_ms=feeder.now()-feeder.last_admission_ms
         finally:
             f.advance=original
@@ -106,50 +108,52 @@ class TwoPortFixture(object):
             'externalReports':1,'requests':self.requests,'modelTimeouts':timeouts,
             'modelStateAtInvalidation':'Streaming','eStateAtInvalidation':'Detached'}
 
-    def run(self):
-        e,f=self.fixtures['E'],self.fixtures['F']
+    def run(self, survivor='F'):
+        if survivor not in ('E','F'):raise ValueError('Only fixed E/F roles permitted')
+        replaced='E' if survivor=='F' else 'F'
+        e,f=self.fixtures[replaced],self.fixtures[survivor]
         self.keepalive_reports=0;self.quiet_drains=[]
         # Attach sequentially; both then remain active during the interleaving.
         f.attach();e.attach()
         sf=f.emit(1111)['session'];se=e.emit(2222)['session']
-        if self.poll('F',1111)!=sf:raise AssertionError('F admitted identity mismatch')
-        self.pending('E',2222,se,'after-F1111-poll')
-        if self.poll('E',2222)!=se:raise AssertionError('E admitted identity mismatch')
+        if self.poll(survivor,1111)!=sf:raise AssertionError(survivor+' admitted identity mismatch')
+        self.pending(replaced,2222,se,'after-'+survivor+'1111-poll')
+        if self.poll(replaced,2222)!=se:raise AssertionError(replaced+' admitted identity mismatch')
         f.emit(3333);e.emit(4444)
-        if self.poll('E',4444)!=se:raise AssertionError('E live identity changed')
-        self.pending('F',3333,sf,'after-E4444-poll')
-        if self.poll('F',3333)!=sf:raise AssertionError('F live identity changed')
+        if self.poll(replaced,4444)!=se:raise AssertionError(replaced+' live identity changed')
+        self.pending(survivor,3333,sf,'after-'+replaced+'4444-poll')
+        if self.poll(survivor,3333)!=sf:raise AssertionError(survivor+' live identity changed')
         f.emit(5555);e.emit(6666)
-        if self.poll('E',6666,invalid=True)!=se:raise AssertionError('E refusal batch identity changed')
-        self.pending('F',5555,sf,'after-E-invalid-batch')
-        self.empty('E');self.pending('F',5555,sf,'after-E-empty-before-detach')
+        if self.poll(replaced,6666,invalid=True)!=se:raise AssertionError(replaced+' refusal batch identity changed')
+        self.pending(survivor,5555,sf,'after-'+replaced+'-invalid-batch')
+        self.empty(replaced);self.pending(survivor,5555,sf,'after-'+replaced+'-empty-before-detach')
         def detach_e():
             e.emit(7777);e.port.Detach()
             def inactive():
                 state=e.observe()
                 return state if state is not None and not state['active'] and state['count']==0 else None
-            e.wait(inactive,5000,'E actual queue invalidation')
-        first,distances=self.sustained_window(sf,[5555],9001,detach_e)
+            e.wait(inactive,5000,replaced+' actual queue invalidation')
+        first,distances=self.sustained_window(sf,[5555],9001,detach_e,survivor=survivor)
         detached_ms=e.last_wait_ms
-        self.pending('F',5555,sf,'after-E-detach',count=len(distances))
-        self.empty('E');self.pending('F',5555,sf,'after-E-empty-after-detach',count=len(distances))
-        self.drain(first,distances)
+        self.pending(survivor,5555,sf,'after-'+replaced+'-detach',count=len(distances))
+        self.empty(replaced);self.pending(survivor,5555,sf,'after-'+replaced+'-empty-after-detach',count=len(distances))
+        self.drain(first,distances,survivor=survivor)
         replacement_state=[]
         def replace_e():
             e.attach();replacement_state.append(e.emit(8888))
-        second,distances=self.sustained_window(sf,[],9101,replace_e)
+        second,distances=self.sustained_window(sf,[],9101,replace_e,survivor=survivor)
         replacement=replacement_state[0]['session']
-        if replacement<=se:raise AssertionError('E replacement identity did not progress')
-        self.drain(second,distances,e_pending=(8888,replacement))
+        if replacement<=se:raise AssertionError(replaced+' replacement identity did not progress')
+        self.drain(second,distances,e_pending=(8888,replacement),survivor=survivor)
         f.emit(9999)
-        if self.poll('E',8888)!=replacement:raise AssertionError('E replacement reply identity mismatch')
-        self.pending('F',9999,sf,'after-E-replacement-poll')
-        if self.poll('F',9999)!=sf:raise AssertionError('E replacement changed F identity')
-        self.empty('E');self.empty('F')
+        if self.poll(replaced,8888)!=replacement:raise AssertionError(replaced+' replacement reply identity mismatch')
+        self.pending(survivor,9999,sf,'after-'+replaced+'-replacement-poll')
+        if self.poll(survivor,9999)!=sf:raise AssertionError(replaced+' replacement changed '+survivor+' identity')
+        self.empty(replaced);self.empty(survivor)
         if any(int(x.port.BridgeDrive)!=0 for x in (e,f)):
             raise AssertionError('Sensor fixture left motor drive')
         return {'ports':['E','F'],'requests':self.requests,'externalReports':9+self.keepalive_reports,'keepaliveReports':self.keepalive_reports,
-            'firstE':se,'replacementE':replacement,'stableF':sf,'detachWaitMs':detached_ms,
+            'first'+replaced:se,'replacement'+replaced:replacement,'stable'+survivor:sf,'detachWaitMs':detached_ms,
             'quietDrainMs':[x.drain_ms for x in self.quiet_drains]}
 
 
@@ -185,3 +189,7 @@ def mc_check_lump_two_port(mailbox, output, layout_path, kernel_path, queue_symb
 
 def mc_check_lump_silence(mailbox, output, layout_path, kernel_path, queue_symbol):
     print('LUMP F DATA silence control passed: %r' % actual_fixture(mailbox,output,layout_path,kernel_path,queue_symbol).run_silence())
+
+
+def mc_check_lump_reverse(mailbox, output, layout_path, kernel_path, queue_symbol):
+    print('LUMP reverse two-port isolation fixture passed: %r' % actual_fixture(mailbox,output,layout_path,kernel_path,queue_symbol).run(survivor='E'))
