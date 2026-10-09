@@ -182,3 +182,22 @@ Next, explicitly adopt this qualified firmware in Brickwright Lite and exercise
 installed Code-tab/shared-arena paths with capability-gated selectors. Keep older
 firmware's legacy compiler behavior and refuse unsupported addressed reads.
 Consumer pins and current UI advertisement are unchanged by this firmware lane.
+
+
+## Live Runtime adapter qualification candidate
+
+Branch `qualify/addressed-runtime-capability-20261009` explicitly advances the
+Runtime test input to `413380963e54b64f94f18d26466e1c6e941be8d2`; Infrastructure
+remains `1253d925accca23dfda66d5bca61e78498dcb64f`. This is a new qualification
+candidate, not an already-qualified dependency adoption. Existing clean firmware,
+resource, TI-exclusion and all peer gates remain mandatory.
+
+After the real E/F program scenario, the ordinary guest includes the exact
+pinned Runtime state adapter. A read-only probe checks its actual snapshot with
+the ELF-resolved own mailbox/marker and actual userspace image hash, legacy
+absence and foreign-hash refusal. It starts no listener and writes no guest
+memory. A publication interrupted while odd is retried with at most20 finite
+10-ms guest intervals; no incomplete frame or substituted result is accepted.
+Public qualification is pending this candidate's new two-profile matrix and
+Runtime checks. No desktop pin, E/F topology chooser or physical claim follows
+from the host controls alone.

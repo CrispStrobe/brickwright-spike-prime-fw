@@ -47,3 +47,8 @@ Actual ARM programs address E and F through external UART DATA
     ${proof}=    Execute Command    check_program_sensors ${mailbox.strip()} @${IMAGES}/lump-queue-layout.json @${IMAGES}/brickwright/nuttx ${queue.strip()}
     Log To Console    ${proof}
     Should Contain    ${proof}    ARM explicit program sensor fixture passed:
+    Execute Command    include @%{RENODE_DIR}/scripts/spike-state-server.py
+    Execute Command    include @${CURDIR}/addressed_runtime_capability.py
+    ${live}=    Execute Command    check_addressed_runtime_capability ${mailbox.strip()} ${feature.strip()} @${IMAGES}/brickwright/nuttx_user.elf
+    Log To Console    ${live}
+    Should Contain    ${live}    ARM live addressed Runtime capability passed: live=1 legacy=0 foreign=refused
