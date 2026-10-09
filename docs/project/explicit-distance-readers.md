@@ -26,7 +26,7 @@ negative/out-of-range values fail before unsigned conversion, and overflowing
 integer conversion remains an explicit error. Keyword arguments are not added.
 A successful read returns signed millimetres, including-1 for unknown.
 
-## Addressed-reader discovery candidate
+## Qualified addressed-reader discovery
 
 A separate read-only four-byte symbol, `g_bw_program_addressed_sensor_abi`,
 contains1 in the own protected userspace ELF. Version1 denotes the additive
@@ -52,9 +52,20 @@ Consumers must verify the packaged ELF and bind the discovered address/version
 to that exact image before reading the same value in a live session. An absent
 or unsupported marker provides no addressed capability; keep legacy D readers
 available. Separately require a declared ultrasonic topology; the firmware adapter
-validates the selected port/type before returning a scalar distance. This candidate has not yet completed its new clean
-ARM matrix or consumer adoption; PR51's historical receipts do not qualify this
-source change. No GUI or package pin changes are included here.
+validates the selected port/type before returning a scalar distance. Tested source `6648a21548dcc3c40e000cd13374d113f7d85d3c` passed both clean
+profiles in [matrix37916873239](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37916873239).
+Both actual ELF marker gates and the ordinary live marker/E/F scenario passed.
+[CI37916873278](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37916873278)
+passed seven synthetic marker control groups and nine assertion-detected C
+source mutants, including a corrupted marker. Ordinary/HCI userspace flash was
+598416/598424 bytes against654336; static RAM89376 against98304, TI payload0.
+The ordinary scenario retained18 external reports,205 mailbox requests, six
+native E conditional trials, cancellation/restart and three caught sticky stale
+reads over24680 guest milliseconds. Summaries are source-emitted observations,
+not independent wire reconstruction. The superseded initial matrix was cancelled
+while queued after the merged-text validation correction; it supplies no guest
+evidence. Consumer adoption remains separate. No GUI or package pin changes are
+included here.
 
 ## Session, consumption and lifecycle
 
