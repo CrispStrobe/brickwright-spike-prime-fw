@@ -35,6 +35,10 @@ Actual ARM programs address E and F through external UART DATA
     Execute Command    include @${CURDIR}/lump_probe.py
     ${startup}=    Execute Command    check_lump_probe ${probe.strip()} ${readonly.strip()}
     Should Contain    ${startup}    LUMP protected refusal probe passed: checks=511
+    ${feature}=    Execute Command    sysbus GetSymbolAddress "g_bw_program_addressed_sensor_abi"
+    ${feature_value}=    Execute Command    sysbus ReadDoubleWord ${feature.strip()}
+    ${feature_integer}=    Evaluate    int($feature_value.strip(), 0)
+    Should Be Equal As Integers    ${feature_integer}    1
     ${mailbox}=    Execute Command    sysbus GetSymbolAddress "g_bw_program_debug"
     ${queue}=    Execute Command    sysbus GetSymbolAddress "g_lump"
     Execute Command    include @${CURDIR}/../../tools/lump_queue_observer.py

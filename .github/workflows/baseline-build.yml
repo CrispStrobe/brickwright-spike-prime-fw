@@ -112,6 +112,11 @@ jobs:
             nuttx-builder \
             python3 tools/check_resource_budgets.py
 
+      - name: Verify addressed sensor capability in the actual userspace ELF
+        run: |
+          docker run --rm -v "$PWD:$PWD" -w "$PWD" nuttx-builder \
+            python3 tools/check_addressed_sensor_marker.py nuttx/nuttx_user.elf
+
       - name: Cross-compile Zephyr buffer boundary against pinned NuttX
         run: |
           docker run --rm \

@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 Brickwright contributors
+"""Validate feature discovery only in our own protected userspace ARM ELF."""
+import argparse
+import hashlib
+from pathlib import Path
+import struct
+import subprocess
+
+SYMBOL = 'g_bw_program_addressed_sensor_abi'
+FLASH_START, FLASH_END = 0x08060000, 0x08100000
+
+
+def validate(raw, symbols):
+    if (not 52 <= len(raw) <= 64 * 1024 * 1024
+            or raw[:7] != b'\x7fELF\x01\x01\x01'
+            or struct.unpack_from('<HHI', raw, 16) != (2, 40, 1)):
+        raise ValueError('requires own little-endian ARM ELF32 executable')
+    matches = [line.split() for line in symbols.splitlines()
+               if line.split() and line.split()[-1] == SYMBOL]
+    if len(matches) != 1 or len(matches[0]) != 4 or matches[0][2] != 'R':
+        raise ValueError('requires exactly one global read-only feature symbol')
+    address, size = (int(v, 16) for v in matches[0][:2])
+    if size != 4 or address % 4 or not FLASH_START <= address <= FLASH_END - 4:
+        raise ValueError('feature symbol must be an aligned four-byte userspace flash object')
+    phoff = struct.unpack_from('<I', raw, 28)[0]
+    ehsize, phsize, phcount = struct.unpack_from('<HHH', raw, 40)
+    if (ehsize != 52 or phsize != 32 or not 1 <= phcount <= 128
+            or phoff < 52 or phoff + phsize * phcount > len(raw)):
+        raise ValueError('invalid program header extent')
+    covering = []
+    for index in range(phcount):
+        kind, offset, start, physical, files, memory, flags, align = struct.unpack_from(
+            '<8I', raw, phoff + index * phsize)
+        if kind != 1:
+            continue
+        if (files > memory or offset + files > len(raw)
+                or start + memory > 0x100000000 or physical + memory > 0x100000000):
+            raise ValueError('invalid load segment extent')
+        if ((start < address + 4 and address < start + memory)
+                or (physical < address + 4 and address < physical + memory)):
+            covering.append((offset, start, physical, files, flags))
+    if len(covering) != 1:
+        raise ValueError('feature must belong to exactly one load segment')
+    offset, start, physical, files, flags = covering[0]
+    if (not flags & 4 or flags & 2 or physical != start
+            or not start <= address <= start + files - 4):
+        raise ValueError('feature must be read-only, flash-loaded and file-backed')
+    value = struct.unpack_from('<I', raw, offset + address - start)[0]
+    if value != 1:
+        raise ValueError('unsupported addressed sensor feature version')
+    return {'abi': value, 'address': address, 'userspaceSha256': hashlib.sha256(raw).hexdigest()}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('elf', type=Path)
+    parser.add_argument('--nm-tool', default='arm-none-eabi-nm')
+    args = parser.parse_args()
+    symbols = subprocess.check_output([args.nm_tool, '-S', '--defined-only', str(args.elf)], text=True)
+    result = validate(args.elf.read_bytes(), symbols)
+    print('addressed-sensor-marker: abi=%d address=0x%08x userspaceSha256=%s' %
+          (result['abi'], result['address'], result['userspaceSha256']))
+
+
+if __name__ == '__main__':
+    main()

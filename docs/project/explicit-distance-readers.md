@@ -26,6 +26,33 @@ negative/out-of-range values fail before unsigned conversion, and overflowing
 integer conversion remains an explicit error. Keyword arguments are not added.
 A successful read returns signed millimetres, including-1 for unknown.
 
+## Addressed-reader discovery candidate
+
+A separate read-only four-byte symbol, `g_bw_program_addressed_sensor_abi`,
+contains1 in the own protected userspace ELF. Version1 denotes the additive
+addressed ultrasonic reader interface described above, including native tokens
+and the two-argument embedded-Python API. It does not declare attached devices,
+GUI support, sample age or qualification on every port. Debug version1 and
+`g_bw_program_storage_abi` cannot establish this feature.
+
+`tools/check_addressed_sensor_marker.py nuttx/nuttx_user.elf` requires a unique
+four-byte global read-only symbol aligned inside userspace flash, an ARM32
+little-endian executable, one nonwritable file-backed load mapping and value1.
+It records the exact userspace ELF SHA256. Both protected build profiles run this
+gate; the ordinary E/F program fixture also reads the actual guest marker without
+writing it. Synthetic malformed symbols, ELF headers, mapping overlaps,
+RAM/writable/unbacked placement and unsupported values must be refused.
+The service roots the object with a volatile read so section garbage collection
+cannot silently remove discovery.
+
+Consumers must verify the packaged ELF and bind the discovered address/version
+to that exact image before reading the same value in a live session. An absent
+or unsupported marker provides no addressed capability; keep legacy D readers
+available. Separately require a declared ultrasonic topology; the firmware adapter
+validates the selected port/type before returning a scalar distance. This candidate has not yet completed its new clean
+ARM matrix or consumer adoption; PR51's historical receipts do not qualify this
+source change. No GUI or package pin changes are included here.
+
 ## Session, consumption and lifecycle
 
 The explicit reader uses `/dev/legoportN`, type62/mode0 and the existing

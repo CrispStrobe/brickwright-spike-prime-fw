@@ -21,6 +21,8 @@ static void simulation_diagnostic_step(void) {
 }
 /* Fixed-slot SAVE/LOAD feature discovery; debug transport version stays 1. */
 const uint32_t g_bw_program_storage_abi=1u;
+/* Addressed distance readers, independently discovered from storage/debug ABI. */
+const uint32_t g_bw_program_addressed_sensor_abi=1u;
 volatile struct bw_program_debug g_bw_program_debug={.magic=0x42574e50u,.version=1};
 static struct bw_program g_program;
 static struct bw_program_upload g_upload;
@@ -61,6 +63,8 @@ static int request_locked(uint32_t owner,uint64_t now,const uint8_t *data,size_t
   return request_rc;
 }
 static void debug_locked(uint64_t now) {
+  /* A volatile read retains this read-only object under section GC. */
+  (void)*(const volatile uint32_t *)&g_bw_program_addressed_sensor_abi;
   uint32_t seq=g_bw_program_debug.request_seq;
   if(seq && !(seq&1u) && seq!=g_bw_program_debug.reply_seq) {
     uint8_t packet[20],reply[20];uint32_t length=g_bw_program_debug.length;unsigned i;

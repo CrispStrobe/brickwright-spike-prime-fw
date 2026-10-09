@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     variants = [
+        ('marker', 'service.c', 'const uint32_t g_bw_program_addressed_sensor_abi=1u;', 'const uint32_t g_bw_program_addressed_sensor_abi=0u;', 'service', 'six_port_wrappers'),
         ('session', 'device.c', 'if(g_sensor_sessions[port] && sample.session!=g_sensor_sessions[port])', 'if(0)', 'control', 'explicit_sensor_tests'),
         ('sticky', 'device.c', 'if(g_sensor_stale[port])return -ESTALE;', 'if(0)return -ESTALE;', 'control', 'explicit_sensor_tests'),
         ('port', 'device.c', 'explicit_distance((predicate-0x100)>>3,value)', 'explicit_distance(3,value)', 'control', 'explicit_sensor_tests'),

@@ -872,7 +872,7 @@
     },
     {
       "path": "apps/hubprogram/service.c",
-      "sha256": "6a1ef2024536fa9f37e26cdef4683154b03e54f5a5a1365c9486a0c8864c8c2b",
+      "sha256": "e1bc933d3f1958a5eef4624819fa03af4e274e15d4160c91056ea04ca3193ed1",
       "spdx": [
         "BSD-3-Clause"
       ],
