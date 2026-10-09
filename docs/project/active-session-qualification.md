@@ -180,7 +180,10 @@ remaining per-port/program/reset/GUI or physical capabilities listed above.
 
 ## Next bounded experiment: two-port isolation
 
-This is proposed work, not coverage of the F-only result. Start with
+The [fixed E/F follow-up](two-port-isolation.md) now passes its bounded guest
+scenario with continued traffic and a separate silence control. The contract
+below is historical preparation; arbitrary ports and broader interleavings
+remain open. Start with
 `tools/lump_request_transport.py`, `tools/lump_queue_observer.py`,
 `apps/hubprogram/`, the diagnostic source located by
 `tools/check_lump_guest_probe.py`, and `simulation/renode/lump-active.robot`.

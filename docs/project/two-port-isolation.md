@@ -4,8 +4,9 @@
 # E/F sensor isolation experiment
 
 This candidate extends the [F-only experiment](active-session-qualification.md)
-and retains it as a regression. Host controls pass; actual protected-guest
-qualification is pending. It does not yet establish E/F guest isolation.
+and retains it as a regression. Both protected profiles and the finite E/F guest experiment pass at tested
+source `e6e79a801b94116f775ede21b2b1cf18bfda1bd4`. This qualifies only the
+continued-DATA scenario below; arbitrary-port isolation remains open.
 
 ## Fixed diagnostic interface
 
@@ -65,7 +66,7 @@ actual inactive/empty F queue within five simulated seconds while the model
 remains Streaming, with unchanged model timeout/transmission counters, zero
 DATA budget and zero drive. An actual unchanged empty poll follows, then F is
 detached and the guest advances five seconds before the pair experiment. This
-control is pending actual qualification; it does not retroactively establish
+control passed actual qualification; it does not retroactively establish
 the cause of earlier failed experiments.
 
 The pair experiment's continued-F-DATA feeder supplies distinct reports every
@@ -105,8 +106,7 @@ the guest failure into qualification. The companion HCI result remains separate.
 The first diagnostic follow-up adds a checkpoint label/request ordinal, expected distance/session and the observed queue plus
 public model state, timeout/frame/budget/drive counters to that failure. A secondary
 diagnostic-sampling exception preserves the original deadline message. It does
-not change firmware, external inputs, success comparisons or deadlines. Require
-actual execution of this diagnostic revision before choosing a behaviour fix.
+not change firmware, external inputs, success comparisons or deadlines. The completed diagnostic observations are recorded below.
 
 [Diagnostic matrix 37888192740](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37888192740)
 at source `5b7f4f15940aff7d495e08d19d4e26412f0dcc95` fails the ordinary experiment
@@ -114,8 +114,53 @@ at `after-E-detach`, request 6, F distance 5555/session 3. F's queue is inactive
 and empty with unchanged session 3 and zero drops; its model remains Streaming,
 zero model timeouts, zero DATA budget and zero drive. This observes invalidation,
 not a swapped payload. Model counters do not prove the guest's failure cause.
-The silence control and continued-DATA revision above require their own actual
-qualification. Original and diagnostic failures remain preserved privately.
+At that checkpoint, the silence control and continued-DATA revision above
+needed their own actual qualification; the completed result follows below. Original and diagnostic failures remain preserved privately.
+
+## Completed bounded qualification — 2026-10-09
+
+[Matrix 37890739377](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37890739377)
+passes both complete protected profiles at tested source
+`e6e79a801b94116f775ede21b2b1cf18bfda1bd4`. Every applicable guest/air,
+compiler/linker, resource and TI-exclusion gate passes. The ordinary profile
+runs the F-only, silence and E/F fixtures; HCI intentionally skips them and runs
+its separate Bluetooth air regressions. Runtime remains
+`b34becc947ac9c998881bb018dfe2cec4b1398b2`; Infrastructure remains
+`1253d925accca23dfda66d5bca61e78498dcb64f`.
+[Exact-source CI 37890443967](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37890443967)
+passes source-policy and strict documentation checks.
+
+The ordinary guest retains the F-only regression, then passes the separate
+silence control: one external report and one empty poll; session 3 becomes
+inactive/empty after 770 simulated milliseconds while E remains Detached and
+F's model remains Streaming with unchanged zero model timeouts. The following
+E/F experiment passes 21 requests and 16 external reports, including seven
+continued-DATA reports. E progresses from session 1 to 2; F stays at session 4.
+E detach invalidation takes 730 simulated milliseconds. Ordered quiet drains
+take 240 and 80 simulated milliseconds from the last witnessed admission,
+within the 400-ms bound. These are one fixture's observations, not universal
+timing guarantees.
+
+All seven Bluetooth peer reports pass with common four-image identities and
+the exact pinned Runtime, including the compiled electrical Classic motor route.
+The HCI diagnostic scan has no matching failure patterns and no reported
+abandoned-packet counts; this is log evidence, not a flush guarantee. The
+ordinary/HCI profiles measure 597,972/597,980 bytes of userspace flash and both
+measure 89,320 bytes of static RAM with zero TI payload bytes. Both actual
+simulation probe objects are 28,480 bytes, SHA256
+`3cf60b9d3b4fe920ed63da5af6f5147e5d8a5202a884f1e6015b9a09609a6475`.
+Static measurements do not establish stack/heap high-water marks. Prior
+inventory image measurements retain their historical source scope.
+
+Ten pair and thirteen feeder host controls pass; eight mutations of actual
+comparisons are assertion-detected. Summary-verifier controls reject fifteen
+corrupt pair/silence summaries; these summaries are source-emitted evidence,
+not an independent reconstruction of every UART frame. Separate peer identity
+controls reject missing reports, conflicting image bytes and a wrong Runtime.
+Raw logs, verifier receipts and integration review remain private. Read-only
+integration review is instruction-based and makes no independence claim.
+Original failed invocations above remain failed; this success revises external
+stimulus and does not weaken guest timeouts or redefine them as passing.
 
 ## Controls and actual acceptance
 
