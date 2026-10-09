@@ -2,6 +2,7 @@
  * Copyright (c) 2026 Brickwright contributors
  */
 #include "../upload.h"
+#include "../sensor_selector.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@ static int brake(void *ctx,unsigned port) {
   struct devices *d=ctx; d->speed[port]=0; d->moving[port]=0; d->brakes[port]++; return 0;
 }
 static int sensor(void *ctx,unsigned predicate,int32_t *value) {
-  struct devices *d=ctx; assert(predicate==1); *value=d->sensor; return 0;
+  struct devices *d=ctx; assert(predicate==1 || predicate==2 || (predicate>=0x100 && bw_sensor_predicate(predicate))); if(d->failure)return d->failure; *value=d->sensor; return 0;
 }
 static void init(struct bw_program *p,struct devices *d) {
   struct bw_program_io io={motor,position,done,brake,sensor,d};
@@ -185,8 +186,35 @@ static void six_ports(void) {
   code[0].a=-1;assert(bw_program_validate(code,5)==-EINVAL);
   code[0].a=0;code[3].a=6;assert(bw_program_validate(code,5)==-EINVAL);
 }
+static void explicit_distance_conditions(void) {
+  struct bw_program p;struct devices d;
+  for(unsigned port=0;port<6;port++) for(unsigned pred=1;pred<=2;pred++) {
+    struct bw_instruction code[]={{3,(int32_t)(0x100+(port<<3)+pred),200,0},{0,0,0,0}};
+    init(&p,&d);assert(!bw_program_load(&p,1,code,2));assert(!bw_program_start(&p,1,0));
+    d.sensor=-1;bw_program_tick(&p,0);assert(p.pc==0 && p.state==BW_PROGRAM_RUNNING);
+    d.sensor=200;bw_program_tick(&p,10);assert(p.pc==0);
+    d.sensor=pred==1 ? 199 : 201;bw_program_tick(&p,20);assert(p.ending);
+    bw_program_tick(&p,30);assert(p.state==BW_PROGRAM_COMPLETE);
+    code[0].op=5;code[0].c=2;
+    struct bw_instruction branch[]={code[0],{2,1000,0,0},{0,0,0,0}};
+    init(&p,&d);assert(!bw_program_load(&p,1,branch,3));assert(!bw_program_start(&p,1,0));
+    d.sensor=pred==1 ? 199 : 201;bw_program_tick(&p,0);assert(p.ending && !p.waiting);
+    init(&p,&d);assert(!bw_program_load(&p,1,branch,3));assert(!bw_program_start(&p,1,0));
+    d.sensor=-1;bw_program_tick(&p,0);assert(p.waiting && !p.ending);
+    code[0].op=3;code[0].c=0;
+    init(&p,&d);assert(!bw_program_load(&p,1,code,2));assert(!bw_program_start(&p,1,0));
+    d.failure=-ESTALE;bw_program_tick(&p,0);assert(p.state==BW_PROGRAM_FAULT && p.error==-ESTALE);
+    assert(!bw_program_validate(code,2));
+    code[0].a=(int32_t)(0x100+(port<<3)+3);assert(bw_program_validate(code,2)==-EINVAL);
+  }
+  const int invalid[]={-1,0x100,0x107,0x130,INT32_MAX};
+  for(unsigned i=0;i<sizeof(invalid)/sizeof(invalid[0]);i++) {
+    struct bw_instruction code[]={{3,invalid[i],200,0},{0,0,0,0}};
+    assert(bw_program_validate(code,2)==-EINVAL);
+  }
+}
 int main(void) {
   assert(bw_program_crc32((const uint8_t *)"123456789",9)==0xcbf43926u);
-  six_ports();lifecycle();restart_committed_program(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
+  explicit_distance_conditions();six_ports();lifecycle();restart_committed_program(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
   puts("firmware program lifecycle, feedback, boundaries and transactional upload: PASS"); return 0;
 }

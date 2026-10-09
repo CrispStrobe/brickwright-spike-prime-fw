@@ -784,7 +784,7 @@
     },
     {
       "path": "apps/hubprogram/device.c",
-      "sha256": "066a227916a22ff9451be19f52d020db9b193af226a1a056b071a504550cd8ad",
+      "sha256": "72cdb7e9bdd6a37dce5ff68566a02e93ad0eafbed611477744619301071e2bd2",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -806,7 +806,7 @@
     },
     {
       "path": "apps/hubprogram/micropython/brickwright_module.c",
-      "sha256": "015edfdbe6724a39a3860c56a7d7db39573254b7e7a38b26d53221b3c17167e7",
+      "sha256": "093cd1f5eda81948594f678ebbf1a90a29c6cab8e81ea53529efea59517cbe59",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -839,7 +839,7 @@
     },
     {
       "path": "apps/hubprogram/program.c",
-      "sha256": "f74148cda82c262a91646b4d3a163173954bff6fdb4d1594d0840956703246bd",
+      "sha256": "1946bccac8fa8a1e2cdf9e11a89970dbccc31c09e9881e90abbac242a6cd957b",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -860,8 +860,19 @@
       "basis": "Explicit per-file SPDX; select the permitted OR branch."
     },
     {
+      "path": "apps/hubprogram/sensor_selector.h",
+      "sha256": "a5ec16fa18e2bda4580281ce641f401c0030b9dc0f24dbb045141036702c5b3d",
+      "spdx": [
+        "BSD-3-Clause"
+      ],
+      "selected_licences": [
+        "BSD-3-Clause"
+      ],
+      "basis": "Newly authored Brickwright selector interface; explicit per-file SPDX."
+    },
+    {
       "path": "apps/hubprogram/service.c",
-      "sha256": "cc8937617e6255a14672de3a6960d1fab600a8c6c6a6ac645e59f25b945a1d04",
+      "sha256": "6a1ef2024536fa9f37e26cdef4683154b03e54f5a5a1365c9486a0c8864c8c2b",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -30417,7 +30428,7 @@
     },
     {
       "path": "third_party/micropython-embed/genhdr/qstrdefs.generated.h",
-      "sha256": "e350c7a036266ddbe678d202b82b44d632fbb10f250e7a3b19fc718a8b3fa911",
+      "sha256": "d115c7ead0c97a8cc306f3359cadc9820b2612054b5a0f3532189e964b4a9f6a",
       "spdx": [],
       "selected_licences": [
         "MIT"
@@ -35126,5 +35137,18 @@
       "apps/port/lumpprobe.c",
       "apps/port/lumpprobe.h"
     ]
+  },
+  "explicit_distance_candidate": {
+    "scope": "Source hashes for additive distance selectors and explicit session-bound reads. Both protected profiles passed matrix37909305186 at sourcef89aa0d9016370f4d9bb82c72e19af9c7dd7b750; bounded actual program/guest evidence is recorded in docs/project/explicit-distance-readers.md. Retained image/archive hashes remain historical and are not replaced by this qualification note.",
+    "base": "2c1ce267e288b9887a9c999e5b2533df1dbb3d14",
+    "new_component": "apps/hubprogram/sensor_selector.h",
+    "firmware_sources": [
+      "apps/hubprogram/device.c",
+      "apps/hubprogram/program.c",
+      "apps/hubprogram/service.c",
+      "apps/hubprogram/micropython/brickwright_module.c"
+    ],
+    "binary_qualification": "https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37909305186",
+    "generated_input": "third_party/micropython-embed/genhdr/qstrdefs.generated.h"
   }
 }

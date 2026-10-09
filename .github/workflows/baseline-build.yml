@@ -209,6 +209,13 @@ jobs:
             --results-dir .local/renode-program-workflow-results --stop-on-error \
             simulation/renode/program-workflow.robot
 
+      - name: Execute explicit E/F sensors through actual ARM programs
+        if: matrix.profile == 'simulation'
+        run: |
+          PATH="$RENODE_TEST_VENV/bin:$PATH" "$RENODE_DIR/renode-test" \
+            --results-dir .local/renode-program-sensor-results --stop-on-error \
+            simulation/renode/program-sensors.robot
+
       - name: Validate the source-generated empty LittleFS seed
         if: matrix.profile == 'simulation'
         run: python3 tools/test_simulation_littlefs_seed.py

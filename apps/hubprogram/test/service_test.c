@@ -37,8 +37,23 @@ static int fixture_position(void *ctx,unsigned port,int32_t degrees,int32_t spee
 }
 static int fixture_done(void *ctx,unsigned port) {(void)ctx;assert(port<6);return 1;}
 static int fixture_brake(void *ctx,unsigned port) {(void)ctx;assert(port<6);return 0;}
+static unsigned sensor_reads;
 static int fixture_sensor(void *ctx,unsigned predicate,int32_t *value) {
-  (void)ctx;(void)predicate;*value=0;return 0;
+  (void)ctx;(void)predicate;sensor_reads++;*value=0;return 0;
+}
+static void sensor_lifecycle_guards(void) {
+  const enum bw_program_state states[]={BW_PROGRAM_EMPTY,BW_PROGRAM_READY,BW_PROGRAM_COMPLETE,BW_PROGRAM_STOPPED,BW_PROGRAM_FAULT};
+  int32_t value=-999;unsigned before=sensor_reads;
+  g_program.io.sensor=fixture_sensor;
+  for(unsigned i=0;i<sizeof(states)/sizeof(states[0]);i++) {
+    g_program.state=states[i];
+    assert(bw_program_service_sensor(0x121,&value)==-EINVAL && value==-999 && sensor_reads==before);
+  }
+  g_program.state=BW_PROGRAM_RUNNING;
+  assert(bw_program_service_sensor(0x121,NULL)==-EINVAL && sensor_reads==before);
+  assert(!bw_program_service_sensor(0x121,&value) && value==0 && sensor_reads==before+1);
+  g_program.io.sensor=NULL;value=-999;
+  assert(bw_program_service_sensor(0x121,&value)==-EINVAL && value==-999);
 }
 static void restart_transport(void) {
   const struct bw_instruction code[]={{0,0,0,0}};
@@ -119,7 +134,7 @@ int main(void) {
   packet[2]=4;assert(bw_program_service_request(1,packet,8,reply)==0 && releases==i);
   packet[2]=9;assert(bw_program_service_request(1,packet,8,reply)==-EBUSY && releases==i);
   g_python_active=0;assert(bw_program_service_request(1,packet,8,reply)==0 && releases>i);
-  restart_transport();
+  sensor_lifecycle_guards();restart_transport();
 #ifdef BW_SIM_SESSION_DIAGNOSTICS
   g_program.state=BW_PROGRAM_READY;g_program.error=0;
   assert(bw_program_service_poll()==-ECANCELED && diagnostics==1);

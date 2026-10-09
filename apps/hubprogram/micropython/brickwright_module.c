@@ -48,10 +48,13 @@ static mp_obj_t sleep_ms(mp_obj_t duration) {
   return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(sleep_obj,sleep_ms);
-static mp_obj_t sensor(mp_obj_t selector) {
-  int32_t value;check(bw_program_service_sensor(mp_obj_get_int(selector),&value));return mp_obj_new_int(value);
+static mp_obj_t sensor(size_t n,const mp_obj_t *args) {
+  unsigned selector;int32_t value;
+  selector=(unsigned)bounded_integer(args[0],1,n==1 ? 6 : 2);
+  if(n==2)selector=0x100+(motor_port(args[1])<<3)+selector;
+  check(bw_program_service_sensor(selector,&value));return mp_obj_new_int(value);
 }
-static MP_DEFINE_CONST_FUN_OBJ_1(sensor_obj,sensor);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(sensor_obj,1,2,sensor);
 static const mp_rom_map_elem_t globals[] = {
   {MP_ROM_QSTR(MP_QSTR___name__),MP_ROM_QSTR(MP_QSTR_brickwright)},
   {MP_ROM_QSTR(MP_QSTR_motor),MP_ROM_PTR(&motor_obj)},
@@ -59,6 +62,8 @@ static const mp_rom_map_elem_t globals[] = {
   {MP_ROM_QSTR(MP_QSTR_sleep_ms),MP_ROM_PTR(&sleep_obj)},
   {MP_ROM_QSTR(MP_QSTR_sensor),MP_ROM_PTR(&sensor_obj)},
   {MP_ROM_QSTR(MP_QSTR_A),MP_ROM_INT(0)}, {MP_ROM_QSTR(MP_QSTR_B),MP_ROM_INT(1)},
+  {MP_ROM_QSTR(MP_QSTR_C),MP_ROM_INT(2)}, {MP_ROM_QSTR(MP_QSTR_D),MP_ROM_INT(3)},
+  {MP_ROM_QSTR(MP_QSTR_E),MP_ROM_INT(4)}, {MP_ROM_QSTR(MP_QSTR_F),MP_ROM_INT(5)},
 };
 static MP_DEFINE_CONST_DICT(globals_dict,globals);
 const mp_obj_module_t brickwright_module={.base={&mp_type_module},.globals=(mp_obj_dict_t *)&globals_dict};

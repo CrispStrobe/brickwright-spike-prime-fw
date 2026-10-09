@@ -7,6 +7,7 @@ output=$(mktemp -d)
 trap 'rm -rf "$output"' EXIT HUP INT TERM
 cd "$root"
 python3 tools/check_reuse_licenses.py
+python3 tools/update_micropython_port_qstrs.py --check
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/test/program_test.c -o "$output/program"
 "$output/program"
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/storage.c apps/hubprogram/test/storage_test.c -o "$output/storage"
@@ -20,3 +21,5 @@ cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/hubprogra
 mp=third_party/micropython-embed
 cc -std=gnu99 -D_POSIX_C_SOURCE=200809L -Os -fno-common -Iapps/hubprogram/micropython -I"$mp" -I"$mp/port" "$mp"/py/*.c "$mp"/port/embed_util.c "$mp"/shared/runtime/gchelper_generic.c apps/hubprogram/micropython/brickwright_module.c apps/hubprogram/python_output.c apps/hubprogram/test/python_test.c -lm -o "$output/python"
 "$output/python"
+
+python3 tools/test_explicit_sensor_mutants.py

@@ -240,3 +240,8 @@ The actual A–F sequence passed 207 observations with speed, relative position,
 concurrent activity, native/Python cancellation and a run beyond 12 seconds.
 The largest position error was 1.73 degrees against the existing 3-degree
 bound. These are simulated observations, not physical calibration evidence.
+
+The [explicit ultrasonic readers](project/explicit-distance-readers.md) add
+optional addressed reads without changing legacy selectors. Actual native and
+embedded-Python E/F programs pass the bounded ARM fixture. GUI adoption and
+other port guest coverage remain separate tasks.
