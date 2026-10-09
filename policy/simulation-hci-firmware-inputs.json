@@ -35139,7 +35139,7 @@
     ]
   },
   "explicit_distance_candidate": {
-    "scope": "Source hashes for additive distance selectors and explicit session-bound reads; actual candidate compiler/linker/resource measurements pending. Retained build/image measurements belong to their original source.",
+    "scope": "Source hashes for additive distance selectors and explicit session-bound reads. Both protected profiles passed matrix37909305186 at sourcef89aa0d9016370f4d9bb82c72e19af9c7dd7b750; bounded actual program/guest evidence is recorded in docs/project/explicit-distance-readers.md. Retained image/archive hashes remain historical and are not replaced by this qualification note.",
     "base": "2c1ce267e288b9887a9c999e5b2533df1dbb3d14",
     "new_component": "apps/hubprogram/sensor_selector.h",
     "firmware_sources": [
@@ -35148,7 +35148,7 @@
       "apps/hubprogram/service.c",
       "apps/hubprogram/micropython/brickwright_module.c"
     ],
-    "binary_qualification": "pending",
+    "binary_qualification": "https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37909305186",
     "generated_input": "third_party/micropython-embed/genhdr/qstrdefs.generated.h"
   }
 }

@@ -13,6 +13,16 @@ code. It is not a complete clean-room firmware or a dependency-free rewrite.
 See [provenance](provenance.md), the repository's `THIRD_PARTY.md` and the
 [configured-build qualification](simulation-qualification.md).
 
+The [explicit ultrasonic program-reader record](explicit-distance-readers.md)
+closes a separate bounded E/F native/embedded-Python slice at source
+`f89aa0d9016370f4d9bb82c72e19af9c7dd7b750` in
+[matrix37909305186](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37909305186).
+Wrong-type/no-DATA refusal, six E conditional cases, F replacement/sticky errors,
+cancellation and restart passed; both profiles and seven air peers completed.
+Other ports, concurrent mode/read ownership, receive age, cross-reset identity
+and installed Code-tab/shared-arena adoption remain open. Do not repeat this
+completed fixture or infer consumer adoption from a firmware merge.
+
 ## Recent bounded sensor qualification
 
 The [protected worker mailbox](live-session-mailbox.md) has completed inactive

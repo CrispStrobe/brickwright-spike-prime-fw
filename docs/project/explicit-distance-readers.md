@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: BSD-3-Clause -->
 <!-- Copyright (c) 2026 Brickwright contributors -->
 
-# Explicit ultrasonic program readers — candidate
+# Explicit ultrasonic program readers — bounded guest qualification
 
-This candidate has hosted compiler controls but remains unqualified for merge.
-It is separate from the E/F diagnostic
-and does not establish Code-tab, installed GUI or physical support. Existing
+Actual E/F native and embedded-Python program readers passed the ordinary
+protected ARM guest. The companion HCI profile passed its seven air peers.
+This is separate from the diagnostic-only experiments and does not establish
+Code-tab, installed GUI or physical support. Existing
 sensor selectors1–6 keep their fixed C/D/E behavior. The instruction layout and
 sensor callback ABI are unchanged.
 
@@ -62,48 +63,81 @@ records are updated. This does not claim the retained interpreter is newly
 independently authored. The header is retained in source; no network build step
 is added.
 
-## Required evidence
+## Completed evidence
 
-Hosted `tools/check_hubprogram.sh` must compile actual device, interpreter,
-service and embedded-Python controls. New controls cover all encoded port
-boundaries, native polarity/unknown values, preserved legacy behavior, wrong
-mode/type/length, unchanged error output, repeated caught ESTALE, mixed
-legacy/explicit reads and restart recovery. Five actual C-source mutants must
-fail assertions in the intended new control functions; compilation/setup failure
-is not detection. These controls and all five assertion-detected C-source
-mutants passed hosted
-[CI37903744205](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37903744205)
-on source `0a046f7315c0f1d851ef0307d2f568b9955eaa5d`. The preceding CI failed
-on a misleading-indentation warning in the host fixture reset loop; its fix
-retained compiler warnings and assertions. No compiler ran locally.
+Tested source `f89aa0d9016370f4d9bb82c72e19af9c7dd7b750` passed both clean
+protected profiles in [matrix37909305186](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37909305186).
+Exact-source [CI37909237011](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37909237011)
+passed both enabled checks on GitHub's synthetic merge `41d3c193a9caf806aaf2d9877b902702ab990742`;
+its tree equals the tested source tree. Runtime remains
+`b34becc947ac9c998881bb018dfe2cec4b1398b2`; Infrastructure remains
+`1253d925accca23dfda66d5bca61e78498dcb64f`.
 
-The separate `simulation/renode/program-sensors.robot` candidate uses the real
-ARM service mailbox, external UART E/F reports and an exact-ELF read-only queue
-observer. Its native cases cover opposite polarities, unknown wait/cancellation,
-identical-payload replacement rejection and retained START recovery. Embedded
-Python cases cover exact E/F values, unknown, missing DATA, three caught stale
-reads, wrong-type refusal and recovery after release. Six conditional trials
-cover below/above, equality boundaries and unknown values; each checks the
-actual branch PC and requires consumption of its admitted DATA. Uploads occur with external inputs detached;
-fresh attachment follows upload to avoid exhausting the DATA silence interval.
-The report cap is24, execution bound60 guest seconds after startup, and each
-transmission/admission/consumption has a200-ms bound. Only program mailbox
-request fields are written in guest memory. These are proposed assertions,
-not guest results. The first actual fixture attempt in
+Hosted `tools/check_hubprogram.sh` compiled actual device, interpreter, service
+and embedded-Python controls. They cover encoded port boundaries, native
+polarity/unknown values, legacy behavior, wrong mode/type/length, unchanged
+error output, repeated caught ESTALE, mixed legacy/explicit reads and restart
+recovery. All eight actual C-source mutants failed assertions in their intended
+control functions: session, sticky failure, port, type, lifecycle, polarity,
+unknown handling and conditional direction. Compilation/setup failure does
+not count as detection. No compiler or emulator ran locally.
+
+`simulation/renode/program-sensors.robot` uploads through the actual service
+mailbox, supplies finite external E/F UART reports and uses an exact-ELF,
+read-only queue observer. Only declared program request fields are written in
+guest memory. Startup refusals finish before program reads; no competing direct
+reader or class mode writer is introduced. The actual program cases passed:
+
+- Native E-below/F-above conditions consume distinct admitted reports.
+- Unknown distance cannot satisfy a native wait; STOP cancels it.
+- Embedded Python returns exact E/F millimetres, including unknown-1.
+- Synchronized empty queues produce EAGAIN; sessions stay active and unchanged.
+- A synchronized color device produces ENODEV and keeps its identity.
+- Six E conditional trials distinguish below/above, equality and unknown by
+  consumed DATA and the actual branch PC.
+- Native same-payload F replacement fails ESTALE; retained START without upload
+  clears the binding and consumes another report normally.
+- Embedded Python catches ESTALE, refuses three subsequent reads, then faults
+  with the expected errno. Release and a new program recover E/F reads.
+
+The guest emitted18 reports and205 mailbox requests in24660 simulated
+milliseconds. Native F session5 became6; Python F session7 became8. Values and
+errno comparisons are exact. The external report cap is24 and the fixture bound
+is60 guest seconds after startup; each transmission/admission/consumption has
+a200-ms bound using20-ms guest steps. Upload occurs with external inputs detached;
+attachment follows upload so DATA silence during upload cannot masquerade as
+reader failure. No motor drive was observed at paused checkpoints.
+
+Both profiles measured598412/654336 bytes of userspace flash and89376/98304
+bytes of static RAM, with zero TI payload. Both measured the unchanged28480-byte
+probe object with SHA256
+`3cf60b9d3b4fe920ed63da5af6f5147e5d8a5202a884f1e6015b9a09609a6475`.
+The ordinary profile completed retained guest/storage regressions and both E/F
+diagnostic role orders. HCI intentionally skips these ordinary-only fixtures
+and completed seven separate air peers. Existing inventory image/archive hashes
+remain historical; this qualification does not claim reproducible whole binaries
+or blanket licence clearance.
+
+## Preserved failures and limits
+
+The first host attempt failed on a misleading-indentation warning in its reset
+fixture; compiler warnings and assertions were retained when fixing it.
+The first actual program fixture in
 [matrix37906760086](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37906760086)
 failed before sensor completion with a monitor paused-state binding error.
-Earlier ordinary guest tests passed. The revised fixture binds observer
-callbacks outside its comprehension, captures the hub explicitly and prints
-tracebacks on failure. This is a candidate correction, not a confirmed root
-cause or guest pass; retry qualification remains required. Three additional
-host C-source mutants target comparison polarity, unknown rejection and
-conditional direction. Their assertion detection remains pending hosted CI.
+The revision explicitly binds observer callbacks outside its comprehension,
+captures the hub instance and preserves Python tracebacks on failure. The retry
+passed; this does not uniquely identify the original runtime cause. Original
+failures, raw logs and review records remain private. Read-only licensed
+integration review is not an independence claim.
 
-Before merge, bind changed compiler inputs and licence notices, perform source
-review and clean both protected builds, all applicable guest/air regressions,
-resource/linker/compiler/TI gates and exact-head CI. Actual native and embedded
-Python E/F reads, unavailable/wrong-type errors and replacement rejection need a
-separate ARM fixture. Do not infer this from diagnostic-only E/F coverage.
-Then explicitly adopt the qualified firmware in Brickwright Lite and exercise
-installed Code-tab/shared-arena paths. Other A–F ports remain host-only until
-actual per-port guest evidence exists. No current UI advertisement is changed.
+A–D addressing and malformed-frame behavior have host controls only. Native
+conditional guest trials cover E; replacement and repeated caught-ESTALE guest
+trials cover F. Concurrent mode writers/readers, physical sample age, cross-reset
+identity, additional sensor kinds and physical behavior remain open. No result
+above implies arbitrary A–F guest equivalence.
+
+Next, explicitly adopt this qualified firmware in Brickwright Lite and exercise
+installed Code-tab/shared-arena paths with capability-gated selectors. Keep older
+firmware's legacy compiler behavior and refuse unsupported addressed reads.
+Consumer pins and current UI advertisement are unchanged by this firmware lane.

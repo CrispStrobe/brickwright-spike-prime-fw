@@ -38,6 +38,16 @@ Runtime `b34becc947ac9c998881bb018dfe2cec4b1398b2`, unchanged Infrastructure
 and the explicit abort-versus-flush boundary. Read that newer dependency record
 before using the historical baseline pins below.
 
+The [explicit ultrasonic program-reader record](explicit-distance-readers.md)
+closes a separate bounded E/F native/embedded-Python slice at source
+`f89aa0d9016370f4d9bb82c72e19af9c7dd7b750` in
+[matrix37909305186](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37909305186).
+Wrong-type/no-DATA refusal, six E conditional cases, F replacement/sticky errors,
+cancellation and restart passed; both profiles and seven air peers completed.
+Other ports, concurrent mode/read ownership, receive age, cross-reset identity
+and installed Code-tab/shared-arena adoption remain open. Do not repeat this
+completed fixture or infer consumer adoption from a firmware merge.
+
 ## Established baseline
 
 [Brickwright firmware PR #34](https://github.com/CrispStrobe/brickwright-spike-prime-fw/pull/34)
