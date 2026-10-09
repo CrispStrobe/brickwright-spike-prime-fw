@@ -66,7 +66,8 @@ static struct bw_program_io reset(void) {
   struct bw_program_io io;
   bw_device_release();memset(head,0,sizeof(head));memset(tail,0,sizeof(tail));
   polls=writes=brakes=closes=session_polls=0;
-  for(unsigned i=0;i<6;i++)sessions[i]=1;fail_op=fail_errno=open_error=0;synced=1;type_id=48;
+  for(unsigned i=0;i<6;i++) {sessions[i]=1;}
+  fail_op=fail_errno=open_error=0;synced=1;type_id=48;
   memset(port_type,0,sizeof(port_type));memset(unavailable,0,sizeof(unavailable));
   memset(port_writes,0,sizeof(port_writes));memset(port_brakes,0,sizeof(port_brakes));
   memset(selections,0,sizeof(selections));
