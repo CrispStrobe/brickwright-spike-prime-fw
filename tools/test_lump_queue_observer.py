@@ -68,6 +68,19 @@ class Observer(unittest.TestCase):
         for digest,symbol in [('b'*64,BASE),(DIGEST,BASE+8),('bad','bad')]:
             with self.assertRaises(ValueError):validate_layout(layout(),digest,symbol)
         self.assertEqual(self.reads,[])
+    def test_all_port_indices_have_bounded_distinct_read_extents(self):
+        for index in range(6):
+            self.reads=[];self.ram[BASE+index*640]=index
+            o=LumpQueueObserver(self.l,DIGEST,BASE,self.read,lambda:True,index)
+            o.snapshot()
+            start=BASE+index*640
+            self.assertTrue(all(a==start or start+32<=a<start+624 for a in self.reads))
+        for index in (-1,6,True,'E',None):
+            with self.assertRaises(ValueError):LumpQueueObserver(self.l,DIGEST,BASE,self.read,lambda:True,index)
+        self.ram[BASE+4*640]=5
+        o=LumpQueueObserver(self.l,DIGEST,BASE,self.read,lambda:True,4)
+        with self.assertRaisesRegex(ValueError,'engine mismatch'):o.snapshot()
+
     def test_invalid_counts_refused(self):
         for offset,value in [(588,16),(589,16),(590,17),(591,2)]:
             self.queued();self.ram[self.q+offset]=value

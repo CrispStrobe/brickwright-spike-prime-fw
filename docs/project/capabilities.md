@@ -22,6 +22,11 @@ legacy/session shared consumption, detach invalidation and same-type replacement
 Read its exact source, profile completion status and dependency pins before
 adopting it. These diagnostics do not generalize the program API's fixed sensor
 ports, establish arbitrary A–F isolation or qualify installed GUI integration.
+Both protected profiles pass the [fixed E/F qualification matrix](two-port-isolation.md).
+Its ordinary profile passes bounded continued F DATA during E detach/replacement,
+exact ordered queue/session observations and a separate DATA-silence control.
+The HCI profile skips that fixture and passes its separate air regressions. This
+extends diagnostic coverage only; the program sensor API is unchanged.
 The older capability and build measurements below retain their original scope.
 
 ## Firmware boundaries

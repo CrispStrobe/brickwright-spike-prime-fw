@@ -25,7 +25,7 @@ def signed(value): return value if value < 0x80000000 else value-0x100000000
 def submit(base, selector, read32, write32, paused):
     extent(base, 32)
     if not paused: raise ValueError('Diagnostic requests require paused emulation')
-    if type(selector) not in INTEGER_TYPES or not 0 <= selector < 8: raise ValueError('Unknown fixed operation')
+    if type(selector) not in INTEGER_TYPES or not 0 <= selector < 10: raise ValueError('Unknown fixed operation')
     current = unsigned(read32(base+8)); acknowledged = unsigned(read32(base+16))
     if current != acknowledged: raise RuntimeError('A diagnostic request is outstanding')
     if current == MAX_SEQUENCE: raise OverflowError('Diagnostic sequence exhausted; reboot required')
@@ -37,7 +37,7 @@ def submit(base, selector, read32, write32, paused):
 def reply(base, sequence, selector, read32):
     extent(base,32)
     if type(sequence) not in INTEGER_TYPES or not 1 <= sequence <= MAX_SEQUENCE: raise ValueError('Bad expected sequence')
-    if type(selector) not in INTEGER_TYPES or not 0 <= selector < 8: raise ValueError('Bad expected operation')
+    if type(selector) not in INTEGER_TYPES or not 0 <= selector < 10: raise ValueError('Bad expected operation')
     current=unsigned(read32(base+8))
     if current < sequence: return None
     if current > sequence: raise ValueError('Diagnostic request was replaced')
@@ -54,7 +54,7 @@ def reply(base, sequence, selector, read32):
 def publication(base, sequence, selector, read32):
     extent(base,400)
     if type(sequence) not in INTEGER_TYPES or not 1 <= sequence <= MAX_SEQUENCE: raise ValueError('Bad publication sequence')
-    if type(selector) not in INTEGER_TYPES or not 0 <= selector < 8: raise ValueError('Bad publication operation')
+    if type(selector) not in INTEGER_TYPES or not 0 <= selector < 10: raise ValueError('Bad publication operation')
     first=(unsigned(read32(base+8)),unsigned(read32(base+12)))
     words=[unsigned(read32(base+4*i)) for i in range(100)]
     last=(unsigned(read32(base+8)),unsigned(read32(base+12)))

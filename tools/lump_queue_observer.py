@@ -46,10 +46,13 @@ def validate_layout(layout, digest, symbol):
 
 
 class LumpQueueObserver(object):
-    def __init__(self, layout, digest, symbol, read8, paused):
+    def __init__(self, layout, digest, symbol, read8, paused, port_index=5):
         self.layout=validate_layout(layout,digest,symbol)
         self.read8,self.paused=read8,paused
-        engine=layout['address']+5*layout['stride']
+        if type(port_index) not in INTEGER_TYPES or not 0<=port_index<6:
+            raise ValueError('Invalid A-F engine index')
+        self.port_index=port_index
+        engine=layout['address']+port_index*layout['stride']
         self.port_address=engine+layout['portOffset']
         self.base=engine+layout['queueOffset']
 
@@ -66,7 +69,7 @@ class LumpQueueObserver(object):
 
     def snapshot(self):
         if not self.paused():raise ValueError('Queue observation requires paused emulation')
-        if int(self.read8(self.port_address))!=5:raise ValueError('Own-kernel F engine mismatch')
+        if int(self.read8(self.port_address))!=self.port_index:raise ValueError('Own-kernel port engine mismatch')
         first=self.header()
         if not 0<=first['head']<16 or not 0<=first['tail']<16 or not 0<=first['count']<=16 or first['active'] not in (0,1):
             raise ValueError('Malformed queue observation')

@@ -23,14 +23,14 @@ def check(executable):
     for invalid in ('<null>', '', 'unknown', 'poll extra', 'x' * 32, 'x' * 4096):
         assert run(invalid, 'reject', code=1) == []
     assert run('poll', 'open-fail', 1) == ['BW_LUMP_REQUEST_OPEN v=1 op=poll rc=-1 errno=16']
-    for operation, size in [('poll', 48), ('legacy', 36)]:
+    for operation, size in [('poll', 48), ('legacy', 36), ('poll-e', 48)]:
         lines = run(operation)
         assert lines == [f'BW_LUMP_REQUEST v=1 op={operation} step=1 rc=-1 errno=11 bytes='+('a5'*size),
                          f'BW_LUMP_REQUEST_END v=1 op={operation} calls=1 close_rc=0 close_errno=0']
         data = run(operation, 'data')
         match = re.fullmatch(r'.* rc=0 errno=0 bytes=([0-9a-f]+)', data[0]); assert match
         raw = bytes.fromhex(match[1]); assert len(raw) == size
-        if operation == 'poll':
+        if operation in ('poll','poll-e'):
             assert int.from_bytes(raw[:8], 'little') == 0x1020304050607080
             assert raw[8:16] == bytes([2, 4, 0, 0])+b'ABCD' and raw[16:] == bytes(32)
         else:
@@ -44,6 +44,8 @@ def check(executable):
         assert batch[i] == f'BW_LUMP_REQUEST v=1 op=invalid-then-poll step={i+1} rc=-1 errno={22 if i == 0 else 14} bytes=-'
     assert 'step=6 rc=0 errno=0 bytes=8070605040302010' in batch[5]
     assert batch[6] == 'BW_LUMP_REQUEST_END v=1 op=invalid-then-poll calls=6 close_rc=0 close_errno=0'
+    batch_e = run('invalid-then-poll-e', 'data')
+    assert batch_e == [line.replace('invalid-then-poll', 'invalid-then-poll-e') for line in batch]
     assert run('poll', 'close-fail', 1)[-1].endswith('close_rc=-1 close_errno=5')
     assert run('invalid-then-poll', 'startup') == []
 
@@ -63,6 +65,9 @@ def main():
                     'startup-writes-console': source.replace('return request_run("invalid-then-poll", false, NULL) == 0 ? 0 : 1;', 'return request_run("invalid-then-poll", true, NULL) == 0 ? 0 : 1;'),
                     'lost-errno': source.replace('result, error, NULL, 0, emit);', 'result, ((void)error, 0), NULL, 0, emit);'),
                     'close-between-requests': source.replace('request_reply(operation, ++calls, result, error, NULL, 0, emit);', 'request_reply(operation, ++calls, result, error, NULL, 0, emit); if (selected == 7 && calls == 1) (void)close(fd);')}
+        variants['route-e-to-f'] = source.replace(
+            'open(selected < 8 ? "/dev/legoport5" : "/dev/legoport4", O_RDONLY)',
+            'open("/dev/legoport5", O_RDONLY)')
         for name, text in variants.items():
             assert name == 'baseline' or text != source
             (root/'lumpprobe.c').write_text(text)

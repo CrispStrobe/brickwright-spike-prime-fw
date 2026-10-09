@@ -19,6 +19,15 @@ points, adversaries and guest acceptance criteria. Refresh its status before
 starting L02 so these completed steps are not repeated. The baseline inventory
 below remains historical; do not silently substitute its older dependency pins.
 
+Both protected profiles pass the [fixed E/F qualification matrix](two-port-isolation.md)
+at source `e6e79a801b94116f775ede21b2b1cf18bfda1bd4` in
+[matrix 37890739377](https://github.com/CrispStrobe/brickwright-spike-prime-fw/actions/runs/37890739377).
+The ordinary profile runs its continued-DATA and separate silence controls;
+the HCI profile runs separate air regressions. This closes the finite diagnostic
+slice. L02 still needs other port pairs, symmetric replacement, concurrent
+readers and program/API integration; do not repeat the completed E/F scenario
+or describe arbitrary A–F coverage.
+
 The separate [HCI lifecycle qualification](hci-lifecycle-qualification.md) records
 Runtime `b34becc947ac9c998881bb018dfe2cec4b1398b2`, unchanged Infrastructure
 `1253d925accca23dfda66d5bca61e78498dcb64f`, complete affected guest/air checks
@@ -439,3 +448,5 @@ including the separate controller-service-pack licence/distribution decision.
 defects; a release review explicitly decides go/no-go. Absent hardware, deliver
 the reproducible experiment plan and leave physical gates open. Current source
 remains simulation-only and no flashable artifacts are published by these lanes.
+
+The next E/F diagnostic candidate is specified in [two-port isolation](two-port-isolation.md). Host controls are separate from pending actual protected-guest qualification.
