@@ -15,7 +15,8 @@
  *
  * Hardware connections:
  *   MODE pin:  TLC5955 channel 14 (duty=0 enables, duty=0xFFFF disables)
- *   ISET pin:  TIM5 CH1, PA0 (96kHz PWM controls charge current limit)
+ *   ISET pin:  TIM5 CH1, PA0 (96kHz PWM controls charge current limit;
+ *              the counter runs only while the duty is non-zero)
  *   CHG pin:   Resistor ladder DEV_0 CH2 (shared with center button ADC)
  *   IB pin:    ADC rank 3 (CH3, PA3) — USB charger current measurement
  *   VBUS:      PA9 (GPIO read for USB presence detection)
@@ -43,6 +44,7 @@
 #include <debug.h>
 
 #include <nuttx/clock.h>
+#include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/power/battery_charger.h>
 #include <nuttx/power/battery_ioctl.h>
@@ -105,6 +107,7 @@
 #define TIM_CR1_CEN               (1 << 0)
 #define TIM_EGR_UG                (1 << 0)
 #define TIM_CCMR1_OC1M_PWM1      (6 << 4)
+#define TIM_CCMR1_OC1M_INACTIVE  (4 << 4)  /* force OC1REF low */
 #define TIM_CCMR1_OC1PE           (1 << 3)
 #define TIM_CCER_CC1E             (1 << 0)
 
@@ -180,7 +183,16 @@ static struct spike_charger_s g_charger;
  * Name: iset_pwm_initialize
  *
  * Description:
- *   Initialize TIM5 CH1 on PA0 for ISET PWM output at 96 kHz.
+ *   Configure TIM5 CH1 on PA0 for ISET PWM output at 96 kHz, with the
+ *   output forced low and the counter stopped (ISET 0 %).
+ *
+ *   The counter runs only while a non-zero duty is set (see
+ *   iset_pwm_set_duty).  At 0 % the pin is held low either way: PWM mode 1
+ *   with CCR = 0 never drives OC1REF high, and "force inactive" holds it low
+ *   with the counter stopped.  The charger MODE pin is also disabled
+ *   whenever ISET is 0 %, so nothing observes the 96 kHz carrier then.  A
+ *   free-running 96 kHz timer was the largest single source of timer events
+ *   in instruction-level simulation (issue #54).
  ****************************************************************************/
 
 static void iset_pwm_initialize(void)
@@ -189,49 +201,69 @@ static void iset_pwm_initialize(void)
 
   modifyreg32(STM32_RCC_APB1ENR, 0, RCC_APB1ENR_TIM5EN);
 
-  /* Configure PA0 as TIM5_CH1 (AF2) */
+  /* Counter stopped and CH1 forced low before the pin is handed over. */
 
-  stm32_configgpio(GPIO_ISET_PWM);
+  putreg32(0, TIM5_BASE + TIM_CR1_OFFSET);
+  putreg32(TIM_CCMR1_OC1M_INACTIVE, TIM5_BASE + TIM_CCMR1_OFFSET);
+  putreg32(0, TIM5_BASE + TIM_CCR1_OFFSET);
 
   /* TIM5: no prescaler, period = 999 → 96 MHz / 1000 = 96 kHz */
 
   putreg32(0, TIM5_BASE + TIM_PSC_OFFSET);
   putreg32(TIM5_ARR, TIM5_BASE + TIM_ARR_OFFSET);
 
-  /* CH1: PWM mode 1, preload enable */
-
-  putreg32(TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE,
-           TIM5_BASE + TIM_CCMR1_OFFSET);
-
   /* Enable CH1 output */
 
   putreg32(TIM_CCER_CC1E, TIM5_BASE + TIM_CCER_OFFSET);
 
-  /* Initial duty = 0 (off) */
+  /* Configure PA0 as TIM5_CH1 (AF2) */
 
-  putreg32(0, TIM5_BASE + TIM_CCR1_OFFSET);
-
-  /* Force update, then enable counter */
-
-  putreg32(TIM_EGR_UG, TIM5_BASE + TIM_EGR_OFFSET);
-  putreg32(TIM_CR1_CEN, TIM5_BASE + TIM_CR1_OFFSET);
+  stm32_configgpio(GPIO_ISET_PWM);
 }
 
 /****************************************************************************
  * Name: iset_pwm_set_duty
  *
  * Description:
- *   Set the ISET PWM duty cycle (0-999).
+ *   Set the ISET PWM duty cycle (0-999).  0 stops the counter with the
+ *   output forced low; a non-zero duty selects PWM mode 1 and starts it.
  ****************************************************************************/
 
 static void iset_pwm_set_duty(uint32_t duty)
 {
+  irqstate_t flags;
+
   if (duty > TIM5_ARR)
     {
       duty = TIM5_ARR;
     }
 
-  putreg32(duty, TIM5_BASE + TIM_CCR1_OFFSET);
+  /* Called from both work queues and the charger ioctl path. */
+
+  flags = enter_critical_section();
+
+  if (duty == 0)
+    {
+      putreg32(TIM_CCMR1_OC1M_INACTIVE, TIM5_BASE + TIM_CCMR1_OFFSET);
+      putreg32(0, TIM5_BASE + TIM_CR1_OFFSET);
+      putreg32(0, TIM5_BASE + TIM_CCR1_OFFSET);
+    }
+  else if ((getreg32(TIM5_BASE + TIM_CR1_OFFSET) & TIM_CR1_CEN) == 0)
+    {
+      /* Starting: load the preloaded CCR with an update event first. */
+
+      putreg32(duty, TIM5_BASE + TIM_CCR1_OFFSET);
+      putreg32(TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE,
+               TIM5_BASE + TIM_CCMR1_OFFSET);
+      putreg32(TIM_EGR_UG, TIM5_BASE + TIM_EGR_OFFSET);
+      putreg32(TIM_CR1_CEN, TIM5_BASE + TIM_CR1_OFFSET);
+    }
+  else
+    {
+      putreg32(duty, TIM5_BASE + TIM_CCR1_OFFSET);
+    }
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************

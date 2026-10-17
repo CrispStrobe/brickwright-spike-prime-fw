@@ -74,17 +74,22 @@ static struct bw_program_io reset(void) {
   bw_device_init(&io);return io;
 }
 static void motor_tests(void) {
-  struct bw_motor_control m={0};int32_t duty;
+  struct bw_motor_control m={0};int32_t duty;int64_t held;
+  /* 11100 deg/s^2 ramp: 111 deg/s per 10 ms, the first call assumes 10 ms. */
   bw_motor_speed(&m,1110);duty=bw_motor_step(&m,0,0,0);
-  assert(m.reference==20 && duty>0 && duty<10000);
-  assert(bw_motor_step(&m,0,0,0)==duty && m.reference==20);
-  bw_motor_step(&m,10,0,0);assert(m.reference==40);
-  bw_motor_step(&m,5,0,0);assert(m.reference==40 && m.last==10);
-  bw_motor_step(&m,10000,0,0);assert(m.reference==140);
-  bw_motor_speed(&m,0);bw_motor_step(&m,10010,0,0);assert(m.reference==100);
-  bw_motor_speed(&m,-1110);bw_motor_step(&m,10020,0,0);assert(m.reference==80);
+  assert(m.reference==111 && duty>0 && duty<10000);
+  assert(bw_motor_step(&m,0,0,0)==duty && m.reference==111);
+  bw_motor_step(&m,10,0,0);assert(m.reference==222);
+  bw_motor_step(&m,5,0,0);assert(m.reference==222 && m.last==10);
+  bw_motor_step(&m,10000,0,0);assert(m.reference==777); /* 50 ms cap */
+  /* Stopping decelerates at 7400 deg/s^2. */
+  bw_motor_speed(&m,0);bw_motor_step(&m,10010,0,0);assert(m.reference==703);
+  bw_motor_speed(&m,-1110);bw_motor_step(&m,10020,0,0);assert(m.reference==629);
+  /* A runaway reading saturates the output; the integral stays bounded and
+   * does not advance while saturated in its own direction. */
   for(unsigned i=0;i<100;i++)bw_motor_step(&m,10030+i*50,0,INT32_MAX);
-  assert(m.integral==-2000000 && m.duty==-10000);
+  assert(m.duty==-10000 && m.integral>=-106382 && m.integral<=106382);
+  held=m.integral;bw_motor_step(&m,20000,0,INT32_MAX);assert(m.integral==held);
   memset(&m,0,sizeof(m));bw_motor_position(&m,100000,-90,300);
   assert(m.target==10000);bw_motor_step(&m,0,100000,0);assert(m.reference<0);
   for(unsigned i=1;i<100;i++)bw_motor_step(&m,i*10,100000,0);
@@ -123,14 +128,14 @@ static void device_tests(void) {
   assert(bw_device_tick(20)==0 && io.done(NULL,0)==0);
   queue(0,2,10);assert(bw_device_tick(30)==0 && io.done(NULL,0)==1);
   assert(io.motor(NULL,0,100)==0);queue(0,2,10);assert(bw_device_tick(40)==0);
-  assert(g_ports[0].control.reference==20 && written>0);
+  assert(g_ports[0].control.reference==100 && written>0);
   fail_op=LEGOPORT_PWM_SET_DUTY;fail_errno=EIO;queue(0,2,10);
   assert(bw_device_tick(50)==-EIO);fail_op=0;
   queue(0,2,10);frames[0][tail[0]-1].len=3;assert(bw_device_tick(60)==-EPROTO);
   fail_op=LEGOPORT_LUMP_POLL_DATA;fail_errno=ENODEV;assert(bw_device_tick(70)==-ENODEV);
   fail_op=0;bw_device_release();
   assert(io.motor(NULL,0,-100)==0);queue(0,2,-1);
-  assert(bw_device_tick(80)==0 && g_ports[0].control.reference==-20);
+  assert(bw_device_tick(80)==0 && g_ports[0].control.reference==-100);
   bw_device_release();
 }
 static void sensor_tests(void) {

@@ -17,6 +17,8 @@ cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/p
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -DBW_SIM_SESSION_DIAGNOSTICS=1 apps/hubprogram/program.c apps/hubprogram/upload.c apps/hubprogram/test/service_test.c -pthread -o "$output/service-diagnostic"
 "$output/service-diagnostic"
 cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/hubprogram/include -Iboards/spike-prime-hub/include apps/hubprogram/motor.c tests/hubprogram/control_test.c -o "$output/control"
+cc -std=c99 -Wall -Wextra -Werror -fsanitize=address,undefined apps/hubprogram/motor.c tests/hubprogram/speed_loop_test.c -o "$output/speed-loop"
+"$output/speed-loop"
 "$output/control"
 mp=third_party/micropython-embed
 cc -std=gnu99 -D_POSIX_C_SOURCE=200809L -Os -fno-common -Iapps/hubprogram/micropython -I"$mp" -I"$mp/port" "$mp"/py/*.c "$mp"/port/embed_util.c "$mp"/shared/runtime/gchelper_generic.c apps/hubprogram/micropython/brickwright_module.c apps/hubprogram/python_output.c apps/hubprogram/test/python_test.c -lm -o "$output/python"

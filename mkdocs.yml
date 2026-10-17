@@ -62,6 +62,7 @@ nav:
       - project/ble-protocol.md
       - project/imu-reference-captures.md
       - project/hub-contract.md
+      - project/motor-speed-loop.md
       - project/capabilities.md
       - project/next-steps.md
       - project/hardware-qualification.md
