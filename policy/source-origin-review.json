@@ -869,12 +869,12 @@
     },
     {
       "path": "apps/hubprogram/motor.c",
-      "sha256": "cccdde954e2dbf9deae73b9233262964ce9845e0fb9505bf6755d34ef875177f",
+      "sha256": "8d0f2397fff9d98b85830f4ddb742ec28198e2796d46539b626903aa4ae4c8e5",
       "kind": "text"
     },
     {
       "path": "apps/hubprogram/motor.h",
-      "sha256": "ce974c8bc21c807445100567f4c1295ed06adec4b230d37efa33f8ec59269b01",
+      "sha256": "b1dcddb86f9e86aad32517fce30f2482774a1211c72eac04208b066893495bc3",
       "kind": "text"
     },
     {
@@ -1734,7 +1734,7 @@
     },
     {
       "path": "boards/spike-prime-hub/src/stm32_battery_charger.c",
-      "sha256": "c6ab5d514e0f73e16ed7c81475132648d65a3ab767d39a970bc75c84e16b3f5c",
+      "sha256": "a7aac522c5a77078c2fb6bd4a56d7babd10fd889178b5d80d53f4120d7bfc734",
       "kind": "text"
     },
     {

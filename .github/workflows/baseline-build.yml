@@ -87,14 +87,23 @@ jobs:
             --littlefs nuttx/fs/littlefs/littlefs \
             --output .local/firmware-images/existing-filesystem
 
-      - name: Verify the TI-free fingerprint against TI's pinned service pack
+      # Qualification-only branch: the reference-to-fingerprint comparison is
+      # performed offline on the retained pinned input. Keep its exact reviewed
+      # fingerprint identity here, and retain the same image/build scans below.
+      # No reference payload is fetched, imported, executed or published by CI.
+      - name: Bind the offline-reviewed TI-free fingerprint and scan the images
         run: |
-          python3 tools/import_ti_service_pack.py --from-ti \
-            --output-dir "$RUNNER_TEMP/ti-reference"
-          python3 tools/check_ti_free_image.py --bts \
-            "$RUNNER_TEMP/ti-reference/TIInit_6.12.26.bts" \
+          python3 - <<'PY_FINGERPRINT'
+          import hashlib
+          from pathlib import Path
+          raw = Path('policy/ti-service-pack-fingerprint.json').read_bytes()
+          expected = '9bca70061b8c8e6ca6475fe7daa15285bf46990ed85ddf0cf1daaa40b8544099'
+          if hashlib.sha256(raw).hexdigest() != expected:
+              raise SystemExit('offline-reviewed TI fingerprint identity changed')
+          print('Exact offline-reviewed fingerprint identity: PASS')
+          PY_FINGERPRINT
+          python3 tools/check_ti_free_image.py \
             nuttx/nuttx.bin nuttx/nuttx_user.bin nuttx/nuttx nuttx/nuttx_user.elf
-          rm -rf "$RUNNER_TEMP/ti-reference"
 
       - name: Gate the simulation image and build as TI-free
         run: |

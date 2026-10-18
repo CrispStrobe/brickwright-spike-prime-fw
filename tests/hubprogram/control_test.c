@@ -21,18 +21,28 @@ static int fail_op, fail_errno, open_error, synced=1, type_id=48;
 static int port_type[6], unavailable[6];
 static unsigned port_writes[6], port_brakes[6], selections[6];
 static int32_t written;
+/* Battery gauge: /dev/bat0 is fd 300; 0 mV models an absent reading. */
+static int battery_mv=7800, battery_missing; static unsigned battery_reads;
 int fixture_open(const char *path,int flags,...) {
   (void)flags;
+  if(!strncmp(path,"/dev/bat",8)) {
+    if(battery_missing) {errno=ENOENT;return -1;}
+    return 300;
+  }
   if(open_error) {errno=open_error;return -1;}
   unsigned port=(unsigned)atoi(path+13);
   if(unavailable[port]) {errno=ENOENT;return -1;}
   return 100+port;
 }
-int fixture_close(int fd) {(void)fd;closes++;return 0;}
+int fixture_close(int fd) {if(fd!=300)closes++;return 0;}
 int fixture_ioctl(int fd,unsigned long op,...) {
   va_list ap; unsigned long arg; unsigned port=(unsigned)(fd-100);
-  assert(port<6);
   va_start(ap,op);arg=va_arg(ap,unsigned long);va_end(ap);
+  if(fd==300) {
+    assert(op==BATIOC_VOLTAGE);battery_reads++;
+    *(int *)arg=battery_mv;return 0;
+  }
+  assert(port<6);
   if((int)op==fail_op) {errno=fail_errno;return -1;}
   if(op==LEGOPORT_LUMP_GET_INFO) {
     struct lump_device_info_s *info=(void *)arg;
@@ -74,17 +84,22 @@ static struct bw_program_io reset(void) {
   bw_device_init(&io);return io;
 }
 static void motor_tests(void) {
-  struct bw_motor_control m={0};int32_t duty;
+  struct bw_motor_control m={0};int32_t duty;int64_t held;
+  /* 11100 deg/s^2 ramp: 111 deg/s per 10 ms, the first call assumes 10 ms. */
   bw_motor_speed(&m,1110);duty=bw_motor_step(&m,0,0,0);
-  assert(m.reference==20 && duty>0 && duty<10000);
-  assert(bw_motor_step(&m,0,0,0)==duty && m.reference==20);
-  bw_motor_step(&m,10,0,0);assert(m.reference==40);
-  bw_motor_step(&m,5,0,0);assert(m.reference==40 && m.last==10);
-  bw_motor_step(&m,10000,0,0);assert(m.reference==140);
-  bw_motor_speed(&m,0);bw_motor_step(&m,10010,0,0);assert(m.reference==100);
-  bw_motor_speed(&m,-1110);bw_motor_step(&m,10020,0,0);assert(m.reference==80);
+  assert(m.reference==111 && duty>0 && duty<10000);
+  assert(bw_motor_step(&m,0,0,0)==duty && m.reference==111);
+  bw_motor_step(&m,10,0,0);assert(m.reference==222);
+  bw_motor_step(&m,5,0,0);assert(m.reference==222 && m.last==10);
+  bw_motor_step(&m,10000,0,0);assert(m.reference==777); /* 50 ms cap */
+  /* Stopping decelerates at 7400 deg/s^2. */
+  bw_motor_speed(&m,0);bw_motor_step(&m,10010,0,0);assert(m.reference==703);
+  bw_motor_speed(&m,-1110);bw_motor_step(&m,10020,0,0);assert(m.reference==629);
+  /* A runaway reading saturates the output; the integral stays bounded and
+   * does not advance while saturated in its own direction. */
   for(unsigned i=0;i<100;i++)bw_motor_step(&m,10030+i*50,0,INT32_MAX);
-  assert(m.integral==-2000000 && m.duty==-10000);
+  assert(m.duty==-10000 && m.integral>=-181818 && m.integral<=181818);
+  held=m.integral;bw_motor_step(&m,20000,0,INT32_MAX);assert(m.integral==held);
   memset(&m,0,sizeof(m));bw_motor_position(&m,100000,-90,300);
   assert(m.target==10000);bw_motor_step(&m,0,100000,0);assert(m.reference<0);
   for(unsigned i=1;i<100;i++)bw_motor_step(&m,i*10,100000,0);
@@ -95,6 +110,22 @@ static void motor_tests(void) {
   bw_motor_step(&m,1020,10000,0);bw_motor_step(&m,1030,10000,0);
   assert(bw_motor_step(&m,1040,10000,0)==0 && !m.active);
   bw_motor_speed(&m,300);assert(m.reference==0 && m.integral==0 && !m.timed);
+}
+static void battery_tests(void) {
+  /* The duty scales by 7200 mV / battery; sampled at most every 500 ms. */
+  struct bw_program_io io=reset();int32_t nominal;
+  battery_missing=1;assert(io.motor(NULL,0,500)==0);queue(0,2,0);
+  assert(bw_device_tick(10)==0);nominal=written;assert(nominal>0);
+  bw_device_release();
+  io=reset();battery_missing=0;battery_mv=8000;battery_reads=0;
+  assert(io.motor(NULL,0,500)==0);queue(0,2,0);assert(bw_device_tick(10)==0);
+  assert(battery_reads==1 && written==(int32_t)((int64_t)nominal*7200/8000));
+  queue(0,2,1);assert(bw_device_tick(20)==0 && battery_reads==1);
+  queue(0,2,2);assert(bw_device_tick(510)==0 && battery_reads==2);
+  /* An implausible reading (an empty simulated ADC) keeps the nominal. */
+  bw_device_release();io=reset();battery_mv=0;
+  assert(io.motor(NULL,0,500)==0);queue(0,2,0);assert(bw_device_tick(10)==0 && written==nominal);
+  bw_device_release();battery_mv=7800;
 }
 static void device_tests(void) {
   struct bw_program_io io=reset();struct bw_program_debug debug={0};unsigned before;
@@ -123,14 +154,14 @@ static void device_tests(void) {
   assert(bw_device_tick(20)==0 && io.done(NULL,0)==0);
   queue(0,2,10);assert(bw_device_tick(30)==0 && io.done(NULL,0)==1);
   assert(io.motor(NULL,0,100)==0);queue(0,2,10);assert(bw_device_tick(40)==0);
-  assert(g_ports[0].control.reference==20 && written>0);
+  assert(g_ports[0].control.reference==100 && written>0);
   fail_op=LEGOPORT_PWM_SET_DUTY;fail_errno=EIO;queue(0,2,10);
   assert(bw_device_tick(50)==-EIO);fail_op=0;
   queue(0,2,10);frames[0][tail[0]-1].len=3;assert(bw_device_tick(60)==-EPROTO);
   fail_op=LEGOPORT_LUMP_POLL_DATA;fail_errno=ENODEV;assert(bw_device_tick(70)==-ENODEV);
   fail_op=0;bw_device_release();
   assert(io.motor(NULL,0,-100)==0);queue(0,2,-1);
-  assert(bw_device_tick(80)==0 && g_ports[0].control.reference==-20);
+  assert(bw_device_tick(80)==0 && g_ports[0].control.reference==-100);
   bw_device_release();
 }
 static void sensor_tests(void) {
@@ -248,4 +279,4 @@ static void explicit_sensor_tests(void) {
   assert(!writes && !brakes);
   bw_device_release();
 }
-int main(void) {struct bw_program_io io;bw_device_init(&io);explicit_sensor_tests();motor_tests();device_tests();sensor_tests();six_port_tests();puts("hubprogram motor/device tests passed");return 0;}
+int main(void) {struct bw_program_io io;bw_device_init(&io);explicit_sensor_tests();motor_tests();battery_tests();device_tests();sensor_tests();six_port_tests();puts("hubprogram motor/device tests passed");return 0;}

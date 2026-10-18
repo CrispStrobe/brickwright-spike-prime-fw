@@ -6,6 +6,7 @@
 #include "sensor_selector.h"
 #include <arch/board/board_legoport.h>
 #include <arch/board/board_lump.h>
+#include <nuttx/power/battery_ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -27,6 +28,20 @@ static uint64_t g_now;
  * legacy samples/control state. Only release/init clears a stale binding. */
 static uint64_t g_sensor_sessions[BW_PROGRAM_PORT_COUNT];
 static unsigned char g_sensor_stale[BW_PROGRAM_PORT_COUNT];
+/* Battery voltage for the speed loop's output scaling (motor.c). Read only
+ * while a motor is driven, at most every BATTERY_PERIOD_MS; any failure (no
+ * gauge, or a simulator's empty ADC) leaves the loop at its 7.2 V nominal. */
+#define BATTERY_PERIOD_MS 500
+static int g_battery_fd=-1;
+static uint64_t g_battery_next;
+static void battery_sample(uint64_t now) {
+  int millivolts=0;
+  if(now<g_battery_next)return;
+  g_battery_next=now+BATTERY_PERIOD_MS;
+  if(g_battery_fd<0)g_battery_fd=open("/dev/bat0",O_RDONLY);
+  if(g_battery_fd<0 || ioctl(g_battery_fd,BATIOC_VOLTAGE,(unsigned long)(uintptr_t)&millivolts)<0)millivolts=0;
+  bw_motor_supply(millivolts);
+}
 static int call(int fd,int op,unsigned long arg) { return ioctl(fd,op,arg)<0 ? -errno : 0; }
 static int is_motor(unsigned type) {
   return type==48 || type==49 || type==46 || type==65;
@@ -192,7 +207,9 @@ int bw_device_tick(uint64_t now) {
       bw_motor_position(&p->control,p->position,p->delta,p->velocity);p->deferred=0;
     }
     if(p->control.active && !p->braking) {
-      int32_t duty=bw_motor_step(&p->control,now,p->position,p->speed);
+      int32_t duty;
+      battery_sample(now);
+      duty=bw_motor_step(&p->control,now,p->position,p->speed);
       rc=call(p->fd,p->control.active ? LEGOPORT_PWM_SET_DUTY : LEGOPORT_PWM_BRAKE,(unsigned long)(long)duty);
       if(rc<0)return rc;
     }
@@ -211,6 +228,8 @@ void bw_device_release(void) {
     memset(g_ports+i,0,sizeof(g_ports[i]));
     g_ports[i].fd=-1;g_ports[i].mode=-1;
   }
+  if(g_battery_fd>=0)(void)close(g_battery_fd);
+  g_battery_fd=-1;g_battery_next=0;bw_motor_supply(0);
 }
 
 void bw_device_snapshot(volatile struct bw_program_debug *out) {

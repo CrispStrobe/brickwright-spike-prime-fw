@@ -806,7 +806,7 @@
         "MIT"
       ],
       "relationship": "adapted source or behavioural/hardware reference as identified by existing comments; notices retained conservatively",
-      "sha256": "c6ab5d514e0f73e16ed7c81475132648d65a3ab767d39a970bc75c84e16b3f5c"
+      "sha256": "a7aac522c5a77078c2fb6bd4a56d7babd10fd889178b5d80d53f4120d7bfc734"
     },
     {
       "path": "boards/spike-prime-hub/src/stm32_battery_gauge.c",
@@ -1193,7 +1193,7 @@
         "path": "boards/spike-prime-hub/src/stm32_battery_charger.c",
         "upstream_exists": true,
         "snapshot_identical": true,
-        "current_identical": true,
+        "current_identical": false,
         "upstream_sha256": "2e8452c62adf1fc98dee776d7ea94d36af302b3477363dd96935e29144133ced"
       },
       {
