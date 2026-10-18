@@ -35,53 +35,77 @@ and the arena's controller tuning stays separate.
 | Control period T | 10 ms (service worker) | `service.c` |
 | Speed measurement | backward difference of integer-degree LUMP positions over 10 ms → 100 °/s quantum; effective delay Td ≈ 20 ms | `device.c` |
 
-Loop structure (`bw_motor_step`):
+Loop structure (`bw_motor_step`), second revision. The first revision
+overshot 13 % at 7.2 V and 20 % at 8.3 V.
 
 1. The commanded speed is rate-limited to reach the rated 1110 °/s in 100 ms
-   (11 100 °/s²) and to stop from it in 150 ms (7 400 °/s²). Then it goes
-   through a first-order reference model wm with τm = 35 ms.
-2. The feed-forward is `(wm + τ·dwm/dt)/K` plus half of the Coulomb friction
-   (700 duty). The friction term fades in over the first 50 °/s.
-3. A PI acts on wm − w. It uses lambda (IMC) tuning for `K·e^(−Td·s)/(τs + 1)`:
-   Kp = τ/(K(λ + Td)). With λ = 64 ms, Kp = 6 duty per °/s, so the 100 °/s
-   quantum gives about 600 duty of jitter (≈ 5 % of full scale). Ti is λ = 64 ms
-   rather than τ, giving Ki = 94 duty per degree. This keeps a load four times
-   the rotor inertia from ringing.
-4. The integral is held as an angle (model angle − encoder angle, in mdeg).
-   It is exact over any number of ticks, so there is no steady-state speed
-   error and two wheels commanded alike turn alike. The feedback compares
-   against the model from one tick earlier, which matches the measurement
-   delay, so the start transient does not wind up the integral.
-5. Anti-windup: the integral does not advance while the output is saturated
-   in the direction that advance would push it. It is also bounded so that
-   its own term never exceeds full scale (±106°).
+   (11 100 °/s²) and to stop from it in 150 ms. Then it goes through a
+   first-order reference model wm with τm = 50 ms.
+2. Feed-forward `(wm + τ·dwm/dt)/K` makes the unloaded plant follow wm.
+   There is no friction feed-forward. Feeding friction forward overdrives a
+   motor with less friction, and overshoot is what it buys.
+3. **Battery compensation.** The loop computes duty at 7.2 V and scales its
+   output by 7200 mV / battery, as the identified motor models do. `device.c`
+   reads `/dev/bat0` (`BATIOC_VOLTAGE`) at most every 500 ms while a motor is
+   driven. A reading outside 5.5–9 V counts as no reading and the loop
+   assumes 7.2 V. That covers a missing gauge and Renode's empty battery ADC
+   channel. Without compensation, a full 8.3 V battery overdrives the
+   feed-forward by 15 %. That alone is 7 % overshoot.
+4. Speed is measured over 2 ticks (20 ms), a 50 °/s quantum instead of
+   100 °/s.
+5. A PI acts on wm − w with Kp = 8 duty per °/s. Lambda (IMC) tuning gives
+   Kp = τ/(K(λ + Td)) with λ + Td = 63 ms. Ki = 55 duty per degree
+   (Ti = 145 ms) keeps the loop overdamped up to four times the rotor inertia.
+6. **The integral advances only while the reference model is steady**
+   (|dwm/dt| ≤ 50 °/s²). A load heavier than the model lags the reference
+   while it accelerates. An integral fed that lag has to give the angle back
+   later, and that is overshoot. Instead, the lag closes under P and
+   feed-forward, which cannot overshoot a first-order plant. The integral then
+   removes the persistent part (friction, load, battery) from below.
+7. The integral is held as an angle: model angle minus encoder angle, in mdeg.
+   It is exact, so there is no steady-state error. Anti-windup: the integral
+   freezes while the output is saturated in its direction, and it is bounded
+   to full scale (±182°).
 
-Only half of the friction is fed forward because the measured value varies
-by unit, wear and temperature, and over-compensation causes overshoot. The
-integral supplies the remainder.
+The cost is that angle lost while accelerating is not recovered. A 2 s run
+at 300 °/s turns 581° on the bare host plant (ideal 600°): 4° from the ramp
+and about 15° from the reference model. The first revision turned 598° and
+gave the lag back as overshoot.
 
 ## Host evidence
 
-`tests/hubprogram/speed_loop_test.c` (part of `tools/check_hubprogram.sh`)
-closes the loop around `motor.c` with the DC plant above. It integrates at
-0.1 ms, quantizes the encoder to integer degrees every 10 ms, and computes the
-same backward-difference speed as `device.c`. Measured with the current gains:
+`tests/hubprogram/speed_loop_test.c` (run by `tools/check_hubprogram.sh`)
+closes the loop around `motor.c`. The plant is the DC model above,
+integrated at 0.1 ms, with integer-degree encoder reports every 10 ms that
+arrive one or two ticks late. The test passes the plant's voltage to
+`bw_motor_supply`, as `device.c` does on a hub.
 
-| Case | Steady error | Overshoot (20 ms mean) | Ripple | 90 % rise |
-|---|---|---|---|---|
-| 300 °/s, 7.2 V | +0.04 % | 13 % | 3.6 % | 0.07 s |
-| −300 °/s, 7.2 V | +0.03 % | 12 % | 3.6 % | 0.07 s |
-| 800 °/s, 7.2 V | −0.01 % | 4 % | 1.6 % | 0.11 s |
-| 300 °/s, 8.3 V battery | −0.07 % | 20 % | 4.3 % | 0.06 s |
-| 300 °/s, friction 0.018 N·m | −0.01 % | 3 % | 4.7 % | 0.17 s |
-| 100 °/s, friction 0.018 N·m | +0.05 % | 6 % | 14 % | 0.33 s |
-| 300 °/s, 2× inertia, friction + 0.02 N·m load | +0.03 % | 3 % | 2.3 % | 0.28 s |
-| 300 °/s, 4× inertia, reports 20 ms late | −0.33 % | 21 % | 4.7 % | 0.22 s |
+Overshoot is measured on the 50 ms mean of the true speed, which is what a
+robot's travel shows. Steady state is the last 0.5 s of a 2 s run.
 
-The bare motor turns 598° in 2 s at 300 °/s, against an ideal 600°. If the
-shaft is held stalled for 1 s at 600 °/s, the duty saturates and the
-integral stops advancing. After release, speed peaks at 706 °/s and settles
-to 600 °/s.
+The grid covers 300 and 800 °/s × battery 7.2 / 8.3 V × 1, 2, 4× rotor
+inertia × friction 0 / 0.018 N·m × reports 1 or 2 ticks late. Every case
+asserts overshoot ≤ 3 % and steady error < 1 %. Rise to 90 % is asserted
+below the old loop on the same plant: ≤ 0.15 / 0.25 / 0.40 s without
+friction (old: 0.22 / 0.31 / 0.51 s), and ≤ 0.8 s with friction (the old loop
+never got there; it settled 45 % low).
+
+| 300 °/s, measured | Overshoot | 90 % rise |
+|---|---|---|
+| 7.2 V or 8.3 V, bare rotor | 2.1–2.8 % | 0.11–0.14 s |
+| 2× inertia | 1.3–1.7 % | 0.18–0.20 s |
+| 4× inertia | 2.9–3.0 % | 0.31–0.32 s |
+| friction 0.018 N·m, 1–4× | 0.6–2.0 % | 0.63–0.67 s |
+
+Other cases:
+- −300 °/s behaves the same as +300 °/s.
+- 100 °/s with friction: steady error −0.25 %, 90 % rise in 0.87 s.
+- 2× inertia with friction plus a 0.02 N·m load: 0.8 % overshoot, 90 % rise in 0.83 s.
+- 8.3 V with no battery reading: 7.4 % overshoot. This case is bounded at 10 %, not 3 %.
+- Stall for 1 s, then release: the integral freezes while saturated. After release, speed peaks at 632 °/s and settles at 600 °/s.
+
+`control_test.c` covers the battery path: scaling, the 500 ms sampling
+period, and the fallback for an absent or zero reading.
 
 ## TIM5 (issue #54)
 

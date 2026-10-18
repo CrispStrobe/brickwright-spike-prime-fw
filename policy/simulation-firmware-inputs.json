@@ -784,7 +784,7 @@
     },
     {
       "path": "apps/hubprogram/device.c",
-      "sha256": "72cdb7e9bdd6a37dce5ff68566a02e93ad0eafbed611477744619301071e2bd2",
+      "sha256": "5f3848c6521d462dc89087852be7d97de72f4fec690a0e81ee8a569b124e4bf7",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -817,7 +817,7 @@
     },
     {
       "path": "apps/hubprogram/motor.c",
-      "sha256": "240ea3c11671330a61e2d1bf50d62a50a190b80bfb7d19ec8b4cef50478c3622",
+      "sha256": "8d0f2397fff9d98b85830f4ddb742ec28198e2796d46539b626903aa4ae4c8e5",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -828,7 +828,7 @@
     },
     {
       "path": "apps/hubprogram/motor.h",
-      "sha256": "996832eda1a3ae8a7af01975a55731429fd191ef950d751de0abe348442df6d8",
+      "sha256": "b1dcddb86f9e86aad32517fce30f2482774a1211c72eac04208b066893495bc3",
       "spdx": [
         "BSD-3-Clause"
       ],

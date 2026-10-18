@@ -24,6 +24,7 @@ struct plant {
   double load;       /* constant opposing torque, N*m */
   unsigned latency;  /* encoder report age, ticks */
   int stall_until;   /* shaft blocked until this time, ms (0: never) */
+  int no_reading;    /* the firmware gets no battery voltage */
 };
 struct trace {
   double angle[400];  /* true shaft angle at each tick, deg */
@@ -39,6 +40,7 @@ static void run(const struct plant *p,int32_t command,unsigned ticks,struct trac
   double w=0, theta=0; long reports[400]; int64_t previous=0; int32_t duty=0;
   assert(ticks<=400);
   memset(&m,0,sizeof(m));memset(out,0,sizeof(*out));
+  bw_motor_supply(p->no_reading ? 0 : (int32_t)(p->volts*1000.0+0.5));
   bw_motor_speed(&m,command);
   for(unsigned k=0;k<ticks;k++) {
     unsigned now=k*TICK_MS;
@@ -61,17 +63,19 @@ static void run(const struct plant *p,int32_t command,unsigned ticks,struct trac
   }
   out->ticks=ticks;
 }
-/* Speed averaged over two ticks (20 ms) of the true angle. */
-static double speed_at(const struct trace *t,unsigned k) { return (t->angle[k]-t->angle[k-2])*50.0; }
+/* Speed averaged over five ticks (50 ms) of the true angle: what a robot's
+ * travel shows, without the 10 ms PWM-step ripple. */
+#define AVERAGE 5
+static double speed_at(const struct trace *t,unsigned k) { return (t->angle[k]-t->angle[k-AVERAGE])*100.0/AVERAGE; }
 struct result { double steady, error, peak, overshoot, ripple, rise; };
 static struct result measure(const struct trace *t,double command) {
   struct result r={0,0,-1e9,0,0,-1}; double low=1e9, high=-1e9, sign=command<0 ? -1 : 1;
   unsigned n=0;
-  for(unsigned k=2;k<t->ticks;k++) {
+  for(unsigned k=AVERAGE;k<t->ticks;k++) {
     double v=speed_at(t,k)*sign;
     if(v>r.peak)r.peak=v;
     if(r.rise<0 && v>=0.9*command*sign)r.rise=k*TICK_MS/1000.0;
-    if(k>=100) { r.steady+=v; n++; if(v<low)low=v; if(v>high)high=v; }
+    if(k>=150) { r.steady+=v; n++; if(v<low)low=v; if(v>high)high=v; } /* last 0.5 s */
   }
   r.steady/=n; r.error=(r.steady-command*sign)/(command*sign)*100.0;
   r.overshoot=(r.peak-command*sign)/(command*sign)*100.0; r.ripple=(high-low)/(command*sign)*100.0;
@@ -81,41 +85,54 @@ static struct result check(const char *name,const struct plant *p,int32_t comman
                            double max_error,double max_overshoot,double max_ripple,double max_rise) {
   static struct trace t; struct result r;
   run(p,command,200,&t); r=measure(&t,command);
-  printf("%-34s steady %7.1f deg/s (%+.2f %%) overshoot %5.1f %% ripple %4.1f %% rise %.2f s\n",
+  printf("%-44s steady %7.1f deg/s (%+.2f %%) overshoot %4.1f %% ripple %4.1f %% rise %.2f s\n",
          name,r.steady,r.error,r.overshoot,r.ripple,r.rise);
   assert(r.error<max_error && r.error>-max_error);
-  assert(r.overshoot<max_overshoot);
+  assert(r.overshoot<=max_overshoot);
   assert(r.ripple<max_ripple);
-  assert(r.rise>0 && r.rise<max_rise);
+  assert(r.rise>0 && r.rise<=max_rise);
   return r;
 }
 int main(void) {
-  struct plant nominal={7.2,1,0,0,1,0};
-  static struct trace t;
-  /* Steady state < 1 %, no ringing, 90 % within 0.2 s on the bare motor. */
-  check("300 deg/s, 7.2 V",&nominal,300,1,15,10,0.15);
-  check("-300 deg/s, 7.2 V",&nominal,-300,1,15,10,0.15);
-  check("800 deg/s, 7.2 V",&nominal,800,1,10,10,0.15);
-  struct plant battery={8.3,1,0,0,1,0};
-  check("300 deg/s, full battery 8.3 V",&battery,300,1,25,10,0.15);
-  struct plant friction={7.2,1,0.018,0,1,0};
-  check("300 deg/s, friction 0.018 N*m",&friction,300,1,10,10,0.2);
-  check("100 deg/s, friction 0.018 N*m",&friction,100,1,15,20,0.4);
-  struct plant loaded={7.2,2,0.018,0.02,1,0};
-  check("300 deg/s, 2x inertia, load",&loaded,300,1,10,10,0.35);
-  struct plant heavy={7.2,4,0.018,0,2,0};
-  check("300 deg/s, 4x inertia, late reports",&heavy,300,1,30,10,0.3);
+  static struct trace t; char name[64];
+  /* The grid: battery 7.2 and 8.3 V, bare rotor to four times its inertia,
+   * no friction (the linear fit) and the measured 0.018 N*m, encoder reports
+   * one or two ticks old. Overshoot <= 3 %, steady state (last 0.5 s) < 1 %. Rise to 90 %
+   * of 300 deg/s is bounded below the old loop's on the same plant (0.22,
+   * 0.31, 0.51 s without friction; with friction it never got there). */
+  const double volts[]={7.2,8.3}, inertia[]={1,2,4}, friction[]={0,0.018};
+  const double rise_bare[]={0.15,0.25,0.40};
+  for(unsigned a=0;a<2;a++) for(unsigned b=0;b<3;b++) for(unsigned f=0;f<2;f++)
+    for(unsigned lat=1;lat<=2;lat++) {
+      struct plant p={volts[a],inertia[b],friction[f],0,lat,0,0};
+      snprintf(name,sizeof(name),"300 deg/s %.1f V %.0fx J friction %.3f late %u",volts[a],inertia[b],friction[f],lat);
+      check(name,&p,300,1,3,10,f ? 0.8 : rise_bare[b]);
+      snprintf(name,sizeof(name),"800 deg/s %.1f V %.0fx J friction %.3f late %u",volts[a],inertia[b],friction[f],lat);
+      check(name,&p,800,1,3,10,f ? 0.8 : rise_bare[b]+0.05);
+    }
+  struct plant nominal={7.2,1,0,0,1,0,0};
+  check("-300 deg/s, 7.2 V",&nominal,-300,1,3,10,0.15);
+  /* At low speed friction is most of the drive, and the integral that
+   * supplies it settles last: within 1 % over the last 0.5 s, 90 % within 1 s. */
+  struct plant friction100={7.2,1,0.018,0,1,0,0};
+  check("100 deg/s, friction 0.018 N*m",&friction100,100,1,5,25,1.0);
+  struct plant loaded={7.2,2,0.018,0.02,1,0,0};
+  check("300 deg/s, 2x inertia, friction + load",&loaded,300,1,3,10,1.0);
+  /* Without a battery reading the loop assumes 7.2 V; a full battery then
+   * overdrives the feed-forward by 15 %. Bounded, but not the 3 % target. */
+  struct plant unread={8.3,1,0,0,1,0,1};
+  check("300 deg/s, 8.3 V, no battery reading",&unread,300,1,10,10,0.15);
   /* The old loop's failure (Robot Lab lockstep, 2026-10-18): a 2 s run at
-   * 300 deg/s turned 563 deg. The ramp alone costs 4 deg at 300 deg/s. */
+   * 300 deg/s turned 563 deg. The ramp and reference model cost ~20 deg. */
   run(&nominal,300,200,&t);
-  printf("angle after 2 s at 300 deg/s: %.1f deg\n",t.angle[199]+speed_at(&t,199)*0.01);
-  assert(t.angle[199]>590 && t.angle[199]<606);
+  printf("angle after 2 s at 300 deg/s: %.1f deg\n",t.angle[199]);
+  assert(t.angle[199]>575 && t.angle[199]<600);
   /* Saturation and anti-windup: a stall holds the duty at full scale, the
    * integral stops advancing, and release does not run away. */
-  struct plant stalled={7.2,1,0,0,1,1000};
+  struct plant stalled={7.2,1,0,0,1,1000,0};
   run(&stalled,600,200,&t);
   assert(t.duty[99]==10000);
-  assert(t.integral[99]==t.integral[60] && t.integral[99]<=106382);
+  assert(t.integral[99]==t.integral[60] && t.integral[99]<=181818);
   double after=0; for(unsigned k=102;k<200;k++) if(speed_at(&t,k)>after)after=speed_at(&t,k);
   printf("stall released at 1 s: peak %.1f deg/s, final %.1f deg/s\n",after,speed_at(&t,199));
   assert(after<600*1.25); /* no wound-up runaway */

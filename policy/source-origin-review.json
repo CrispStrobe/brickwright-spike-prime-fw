@@ -869,12 +869,12 @@
     },
     {
       "path": "apps/hubprogram/motor.c",
-      "sha256": "240ea3c11671330a61e2d1bf50d62a50a190b80bfb7d19ec8b4cef50478c3622",
+      "sha256": "8d0f2397fff9d98b85830f4ddb742ec28198e2796d46539b626903aa4ae4c8e5",
       "kind": "text"
     },
     {
       "path": "apps/hubprogram/motor.h",
-      "sha256": "996832eda1a3ae8a7af01975a55731429fd191ef950d751de0abe348442df6d8",
+      "sha256": "b1dcddb86f9e86aad32517fce30f2482774a1211c72eac04208b066893495bc3",
       "kind": "text"
     },
     {
