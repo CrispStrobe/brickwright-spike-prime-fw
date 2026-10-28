@@ -574,7 +574,11 @@ async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
                 if receipt["virtual_us"] - initial["virtual_us"] < ticks * 1000000 / 104 - 1:
                     raise ValueError("Stationary fixture ran faster than configured ODR")
                 return receipt
-            await asyncio.sleep(2)
+            # Observe the finite feeder promptly. A two-second host poll can
+            # outlast the guest's unchanged 300 ms freshness limit once the
+            # aggregate display clock lets the guest run faster. Do not extend
+            # snapshot freshness or add samples to satisfy an exact sequence.
+            await asyncio.sleep(.05)
 
     active = False
     try:
