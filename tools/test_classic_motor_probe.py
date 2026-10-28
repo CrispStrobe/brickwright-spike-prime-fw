@@ -14,7 +14,22 @@ from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'simulation/bluetooth-air'))
 from classic_motor_probe import (MotorPeer, require_move, require_reply, require_disconnect,
-                                require_attachment_observation, motor_round_trip, boundary_jobs)
+                                require_attachment_observation, require_transport_release,
+                                motor_round_trip, boundary_jobs)
+
+
+class TransportRelease(unittest.TestCase):
+    def test_real_drive_and_bounded_guest_time_are_required(self):
+        before=dict(power=30,bridge_drive=3000,virtual_us=100)
+        after=dict(power=0,bridge_drive=0,virtual_us=200)
+        self.assertEqual(require_transport_release(before,after),100)
+        for patch in ({'power':1},{'bridge_drive':1},{'virtual_us':100},
+                      {'virtual_us':99},{'virtual_us':2500101}):
+            with self.assertRaises(AssertionError):
+                require_transport_release(before,{**after,**patch})
+        for patch in ({'power':0},{'bridge_drive':None},{'bridge_drive':0}):
+            with self.assertRaises(AssertionError):
+                require_transport_release({**before,**patch},after)
 
 
 class ScriptSelection(unittest.TestCase):

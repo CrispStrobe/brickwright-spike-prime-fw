@@ -266,6 +266,54 @@ async def cancellation_job(peer, record):
     await peer.quiet(150)
 
 
+def require_transport_release(before, after):
+    elapsed=after['virtual_us']-before['virtual_us']
+    if (before['power']==0 or before['bridge_drive'] in (None,0) or
+            after['power']!=0 or after['bridge_drive']!=0 or
+            not 0<elapsed<=2500000):
+        raise AssertionError('Disconnected Classic owner did not release its powered bridge within 2.5 guest seconds')
+    return elapsed
+
+
+async def disconnect_round_trip(central, results, round_trip, renode, log):
+    """Two actual authenticated connections; never transfer the old DLC or parser."""
+    record=results.setdefault('classic_disconnect',{'old':{'requests':[],'replies':[],'model_states':[],'cases':[]},
+        'replacement':{'requests':[],'replies':[],'model_states':[],'cases':[]}})
+    active=[]
+    async def start(dlc,received):
+        peer=MotorPeer(dlc,received,renode,log,record['old'])
+        await peer.establish_encoder('A')
+        peer.degrees('x001','A',10000)
+        before=(await peer.moving('A'))[0]
+        if before['bridge_drive'] in (None,0):raise AssertionError('Missing powered bridge before disconnect')
+        active.append((peer,before))
+        # Returning closes the real authenticated Classic connection while the
+        # unfinished job owns A. Do not issue STOP or fake a completion.
+    await round_trip(central,record['old'],renode_log=log,motor_action=start)
+    peer,before=active[0]
+    async with asyncio.timeout(120):
+        while True:
+            after=await peer.model('A')
+            if after['power']==0 and after['bridge_drive']==0:break
+            if after['virtual_us']-before['virtual_us']>2500000:
+                raise AssertionError('Classic disconnect retained powered motor ownership')
+            await asyncio.sleep(.1)
+    record['releaseGuestUs']=require_transport_release(before,after)
+    async def replace(dlc,received):
+        successor=MotorPeer(dlc,received,renode,log,record['replacement'])
+        # Old async replies must not be delivered to the fresh connection.
+        await successor.quiet(300)
+        await successor.establish_encoder('A',tag='r')
+        before=await successor.model('A')
+        successor.degrees('x002','A',-180)
+        await successor.moving('A');await successor.collect('x002')
+        after=await successor.model('A')
+        record['replacementDelta']=require_move(before,after,-180)
+        await successor.quiet(300)
+    await round_trip(central,record['replacement'],renode_log=log,motor_action=replace)
+    record['passed']=True
+
+
 async def no_progress_job(peer, record):
     before = await peer.model('A', 'load', 100)
     peer.degrees('p008', 'A', 90)

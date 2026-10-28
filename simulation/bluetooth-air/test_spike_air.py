@@ -767,7 +767,7 @@ async def main() -> int:
                         help="Explicit source-compiled candidate from Infrastructure's qualification stager")
     parser.add_argument("--motor-port-layout", type=Path,
                         help="Private read-only DCM layout collected from this exact own-kernel ELF")
-    parser.add_argument("--motor-case", choices=('all', 'motion', 'cancel', 'no-progress', 'detach'), default='all',
+    parser.add_argument("--motor-case", choices=('all', 'motion', 'cancel', 'no-progress', 'detach', 'disconnect'), default='all',
                         help="select a separate bounded diagnostic motor scenario; CI requires all")
     parser.add_argument("--imu-probe", action="store_true",
                         help="with --classic, inject paired raw IMU fixtures and verify driver/uORB BUNDLE samples")
@@ -990,14 +990,18 @@ async def main() -> int:
                     await asyncio.sleep(0.5)
                 await asyncio.sleep(2)
                 peer = (await air.add_peer("classic-central", "02:B1:0E:5A:17:C1")).device
-                await asyncio.wait_for(
-                    classic_round_trip(peer, results, arguments.lite_extension,
+                if arguments.motor_case == 'disconnect':
+                    from classic_motor_probe import disconnect_round_trip
+                    operation = disconnect_round_trip(peer, results, classic_round_trip, renode, workdir / 'renode.log')
+                else:
+                    operation = classic_round_trip(peer, results, arguments.lite_extension,
                                        imu_renode=renode if arguments.imu_probe or arguments.imu_readiness or arguments.imu_poses or arguments.imu_calibration else None,
                                        renode_log=workdir / "renode.log",
                                        imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses,
                                        imu_calibration=arguments.imu_calibration,
                                        motor_renode=renode if arguments.motor_runtime else None,
-                                       motor_case=arguments.motor_case),
+                                       motor_case=arguments.motor_case)
+                await asyncio.wait_for(operation,
                     1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (600 if arguments.motor_runtime else 360 if arguments.imu_poses else 240))
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
