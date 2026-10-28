@@ -1,0 +1,200 @@
+{
+  "schema": 1,
+  "firmwareBuildSource": "91cf0c07784441ac114b85a1705737327db2d9f8",
+  "calibrationHarnessSource": "bb4871484c8918bf2dd9ca8871a0466d5d2b1662",
+  "runtimeBuildSource": "b7aca81430ee2e1ea6706102fefc3c573ae1aa0c",
+  "runtimeSha256": "cdc11fcd0d1c97583fe8059462bf2dde8b582fcd034212ba36994195d2ec2793",
+  "infrastructure": "bb2c96fd2656f686d4b06683df4ece234f33b206",
+  "cases": {
+    "classic-all": {
+      "passed": true,
+      "originalReceiptSha256": "3213d81b1b5859b9cf3906b4c91bdd1cb0b9d19b2bf538843f7a29f04b9086d0",
+      "kernelSha256": "a8845c3325e71a2ca19d98fe6e83b5eb652a70070c55974369029401936dd691",
+      "userspaceSha256": "e4ddd0b9af22a6c747fb784dfb60de4cbcf8958bc13b3e0e040d3b97c60418e4",
+      "observations": [
+        {
+          "case": "encoder-ready-A",
+          "delta": 33.20900550000001
+        },
+        {
+          "case": "encoder-ready-B",
+          "delta": 34.20100650000001
+        },
+        {
+          "case": "p001",
+          "delta": 94.74640049999962
+        },
+        {
+          "case": "p002",
+          "delta": -95.74440150000001
+        },
+        {
+          "case": "concurrent-A",
+          "delta": 184.87515749999602
+        },
+        {
+          "case": "concurrent-B",
+          "delta": -185.16782449999994
+        },
+        {
+          "case": "cancel-replace",
+          "delta": -188.2258274999964
+        },
+        {
+          "case": "no-progress",
+          "error": -110,
+          "elapsed_us": 1022308
+        },
+        {
+          "case": "p009",
+          "error": -138
+        },
+        {
+          "case": "p010",
+          "error": -22
+        },
+        {
+          "case": "p011",
+          "error": -138
+        }
+      ]
+    },
+    "classic-disconnect": {
+      "passed": true,
+      "originalReceiptSha256": "fb5b94c94eec1dba78439001ed4c7b780a19b6a776bed4a39b9ddd49361ab5a6",
+      "kernelSha256": "a8845c3325e71a2ca19d98fe6e83b5eb652a70070c55974369029401936dd691",
+      "userspaceSha256": "e4ddd0b9af22a6c747fb784dfb60de4cbcf8958bc13b3e0e040d3b97c60418e4",
+      "releaseGuestUs": 10500,
+      "replacementDelta": -182.9031555000003
+    },
+    "classic-detach": {
+      "passed": true,
+      "originalReceiptSha256": "8e0a0af4bf030271038495817c831965a86742c98dbf268b29a5f2fa226b0546",
+      "kernelSha256": "a8845c3325e71a2ca19d98fe6e83b5eb652a70070c55974369029401936dd691",
+      "userspaceSha256": "e4ddd0b9af22a6c747fb784dfb60de4cbcf8958bc13b3e0e040d3b97c60418e4",
+      "observations": [
+        {
+          "case": "encoder-ready-A",
+          "delta": 33.86833950000001
+        },
+        {
+          "case": "encoder-ready-A",
+          "delta": 33.53567250000001
+        },
+        {
+          "case": "detach-reconnect",
+          "error": -19,
+          "disconnect_guest_us": 789989,
+          "before_guest": {
+            "confirmed_type": 14,
+            "event_counter": 1,
+            "flags": 11
+          },
+          "disconnected_guest": {
+            "confirmed_type": 0,
+            "event_counter": 2,
+            "flags": 0
+          },
+          "replacement_guest": {
+            "confirmed_type": 14,
+            "event_counter": 3,
+            "flags": 11
+          },
+          "released_bridge": 0,
+          "delta": -94.7524005000001
+        },
+        {
+          "case": "p009",
+          "error": -138
+        },
+        {
+          "case": "p010",
+          "error": -22
+        },
+        {
+          "case": "p011",
+          "error": -138
+        }
+      ]
+    },
+    "calibration-save": {
+      "passed": true,
+      "originalReceiptSha256": "b860a2813a6dd0b292eaa41e398468f10146780a20f22c3809e5950ac0252669",
+      "snapshotSequences": [
+        1,
+        101,
+        261,
+        441,
+        1
+      ],
+      "calibration": {
+        "saved_sequence": 441,
+        "loaded_bias_verified": true,
+        "physical_durability_qualified": false,
+        "status": "PASS"
+      },
+      "medium": {
+        "schema": 1,
+        "kind": "own-guest-calibration-medium",
+        "bytes": 33554432,
+        "sha256": "ed08963417b06d9d8c7aa73cb736e47aeca5710ac918d775199324dd9ddb6a31",
+        "kernelSha256": "a8845c3325e71a2ca19d98fe6e83b5eb652a70070c55974369029401936dd691",
+        "userspaceSha256": "e4ddd0b9af22a6c747fb784dfb60de4cbcf8958bc13b3e0e040d3b97c60418e4"
+      },
+      "topology": {
+        "scope": "legacy paired-IMU/NOR fixture; compiled TLC5955 and exact 96 MHz aggregate TIM12",
+        "files": {
+          "stm32f4.repl": {
+            "sourceSha256": "fba5815580364acdf1eca1e8609a90be07dcdf218463c7b6d2bb34dacf5a3c14",
+            "stagedSha256": "36eef956680825c00cd420612b073897edb36be5eacf07df132b532e6204f66f"
+          },
+          "spike-prime.repl": {
+            "sourceSha256": "cadc2725d4dc652f6480d53c39feb97487bebbe5aa465ad0a17b47fc30f49eca",
+            "stagedSha256": "0bad4264d76cf4f7e49b351abfb5b9d6a76084860e2690e42ace04e59abea9c4"
+          },
+          "spike-prime-custom-dma.repl": {
+            "sourceSha256": "3a323130ae7f804e83ffa08feaf318a567357e85abbecf00fe3892d508345063",
+            "stagedSha256": "3a323130ae7f804e83ffa08feaf318a567357e85abbecf00fe3892d508345063"
+          }
+        }
+      }
+    },
+    "calibration-restore": {
+      "passed": true,
+      "originalReceiptSha256": "9325aface19fd43b61ef1ee54e81e13e12df5c106c97d5365c0faca7eb3a4527",
+      "snapshotSequences": [
+        1
+      ],
+      "calibration": {
+        "cold_bias_verified": true,
+        "physical_durability_qualified": false,
+        "status": "PASS"
+      },
+      "medium": {
+        "schema": 1,
+        "kind": "own-guest-calibration-medium",
+        "bytes": 33554432,
+        "sha256": "ed08963417b06d9d8c7aa73cb736e47aeca5710ac918d775199324dd9ddb6a31",
+        "kernelSha256": "a8845c3325e71a2ca19d98fe6e83b5eb652a70070c55974369029401936dd691",
+        "userspaceSha256": "e4ddd0b9af22a6c747fb784dfb60de4cbcf8958bc13b3e0e040d3b97c60418e4"
+      },
+      "topology": {
+        "scope": "legacy paired-IMU/NOR fixture; compiled TLC5955 and exact 96 MHz aggregate TIM12",
+        "files": {
+          "stm32f4.repl": {
+            "sourceSha256": "fba5815580364acdf1eca1e8609a90be07dcdf218463c7b6d2bb34dacf5a3c14",
+            "stagedSha256": "36eef956680825c00cd420612b073897edb36be5eacf07df132b532e6204f66f"
+          },
+          "spike-prime.repl": {
+            "sourceSha256": "cadc2725d4dc652f6480d53c39feb97487bebbe5aa465ad0a17b47fc30f49eca",
+            "stagedSha256": "0bad4264d76cf4f7e49b351abfb5b9d6a76084860e2690e42ace04e59abea9c4"
+          },
+          "spike-prime-custom-dma.repl": {
+            "sourceSha256": "3a323130ae7f804e83ffa08feaf318a567357e85abbecf00fe3892d508345063",
+            "stagedSha256": "3a323130ae7f804e83ffa08feaf318a567357e85abbecf00fe3892d508345063"
+          }
+        }
+      }
+    }
+  }
+}

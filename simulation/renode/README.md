@@ -185,6 +185,10 @@ table remains inside NuttX's protected initialized-data range.
 
 ## Local run
 
+The [Classic recovery and cold-calibration qualification](QUALIFICATION-2026-10-28.md)
+records actual guest disconnect/detach/replacement and fresh-process NOR
+restore, with source/image/medium bindings and the preserved timing failure.
+
 The IMU model defaults to manual paired-sample injection. Its optional
 `StartFixtureFeed(gx, gy, gz, ax, ay, az, ticks)` schedules a bounded synthetic
 stream at the matching configured accel/gyro ODR in guest time. It skips unread
