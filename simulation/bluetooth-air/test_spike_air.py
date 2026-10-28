@@ -92,10 +92,12 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   imu_fixture: Path | None = None,
                   motor_runtime: Path | None = None,
                   electrical_qualification: Path | None = None,
-                  empty_ports: bool = False, persistent_flash: Path | None = None) -> str:
+                  empty_ports: bool = False, persistent_flash: Path | None = None,
+                  imu_topology: Path | None = None) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
-    platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
+    platform = (motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime
+                else imu_topology / "spike-prime-custom-dma.repl" if imu_topology else PLATFORM)
     if electrical_qualification and not motor_runtime:
         raise ValueError('electrical qualification requires explicit motor topology')
     if empty_ports and not motor_runtime:
@@ -201,10 +203,11 @@ async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        imu_fixture: Path | None = None,
                        motor_runtime: Path | None = None,
                        electrical_qualification: Path | None = None,
-                       empty_ports: bool = False, persistent_flash: Path | None = None):
+                       empty_ports: bool = False, persistent_flash: Path | None = None,
+                       imu_topology: Path | None = None):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification, empty_ports, persistent_flash))
+                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification, empty_ports, persistent_flash, imu_topology))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -797,6 +800,8 @@ async def main() -> int:
                         help="after the first LE round trip, require a second one")
     parser.add_argument("--periodic", action="store_true",
                         help="with --reconnect, verify battery notifications, unsubscribe and connection reset")
+    parser.add_argument("--imu-topology", type=Path,
+                        help="separate paired-IMU calibration topology staged with aggregate display clock")
     parser.add_argument("--observe-guest-clock", action="store_true",
                         help="with --periodic, record bounded read-only guest-clock progress beside host arrivals")
     parser.add_argument("--skip-le", action="store_true",
@@ -838,6 +843,23 @@ async def main() -> int:
             validate_medium(arguments.imu_cold_restore,arguments.images)
         if arguments.imu_flash_output and (arguments.imu_flash_output.exists() or Path(str(arguments.imu_flash_output)+'.json').exists()):
             parser.error('cold medium output exists; preserve prior evidence')
+    imu_topology_receipt = None
+    if arguments.imu_topology:
+        if not arguments.imu_calibration or not arguments.classic or arguments.motor_runtime:
+            parser.error('--imu-topology requires the separate Classic calibration fixture')
+        import re
+        arguments.imu_topology = arguments.imu_topology.resolve()
+        if re.search(r'[\s"\'@;\\]', str(arguments.imu_topology)):
+            parser.error('IMU topology requires a monitor-safe path')
+        imu_topology_receipt = json.loads((arguments.imu_topology / 'topology-receipt.json').read_text())
+        expected = {'stm32f4.repl', 'spike-prime.repl', 'spike-prime-custom-dma.repl'}
+        if set(imu_topology_receipt['files']) != expected:
+            parser.error('unexpected IMU topology union')
+        for name in expected:
+            raw = (arguments.imu_topology / name).read_bytes()
+            if (hashlib.sha256(raw).hexdigest() != imu_topology_receipt['files'][name]['stagedSha256']
+                    or b'http://' in raw or b'https://' in raw):
+                parser.error('IMU topology differs from its offline receipt')
     imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
                      arguments.imu_readiness, arguments.imu_calibration))
     le_board = compiled_le_board(arguments, parser)
@@ -940,6 +962,8 @@ async def main() -> int:
                      "--secs", str(int(arguments.timeout) + 120)]
                     + (["--lib", str(arguments.sdhle_lib)] if arguments.sdhle_lib else []),
                     stdout=open(workdir / "microbit.log", "wb"), stderr=subprocess.STDOUT, start_new_session=True)
+            if imu_topology_receipt is not None:
+                results['imu_topology'] = imu_topology_receipt
             imu_fixture = None
             if arguments.motor_runtime or arguments.le_concurrent_motion:
                 from classic_motor_probe import RENODE_MOTOR_HELPER
@@ -958,7 +982,7 @@ async def main() -> int:
                                         arguments.dump, arguments.existing_filesystem,
                                         imu_fixture, board_runtime, arguments.electrical_qualification,
                                         le_board is not None and not arguments.active_port_notifications,
-                                        arguments.imu_cold_restore)
+                                        arguments.imu_cold_restore, arguments.imu_topology)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             if arguments.le_distance_step:

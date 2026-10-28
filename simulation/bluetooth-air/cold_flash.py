@@ -19,10 +19,13 @@ def image_hashes(images):
 def validate_medium(path, images):
     if path.is_symlink() or not path.is_file() or path.stat().st_size!=SIZE:
         raise ValueError('Cold medium must be a regular complete 32 MiB NOR image')
-    receipt=json.loads(Path(str(path)+'.json').read_text())
+    sidecar=Path(str(path)+'.json')
+    if sidecar.is_symlink() or not sidecar.is_file() or sidecar.stat().st_size>4096:
+        raise ValueError('Cold medium requires a regular bounded identity receipt')
+    receipt=json.loads(sidecar.read_text())
     expected={'schema':1,'kind':'own-guest-calibration-medium','bytes':SIZE,
               'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),**image_hashes(images)}
-    if type(receipt.get('schema')) is not int or receipt!=expected:
+    if not isinstance(receipt,dict) or type(receipt.get('schema')) is not int or receipt!=expected:
         raise ValueError('Cold medium or own image identity mismatch')
     return receipt
 
