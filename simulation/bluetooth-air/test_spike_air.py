@@ -825,6 +825,7 @@ async def main() -> int:
         parser.error("Bluetooth-air tests require Python 3.11 or later")
     if arguments.timeout <= 0:
         parser.error("--timeout must be positive")
+    restored_medium = None
     if arguments.imu_cold_restore or arguments.imu_flash_output:
         if not arguments.imu_calibration or not arguments.classic or arguments.motor_runtime:
             parser.error('cold calibration medium requires the separate Classic --imu-calibration fixture')
@@ -840,7 +841,7 @@ async def main() -> int:
                 setattr(arguments,name,path)
         if arguments.imu_cold_restore:
             from cold_flash import validate_medium
-            validate_medium(arguments.imu_cold_restore,arguments.images)
+            restored_medium = validate_medium(arguments.imu_cold_restore,arguments.images)
         if arguments.imu_flash_output and (arguments.imu_flash_output.exists() or Path(str(arguments.imu_flash_output)+'.json').exists()):
             parser.error('cold medium output exists; preserve prior evidence')
     imu_topology_receipt = None
@@ -948,6 +949,9 @@ async def main() -> int:
             from renode_load_littlefs_fixture import validate_fixture
             _, results["fixture_receipt"] = validate_fixture(str(arguments.existing_filesystem))
             results["storage"] = "explicit-existing-filesystem"
+        if restored_medium is not None:
+            results['restored_medium'] = restored_medium
+            results['storage'] = 'exact-medium-cold-restore'
         async with asyncio.timeout(arguments.timeout + (1500 if arguments.imu_calibration else 1200 if arguments.imu_readiness else 600)):
             air_hub = subprocess.Popen(
                 [sys.executable, str(AIR_TOOLS / "airhub.py"), "--tcp",
