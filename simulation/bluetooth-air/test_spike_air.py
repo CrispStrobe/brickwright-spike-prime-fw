@@ -92,7 +92,7 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
                   imu_fixture: Path | None = None,
                   motor_runtime: Path | None = None,
                   electrical_qualification: Path | None = None,
-                  empty_ports: bool = False) -> str:
+                  empty_ports: bool = False, persistent_flash: Path | None = None) -> str:
     manifest = json.loads((images / "manifest.json").read_text())
     pc = int(manifest["reset_pc"], 16) & ~1
     platform = motor_runtime / "platforms/boards/spike-prime.repl" if motor_runtime else PLATFORM
@@ -113,7 +113,9 @@ def renode_script(images: Path, port: int, trace=(), callers=(), watches=(),
             # Match the battery-only LE fixture's external input conditions.
             # This acts on model attachments before loading/running the guest.
             lines.extend(f'port{name} Detach' for name in 'ABCDEF')
-    if existing_filesystem is not None:
+    if persistent_flash is not None:
+        lines.append('python "from System.IO import File; monitor.Machine[\'sysbus.spi2.flashMux.norFlash\'].RestoreStorage(File.ReadAllBytes(\''+str(persistent_flash)+'\'))"')
+    elif existing_filesystem is not None:
         lines.append(f"include @{ROOT / 'tools' / 'renode_load_littlefs_fixture.py'}")
         if motor_runtime:
             # Same validated synthetic NOR fixture and ISPIPeripheral loader;
@@ -199,10 +201,10 @@ async def start_renode(renode_dir: Path, images: Path, port: int, workdir: Path,
                        imu_fixture: Path | None = None,
                        motor_runtime: Path | None = None,
                        electrical_qualification: Path | None = None,
-                       empty_ports: bool = False):
+                       empty_ports: bool = False, persistent_flash: Path | None = None):
     script = workdir / "spike-air.resc"
     script.write_text(renode_script(images, port, trace, callers, watches, dumps,
-                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification, empty_ports))
+                                    existing_filesystem, imu_fixture, motor_runtime, electrical_qualification, empty_ports, persistent_flash))
     with open(workdir / "renode.log", "wb") as logfile:
         return await asyncio.create_subprocess_exec(
             str(renode_dir / "renode"), "--disable-gui", "--console", "--plain",
@@ -493,6 +495,7 @@ async def classic_round_trip(central, results: dict,
                              imu_renode=None, renode_log: Path | None = None,
                              imu_readiness: bool = False, imu_poses: bool = False,
                              imu_calibration: bool = False,
+                             imu_cold_restore: bool = False,
                              motor_renode=None, motor_case: str = 'all', motor_action=None) -> None:
     from bumble.rfcomm import Client, find_rfcomm_channel_with_uuid
     from bumble.sdp import Client as SdpClient  # noqa: F401
@@ -546,6 +549,7 @@ async def classic_round_trip(central, results: dict,
             elif imu_readiness or imu_calibration:
                 await stationary_round_trip(dlc, received, imu_renode, results,
                                             renode_log=renode_log, persistence=imu_calibration,
+                                            cold_restore=imu_cold_restore,
                                             timeout=1200 if imu_calibration else 900)
             else:
                 await imu_round_trip(dlc, received, imu_renode, results,
@@ -777,6 +781,10 @@ async def main() -> int:
                         help="with --classic, qualify stationary readiness using a configured-rate guest-time fixture")
     parser.add_argument("--imu-calibration", action="store_true",
                         help="with --classic, save/reload learned gyro bias through guest LittleFS")
+    parser.add_argument('--imu-cold-restore',type=Path,
+                        help='with --imu-calibration, restore exact private medium and verify first-sample calibration in a fresh process')
+    parser.add_argument('--imu-flash-output',type=Path,
+                        help='with --imu-calibration, export the exact NOR medium after successful save and stop')
     parser.add_argument("--serve-scratch-link", type=int, default=20111,
                         metavar="PORT", help="Scratch Link port for --then")
     parser.add_argument("--then", metavar="COMMAND",
@@ -812,6 +820,24 @@ async def main() -> int:
         parser.error("Bluetooth-air tests require Python 3.11 or later")
     if arguments.timeout <= 0:
         parser.error("--timeout must be positive")
+    if arguments.imu_cold_restore or arguments.imu_flash_output:
+        if not arguments.imu_calibration or not arguments.classic or arguments.motor_runtime:
+            parser.error('cold calibration medium requires the separate Classic --imu-calibration fixture')
+        if arguments.imu_cold_restore and arguments.imu_flash_output:
+            parser.error('select calibration save or fresh-process restore')
+        import re
+        for name in ('imu_cold_restore','imu_flash_output'):
+            path=getattr(arguments,name)
+            if path is not None:
+                if path.is_symlink():parser.error('cold medium must not be a symbolic link')
+                path=path.resolve()
+                if re.search(r'[\s"\'@;\\]',str(path)):parser.error('cold medium requires a monitor-safe private path')
+                setattr(arguments,name,path)
+        if arguments.imu_cold_restore:
+            from cold_flash import validate_medium
+            validate_medium(arguments.imu_cold_restore,arguments.images)
+        if arguments.imu_flash_output and (arguments.imu_flash_output.exists() or Path(str(arguments.imu_flash_output)+'.json').exists()):
+            parser.error('cold medium output exists; preserve prior evidence')
     imu_modes = sum((arguments.imu_probe, arguments.imu_poses,
                      arguments.imu_readiness, arguments.imu_calibration))
     le_board = compiled_le_board(arguments, parser)
@@ -931,7 +957,8 @@ async def main() -> int:
                                         arguments.trace_caller, arguments.watch,
                                         arguments.dump, arguments.existing_filesystem,
                                         imu_fixture, board_runtime, arguments.electrical_qualification,
-                                        le_board is not None and not arguments.active_port_notifications)
+                                        le_board is not None and not arguments.active_port_notifications,
+                                        arguments.imu_cold_restore)
             hub = await air.attach_hci_client("spike-hub", "127.0.0.1",
                                               arguments.port, HUB_ADDRESS)
             if arguments.le_distance_step:
@@ -999,10 +1026,14 @@ async def main() -> int:
                                        renode_log=workdir / "renode.log",
                                        imu_readiness=arguments.imu_readiness, imu_poses=arguments.imu_poses,
                                        imu_calibration=arguments.imu_calibration,
+                                       imu_cold_restore=arguments.imu_cold_restore is not None,
                                        motor_renode=renode if arguments.motor_runtime else None,
                                        motor_case=arguments.motor_case)
                 await asyncio.wait_for(operation,
                     1380 if arguments.imu_calibration else 1020 if arguments.imu_readiness else (600 if arguments.motor_runtime else 360 if arguments.imu_poses else 240))
+            if arguments.imu_flash_output:
+                from cold_flash import save_medium
+                results['cold_medium']=await save_medium(renode,arguments.imu_flash_output,arguments.images,workdir/'renode.log')
             assert 0x0C03 in hub.controller.commands, "Controller never received HCI Reset"
             assert not hub.controller.vendor_commands, "Unexpected vendor HCI commands"
             assert not hub.controller.unknown_commands, "Unsupported HCI commands"
