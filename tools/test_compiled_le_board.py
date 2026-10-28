@@ -65,8 +65,16 @@ class BoardAdmission(unittest.TestCase):
         main = next(n for n in nodes if isinstance(n, ast.AsyncFunctionDef) and n.name == 'main')
         call = next(n for n in ast.walk(main) if isinstance(n, ast.Call)
                     and isinstance(n.func, ast.Name) and n.func.id == 'start_renode')
-        self.assertEqual(ast.unparse(call.args[-3]), 'board_runtime')
-        self.assertEqual(ast.unparse(call.args[-1]), 'le_board is not None and (not arguments.active_port_notifications)')
+        launcher = next(n for n in nodes if isinstance(n, ast.AsyncFunctionDef) and n.name == 'start_renode')
+        # Bind by the declared parameter name: cold-media/topology options must
+        # not make unrelated tail-position assertions inspect another argument.
+        actual = {parameter.arg: ast.unparse(value)
+                  for parameter, value in zip(launcher.args.args, call.args)}
+        actual.update({keyword.arg: ast.unparse(keyword.value) for keyword in call.keywords})
+        self.assertEqual(actual['motor_runtime'], 'board_runtime')
+        self.assertEqual(actual['empty_ports'], 'le_board is not None and (not arguments.active_port_notifications)')
+        self.assertEqual(actual['persistent_flash'], 'arguments.imu_cold_restore')
+        self.assertEqual(actual['imu_topology'], 'arguments.imu_topology')
         assignment = next(n for n in main.body if isinstance(n, ast.Assign)
                           and any(isinstance(t, ast.Name) and t.id == 'board_runtime' for t in n.targets))
         self.assertEqual(ast.unparse(assignment.value), 'arguments.motor_runtime or le_board')
