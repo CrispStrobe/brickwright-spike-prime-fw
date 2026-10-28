@@ -370,6 +370,22 @@ namespace Antmicro.Renode.Peripherals.SPIKEPrime
     // read/program/erase commands used by the NuttX MTD and LittleFS path.
     public sealed class W25Q256JV : ISPIPeripheral
     {
+        // Qualification-only external medium transfer between fresh processes.
+        // These APIs do not alter CPU/RAM, filesystem results or calibration.
+        public byte[] SnapshotStorage()
+        {
+            if(position != 0 || writeEnable) throw new InvalidOperationException("Flash transaction is active");
+            return (byte[])storage.Clone();
+        }
+
+        public void RestoreStorage(byte[] snapshot)
+        {
+            if(snapshot == null || snapshot.Length != storage.Length)
+                throw new ArgumentException("Expected one complete 32 MiB NOR medium");
+            if(position != 0 || writeEnable) throw new InvalidOperationException("Flash transaction is active");
+            Array.Copy(snapshot, storage, storage.Length);
+        }
+
         public W25Q256JV()
         {
             storage = new byte[32 * 1024 * 1024];

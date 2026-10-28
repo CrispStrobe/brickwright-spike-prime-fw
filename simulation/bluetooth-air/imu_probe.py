@@ -474,7 +474,7 @@ async def fusion_round_trip(dlc, received, renode_proc, results: dict, *,
 
 async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
                                 renode_log: Path, timeout: float = 900,
-                                persistence: bool = False) -> None:
+                                persistence: bool = False, cold_restore: bool = False) -> None:
     """Configured-rate synthetic stationarity; no firmware/clock substitution.
 
     The first window qualifies readiness and live bias correction. This does
@@ -574,7 +574,11 @@ async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
                 if receipt["virtual_us"] - initial["virtual_us"] < ticks * 1000000 / 104 - 1:
                     raise ValueError("Stationary fixture ran faster than configured ODR")
                 return receipt
-            await asyncio.sleep(2)
+            # Observe the finite feeder promptly. A two-second host poll can
+            # outlast the guest's unchanged 300 ms freshness limit once the
+            # aggregate display clock lets the guest run faster. Do not extend
+            # snapshot freshness or add samples to satisfy an exact sequence.
+            await asyncio.sleep(.05)
 
     active = False
     try:
@@ -589,6 +593,16 @@ async def stationary_round_trip(dlc, received, renode_proc, results: dict, *,
             if (await model("inject", fixture))["accepted"] is not True:
                 raise ValueError("Stationary producer did not activate sensor")
             first = await snapshot(1)
+            if cold_restore:
+                if (first['ready'] or first['up_side']!=2 or
+                        any(abs(v)>.001 for v in first['gyro_dps']) or
+                        any(abs(v-expected)>.1 for v,expected in zip(first['accel_mms2'],(0,0,9806.65)))):
+                    raise ValueError('Fresh-process first sample did not retain saved calibration independently of readiness')
+                record['cold_bias_verified']=True
+                record['physical_durability_qualified']=False
+                await ok('FUSION STOP');await running(False);active=False
+                record['status']='PASS'
+                return
             validate_fusion(first, fixture)
             await feed(100)
             before = await snapshot(101)
