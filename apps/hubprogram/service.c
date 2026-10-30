@@ -23,6 +23,8 @@ static void simulation_diagnostic_step(void) {
 const uint32_t g_bw_program_storage_abi=1u;
 /* Addressed distance readers, independently discovered from storage/debug ABI. */
 const uint32_t g_bw_program_addressed_sensor_abi=1u;
+/* Instruction ABI version (program.h); absent in v1-only images. */
+const uint32_t g_bw_program_instruction_abi=BW_PROGRAM_INSTRUCTION_ABI;
 volatile struct bw_program_debug g_bw_program_debug={.magic=0x42574e50u,.version=1};
 static struct bw_program g_program;
 static struct bw_program_upload g_upload;
@@ -65,6 +67,7 @@ static int request_locked(uint32_t owner,uint64_t now,const uint8_t *data,size_t
 static void debug_locked(uint64_t now) {
   /* A volatile read retains this read-only object under section GC. */
   (void)*(const volatile uint32_t *)&g_bw_program_addressed_sensor_abi;
+  (void)*(const volatile uint32_t *)&g_bw_program_instruction_abi;
   uint32_t seq=g_bw_program_debug.request_seq;
   if(seq && !(seq&1u) && seq!=g_bw_program_debug.reply_seq) {
     uint8_t packet[20],reply[20];uint32_t length=g_bw_program_debug.length;unsigned i;
@@ -112,7 +115,7 @@ static void *worker(void *arg) {
       if(g_program.state==BW_PROGRAM_RUNNING) {
         int stopped=bw_program_stop(&g_program);
         g_program.state=rc<0 || stopped<0 ? BW_PROGRAM_FAULT : BW_PROGRAM_RUNNING;
-        if(g_program.state==BW_PROGRAM_RUNNING) {g_program.ending=1;g_program.moving=-1;}
+        if(g_program.state==BW_PROGRAM_RUNNING) {g_program.ending=1;g_program.moving=-1;g_program.awaiting=0;}
         g_program.error=rc<0 ? rc : stopped;
       }
       g_python_active=0;
