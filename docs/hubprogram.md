@@ -235,7 +235,10 @@ outside public repositories.
 The exported read-only `g_bw_program_instruction_abi` value 2 advertises
 instruction ABI version 2 (ops 7 and 8). Images without the symbol implement
 version 1 only and refuse ops 7/8 at COMMIT with -EINVAL; the debug transport
-version stays 1.
+version stays 1. `tools/check_instruction_abi_marker.py nuttx/nuttx_user.elf`
+applies the addressed-sensor marker's ELF rules (global four-byte read-only
+OBJECT in userspace flash, one file-backed load mapping) and requires value 2;
+both protected builds run it, and the E/F program fixture reads the guest value.
 
 The exported `g_bw_program_storage_abi` value 1 advertises the fixed-slot
 SAVE/LOAD contract. Consumers must verify this value in the running firmware;
