@@ -93,7 +93,7 @@ closed:
   if(!rc) {
     if(b[5]) {
       memcpy(p->source,b+HEADER,n);p->source[n]=0;
-      p->language=1;p->id=id;p->count=count;p->pc=0;p->error=0;p->owned=0;p->moving=-1;p->waiting=0;p->ending=0;p->state=BW_PROGRAM_READY;
+      p->language=1;p->id=id;p->count=count;p->pc=0;p->error=0;p->owned=0;p->moving=-1;p->waiting=0;p->ending=0;p->awaiting=0;p->state=BW_PROGRAM_READY;
     } else rc=bw_program_load(p,id,(const struct bw_instruction *)(const void *)(b+HEADER),count);
   }
 out:

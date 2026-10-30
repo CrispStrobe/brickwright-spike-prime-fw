@@ -28,7 +28,8 @@ int bw_program_validate(const struct bw_instruction *code, uint32_t count)
       case 3: valid = predicate(p->a,p->b) && p->c == 0; break;
       case 4: valid = between(p->a,0,(int32_t)count-1) && p->b == 0 && p->c == 0; break;
       case 5: valid = predicate(p->a,p->b) && between(p->c,0,(int32_t)count-1); break;
-      case 6: valid = between(p->a,0,BW_PROGRAM_PORT_COUNT-1) && between(p->b,-36000,36000) && between(p->c,1,1110); break;
+      case 6: case 7: valid = between(p->a,0,BW_PROGRAM_PORT_COUNT-1) && between(p->b,-36000,36000) && between(p->c,1,1110); break;
+      case 8: valid = between(p->a,1,(int32_t)BW_PROGRAM_PORT_MASK) && p->b == 0 && p->c == 0; break;
     }
     if (!valid) return -EINVAL;
   }
@@ -49,7 +50,7 @@ int bw_program_load(struct bw_program *p, uint32_t id,
   rc = bw_program_validate(code,count);
   if (rc < 0) return rc;
   memmove(p->code,code,count*sizeof(*code));
-  p->language=0; p->source[0]=0; p->count=count; p->id=id; p->pc=0; p->error=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0; p->state=BW_PROGRAM_READY;
+  p->language=0; p->source[0]=0; p->count=count; p->id=id; p->pc=0; p->error=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0; p->awaiting=0; p->state=BW_PROGRAM_READY;
   return 0;
 }
 int bw_program_start(struct bw_program *p, uint32_t id, uint64_t now)
@@ -61,7 +62,7 @@ int bw_program_start(struct bw_program *p, uint32_t id, uint64_t now)
        p->state != BW_PROGRAM_STOPPED && p->state != BW_PROGRAM_FAULT) ||
       p->id != id || now>UINT64_MAX-BW_PROGRAM_TIME_LIMIT) return -EINVAL;
   if (!p->io.motor || !p->io.position || !p->io.done || !p->io.brake || !p->io.sensor) return -ENOSYS;
-  p->pc=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0; p->deadline=0;
+  p->pc=0; p->owned=0; p->moving=-1; p->waiting=0; p->ending=0; p->awaiting=0; p->deadline=0;
   p->started=p->last_tick=now; p->error=0; p->state=BW_PROGRAM_RUNNING;
   return 0;
 }
@@ -113,6 +114,15 @@ void bw_program_tick(struct bw_program *p, uint64_t now)
     if (!rc) return;
     p->moving=-1;
   }
+  if (p->awaiting) {
+    unsigned port;
+    for (port=0;port<BW_PROGRAM_PORT_COUNT;port++) if (p->awaiting&(1u<<port)) {
+      rc=p->io.done(p->io.context,port);
+      if (rc<0) { fault(p,rc); return; }
+      if (!rc) return;
+    }
+    p->awaiting=0;
+  }
   if (p->ending) {
     unsigned port;
     for (port=0;port<BW_PROGRAM_PORT_COUNT;port++) if (p->owned&(1u<<port)) {
@@ -154,6 +164,13 @@ void bw_program_tick(struct bw_program *p, uint64_t now)
         rc=p->io.position(p->io.context,(unsigned)ins->a,ins->b,ins->c);
         if (rc<0) { fault(p,rc); return; }
         p->moving=ins->a; p->pc++; return;
+      case 7: /* v2: arm the move and continue; op 8 (or END) waits for it */
+        p->owned|=1u<<(unsigned)ins->a;
+        rc=p->io.position(p->io.context,(unsigned)ins->a,ins->b,ins->c);
+        if (rc<0) { fault(p,rc); return; }
+        p->pc++; break;
+      case 8: /* v2: block until every port in the mask reports done */
+        p->awaiting=(uint32_t)ins->a; p->pc++; return;
       default: fault(p,-EPROTO); return;
     }
   }

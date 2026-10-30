@@ -12,13 +12,14 @@ SYMBOL = 'g_bw_program_addressed_sensor_abi'
 FLASH_START, FLASH_END = 0x08060000, 0x08100000
 
 
-def validate(raw, symbols):
+def validate(raw, symbols, symbol=SYMBOL, version=1):
+    """Shared by every read-only feature marker; symbol and version select one."""
     if (not 52 <= len(raw) <= 64 * 1024 * 1024
             or raw[:7] != b'\x7fELF\x01\x01\x01'
             or struct.unpack_from('<HHI', raw, 16) != (2, 40, 1)):
         raise ValueError('requires own little-endian ARM ELF32 executable')
     matches = [line.split() for line in symbols.splitlines()
-               if line.split() and line.split()[-1] == SYMBOL]
+               if line.split() and line.split()[-1] == symbol]
     if len(matches) != 1 or len(matches[0]) != 4 or matches[0][2] not in ('R', 'T'):
         raise ValueError('requires exactly one global read-only feature symbol')
     address, size = (int(v, 16) for v in matches[0][:2])
@@ -54,7 +55,7 @@ def validate(raw, symbols):
             end = raw.find(b'\0', namebase + name, namebase + namesize)
             if end < 0:
                 raise ValueError('unterminated symbol name')
-            if raw[namebase + name:end] != SYMBOL.encode('ascii'):
+            if raw[namebase + name:end] != symbol.encode('ascii'):
                 continue
             if info != 0x11 or value != address or width != 4 or not 0 < index < shcount:
                 raise ValueError('requires global four-byte OBJECT symbol')
@@ -88,8 +89,8 @@ def validate(raw, symbols):
     if offset + address - start != object_offset:
         raise ValueError('section and load mappings disagree')
     value = struct.unpack_from('<I', raw, object_offset)[0]
-    if value != 1:
-        raise ValueError('unsupported addressed sensor feature version')
+    if value != version:
+        raise ValueError('unsupported %s feature version' % symbol)
     return {'abi': value, 'address': address, 'userspaceSha256': hashlib.sha256(raw).hexdigest()}
 
 

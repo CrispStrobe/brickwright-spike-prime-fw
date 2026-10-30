@@ -8,6 +8,11 @@
 #define BW_PROGRAM_PORT_COUNT 6u
 #define BW_PROGRAM_LIMIT 256u
 #define BW_PROGRAM_TIME_LIMIT 120000u
+/* Instruction ABI exported by service.c as g_bw_program_instruction_abi.
+ * v1: ops 0-6. v2 (additive): 7 non-waiting position move, 8 wait for a
+ * motor port bitmask. Images without the symbol implement v1 only. */
+#define BW_PROGRAM_INSTRUCTION_ABI 2u
+#define BW_PROGRAM_PORT_MASK ((1u<<BW_PROGRAM_PORT_COUNT)-1u)
 struct bw_instruction { int32_t op, a, b, c; };
 enum bw_program_state { BW_PROGRAM_EMPTY, BW_PROGRAM_READY, BW_PROGRAM_RUNNING,
   BW_PROGRAM_COMPLETE, BW_PROGRAM_STOPPED, BW_PROGRAM_FAULT };
@@ -31,6 +36,7 @@ struct bw_program {
   int error, moving;
   uint64_t started, deadline, last_tick;
   unsigned waiting, ending;
+  uint32_t awaiting; /* op 8: ports that must report done before pc advances */
 };
 int bw_program_validate(const struct bw_instruction *, uint32_t);
 void bw_program_init(struct bw_program *, const struct bw_program_io *);

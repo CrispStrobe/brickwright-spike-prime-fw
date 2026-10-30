@@ -31,15 +31,37 @@ does not terminate an autonomous program.
 
 Instruction programs contain 1–256 rows of four signed little-endian 32-bit
 words, `op,a,b,c`. Supported operations are END (0), continuous speed (1),
-wait (2), wait for sensor (3), jump (4), conditional sensor jump (5), and
-relative motor position (6). The final row must be END. Speeds use degrees per
+wait (2), wait for sensor (3), jump (4), conditional sensor jump (5),
+relative motor position (6), and in ABI version 2 relative motor position
+without waiting (7) and wait for motors (8). The final row must be END. Speeds use degrees per
 second, positions degrees, waits milliseconds, distance millimeters, color
 IDs and reflection percentages. Speed magnitude is at most 1110; relative
 positions are at most 36000 degrees. Motor port operands are 0–5 in both
 native instructions and Python calls.
 Python retains `b.A` and `b.B`; use integers 2–5 for C–F.
-Positions block the instruction stream
+Op 6 positions block the instruction stream
 while another motor's earlier continuous command can remain active.
+
+Instruction ABI version 2 adds two operations; version-1 programs (ops 0–6)
+validate and run unchanged:
+
+- **Position without waiting (7)** `{port, degrees, speed}` has the bounds of
+  op 6. It arms the relative move and continues with the next row in the same
+  tick, so several motors start together. The port becomes owned, like op 6:
+  STOP, a fault and END brake it. END brakes owned motors before it waits, so
+  a program that wants the move to finish places op 8 before END.
+- **Wait for motors (8)** `{mask, 0, 0}` blocks until every port in the
+  bitmask (bit 0 = A … bit 5 = F, 1–63) reports done, checked from the next
+  tick, the way END waits for owned motors. A device error on a waited port
+  faults the program. A waited port that carries a continuous speed (op 1)
+  never reports done, so the wait ends only at STOP or the 120 s limit.
+
+A second op 7 (or op 6) on a port whose move is still running replaces it,
+as the device layer always has: the new target is the current encoder
+position plus the new relative degrees, and the new speed applies; the
+running controller keeps its reference ramp and integral instead of starting
+from rest. When the port has no fresh sample yet, the move is deferred, and a
+second deferred request overwrites the first one before either starts.
 
 The worker runs every 10 milliseconds using NuttX monotonic time. In Renode
 this clock is driven by simulated hardware time. Zero-duration waits yield;
@@ -209,6 +231,14 @@ MicroPython images use a separate, bounded
 [arena execution profile](https://github.com/CrispStrobe/renode-spike-prime/blob/main/docs/spike-micropython-support.md).
 Private image inputs, generated run records and complete transcripts remain
 outside public repositories.
+
+The exported read-only `g_bw_program_instruction_abi` value 2 advertises
+instruction ABI version 2 (ops 7 and 8). Images without the symbol implement
+version 1 only and refuse ops 7/8 at COMMIT with -EINVAL; the debug transport
+version stays 1. `tools/check_instruction_abi_marker.py nuttx/nuttx_user.elf`
+applies the addressed-sensor marker's ELF rules (global four-byte read-only
+OBJECT in userspace flash, one file-backed load mapping) and requires value 2;
+both protected builds run it, and the E/F program fixture reads the guest value.
 
 The exported `g_bw_program_storage_abi` value 1 advertises the fixed-slot
 SAVE/LOAD contract. Consumers must verify this value in the running firmware;

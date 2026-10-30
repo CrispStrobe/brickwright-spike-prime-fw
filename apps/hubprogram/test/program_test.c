@@ -7,14 +7,18 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-struct devices { int speed[6], moving[6], brakes[6], sensor, failure; };
+struct devices { int speed[6], moving[6], brakes[6], sensor, failure, done_failure, any_move, moves, degrees[6], velocity[6]; };
 static int motor(void *ctx,unsigned port,int32_t speed) {
   struct devices *d=ctx; d->speed[port]=speed; return d->failure;
 }
 static int position(void *ctx,unsigned port,int32_t degrees,int32_t speed) {
-  struct devices *d=ctx; assert(degrees==-90); assert(speed==500); d->moving[port]=1; return d->failure;
+  struct devices *d=ctx;
+  if(!d->any_move) { assert(degrees==-90); assert(speed==500); }
+  d->moving[port]=1; d->moves++; d->degrees[port]=degrees; d->velocity[port]=speed; return d->failure;
 }
-static int done(void *ctx,unsigned port) { return !((struct devices *)ctx)->moving[port]; }
+static int done(void *ctx,unsigned port) {
+  struct devices *d=ctx; return d->done_failure ? d->done_failure : !d->moving[port];
+}
 static int brake(void *ctx,unsigned port) {
   struct devices *d=ctx; d->speed[port]=0; d->moving[port]=0; d->brakes[port]++; return 0;
 }
@@ -213,8 +217,63 @@ static void explicit_distance_conditions(void) {
     assert(bw_program_validate(code,2)==-EINVAL);
   }
 }
+/* ABI v2: op 7 arms a move without waiting, op 8 waits for a port mask. */
+static void motor_group(void) {
+  struct bw_program p;struct devices d;
+  const struct bw_instruction pair[]={{7,0,-360,300},{7,1,360,300},{8,3,0,0},{1,2,200,0},{0,0,0,0}};
+  init(&p,&d);d.any_move=1;assert(!bw_program_load(&p,1,pair,5));assert(!bw_program_start(&p,1,0));
+  /* Both moves are armed in the same tick, before anything waits. */
+  bw_program_tick(&p,0);
+  assert(d.moves==2 && d.moving[0] && d.moving[1] && d.degrees[0]==-360 && d.degrees[1]==360);
+  assert(d.velocity[0]==300 && d.velocity[1]==300 && p.owned==3 && p.pc==3 && p.awaiting==3 && p.moving==-1);
+  bw_program_tick(&p,10);assert(p.pc==3 && !d.speed[2]);
+  d.moving[1]=0;bw_program_tick(&p,20);assert(p.pc==3 && p.awaiting==3 && !d.speed[2]);
+  d.moving[0]=0;d.moving[1]=1;bw_program_tick(&p,30);assert(p.pc==3 && !d.speed[2]);
+  d.moving[1]=0;bw_program_tick(&p,40);assert(!p.awaiting && p.ending && p.owned==7);
+  assert(d.brakes[0]==1 && d.brakes[1]==1 && d.brakes[2]==1);
+  bw_program_tick(&p,50);assert(p.state==BW_PROGRAM_COMPLETE);
+  /* An op-7 port is owned: END brakes it (without op 8 the move is cut short)
+   * and waits for it, and STOP brakes it while op 8 waits. */
+  {
+    const struct bw_instruction armed[]={{7,4,90,500},{0,0,0,0}};
+    const struct bw_instruction wait[]={{7,4,90,500},{8,16,0,0},{0,0,0,0}};
+    init(&p,&d);d.any_move=1;assert(!bw_program_load(&p,2,armed,2));assert(!bw_program_start(&p,2,0));
+    bw_program_tick(&p,0);assert(p.owned==16 && p.ending && d.brakes[4]==1);
+    bw_program_tick(&p,10);assert(p.state==BW_PROGRAM_COMPLETE);
+    init(&p,&d);d.any_move=1;assert(!bw_program_load(&p,3,wait,3));assert(!bw_program_start(&p,3,0));
+    bw_program_tick(&p,0);assert(p.awaiting==16 && d.moving[4]);
+    assert(!bw_program_stop(&p) && p.state==BW_PROGRAM_STOPPED && d.brakes[4]==1);
+    /* START clears a pending wait mask and runs the program anew. */
+    assert(!bw_program_start(&p,3,10) && !p.awaiting);
+    bw_program_tick(&p,10);assert(p.awaiting==16 && d.moves==2);
+  }
+  /* A device failure while waiting faults and brakes the owned motors. */
+  {
+    const struct bw_instruction one[]={{7,0,-360,300},{8,3,0,0},{0,0,0,0}};
+    init(&p,&d);d.any_move=1;assert(!bw_program_load(&p,4,one,3));assert(!bw_program_start(&p,4,0));
+    bw_program_tick(&p,0);assert(p.awaiting==3);
+    d.done_failure=-EIO;bw_program_tick(&p,10);
+    assert(p.state==BW_PROGRAM_FAULT && p.error==-EIO && d.brakes[0]==1 && !d.brakes[1]);
+  }
+  /* Bounds: op 7 = op 6; op 8 a non-zero subset of A-F, other words zero. */
+  {
+    struct bw_instruction code[]={{7,5,-36000,1110},{8,63,0,0},{0,0,0,0}};
+    assert(!bw_program_validate(code,3));
+    code[0]=(struct bw_instruction){7,0,36000,1};assert(!bw_program_validate(code,3));
+    code[1].a=1;assert(!bw_program_validate(code,3));
+    const struct bw_instruction bad[][1]={{{7,6,90,500}},{{7,-1,90,500}},{{7,0,36001,500}},{{7,0,-36001,500}},
+      {{7,0,90,0}},{{7,0,90,1111}},{{8,0,0,0}},{{8,64,0,0}},{{8,-1,0,0}},{{8,3,1,0}},{{8,3,0,1}},{{9,0,0,0}}};
+    for(unsigned i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
+      code[0]=bad[i][0];code[1]=(struct bw_instruction){8,1,0,0};
+      assert(bw_program_validate(code,3)==-EINVAL);
+    }
+    /* A rejected v2 row cannot replace the committed program. */
+    init(&p,&d);code[0]=(struct bw_instruction){7,0,90,500};assert(!bw_program_load(&p,5,code,3));
+    code[1].a=0;assert(bw_program_load(&p,6,code,3)==-EINVAL && p.id==5);
+  }
+}
 int main(void) {
   assert(bw_program_crc32((const uint8_t *)"123456789",9)==0xcbf43926u);
-  explicit_distance_conditions();six_ports();lifecycle();restart_committed_program(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
+  explicit_distance_conditions();six_ports();motor_group();lifecycle();restart_committed_program(); position_and_sensor(); bounds_and_failures(); upload();python_upload();
   puts("firmware program lifecycle, feedback, boundaries and transactional upload: PASS"); return 0;
 }

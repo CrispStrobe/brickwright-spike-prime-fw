@@ -39,6 +39,10 @@ Actual ARM programs address E and F through external UART DATA
     ${feature_value}=    Execute Command    sysbus ReadDoubleWord ${feature.strip()}
     ${feature_integer}=    Evaluate    int($feature_value.strip(), 0)
     Should Be Equal As Integers    ${feature_integer}    1
+    ${instructions}=    Execute Command    sysbus GetSymbolAddress "g_bw_program_instruction_abi"
+    ${instructions_value}=    Execute Command    sysbus ReadDoubleWord ${instructions.strip()}
+    ${instructions_integer}=    Evaluate    int($instructions_value.strip(), 0)
+    Should Be Equal As Integers    ${instructions_integer}    2
     ${mailbox}=    Execute Command    sysbus GetSymbolAddress "g_bw_program_debug"
     ${queue}=    Execute Command    sysbus GetSymbolAddress "g_lump"
     Execute Command    include @${CURDIR}/../../tools/lump_queue_observer.py

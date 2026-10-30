@@ -839,7 +839,7 @@
     },
     {
       "path": "apps/hubprogram/program.c",
-      "sha256": "1946bccac8fa8a1e2cdf9e11a89970dbccc31c09e9881e90abbac242a6cd957b",
+      "sha256": "d71cb5f19a9abddc648549143cfe86df16c15dbad1709465bf734389038b4c81",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -850,7 +850,7 @@
     },
     {
       "path": "apps/hubprogram/program.h",
-      "sha256": "edfa89dca9e4e4e83ed49e2a966531b3fda2c7278d7bcc3737c053d1e368a038",
+      "sha256": "8d49b548c7bc2aaee700f7ca41ea542abf25407499f4e7d6c51f3583cbd1f026",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -872,7 +872,7 @@
     },
     {
       "path": "apps/hubprogram/service.c",
-      "sha256": "e1bc933d3f1958a5eef4624819fa03af4e274e15d4160c91056ea04ca3193ed1",
+      "sha256": "6db04b65552b1e4dbeea70629941bfd0f6bf1386f8062fc91cc90100c0416702",
       "spdx": [
         "BSD-3-Clause"
       ],
@@ -901,7 +901,7 @@
         "BSD-3-Clause"
       ],
       "basis": "New Brickwright storage component; explicit BSD-3-Clause notice and apps/hubprogram/LICENSE.",
-      "sha256": "0e9b16ed4e258c3b4f4173722ae7ef1be5561a11c8045f10ab37e6ac0cc108d1"
+      "sha256": "faf1420bf899751e69f48d11e86a90ea52d761d34d4ec2611dc30110dd7170a4"
     },
     {
       "path": "apps/hubprogram/storage.h",
@@ -916,7 +916,7 @@
     },
     {
       "path": "apps/hubprogram/upload.c",
-      "sha256": "9e0811ecf32a9696f0231ce37533c4616be899e92e57321030e79b8fe74d617a",
+      "sha256": "53e2cdc04405210e0dbc5498b7fa4807cec82cb3ce525c93dd4ea2cceae7141b",
       "spdx": [
         "BSD-3-Clause"
       ],

@@ -126,6 +126,11 @@ jobs:
           docker run --rm -v "$PWD:$PWD" -w "$PWD" nuttx-builder \
             python3 tools/check_addressed_sensor_marker.py nuttx/nuttx_user.elf
 
+      - name: Verify instruction ABI 2 capability in the actual userspace ELF
+        run: |
+          docker run --rm -v "$PWD:$PWD" -w "$PWD" nuttx-builder \
+            python3 tools/check_instruction_abi_marker.py nuttx/nuttx_user.elf
+
       - name: Cross-compile Zephyr buffer boundary against pinned NuttX
         run: |
           docker run --rm \
